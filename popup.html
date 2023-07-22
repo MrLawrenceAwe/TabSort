@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Tabs Info</title>
+    <style>
+        body {
+          width: 780px;
+          height: 580px;
+          overflow: auto;
+          margin: 0;
+          padding: 10px;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        th, td {
+          border: 1px solid #ddd;
+          padding: 8px;
+          text-align: left;
+        }
+        th {
+          background-color: #4CAF50;
+          color: white;
+        }
+      </style>
+  </head>
+  <body>
+    <h1>Tabs Info</h1>
+    <table id="infoTable">
+        <tr>
+            <th>URL</th>
+            <th>Content Script Loaded?</th>
+            <th>Video Details</th>
+            <th>Metadata Loaded?</th>
+            <th>Tab State</th>
+            <th>Action Required</th> 
+            <th>Tab ID</th>
+            <th>Tab Index</th>
+        </tr>
+    </table>
+
+    <div id="tabStatus"></div>
+    <button id="sortButton" style="display: none;">Sort Tabs</button>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
