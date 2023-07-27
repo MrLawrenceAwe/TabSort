@@ -5,18 +5,24 @@ import YoutubeWatchTabsInfos from './YoutubeWatchTabsInfos.js';
 let youtubeWatchTabsInfosOfCurrentWindow = new YoutubeWatchTabsInfos();
 populateYoutubeWatchTabsInfosOfCurrentWindow();
 
+let youtubeWatchTabsInfosOfCurrentWindowIDsSortedByRemainingTime;
+
 chrome.runtime.onMessage.addListener(handleMessage);
 
 initialiseTabsListeners();
 
+let tabsInCurrentWindowAreKnownToBeSorted = false;
+
 let tabUrls = {};
 initialiseTabUrls();
 
-let lastFocusedChromeWindowId = getCurrentWindowId();
+let lastFocusedChromeWindowId;
+initialiseLastFocusedChromeWindowId();
+
 let windowsOfYoutubeWatchTabsInfos = new WindowsOfYoutubeWatchTabsInfos();
 let nonChromeWindowInFocus = false;
 
-initialiseWindowsListeners()
+initialiseWindowsListeners();
 
 //#region Functions
 async function populateYoutubeWatchTabsInfosOfCurrentWindow(){
@@ -33,6 +39,7 @@ async function initialiseTabsListeners(){
     chrome.tabs.onRemoved.addListener(handleRemovedTab);
     chrome.tabs.onDetached.addListener(handleDetachedTab);
     chrome.tabs.onReplaced.addListener(handleReplacedTab);
+    chrome.tabs.onMoved.addListener(handleMovedTab);
 }
 
 function initialiseTabUrls(){
@@ -48,17 +55,28 @@ async function getCurrentWindowId() {
     return window.id;
 }
 
+async function initialiseLastFocusedChromeWindowId(){
+    lastFocusedChromeWindowId = await getCurrentWindowId();
+}
+
 function initialiseWindowsListeners(){
     chrome.windows.onFocusChanged.addListener((newWindowId) => {
         if (lastFocusedChromeWindowId !== undefined) {
-            windowsOfYoutubeWatchTabsInfos[lastFocusedChromeWindowId] = youtubeWatchTabsInfosOfCurrentWindow;
+            windowsOfYoutubeWatchTabsInfos[lastFocusedChromeWindowId] = JSON.parse(JSON.stringify(youtubeWatchTabsInfosOfCurrentWindow));
         }
         if (newWindowId !== chrome.windows.WINDOW_ID_NONE) {
             nonChromeWindowInFocus = false;
-            youtubeWatchTabsInfosOfCurrentWindow = windowsOfYoutubeWatchTabsInfos[newWindowId] !== undefined ? windowsOfYoutubeWatchTabsInfos[newWindowId] : new YoutubeWatchTabsInfos();
+            console.log("Chrome Window In Focus");
+            if (!windowsOfYoutubeWatchTabsInfos[newWindowId]) {
+                windowsOfYoutubeWatchTabsInfos[newWindowId] = new YoutubeWatchTabsInfos();
+            }
+            youtubeWatchTabsInfosOfCurrentWindow = windowsOfYoutubeWatchTabsInfos[newWindowId];
             lastFocusedChromeWindowId = newWindowId;
         }
-        else nonChromeWindowInFocus = true;
+        else {
+            console.log("Non Chrome Window In Focus");
+            nonChromeWindowInFocus = true;
+        } 
     });
     
     chrome.windows.onRemoved.addListener((removedWindowId) => {
@@ -69,35 +87,42 @@ function initialiseWindowsListeners(){
 
 function handleMessage(message, sender, sendResponse){
     //#region INNER FUNCTIONS
-    function logMessage(message, url, color = 'color: purple;') {
-        console.log(`%cMessage from ${message.source} on tab with url ${url}:`, color, message.text);
-    }
-
-    function errorMessage(message, url) {
-        console.error(`Error from ${message.source} on tab with url ${url}:`, message.text);
-    }
-
-    function handleContentScriptReady() {
-        if(youtubeWatchTabsInfosOfCurrentWindow[sender.tab.id].contentScriptReady) return;
-        loadYoutubeWatchTab(sender.tab);
-        youtubeWatchTabsInfosOfCurrentWindow[sender.tab.id].contentScriptReady = true;
-        sendMessageToTab(tabId, "sendMetadataLoaded", "Requesting metaDataLoaded");
-
-    
-        sendResponse({message: "contentScriptAck"});
-    }
-
-    function handleMetadataLoaded() {
-        if (youtubeWatchTabsInfosOfCurrentWindow[sender.tab.id]) {
-            youtubeWatchTabsInfosOfCurrentWindow[sender.tab.id].metadataLoaded = true;
-            youtubeWatchTabsInfosOfCurrentWindow[sender.tab.id].status = 'unsuspended';
-    
-            let videoDetails = getYoutubeWatchTabVideoDetailsFromTab(sender.tab);
-            loadYoutubeWatchTabVideoDetails(sender.tab, videoDetails);
-        } else {
-            throw new Error(`Received metadataLoaded message from tab with url ${sender.tab.url}, but no tab info was found`);
+        function logMessage(message, url, color = 'color: purple;') {
+            console.log(`%cMessage from content script on tab with url ${url}:`, color, message);
         }
-    }
+
+        function errorMessage(message, url) {
+            console.error(`Error from content script on tab with url ${url}:`, message);
+        }
+
+        function handleContentScriptReady() {
+            if(youtubeWatchTabsInfosOfCurrentWindow[sender.tab.id].contentScriptReady) return;
+            loadYoutubeWatchTab(sender.tab);
+            youtubeWatchTabsInfosOfCurrentWindow[sender.tab.id].contentScriptReady = true;
+            sendMessageToTab(sender.tab.id, "sendMetadataLoaded");
+
+        
+            sendResponse({message: "contentScriptAck"});
+        }
+
+        async function handleMetadataLoaded() {
+            if (youtubeWatchTabsInfosOfCurrentWindow[sender.tab.id]) {
+                youtubeWatchTabsInfosOfCurrentWindow[sender.tab.id].metadataLoaded = true;
+                loadYoutubeWatchTabState(sender.tab.id)
+        
+                let videoDetails;
+                if (!youtubeWatchTabsInfosOfCurrentWindow[sender.tab.id].videoDetails?.title){
+                    videoDetails = await getYoutubeWatchTabVideoDetailsFromTab(sender.tab);
+                    if (videoDetails.remainingTime == 172800.5){ //Live stream number
+                        youtubeWatchTabsInfosOfCurrentWindow[sender.tab.id].isLiveStream = true;
+                    }  
+
+                    loadYoutubeWatchTabVideoDetails(sender.tab, videoDetails);
+                }
+            } else {
+                throw new Error(`Received metadataLoaded message from tab with url ${sender.tab.url}, but no tab info was found`);
+            }
+        }
     //#endregion
 
     message.message = message.action || message.message;
@@ -105,29 +130,29 @@ function handleMessage(message, sender, sendResponse){
     const handlers = {
         logMessage: () => {
             if (message.type === "error") {
-                errorMessage(message, sender.tab.url);
+                errorMessage(message.info, sender.tab.url);
             } else {
-                logMessage({source: 'content script', text: message.message}, sender.tab.url);
+                logMessage(message.info, sender.tab.url);
             }
         },
         logPopupMessage: () => {
             if (message.type === "error") {
-                errorMessage(message, sender.tab.url);
-                console.log(youtubeWatchTabsInfosOfCurrentWindow[message.message])
+                console.error(`error from popup script ${message.info}`)
             } else {
-                logMessage({source: 'popup', text: message.message}, sender.tab.url);
+                console.log(`Message from popup script ${message.info}`)
             }
         },
-        sendTabsInfo: () => {
-            console.log("Received getTabsInfo message from popup");
+        sendTabsInfos: () => {
             for (let id in youtubeWatchTabsInfosOfCurrentWindow) {
-                if (youtubeWatchTabsInfosOfCurrentWindow[id].metadataLoaded){
-                    if (youtubeWatchTabsInfosOfCurrentWindow[id].status != 'unsuspended')
-                    youtubeWatchTabsInfosOfCurrentWindow[id].status = 'unsuspended'
+                if (youtubeWatchTabsInfosOfCurrentWindow[id].metadataLoaded && !youtubeWatchTabsInfosOfCurrentWindow[id].isLiveStream){
+                    loadYoutubeWatchTabState(parseInt(id));
                     updateRemainingTimeOfVideo(parseInt(id));
                 }
             }
-            sendResponse(youtubeWatchTabsInfosOfCurrentWindow);
+
+            updateYoutubeWatchTabsInfosOfCurrentWindowIdsSortedByRemainingTime()
+
+            sendResponse({youtubeWatchTabsInfosOfCurrentWindow, youtubeWatchTabsInfosOfCurrentWindowIDsSortedByRemainingTime});
         },
         activateTab: () => {
             chrome.tabs.update(message.tabId, { active: true });
@@ -151,6 +176,10 @@ function handleMessage(message, sender, sendResponse){
         metadataLoaded: () => {
             console.log("Received metadataLoaded message from tab with url " + sender.tab.url);
             handleMetadataLoaded();
+        },
+        areTabsInCurrentWindowKnownToBeSorted: async () => {
+            updateTabsInCurrentWindowAreKnownToBeSorted();
+            sendResponse(tabsInCurrentWindowAreKnownToBeSorted);
         }
     }
 
@@ -170,7 +199,7 @@ function loadYoutubeWatchTab(tab){
 }
 
 async function loadYoutubeWatchTabState(tabId) {
-    //#region Inner Functions
+    //#region Inner Function
     function setTabState(tab, status) {
         if (!youtubeWatchTabsInfosOfCurrentWindow[tab.id]) {
             youtubeWatchTabsInfosOfCurrentWindow[tab.id] = new YoutubeWatchTabInfo();
@@ -181,16 +210,12 @@ async function loadYoutubeWatchTabState(tabId) {
 
     try {
         const tab = await getTab(tabId);
-        const prefix = `Tab with url ${tab.url} is `;
 
         if (tab.discarded || tab.status === "unloaded") {
-            console.log(prefix + "suspended");
             setTabState(tab, 'suspended');
         } else if (tab.status === "complete") {
-            console.log(prefix + "unsuspended");
             setTabState(tab, 'unsuspended');
         } else if (tab.status === "loading") {
-            console.log(prefix + "loading");
             setTabState(tab, 'loading');
             listenForLoadingTabComplete(tab);
         } else {
@@ -204,9 +229,7 @@ async function loadYoutubeWatchTabState(tabId) {
 
 async function updateRemainingTimeOfVideo(tabId) {
     try {
-        const tab = await getTab(tabId);
-        
-        //#region Helper functions
+        //#region Inner functions
         function throwErrorIfNoTabInfo() {
             if (!youtubeWatchTabsInfosOfCurrentWindow[tabId]) throw new Error(`No information available for tab with id ${tabId}`);
         }
@@ -224,11 +247,11 @@ async function updateRemainingTimeOfVideo(tabId) {
         }
 
         async function updateRemainingTime() {
-            const response = await getRemainingTimeOfVideoFromTab(tab.id);
-            if (!response) throw new Error(`Something went wrong getting the remaining time for from tab with URL ${tab.url}`);
-
-            youtubeWatchTabsInfosOfCurrentWindow[tab.id].videoDetails = {
-                ...youtubeWatchTabsInfosOfCurrentWindow[tab.id].videoDetails,
+            const response = await getRemainingTimeOfVideoFromTab(tabId);
+            if (!response) throw new Error(`Something went wrong getting the remaining time for from tab with URL ${youtubeWatchTabsInfosOfCurrentWindow[tabId].url}`);
+            
+            youtubeWatchTabsInfosOfCurrentWindow[tabId].videoDetails = {
+                ...youtubeWatchTabsInfosOfCurrentWindow[tabId].videoDetails,
                 remainingTime: response.remainingTime,
             };
         }
@@ -245,45 +268,63 @@ async function updateRemainingTimeOfVideo(tabId) {
     }
 }
 
-function getYoutubeWatchTabVideoDetailsFromTab(tab) {
+async function getYoutubeWatchTabVideoDetailsFromTab(tab, retryCount = 0) {
+    const MAX_RETRIES = 20; 
+
     async function handleResponse(response){
-        function checkForErrorWithResponse() {
-            if (response && response.remainingTime !== undefined) {
+        async function checkForErrorWithResponse() {
+            if (response.remainingTime !== undefined && response.title !== undefined) {
                 return;
             } 
             else if (response.error) {
-                console.error(`An error occurred in the content script for tab with url ${responder.url} : ${response.error}`);
+                console.error(`An error occurred in the content script for tab with url ${tab.url} : ${response.error}`);
                 throw new Error(response.error);
             }
         }
 
         if (response) {
             console.log("Video details received from content script for tab with url " + tab.url + " : " + JSON.stringify(response));
+            try {
+                await checkForErrorWithResponse();
+            } catch (error) {
+                console.error(error)
+            }
             return response;
         }
         else {
             console.error("no response received from content script for tab with url " + tab.url);
-        }
-        try {
-            checkForErrorWithResponse();
-        } catch (error) {
-            console.error(error)
+            if (retryCount <= MAX_RETRIES) {
+                console.log(`Retry count: ${retryCount}`)
+                return await getYoutubeWatchTabVideoDetailsFromTab(tab, retryCount+1);
+            } else {
+                throw new Error(`Max getYoutubeWatchTabVideoDetailsFromTab retry attempts reached for tab with url ${tab.url}`);
+            }
         }
     }
 
-    sendMessageToTab(tab.id, "sendDetails", "Requesting video details from tab", (response) => handleResponse(response));
+    return new Promise((resolve, reject) => {
+        sendMessageToTab(tab.id, "sendDetails", async (response) => {
+            try {
+                resolve(await handleResponse(response));
+            } catch (error) {
+                reject(error);
+            }
+        });
+    });
 }
 
 async function loadYoutubeWatchTabVideoDetails(tab,videoDetails) {
     if (!youtubeWatchTabsInfosOfCurrentWindow[tab.id]) {
         youtubeWatchTabsInfosOfCurrentWindow[tabId] = new YoutubeWatchTabInfo();
     }
-
-    youtubeWatchTabsInfosOfCurrentWindow[tab.id].videoDetails = videoDetails;
+    
+    youtubeWatchTabsInfosOfCurrentWindow[tab.id].videoDetails = {
+        ...youtubeWatchTabsInfosOfCurrentWindow[tab.id].videoDetails,
+        ...videoDetails
+    };
 }
 
-async function sendMessageToTab(tabId, action, logMessage, callback) {
-    console.log(logMessage);
+async function sendMessageToTab(tabId, action, callback) {
     chrome.tabs.sendMessage(tabId, { action }, callback);
 }
 
@@ -293,14 +334,14 @@ async function updateYoutubeWatchTabsInfos() {
         let currentWindowTabIds = new Set(tabs.map(tab => tab.id));
 
         //#region Inner Functions
-            function loadUntrackedTabs(tab) {
+            function loadUntrackedTabsInfos(tab) {
                 if (!youtubeWatchTabsInfosOfCurrentWindow.hasOwnProperty(tab.id)) {
                     console.log(`Tab with url ${tab.url}  not in youtubeWatchTabs, found in current window. Attempting to load`);
                     loadYoutubeWatchTab(tab);
                 }
             }
 
-            function removeObsoleteTabs(id) {
+            function removeObsoleteTabsInfos(id) {
                 if (!currentWindowTabIds.has(parseInt(id))) {
                     console.log(`Tab with id ${id} found in youtubeWatchTabs but not in current window. Removing from youtubeWatchTabs`);
                     delete youtubeWatchTabsInfosOfCurrentWindow[id];
@@ -308,17 +349,31 @@ async function updateYoutubeWatchTabsInfos() {
             }
         //#endregion
 
-        tabs.forEach(loadUntrackedTabs);
-        Object.keys(youtubeWatchTabsInfosOfCurrentWindow).forEach(removeObsoleteTabs);
+        tabs.forEach(loadUntrackedTabsInfos);
+        Object.keys(youtubeWatchTabsInfosOfCurrentWindow).forEach(removeObsoleteTabsInfos);
         
     } catch (error) {
         console.error(error);
     }
 }
 
+function updateYoutubeWatchTabsInfosOfCurrentWindowIdsSortedByRemainingTime(){
+    let youtubeWatchTabsInfosArray = Object.entries(youtubeWatchTabsInfosOfCurrentWindow);
+
+    youtubeWatchTabsInfosArray.sort((a, b) => {
+        if (!a[1].videoDetails || !b[1].videoDetails) {
+            return !a[1].videoDetails && !b[1].videoDetails ? 0 : !a[1].videoDetails ? 1 : -1;
+        }
+
+        return a[1].videoDetails.remainingTime - b[1].videoDetails.remainingTime;
+    });
+
+    youtubeWatchTabsInfosOfCurrentWindowIDsSortedByRemainingTime = youtubeWatchTabsInfosArray.map(entry => entry[0]);
+}
+
 function getRemainingTimeOfVideoFromTab(tabId) {
     return new Promise((resolve, reject) => {
-      sendMessageToTab(tabId, "sendRemainingTime", "Requesting remainingTime", resolve);
+      sendMessageToTab(tabId, "sendRemainingTime", resolve);
       setTimeout(() => reject("No response received from content script in 5 second limit"), 5000);
     });
 }
@@ -354,31 +409,33 @@ function handleUpdatedTab(tabId, changeInfo, tab) {
     console.log(`Tab with url ${tabUrls[tabId] || 'unknown'} has been updated. New url is ${changeInfo.url}.`);
     tabUrls[tabId] = changeInfo.url;
 
-    const updatedTabIsYoutubeWatchTab = changeInfo.url.startsWith('https://www.youtube.com/watch');
+    const updatedTabIsYoutubeWatchTab = changeInfo.url?.startsWith('https://www.youtube.com/watch');
     const updatedTabWasYoutubeWatchTab = youtubeWatchTabsInfosOfCurrentWindow[tabId]
     
     if (updatedTabIsYoutubeWatchTab) {
-        handleYoutubeWatchTabUpdate(tabId, tab, changeInfo.url);
+        handleTabUpdateToYoutubeWatchTab(tabId, tab, changeInfo.url);
     } else if (updatedTabWasYoutubeWatchTab) {
-        handleTabChangeToNonYoutubeWatchTab(tabId, tab);
+        if (changeInfo.url) handleTabUpdateToNonYoutubeWatchTab(tabId, tab);
     }
 }
 
-function handleYoutubeWatchTabUpdate(tabId, tab) {
+function handleTabUpdateToYoutubeWatchTab(tabId, tab) {
     console.log(`%cA tab has been updated to youtube watch tab with id ${tab.id}. tabId: ${tab.id}`, "color: orange");
     if (!youtubeWatchTabsInfosOfCurrentWindow[tabId]){
         youtubeWatchTabsInfosOfCurrentWindow[tabId] = new YoutubeWatchTabInfo(tab);
     } 
-    if (!youtubeWatchTabsInfosOfCurrentWindow[tabId].contentScriptReady) sendMessageToTab(tabId, "sendContentScriptReady", "Requesting contentScriptReady");
+    if (!youtubeWatchTabsInfosOfCurrentWindow[tabId].contentScriptReady){
+        sendMessageToTab(tabId, "sendContentScriptReady");
+        loadYoutubeWatchTabState(tabId);
+    }
     else if (!youtubeWatchTabsInfosOfCurrentWindow[tabId].metadataLoaded){
-        youtubeWatchTabsInfosOfCurrentWindow[tabId].status = "loading"
-        sendMessageToTab(tabId, "sendMetadataLoaded", "Requesting metaDataLoaded");
-        setTimeout(() => {loadYoutubeWatchTabState(tabId)}, 3500)
+        sendMessageToTab(tabId, "sendMetadataLoaded");
+        loadYoutubeWatchTabState(tabId)
     }
     else loadYoutubeWatchTabState(tabId);
 }
 
-function handleTabChangeToNonYoutubeWatchTab(tabId, tab) {
+function handleTabUpdateToNonYoutubeWatchTab(tabId, tab) {
     console.log(`Youtube tab changed to non youtube tab with id ${tab.id}`);
     delete youtubeWatchTabsInfosOfCurrentWindow[tabId];
 }
@@ -386,10 +443,16 @@ function handleTabChangeToNonYoutubeWatchTab(tabId, tab) {
 function handleRemovedTab(tabId, removeInfo) {
     console.log(`Tab with url ${removeInfo.url} was removed`);
     delete tabUrls[tabId]
-    deleteFromYoutubeWatchTabIfInYoutubeWatchTabsInfos(tabId);
+    deleteFromYoutubeWatchTabInfosIfInYoutubeWatchTabsInfos(tabId);
 }
 
-async function deleteFromYoutubeWatchTabIfInYoutubeWatchTabsInfos(tabId){
+function handleMovedTab(tabId,moveInfo){
+    console.log(`Tab with id: ${tabId} is moved. New index: ${moveInfo.toIndex}`)
+
+    youtubeWatchTabsInfosOfCurrentWindow[tabId].index = moveInfo.toIndex;
+}
+
+async function deleteFromYoutubeWatchTabInfosIfInYoutubeWatchTabsInfos(tabId){
     if (youtubeWatchTabsInfosOfCurrentWindow[tabId]) {
         delete youtubeWatchTabsInfosOfCurrentWindow[tabId];
     }
@@ -398,16 +461,130 @@ async function deleteFromYoutubeWatchTabIfInYoutubeWatchTabsInfos(tabId){
 function handleDetachedTab(tabId, removeInfo) {
     console.log(`Tab with url ${removeInfo.url} was detached`);
     delete tabUrls[tabId]
-    deleteFromYoutubeWatchTabIfInYoutubeWatchTabsInfos(tabId);
+    deleteFromYoutubeWatchTabInfosIfInYoutubeWatchTabsInfos(tabId);
 }
 
 function handleReplacedTab(addedTabId, removedTabId) {
     // Get the details of the new tab
     chrome.tabs.get(addedTabId, (tab) => {
         console.log(`Tab with id ${removedTabId} was replaced with tab with id ${addedTabId}, URL: ${tab.url}`);
-        delete youtubeWatchTabsInfosOfCurrentWindow[removedTabId];
-        loadYoutubeWatchTab(tab);
+        if (youtubeWatchTabsInfosOfCurrentWindow[removedTabId]){
+            delete youtubeWatchTabsInfosOfCurrentWindow[removedTabId];
+            loadYoutubeWatchTab(tab);
+        }
     });
+}
+
+async function updateTabsInCurrentWindowAreKnownToBeSorted() {
+    //#region Inner Functions
+        function categorizeTabs(tabsInWindow) {
+            const youtubeShortsTabs = [];
+            const youtubeWatchTabs = [];
+            const otherYoutubeTabs = [];
+            const nonYoutubeTabs = [];
+        
+            tabsInWindow.forEach(tab => {
+                if (tab.url.startsWith("https://www.youtube.com/shorts")) {
+                    youtubeShortsTabs.push(tab);
+                } else if (tab.url.startsWith("https://www.youtube.com/watch")) {
+                    youtubeWatchTabs.push(tab);
+                } else if (tab.url.startsWith("https://www.youtube.com")) {
+                    otherYoutubeTabs.push(tab);
+                } else {
+                    nonYoutubeTabs.push(tab);
+                }
+            });
+        
+            return [youtubeShortsTabs, youtubeWatchTabs, otherYoutubeTabs, nonYoutubeTabs];
+        }
+        
+        function areTabsInPlace(tabs, startIndex, tabsInWindow, tabsCategory) {
+            const tabsAreInPlace = tabs.every((tab, i) => tab === tabsInWindow[startIndex + i]);
+        
+            if (!tabsAreInPlace) {
+                console.log(`${tabsCategory} tabs are not in the correct position.`);
+                tabsInCurrentWindowAreKnownToBeSorted = false;
+            }
+        
+            return tabsAreInPlace;
+        }
+        
+        function areYoutubeWatchTabsSorted(youtubeWatchTabs) {
+            let youtubeWatchTabIds = youtubeWatchTabs.map(tab => tab.id);
+            for (let i = 0; i < youtubeWatchTabIds.length - 1; i++) {
+                let currentRemainingTime = youtubeWatchTabsInfosOfCurrentWindow[youtubeWatchTabIds[i]].videoDetails?.remainingTime;
+                let nextRemainingTime = youtubeWatchTabsInfosOfCurrentWindow[youtubeWatchTabIds[i + 1]].videoDetails?.remainingTime;
+                if ((currentRemainingTime == undefined || nextRemainingTime == undefined) || currentRemainingTime > nextRemainingTime) {
+                    console.log("Youtube watch tabs are not known to be sorted by remaining time.");
+                    tabsInCurrentWindowAreKnownToBeSorted = false;
+                    return false;
+                }
+            }
+            return true;
+        }
+        
+        function areNonYoutubeTabsGroupedByDomain(nonYoutubeTabs, startIndex, tabsInWindow) {
+            let groups = {};
+            nonYoutubeTabs.forEach((tab) => {
+                let url = new URL(tab.url);
+                if (!groups[url.hostname]) groups[url.hostname] = [];
+                groups[url.hostname].push(tab);
+            });
+        
+            let lastHostname = null;
+            let highestNonYoutubeTabIndex = (nonYoutubeTabs.length > 0) ?
+                Math.max(...nonYoutubeTabs.map(tab => tabsInWindow.indexOf(tab))) :
+                startIndex - 1;
+            for (let tab of tabsInWindow.slice(startIndex, highestNonYoutubeTabIndex + 1)) {
+                let currentHostname = new URL(tab.url).hostname;
+                if (lastHostname !== null &&
+                    lastHostname !== currentHostname &&
+                    groups[lastHostname].length > 0) {
+                    console.log("Non-Youtube tabs are not grouped by domain.");
+                    tabsInCurrentWindowAreKnownToBeSorted = false;
+                    return false;
+                }
+                let index = groups[currentHostname].findIndex(t => t.id === tab.id);
+                if (index !== -1) groups[currentHostname].splice(index, 1);
+                else {
+                    console.log("Non-Youtube tabs are not grouped by domain.");
+                    tabsInCurrentWindowAreKnownToBeSorted = false;
+                    return false;
+                }
+                lastHostname = currentHostname;
+            }
+            return true;
+        }
+    //#endregion
+    
+    const tabsInWindow = await getTabsInWindow({ currentWindow: true });
+    const pinnedTabs = await chrome.tabs.query({ currentWindow: true, pinned: true });
+    let startIndex = pinnedTabs.length;
+
+    const [youtubeShortsTabs, youtubeWatchTabs, otherYoutubeTabs, nonYoutubeTabs] = categorizeTabs(tabsInWindow);
+
+    if (!areTabsInPlace(youtubeShortsTabs, startIndex, tabsInWindow, "Youtube shorts")) 
+        return tabsInCurrentWindowAreKnownToBeSorted = false;
+
+    startIndex += youtubeShortsTabs.length;
+
+    if (!areTabsInPlace(youtubeWatchTabs, startIndex, tabsInWindow, "Youtube watch"))
+        return tabsInCurrentWindowAreKnownToBeSorted = false;
+    
+    if (!areYoutubeWatchTabsSorted(youtubeWatchTabs))
+        return tabsInCurrentWindowAreKnownToBeSorted = false;
+
+    startIndex += youtubeWatchTabs.length;
+
+    if (!areTabsInPlace(otherYoutubeTabs, startIndex, tabsInWindow, "Other Youtube")) 
+        return tabsInCurrentWindowAreKnownToBeSorted = false;
+    
+    startIndex += otherYoutubeTabs.length;
+
+    if (!areNonYoutubeTabsGroupedByDomain(nonYoutubeTabs, startIndex, tabsInWindow))
+        return tabsInCurrentWindowAreKnownToBeSorted = false;
+
+    return tabsInCurrentWindowAreKnownToBeSorted = true;
 }
 
 async function sortTabs() {
@@ -416,8 +593,11 @@ async function sortTabs() {
         let tabs = await chrome.tabs.query({currentWindow: true});
 
         let youtubeShortsTabs = tabs.filter(tab => tab.url.startsWith("https://www.youtube.com/shorts"));
-        let youtubeWatchTabs = tabs.filter(tab => tab.url.startsWith("https://www.youtube.com/watch"));
-        let otherYoutubeTabs = tabs.filter(tab => tab.url.startsWith("https://www.youtube.com") && !tab.url.startsWith("https://www.youtube.com/watch") && !tab.url.startsWith("https://www.youtube.com/shorts"));
+        let youtubeWatchTabsWithRemainingTimes = tabs.filter(tab => tab.url.startsWith("https://www.youtube.com/watch") && youtubeWatchTabsInfosOfCurrentWindow[tab.id]?.videoDetails?.remainingTime);
+
+        let youtubeWatchTabsWithRemainingTimesIds = new Set(youtubeWatchTabsWithRemainingTimes.map(tab => tab.id));
+
+        let otherYoutubeTabs = tabs.filter(tab => tab.url.startsWith("https://www.youtube.com") && !youtubeWatchTabsWithRemainingTimesIds.has(tab.id) && !tab.url.startsWith("https://www.youtube.com/shorts"));
         let nonYoutubeTabs = tabs.filter(tab => !tab.url.startsWith("https://www.youtube.com"));
 
         let pinnedTabs = await chrome.tabs.query({currentWindow: true, pinned: true});
@@ -429,17 +609,17 @@ async function sortTabs() {
         startIndex += youtubeShortsTabs.length;
 
         const remainingTimes = getRemainingTimesFromYoutubeWatchTabsInfos();
-        await moveTabs(youtubeWatchTabs, remainingTimes, startIndex);
+        await moveTabs(youtubeWatchTabsWithRemainingTimes, remainingTimes, startIndex);
 
-        startIndex += youtubeWatchTabs.length;
+        startIndex += youtubeWatchTabsWithRemainingTimes.length;
 
         await moveTabs(otherYoutubeTabs, null, startIndex);
 
         startIndex += otherYoutubeTabs.length;
 
-        let groups = groupTabsByDomain(nonYoutubeTabs);
+        let domainGroups = createDomainGroupsFromTabs(nonYoutubeTabs);
 
-        for (let group of groups) {
+        for (let group of domainGroups) {
             await moveTabs(group, null, startIndex);
             startIndex += group.length;
         }
@@ -461,6 +641,7 @@ async function moveTabs(tabs, remainingTimes, startIndex) {
                         reject(new Error(chrome.runtime.lastError.message));
                     } else {
                         console.log(`%cMoved tab with url ${tabs[i].url} to index ${startIndex + i}`, "color: green");
+                        if (youtubeWatchTabsInfosOfCurrentWindow[tabs[i].id]) youtubeWatchTabsInfosOfCurrentWindow[tabs[i].id].index = startIndex + i;
                         resolve(result);
                     }
                 });
@@ -471,7 +652,7 @@ async function moveTabs(tabs, remainingTimes, startIndex) {
     }
 }
 
-function groupTabsByDomain(tabs) {
+function createDomainGroupsFromTabs(tabs) {
     let groups = {};
 
     for (let tab of tabs) {
