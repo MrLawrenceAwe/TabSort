@@ -19,10 +19,8 @@ async function handleSendDetailsRequest(sendResponse) {
 }
 
 async function handleSendRemainingTimeRequest(sendResponse) {
-    logAndSend('info', "sendRemainingTime request received");
     const remainingTime = await getRemainingTimeOfVideo();
     sendResponse({remainingTime: remainingTime});
-    logAndSend('info', "Remaining time sent");
 }
 
 function handleSendContentScriptReadyRequest() {
@@ -63,6 +61,7 @@ async function handleMessage(request, sender, sendResponse) {
     // Indicate that the response will be sent asynchronously
     return true;
 }
+
 function logAndSend(type, message) {
     if (message !== undefined) {
         const formattedMessage = typeof message === 'string' ? message : (message.message || JSON.stringify(message));
@@ -73,7 +72,7 @@ function logAndSend(type, message) {
             console.log(formattedMessage);
         }
 
-        chrome.runtime.sendMessage({action: "logMessage", type, message: formattedMessage});
+        chrome.runtime.sendMessage({action: "logMessage", type, info: formattedMessage});
     } else {
         logAndSend('error', "Message is undefined");
     }
@@ -84,25 +83,20 @@ async function getVideoDetails(attempts = 0, maxAttempts = 100) {
         const video = await getVideo(attempts, maxAttempts); 
         const titleElement = document.querySelector('title');
 
-        //  if (video && titleElement){
-        //     logAndSend('info', "Video (Video duration " + video.duration + ", Video current Time " + video.currentTime +") and title element found");
-        //  } 
-
-        const remainingTime = video.duration - video.currentTime;
+        const remainingTime = (!isLiveStream())? (video.duration - video.currentTime) : 172800.5;
+        console.log(remainingTime)
         const title = titleElement.innerHTML;
+
+    
 
         if (isNaN(remainingTime)) {
             logAndSend('info', "Remaining time is NaN");
             throw new Error("Invalid remaining time.");
         } 
 
-        //logAndSend('info', "Remaining time calculated: " + remainingTime );
-        //logAndSend('info', "Returning remaining time and title");
-
         return {remainingTime, title};
     } catch (error) {
         if (attempts < maxAttempts) {
-            logAndSend('info', "Video not ready yet, will check again. attempts: " + attempts + "error: " + error);
             await new Promise(resolve => setTimeout(resolve, 100));
             return getVideoDetails(attempts + 1);
         } 
@@ -112,11 +106,20 @@ async function getVideoDetails(attempts = 0, maxAttempts = 100) {
     }
 }
 
+function isLiveStream() {
+    // YouTube usually adds a live badge to the video player for live streams.
+    const liveBadge = document.querySelector('.ytp-live');
+    if (liveBadge) {
+        logAndSend('info', "Live badge")
+        return true;
+    }
+    return false;
+}
+
 async function getVideo(attempts = 0, maxAttempts = 100, waitTime = 100) {
     const video = document.querySelector("video");
 
     if (video && video.readyState >= 2) {
-        logAndSend('info', "Video element found and metadata loaded");
         return video;
     }
 
@@ -147,7 +150,7 @@ async function getRemainingTimeOfVideo(attempts = 0, maxAttempts = 100){
            // logAndSend('info', "Video (Video duration " + video.duration + ", Video current Time " + video.currentTime +") found");
          }
 
-        const remainingTime = video.duration - video.currentTime;
+        const remainingTime = (!isLiveStream())? (video.duration - video.currentTime) : 172800.5;
 
         if (isNaN(remainingTime)) {
            // logAndSend('info', "Remaining time is NaN");
@@ -162,7 +165,7 @@ async function getRemainingTimeOfVideo(attempts = 0, maxAttempts = 100){
         if (attempts < maxAttempts) {
             logAndSend('info', "Video not ready, will check again. attempts: " + attempts + "error: " + error);
             await new Promise(resolve => setTimeout(resolve, 100));
-            return getVideoDetails(attempts + 1);
+            return getRemainingTimeOfVideo(attempts + 1);
         } 
         else {
             throw new Error("Maximum attempts reached.");
@@ -173,12 +176,10 @@ async function getRemainingTimeOfVideo(attempts = 0, maxAttempts = 100){
 async function sendContentScriptReady() {
     try {
         chrome.runtime.sendMessage({message: "contentScriptReady"}, response =>        {
-            logAndSend('info', "contentScriptReady message sent");
             if (!response || response.message !== "contentScriptAck") {
                 logAndSend('info', "contentScriptAck message not received, sending another contentScriptReady message");
             }
             else {
-                logAndSend('info', `contentScriptAck message received. ${(!contentScriptReadyAckReceived) ? "Sending of contentScriptReady message ceased" : ""}`);
                 contentScriptReadyAckReceived = true;
             }
         });

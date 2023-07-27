@@ -1,48 +1,43 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Tabs Info</title>
-    <style>
-        body {
-          width: 780px;
-          height: 580px;
-          overflow: auto;
-          margin: 0;
-          padding: 10px;
-        }
-        table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-        th, td {
-          border: 1px solid #ddd;
-          padding: 8px;
-          text-align: left;
-        }
-        th {
-          background-color: #4CAF50;
-          color: white;
-        }
-      </style>
-  </head>
-  <body>
-    <h1>Tabs Info</h1>
-    <table id="infoTable">
-        <tr>
-            <th>URL</th>
-            <th>Content Script Loaded?</th>
-            <th>Video Details</th>
-            <th>Metadata Loaded?</th>
-            <th>Tab State</th>
-            <th>Action Required</th> 
-            <th>Tab ID</th>
-            <th>Tab Index</th>
-        </tr>
-    </table>
-
-    <div id="tabStatus"></div>
-    <button id="sortButton" style="display: none;">Sort Tabs</button>
-
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabs Information Dashboard</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <main>
+        <header>
+            <div id="headerContainer">
+              <h1>Dashboard</h1>
+              <button id="sortButton" class="action-button">Sort Tabs</button>
+              <div id="tabsSorted" class="tabs-sorted">Tabs sorted</div>
+          </div>
+          <div id="headerBorder"></div>
+        </header>
+        <section>
+            <h2>Youtube Watch Tabs</h2>
+            <table id="infoTable">
+              <thead>
+                <tr>
+                    <th class="url-title">URL/Title</th>
+                    <th class="action-required">Action Required</th>
+                    <th class="remaining-time">Remaining Time</th>
+                    <th class="tab-index">Tab Index</th>
+                    <th class="tab-status">Tab Status</th>
+                </tr>
+            </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+        <footer>
+            <div id="controls">
+                <div id="tabStatus" class="status-message"></div>
+            </div>
+        </footer>
+    </main>
     <script src="popup.js"></script>
-  </body>
+</body>
 </html>
+

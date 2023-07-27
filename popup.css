@@ -1,0 +1,117 @@
+body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    padding: 20px;
+    background-color: #000;
+    color: #fff;
+}
+
+#headerContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+h1 {
+    text-align: left;
+    color: #fff;
+    padding-bottom: 5px;
+}
+
+#headerBorder {
+    border-bottom: 5px solid #737272;
+}
+
+h2 {
+    text-align: left;
+    color: #fff;
+    margin-bottom: 0px;
+}
+
+#infoTable {
+    width: 100%;
+    border-collapse: collapse;
+    color: #fff;
+}
+
+#infoTable th:first-child {
+    min-width: 300px;
+}
+
+#infoTable th {
+    text-align: left;
+    padding: 8px;
+    background: none;
+    border: none; 
+    border-bottom: 3px solid #737272; 
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#infoTable td:first-child {
+    min-width: 300px; 
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #fff;
+}
+
+#infoTable td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    color: #fff;
+}
+
+ #infoTable tr:nth-child(odd) td {
+    background-color: #222;
+    color: #fff;
+}
+
+.ready-row td {
+    background-color: green !important;
+}
+
+
+.user-action-link {
+    color: royalblue;
+}
+
+#controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.status-message {
+    margin-right: 20px;
+    color: #fff;
+}
+
+.action-button {
+    color: #000;
+    background-color: #fff;
+    border: none;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    font-size: 16px;
+    cursor: pointer;
+    align-self: flex-end;
+    margin-bottom: 15px;
+}
+
+.tabs-sorted {
+    display: none;
+    align-self: flex-end;
+    color: #4CAF50;
+    font-size: 13px;
+    padding: 10px 0;
+    margin-bottom: 15px;
+}
+
+.hide-col-action-required,
+.hide-col-tab-status {
+    display: none;
+}

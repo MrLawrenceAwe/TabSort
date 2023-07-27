@@ -2,7 +2,7 @@
 "manifest_version": 3,
 "name": "TabSort",
 "version": "1.0",
-"description": "Sorts tabs by length of youtube video, and groups tabs from the same webpage",
+"description": "Sorts tabs by length of youtube video, and groups tabs from the same domain",
 "author": "Lawrence Awe",
 "permissions": ["tabs", "scripting", "activeTab", "storage", "windows"],
 "host_permissions": ["*://*.youtube.com/watch*"],
