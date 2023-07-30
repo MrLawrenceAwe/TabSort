@@ -86,8 +86,7 @@ async function getVideoDetails(attempts = 0, maxAttempts = 100) {
         const remainingTime = (!isLiveStream())? (video.duration - video.currentTime) : 172800.5;
         console.log(remainingTime)
         const title = titleElement.innerHTML;
-
-    
+        console.log(title);
 
         if (isNaN(remainingTime)) {
             logAndSend('info', "Remaining time is NaN");
@@ -156,9 +155,6 @@ async function getRemainingTimeOfVideo(attempts = 0, maxAttempts = 100){
            // logAndSend('info', "Remaining time is NaN");
             throw new Error("Invalid remaining time.");
         } 
-
-       // logAndSend('info', "Remaining time calculated: " + remainingTime );
-       // logAndSend('info', "Returning remaining time");
 
         return remainingTime;
     } catch (error) {

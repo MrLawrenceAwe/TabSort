@@ -16,7 +16,9 @@ const USER_ACTIONS = {
   NO_ACTION: ''
 }
 
-let tabsInCurrentWindowAreKnownToBeSorted = true;
+let tabsInCurrentWindowAreKnownToBeSorted = false;
+let totalTabs;
+let tabsReadyCount;
 
 initialise();
 
@@ -43,19 +45,143 @@ function initialise() {
 }
 
 async function updatePopup() {
-  let activeTabId;
+  //#region Inner Functions
+    async function getActiveTabId() {
+      return new Promise((resolve, reject) => {
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+          if (tabs.length) {
+            resolve(tabs[0].id);
+          } else {
+            reject(new Error('No active tab found'));
+          }
+        });
+      });
+    }
 
-  try {
-    activeTabId = await getActiveTabId();
-  } catch (error) {
-    logAndSend(MESSAGE_TYPES.ERROR, error);
-    return;
-  }
+    function insertRowCells(row, tabInfo) {
+      const ACTIVATE_TAB = 'activateTab';
+      const RELOAD_TAB_ACTION = 'reloadTab';
+      
+      row.insertCell(0).textContent = (tabInfo.videoDetails?.title) ? tabInfo.videoDetails.title : tabInfo.url;
+      const userAction = determineUserAction(tabInfo);
+      if (!tabsInCurrentWindowAreKnownToBeSorted) insertUserActionCell(row, tabInfo, userAction);
+      insertInfoCells(row, tabInfo);
+      if (userAction === USER_ACTIONS.NO_ACTION && !tabsInCurrentWindowAreKnownToBeSorted) row.classList.add('ready-row');
+    
+      //#region Inner Functions
+      function insertInfoCells(row, tabInfo) {
+        let INFO_KEYS = (tabsInCurrentWindowAreKnownToBeSorted) ? ['videoDetails', 'index'] : ['videoDetails', 'index', 'status'] 
+        INFO_KEYS.forEach((key, index) => {
+          let offset = (tabsInCurrentWindowAreKnownToBeSorted) ? 1 : 2
+          const cell = row.insertCell(index + offset);
+          let value = tabInfo[key];
+          if (key === 'videoDetails'){
+            value = (value?.remainingTime !== null && value?.remainingTime !== undefined) ? ((!tabInfo.isLiveStream) ? convertSecondsToStringHoursMinutesandSeconds(value.remainingTime): "Live Stream") : 'unavailable';
+          } 
+          if (key === 'index') value++
+          cell.textContent = (tabsInCurrentWindowAreKnownToBeSorted) ? value : ((key, value) => {
+            if (!value) {
+              return (key === 'contentScriptReady' || key === 'metadataLoaded') ? false : USER_ACTIONS.NO_ACTION;
+            }
+            return value;
+          })(key, value);
+        });
+      }
+    
+      function convertSecondsToStringHoursMinutesandSeconds(seconds){
+        if (typeof seconds !== 'number' || !isFinite(seconds)) {
+            logAndSend('error',"Invalid input. The function expects a finite number.");
+        }
+    
+        const totalMinutes = Math.floor(seconds / 60);
+        const hours = Math.floor(totalMinutes / 60);
+        const remainingMinutes = totalMinutes % 60; // This will give the minutes that are not part of the calculated hours.
+        const remainingSeconds = Math.floor(seconds % 60);
+    
+        if (hours < 1) {
+            return `${remainingMinutes}m ${remainingSeconds}s`;
+        } else {
+            return `${hours}h ${remainingMinutes}m ${remainingSeconds}s`;
+        }
+      }
+      
+      function insertUserActionCell(row, tabInfo, userAction) {
+        const userActionCell = row.insertCell(1);
+        const userActionLink = document.createElement('a');
+        userActionLink.href = '#';
+        userActionLink.classList.add('user-action-link');
+      
+        let messageAction = (userAction === USER_ACTIONS.RELOAD_TAB) ? RELOAD_TAB_ACTION : ACTIVATE_TAB;
+      
+        if (userAction === USER_ACTIONS.RELOAD_TAB || !(tabInfo.isActiveTab)) {
+          userActionLink.textContent = userAction;
+        } 
+        else userActionCell.textContent = userAction;
+      
+        userActionLink.addEventListener('click', () => {
+          chrome.runtime.sendMessage({action: messageAction, tabId: tabInfo.id});
+        });
+      
+        if (userActionLink.textContent) {
+          userActionCell.appendChild(userActionLink);
+        }
+      }
+      //#endregion 
+    }
+
+    async function updateyoutubeWatchTabsReadyStatusDivAndSortButton() {
+      //#region Inner Functions
+        function updateyoutubeWatchTabsReadyStatusMessage() {
+          if (!tabsInCurrentWindowAreKnownToBeSorted) {
+            youtubeWatchTabsReadyStatusElement.style.display = totalTabs <= 1 ? 'none' : 'block';
+            youtubeWatchTabsReadyStatusElement.textContent = `${tabsReadyCount}/${totalTabs} ready for sort.`;
+            youtubeWatchTabsReadyStatusElement.style.color = "white";
+          }
+          else youtubeWatchTabsReadyStatusElement.style.display = 'none'
+        }
+        
+        function updateSortButtonAndTabsSortedText() {
+          const tabsSortedElement = document.getElementById('tabsSorted');
+          const table = document.getElementById('infoTable');
+      
+          if (tabsInCurrentWindowAreKnownToBeSorted) {
+            sortButton.style.display = 'none';
+            tabsSortedElement.style.display = 'block'
+      
+            for (let i = 1; i < table.rows.length; i++) {
+              table.rows[i].classList.remove('ready-row');
+            }
+            
+          }
+          else {
+            sortButton.style.display = 'block';
+            tabsSortedElement.style.display = 'none'
+      
+          }
+          
+          if (tabsReadyCount === totalTabs){
+            sortButton.style.backgroundColor = 'forestgreen';
+            sortButton.innerHTML = 'Sort All Tabs';
+          }
+          else{
+            sortButton.style.backgroundColor = 'white';
+            sortButton.innerHTML = 'Sort Ready & Non Youtube Watch Tabs';
+          } 
+        }
+      //#endregion
+      const youtubeWatchTabsReadyStatusElement = document.getElementById('youtubeWatchTabsReadyStatus');
+      const sortButton = document.getElementById('sortButton');
+    
+      updateyoutubeWatchTabsReadyStatusMessage();
+      updateSortButtonAndTabsSortedText();
+    }
+  //#endregion Inner Functions
+  
+  let activeTabId = await getActiveTabId();
 
   if (tabsInCurrentWindowAreKnownToBeSorted) hideColumnsThatAreUnWantedWhenTabsInTheCurrentWindowAreKnownToBeSorted()
   else showColumnsThatAreUnWantedWhenTabsInTheCurrentWindowAreKnownToBeSorted()
-
-
+  
   chrome.runtime.sendMessage({action: "sendTabsInfos"}, function(response) {
     const table = document.getElementById('infoTable');
     let tabsInfos = response.youtubeWatchTabsInfosOfCurrentWindow;
@@ -70,27 +196,16 @@ async function updatePopup() {
       const tabInfo = tabsInfos[tabId];
       tabInfo.isActiveTab = tabId == activeTabId;
 
-      if(!tabInfo.url){
-       logAndSend(MESSAGE_TYPES.ERROR, `No url for tab with id ${tabId}`);
-        continue;
-      } 
-
       insertRowCells(row, tabInfo);
     }
 
-    updateTabStatusDiv(tabsInfos);
-  });
-}
+    totalTabs = Object.keys(tabsInfos).length;
+    tabsReadyCount = countTabsReadyForSorting(tabsInfos);
 
-async function getActiveTabId() {
-  return new Promise((resolve, reject) => {
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-      if (tabs.length) {
-        resolve(tabs[0].id);
-      } else {
-        reject(new Error('No active tab found'));
-      }
-    });
+    updateTabsInCurrentWindowAreKnownToBeSorted()
+
+    if ((totalTabs == tabsReadyCount)  && !tabsInCurrentWindowAreKnownToBeSorted) addClassToAllRows(table, "all-ready-row");
+    updateyoutubeWatchTabsReadyStatusDivAndSortButton(tabsInfos);
   });
 }
 
@@ -110,152 +225,24 @@ function showColumnsThatAreUnWantedWhenTabsInTheCurrentWindowAreKnownToBeSorted(
   tabStatus.classList.remove('hide-col-tab-status');
 }
 
-function insertRowCells(row, tabInfo) {
-  const ACTIVATE_TAB = 'activateTab';
-  const RELOAD_TAB_ACTION = 'reloadTab';
-  
-  row.insertCell(0).textContent = (tabInfo.videoDetails?.title) ? tabInfo.videoDetails.title : tabInfo.url;
-  const userAction = determineUserAction(tabInfo);
-  if (!tabsInCurrentWindowAreKnownToBeSorted) insertUserActionCell(row, tabInfo, userAction);
-  insertInfoCells(row, tabInfo);
-  if (userAction === USER_ACTIONS.NO_ACTION && !tabsInCurrentWindowAreKnownToBeSorted) row.classList.add('ready-row');
-
-  //#region Inner Functions
-
-  function insertInfoCells(row, tabInfo) {
-    let INFO_KEYS = (tabsInCurrentWindowAreKnownToBeSorted) ? ['videoDetails', 'index'] : ['videoDetails', 'index', 'status'] 
-    INFO_KEYS.forEach((key, index) => {
-      let offset = (tabsInCurrentWindowAreKnownToBeSorted) ? 1 : 2
-      const cell = row.insertCell(index + offset);
-      let value = tabInfo[key];
-      if (key === 'videoDetails'){
-        value = (value?.remainingTime !== null && value?.remainingTime !== undefined) ? ((!tabInfo.isLiveStream) ? convertSecondsToStringHoursMinutesandSeconds(value.remainingTime): "Live stream") : 'unavailable';
-      } 
-      if (key === 'index') value++
-      cell.textContent = (tabsInCurrentWindowAreKnownToBeSorted) ? value : ((key, value) => {
-        if (!value) {
-          return (key === 'contentScriptReady' || key === 'metadataLoaded') ? false : USER_ACTIONS.NO_ACTION;
-        }
-        return value;
-      })(key, value);
-    });
-  }
-
-  function convertSecondsToStringHoursMinutesandSeconds(seconds){
-    if (typeof seconds !== 'number' || !isFinite(seconds)) {
-        logAndSend('error',"Invalid input. The function expects a finite number.");
+async function updateTabsInCurrentWindowAreKnownToBeSorted(){
+  //#region Inner Function
+    function checkIfTabsSortedInCurrentWindow() {
+      return new Promise(resolve => {
+        chrome.runtime.sendMessage({action: "areTabsInCurrentWindowKnownToBeSorted"}, resolve);
+      });
     }
-
-    const totalMinutes = Math.floor(seconds / 60);
-    const hours = Math.floor(totalMinutes / 60);
-    const remainingMinutes = totalMinutes % 60; // This will give the minutes that are not part of the calculated hours.
-    const remainingSeconds = Math.floor(seconds % 60);
-
-    if (hours < 1) {
-        return `${remainingMinutes}m ${remainingSeconds}s`;
-    } else {
-        return `${hours}h ${remainingMinutes}m ${remainingSeconds}s`;
-    }
-  }
-  
-  function insertUserActionCell(row, tabInfo, userAction) {
-    const userActionCell = row.insertCell(1);
-    const userActionLink = document.createElement('a');
-    userActionLink.href = '#';
-    userActionLink.classList.add('user-action-link');
-  
-    let messageAction = (userAction === USER_ACTIONS.RELOAD_TAB) ? RELOAD_TAB_ACTION : ACTIVATE_TAB;
-  
-    if (userAction === USER_ACTIONS.RELOAD_TAB || !(tabInfo.isActiveTab)) {
-      userActionLink.textContent = userAction;
-    } 
-    else userActionCell.textContent = userAction;
-  
-    userActionLink.addEventListener('click', () => {
-      chrome.runtime.sendMessage({action: messageAction, tabId: tabInfo.id});
-    });
-  
-    if (userActionLink.textContent) {
-      userActionCell.appendChild(userActionLink);
-    }
-  }
-  //#endregion 
+  //#endregion Inner Function
+  tabsInCurrentWindowAreKnownToBeSorted = await checkIfTabsSortedInCurrentWindow();
 }
 
-async function updateTabStatusDiv(tabData) {
-  //#region Inner Functions
-  function getTotalTabs() {
-    return Object.keys(tabData).length;
-  }
-  
-  function countTabsReadyForSorting(tabData) {
-    return Object.values(tabData).filter(tabInfo => isTabReadyForSorting(tabInfo)).length;
-  }
-  
+function countTabsReadyForSorting(tabData) {
+  //#region Inner Function
   function isTabReadyForSorting(tabInfo) {
     return tabInfo.url && determineUserAction(tabInfo) === USER_ACTIONS.NO_ACTION;
   }
-  
-  function checkIfTabsSortedInCurrentWindow() {
-    return new Promise(resolve => {
-      chrome.runtime.sendMessage({action: "areTabsInCurrentWindowKnownToBeSorted"}, resolve);
-    });
-  }
-  
-  function getHTMLElementById(elementId) {
-    return document.getElementById(elementId);
-  }
-  
-  function updateTabStatusMessage() {
-    if (!tabsInCurrentWindowAreKnownToBeSorted) {
-      tabStatusElement.style.display = totalTabs <= 1 ? 'none' : 'block';
-      tabStatusElement.textContent = `${tabsReadyCount}/${totalTabs} ready for sort.`;
-      tabStatusElement.style.color = "white";
-    }
-    else tabStatusElement.style.display = 'none'
-  }
-  
-  function updateSortButtonAndTabsSortedText() {
-    const tabsSortedElement = document.getElementById('tabsSorted');
-    const table = document.getElementById('infoTable');
-
-    if (tabsInCurrentWindowAreKnownToBeSorted) {
-      sortButton.style.display = 'none';
-      tabsSortedElement.style.display = 'block'
-
-      for (let i = 1; i < table.rows.length; i++) {
-        table.rows[i].classList.remove('ready-row');
-      }
-      
-    }
-    else {
-      sortButton.style.display = 'block';
-      tabsSortedElement.style.display = 'none'
-
-    }
-    
-    const allTabsReady = (tabsReadyCount === totalTabs);
-    if (allTabsReady){
-      sortButton.style.backgroundColor = 'forestgreen';
-      sortButton.innerHTML = 'Sort All Tabs';
-    }
-    else{
-      sortButton.style.backgroundColor = 'white';
-      sortButton.innerHTML = 'Sort Ready & Non Youtube Watch Tabs';
-    } 
-  }
-  //#endregion
-
-  const totalTabs = getTotalTabs();
-  const tabsReadyCount = countTabsReadyForSorting(tabData);
-
-  tabsInCurrentWindowAreKnownToBeSorted = await checkIfTabsSortedInCurrentWindow();
-
-  const tabStatusElement = getHTMLElementById('tabStatus');
-  const sortButton = getHTMLElementById('sortButton');
-
-  updateTabStatusMessage();
-  updateSortButtonAndTabsSortedText();
+  //#endregion Inner Function
+  return Object.values(tabData).filter(tabInfo => isTabReadyForSorting(tabInfo)).length;
 }
 
 function determineUserAction(tabInfo) {
@@ -277,6 +264,12 @@ function determineUserAction(tabInfo) {
     }
  }
  else return USER_ACTIONS.NO_ACTION;
+}
+
+function addClassToAllRows(table, className) {
+  for (let i = 0; i < table.rows.length; i++) {
+      table.rows[i].classList.add(className);
+  }
 }
 
 async function logAndSend(type = MESSAGE_TYPES.ERROR, message = "Message is undefined") {
