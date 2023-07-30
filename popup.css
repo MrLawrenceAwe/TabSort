@@ -69,7 +69,13 @@ h2 {
 }
 
 .ready-row td {
+    background-color: white !important;
+    color: black !important
+}
+
+.all-ready-row td {
     background-color: green !important;
+    color: white !important
 }
 
 
