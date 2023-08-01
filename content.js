@@ -106,13 +106,8 @@ async function getVideoDetails(attempts = 0, maxAttempts = 100) {
 }
 
 function isLiveStream() {
-    // YouTube usually adds a live badge to the video player for live streams.
     const liveBadge = document.querySelector('.ytp-live');
-    if (liveBadge) {
-        logAndSend('info', "Live badge")
-        return true;
-    }
-    return false;
+    return liveBadge;
 }
 
 async function getVideo(attempts = 0, maxAttempts = 100, waitTime = 100) {

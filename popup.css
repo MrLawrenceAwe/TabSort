@@ -121,3 +121,7 @@ h2 {
 .hide-col-tab-status {
     display: none;
 }
+
+#sortButton {
+    display: none !important
+  }

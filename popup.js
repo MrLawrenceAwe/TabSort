@@ -13,6 +13,7 @@ const USER_ACTIONS = {
   RELOAD_TAB: 'Reload tab',
   INTERACT_WITH_TAB: 'Interact with tab',
   FACILITATE_LOAD: 'Facilitate load',
+  INTERACT_WITH_TAB_OR_RELOAD: 'Interact with tab/Reload tab',
   NO_ACTION: ''
 }
 
@@ -24,6 +25,7 @@ initialise();
 
 //#region Functions 
 function initialise() {
+  
   chrome.runtime.sendMessage({action: "updateYoutubeWatchTabsInfos"})
   const updateYoutubeWatchTabsInfosIntervalId = setInterval(() => chrome.runtime.sendMessage({action: "updateYoutubeWatchTabsInfos"}), 500); 
 
@@ -38,10 +40,6 @@ function initialise() {
     clearInterval(updatePopupIntervalId);
     clearInterval(updateYoutubeWatchTabsInfosIntervalId)
   };
-
-  document.getElementById('sortButton').addEventListener('click', function() {
-    chrome.runtime.sendMessage({action: "sortTabs"});
-  });
 }
 
 async function updatePopup() {
@@ -107,24 +105,28 @@ async function updatePopup() {
       
       function insertUserActionCell(row, tabInfo, userAction) {
         const userActionCell = row.insertCell(1);
-        const userActionLink = document.createElement('a');
-        userActionLink.href = '#';
-        userActionLink.classList.add('user-action-link');
       
-        let messageAction = (userAction === USER_ACTIONS.RELOAD_TAB) ? RELOAD_TAB_ACTION : ACTIVATE_TAB;
-      
-        if (userAction === USER_ACTIONS.RELOAD_TAB || !(tabInfo.isActiveTab)) {
-          userActionLink.textContent = userAction;
-        } 
-        else userActionCell.textContent = userAction;
-      
-        userActionLink.addEventListener('click', () => {
-          chrome.runtime.sendMessage({action: messageAction, tabId: tabInfo.id});
-        });
-      
-        if (userActionLink.textContent) {
+        if (userAction === USER_ACTIONS.INTERACT_WITH_TAB_OR_RELOAD) {
+          const interactActionLink = createLink(USER_ACTIONS.INTERACT_WITH_TAB, ACTIVATE_TAB, tabInfo.id);
+          const reloadActionLink = createLink(USER_ACTIONS.RELOAD_TAB, RELOAD_TAB_ACTION, tabInfo.id);
+          userActionCell.appendChild(interactActionLink);
+          userActionCell.appendChild(document.createTextNode(">"));
+          userActionCell.appendChild(reloadActionLink);
+        } else {
+          const userActionLink = createLink(userAction, userAction === USER_ACTIONS.RELOAD_TAB ? RELOAD_TAB_ACTION : ACTIVATE_TAB, tabInfo.id);
           userActionCell.appendChild(userActionLink);
         }
+      }
+
+      function createLink(text, messageAction, tabId) {
+        const link = document.createElement('a');
+        link.href = '#';
+        link.classList.add('user-action-link');
+        link.textContent = text;
+        link.addEventListener('click', () => {
+          chrome.runtime.sendMessage({action: messageAction, tabId: tabId});
+        });
+        return link;
       }
       //#endregion 
     }
@@ -154,7 +156,10 @@ async function updatePopup() {
             
           }
           else {
-            sortButton.style.display = 'block';
+            setTimeout(() => {
+              if (!tabsInCurrentWindowAreKnownToBeSorted)
+              sortButton.style.setProperty('display', 'block', 'important')
+            }, 500)
             tabsSortedElement.style.display = 'none'
       
           }
@@ -209,6 +214,7 @@ async function updatePopup() {
   });
 }
 
+
 function hideColumnsThatAreUnWantedWhenTabsInTheCurrentWindowAreKnownToBeSorted() {
   const actionRequired = document.querySelector('.action-required');
   const tabStatus = document.querySelector('.tab-status');
@@ -250,11 +256,11 @@ function determineUserAction(tabInfo) {
   if (!remainingTimeAvailable){
     switch(tabInfo.status) {
       case TAB_STATES.UNSUSPENDED:
-        if((tabInfo.isActiveTab) || (!tabInfo.isActiveTab && !tabInfo.contentScriptReady)){
+        if((tabInfo.isActiveTab) || !tabInfo.contentScriptReady){
           return USER_ACTIONS.RELOAD_TAB;
         }
 
-        return USER_ACTIONS.INTERACT_WITH_TAB;
+        return USER_ACTIONS.INTERACT_WITH_TAB_OR_RELOAD;
       case TAB_STATES.SUSPENDED:
         return USER_ACTIONS.INTERACT_WITH_TAB;
       case TAB_STATES.LOADING:
