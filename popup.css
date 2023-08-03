@@ -117,8 +117,7 @@ h2 {
     margin-bottom: 15px;
 }
 
-.hide-col-action-required,
-.hide-col-tab-status {
+.hide{
     display: none;
 }
 
