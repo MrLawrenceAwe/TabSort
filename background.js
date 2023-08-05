@@ -136,7 +136,7 @@ function handleMessage(message, sender, sendResponse){
                     throw new Error(`Received metadataLoaded message from tab with url ${sender.tab.url}, but no tab info was found`);
                 }
             } catch (error) {
-                console.log(error)
+                console.error(error)
             }
         }
     //#endregion
@@ -465,18 +465,20 @@ function handleTabUpdateToNonYoutubeWatchTab(tabId, tab) {
 function handleRemovedTab(tabId, removeInfo) {
     delete tabUrls[tabId]
     deleteFromYoutubeWatchTabInfosIfInYoutubeWatchTabsInfos(tabId);
-    updateIndexOfAllTabsAfterIndex(removeInfo.windowId,tabIndexes[tabId])
+    updateIndexOfAllTabsFromIndex(removeInfo.windowId,tabIndexes[tabId])
     delete tabIndexes[tabId]
 }
 
 function handleMovedTab(tabId,moveInfo){
-    if (youtubeWatchTabsInfosOfCurrentWindow[tabId])
-    youtubeWatchTabsInfosOfCurrentWindow[tabId].index = moveInfo.toIndex;
+    if (youtubeWatchTabsInfosOfCurrentWindow[tabId]){
+        youtubeWatchTabsInfosOfCurrentWindow[tabId].index = moveInfo.toIndex;
+        tabIndexes[tabId] = moveInfo.toIndex
+    }
 
     let startIndex = (moveInfo.fromIndex < moveInfo.toIndex) ? moveInfo.fromIndex : (moveInfo.toIndex+1)
     let endIndex = (moveInfo.fromIndex < moveInfo.toIndex) ? (moveInfo.toIndex-1) : moveInfo.fromIndex
 
-    updateIndexOfAllTabsAfterIndex(moveInfo.windowId, startIndex, endIndex)
+    updateIndexOfAllTabsFromIndex(moveInfo.windowId, startIndex, endIndex)
 }
 
 async function deleteFromYoutubeWatchTabInfosIfInYoutubeWatchTabsInfos(tabId){
@@ -489,19 +491,19 @@ function handleDetachedTab(tabId, detachInfo) {
     delete tabUrls[tabId]
     delete tabIndexes[tabId]
     deleteFromYoutubeWatchTabInfosIfInYoutubeWatchTabsInfos(tabId);
-    updateIndexOfAllTabsAfterIndex(detachInfo.oldWindowId,detachInfo.oldPosition)
+    updateIndexOfAllTabsFromIndex(detachInfo.oldWindowId,detachInfo.oldPosition)
 }
 
 function handleAttachedTab(tabId, attachInfo){
-    updateIndexOfAllTabsAfterIndex(attachInfo.newWindowId, (attachInfo.newPosition+1))
+    updateIndexOfAllTabsFromIndex(attachInfo.newWindowId, (attachInfo.newPosition+1))
 }
 
-async function updateIndexOfAllTabsAfterIndex(windowId, startIndex, endIndex = Infinity) {
+async function updateIndexOfAllTabsFromIndex(windowId, startIndex, endIndex = Infinity) {
     let tabsInWindow = await getTabsInWindow({windowId});
     tabsInWindow = tabsInWindow.filter(tab => tab.index >= startIndex && tab.index <= endIndex);
     
     for (const tab of tabsInWindow) {
-        const tabInfo = windowsOfYoutubeWatchTabsInfos[windowId][tab.id];
+        const tabInfo = windowsOfYoutubeWatchTabsInfos[windowId]?.[tab.id];
         if (tabInfo) {
             tabInfo.index = tab.index;
             tabIndexes[tab.id] = tab.index
@@ -521,7 +523,7 @@ function handleReplacedTab(addedTabId, removedTabId) {
 
 function handleCreatedTab(tab){
     tabIndexes[tab.id] = tab.index; 
-    updateIndexOfAllTabsAfterIndex(tab.windowId, tab.index)
+    updateIndexOfAllTabsFromIndex(tab.windowId, tab.index)
 }
 
 async function updateTabsInCurrentWindowAreKnownToBeSorted() {
