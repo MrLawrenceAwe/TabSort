@@ -107,7 +107,7 @@ function handleMessage(message, sender, sendResponse){
         }
 
         function handleContentScriptReady() {
-            if(youtubeWatchTabsInfosOfCurrentWindow[sender.tab.id].contentScriptReady) return;
+            if(youtubeWatchTabsInfosOfCurrentWindow[sender.tab.id] && youtubeWatchTabsInfosOfCurrentWindow[sender.tab.id].contentScriptReady) return;
             loadYoutubeWatchTabInfoIntoYoutubeWatchTabsInfosOfCurrentWindow(sender.tab);
             youtubeWatchTabsInfosOfCurrentWindow[sender.tab.id].contentScriptReady = true;
             sendMessageToTab(sender.tab.id, "sendMetadataLoaded");
