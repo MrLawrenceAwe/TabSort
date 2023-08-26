@@ -581,7 +581,9 @@ async function updateTabsInCurrentWindowAreKnownToBeSorted() {
                 if (!groups[url.hostname]) groups[url.hostname] = [];
                 groups[url.hostname].push(tab);
             });
-        
+            
+            console.log("Grouped other tabs by hostname:", groups); // Added log statement
+            
             let lastHostname = null;
             let highestOtherTabIndex = (otherTabs.length > 0) ?
                 Math.max(...otherTabs.map(tab => tabsInWindow.indexOf(tab))) :
@@ -591,24 +593,26 @@ async function updateTabsInCurrentWindowAreKnownToBeSorted() {
                 if (lastHostname !== null &&
                     lastHostname !== currentHostname &&
                     groups[lastHostname].length > 0) {
+                    console.error("Ordering mismatch for hostnames:", lastHostname, "and", currentHostname); // Added log statement
                     tabsInCurrentWindowAreKnownToBeSorted = false;
                     return false;
                 }
                 let index = groups[currentHostname].findIndex(t => t.id === tab.id);
                 if (index !== -1) groups[currentHostname].splice(index, 1);
                 else {
+                    console.error("Tab not found in the grouped tabs for hostname:", currentHostname, "with tab ID:", tab.id); // Added log statement
                     tabsInCurrentWindowAreKnownToBeSorted = false;
                     return false;
                 }
                 lastHostname = currentHostname;
             }
+            console.log("Other tabs are grouped correctly by domain"); // Added log statement
             return true;
-        }
+        }        
     //#endregion
     
-    const tabsInWindow = await getTabsInWindow({ currentWindow: true });
-    const pinnedTabs = await chrome.tabs.query({ currentWindow: true, pinned: true });
-    let startIndex = pinnedTabs.length;
+    const tabsInWindow = await chrome.tabs.query({currentWindow: true, pinned: false});
+    let startIndex = 0;
 
     const [youtubeShortsTabs, youtubeWatchTabs, otherYoutubeTabs, nonYoutubeTabs] = categorizeTabs(tabsInWindow);
 
@@ -640,7 +644,7 @@ async function updateTabsInCurrentWindowAreKnownToBeSorted() {
 
 async function sortTabs() {
     try {
-        let tabs = await chrome.tabs.query({currentWindow: true});
+        let tabs = await chrome.tabs.query({currentWindow: true, pinned: false});
 
         let youtubeShortsTabs = tabs.filter(tab => tab.url.startsWith("https://www.youtube.com/shorts"));
         let youtubeWatchTabsWithRemainingTimes = tabs.filter(tab => tab.url.startsWith("https://www.youtube.com/watch") && youtubeWatchTabsInfosOfCurrentWindow[tab.id]?.videoDetails?.remainingTime != undefined);

@@ -45,8 +45,8 @@ function initialise() {
 async function updatePopup() {
   let activeTabId = await getActiveTabId();
 
-  if (tabsInCurrentWindowAreKnownToBeSorted) toggleActionAndStatusColumnsVisibility(false)
-  else toggleActionAndStatusColumnsVisibility(true)
+  if (tabsInCurrentWindowAreKnownToBeSorted) setActionAndStatusColumnsVisibility(false)
+  else setActionAndStatusColumnsVisibility(true)
 
   chrome.runtime.sendMessage({action: "sendTabsInfos"}, function(response) {
     const table = document.getElementById('infoTable');
@@ -86,7 +86,7 @@ async function getActiveTabId() {
   });
 }
 
-function toggleActionAndStatusColumnsVisibility(visible) {
+function setActionAndStatusColumnsVisibility(visible) {
   const actionRequired = document.querySelector('.action-required');
   const tabStatus = document.querySelector('.tab-status');
 
