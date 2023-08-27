@@ -152,7 +152,7 @@ function insertRowCells(row, tabInfo) {
       userActionCell.appendChild(document.createTextNode(">"));
       userActionCell.appendChild(reloadActionLink);
     } else {
-      const userActionLink = createLink(userAction, userAction === USER_ACTIONS.RELOAD_TAB ? RELOAD_TAB_ACTION : ACTIVATE_TAB, tabInfo.id);
+      const userActionLink = createLink(userAction, (userAction === USER_ACTIONS.RELOAD_TAB) ? RELOAD_TAB_ACTION : ACTIVATE_TAB, tabInfo.id);
       userActionCell.appendChild(userActionLink);
     }
   }
