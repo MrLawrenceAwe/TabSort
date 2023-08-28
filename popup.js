@@ -248,7 +248,7 @@ async function updateyoutubeWatchTabsReadyStatusDivAndSortButton() {
 
 function determineUserAction(tabInfo) {
   tabInfo.remainingTimeAvailable = (tabInfo.videoDetails?.remainingTime !== null && tabInfo.videoDetails?.remainingTime !== undefined)
-  let unspendedLessThanHalfASecondAgo = tabInfo.unsuspendedTimestamp && (Date.now() - tabInfo.unsuspendedTimestamp) < 500;
+  let unspendedLessThanHalfASecondAgo = tabInfo.unsuspendedTimestamp && (Date.now() - tabInfo.unsuspendedTimestamp) < 5000;
 
   if (!tabInfo.remainingTimeAvailable){
     switch(tabInfo.status) {

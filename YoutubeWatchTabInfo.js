@@ -7,5 +7,6 @@ export default class YoutubeWatchTabInfo {
       this.videoDetails = null;
       this.metadataLoaded = false;
       this.contentScriptReady = false;
+      this.unsuspendedTimeStamp = null;
     }
 }
