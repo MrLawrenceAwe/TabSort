@@ -225,6 +225,7 @@ async function loadYoutubeWatchTabStateIntoYoutubeWatchTabsInfosOfCurrentWindow(
         if (tab.discarded || tab.status === "unloaded") {
             setTabState(tab, 'suspended');
         } else if (tab.status === "complete") {
+            youtubeWatchTabsInfosOfCurrentWindow[tabId].unsuspendedTimestamp = Date.now();
             setTabState(tab, 'unsuspended');
         } else if (tab.status === "loading") {
             setTabState(tab, 'loading');

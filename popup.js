@@ -104,7 +104,7 @@ function insertRowCells(row, tabInfo) {
   const userAction = determineUserAction(tabInfo);
   if (!tabsInCurrentWindowAreKnownToBeSorted) insertUserActionCell(row, tabInfo, userAction);
   insertInfoCells(row, tabInfo);
-  if (userAction === USER_ACTIONS.NO_ACTION && !tabsInCurrentWindowAreKnownToBeSorted) row.classList.add('ready-row');
+  if (tabInfo.remainingTimeAvailable && !tabsInCurrentWindowAreKnownToBeSorted) row.classList.add('ready-row');
 
   function insertInfoCells(row, tabInfo) {
     let INFO_KEYS = (tabsInCurrentWindowAreKnownToBeSorted) ? ['videoDetails', 'index'] : ['videoDetails', 'index', 'status'] 
@@ -149,7 +149,7 @@ function insertRowCells(row, tabInfo) {
       const interactActionLink = createLink(USER_ACTIONS.INTERACT_WITH_TAB, ACTIVATE_TAB, tabInfo.id);
       const reloadActionLink = createLink(USER_ACTIONS.RELOAD_TAB, RELOAD_TAB_ACTION, tabInfo.id);
       userActionCell.appendChild(interactActionLink);
-      userActionCell.appendChild(document.createTextNode(">"));
+      userActionCell.appendChild(document.createTextNode("/"));
       userActionCell.appendChild(reloadActionLink);
     } else {
       const userActionLink = createLink(userAction, (userAction === USER_ACTIONS.RELOAD_TAB) ? RELOAD_TAB_ACTION : ACTIVATE_TAB, tabInfo.id);
@@ -173,7 +173,7 @@ function insertRowCells(row, tabInfo) {
 function countTabsReadyForSorting(tabData) {
   //#region Inner Function
   function isTabReadyForSorting(tabInfo) {
-    return tabInfo.url && determineUserAction(tabInfo) === USER_ACTIONS.NO_ACTION;
+    return tabInfo.url && tabInfo.remainingTimeAvailable;
   }
   //#endregion Inner Function
   return Object.values(tabData).filter(tabInfo => isTabReadyForSorting(tabInfo)).length;
@@ -247,10 +247,13 @@ async function updateyoutubeWatchTabsReadyStatusDivAndSortButton() {
 }
 
 function determineUserAction(tabInfo) {
-  let remainingTimeAvailable = (tabInfo.videoDetails?.remainingTime !== null && tabInfo.videoDetails?.remainingTime !== undefined)
-  if (!remainingTimeAvailable){
+  tabInfo.remainingTimeAvailable = (tabInfo.videoDetails?.remainingTime !== null && tabInfo.videoDetails?.remainingTime !== undefined)
+  let unspendedLessThanASecondAgo = tabInfo.unsuspendedTimestamp && (Date.now() - tabInfo.unsuspendedTimestamp) < 1000;
+
+  if (!tabInfo.remainingTimeAvailable){
     switch(tabInfo.status) {
       case TAB_STATES.UNSUSPENDED:
+        if(unspendedLessThanASecondAgo) return USER_ACTIONS.NO_ACTION;
         if((tabInfo.isActiveTab) || !tabInfo.contentScriptReady)
           return USER_ACTIONS.RELOAD_TAB;
 
