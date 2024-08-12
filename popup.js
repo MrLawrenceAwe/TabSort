@@ -53,8 +53,11 @@ async function updatePopup() {
     let tabsInfos = response.youtubeWatchTabsInfosOfCurrentWindow;
     let youtubeWatchTabsInfosOfCurrentWindowIDsSortedByRemainingTime = response.youtubeWatchTabsInfosOfCurrentWindowIDsSortedByRemainingTime;
 
+    // Use DocumentFragment to reduce direct DOM manipulations
+    const fragment = document.createDocumentFragment();
+
     while (table.rows.length > 1)
-      table.deleteRow(1);
+        table.deleteRow(1);
 
     for (let tabId of youtubeWatchTabsInfosOfCurrentWindowIDsSortedByRemainingTime) {
       const row = table.insertRow(-1);
@@ -62,7 +65,11 @@ async function updatePopup() {
       tabInfo.isActiveTab = tabId == activeTabId;
 
       insertRowCells(row, tabInfo, tabsInCurrentWindowAreKnownToBeSorted);
+
+      fragment.appendChild(row);
     }
+
+    table.appendChild(fragment);
 
     totalTabs = Object.keys(tabsInfos).length;
     tabsReadyCount = countTabsReadyForSorting(tabsInfos);
