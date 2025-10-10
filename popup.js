@@ -15,9 +15,9 @@ const USER_ACTIONS = {
 };
 
 let tabsInCurrentWindowAreKnownToBeSorted = false; // only true when ALL tabs known AND ordered
-let totalYoutubeWatchTabsInWindow = 0;          
-let youtubeWatchTabsReadyCount = 0;     // tabs with finite remaining time
-let finiteSubsetIsOutOfOrder = false; // whether the known subset is out of order
+let totalWatchTabsInWindow = 0;          
+let watchTabsReadyCount = 0;     // tabs with known remaining time
+let knownWatchTabsOutOfOrder = false; // whether the known subset is out of order
 
 initialise();
 
@@ -62,14 +62,14 @@ async function updatePopup() {
     table.appendChild(frag);
 
     // recompute state for header/footer
-    totalYoutubeWatchTabsInWindow = Object.keys(tabsInfos).length;
-    youtubeWatchTabsReadyCount = countTabsReadyForSorting(tabsInfos);
-    finiteSubsetIsOutOfOrder = areFiniteTabsOutOfOrder(tabsInfos);
+    totalWatchTabsInWindow = Object.keys(tabsInfos).length;
+    watchTabsReadyCount = countTabsReadyForSorting(tabsInfos);
+    knownWatchTabsOutOfOrder = areFiniteTabsOutOfOrder(tabsInfos);
     tabsInCurrentWindowAreKnownToBeSorted = allTabsKnownAndSorted(tabsInfos);
 
     setActionAndStatusColumnsVisibility(!tabsInCurrentWindowAreKnownToBeSorted);
 
-    if ((totalYoutubeWatchTabsInWindow === youtubeWatchTabsReadyCount) && !tabsInCurrentWindowAreKnownToBeSorted) {
+    if ((totalWatchTabsInWindow === watchTabsReadyCount) && !tabsInCurrentWindowAreKnownToBeSorted) {
       addClassToAllRows(table, "all-ready-row");
     }
 
@@ -228,39 +228,39 @@ function allTabsKnownAndSorted(tabsInfos) {
 
 // Header/footer (status, button, “Tabs sorted”)
 function updateHeaderFooter() {
-  const statusEl = document.getElementById('youtubeWatchTabsReadyStatus');
+  const statusElement = document.getElementById('youtubeWatchTabsReadyStatus');
   const sortButton = document.getElementById('sortButton');
-  const tabsSortedEl = document.getElementById('tabsSorted');
+  const tabsSortedElement = document.getElementById('tabsSorted');
   const table = document.getElementById('infoTable');
 
   // Status text: N/M ready
-  if (statusEl) {
+  if (statusElement) {
     if (!tabsInCurrentWindowAreKnownToBeSorted) {
-      statusEl.style.display = totalYoutubeWatchTabsInWindow <= 1 ? 'none' : 'block';
-      statusEl.textContent = `${youtubeWatchTabsReadyCount}/${totalYoutubeWatchTabsInWindow} ready for sort.`;
-      statusEl.style.color = 'white';
+      statusElement.style.display = totalWatchTabsInWindow <= 1 ? 'none' : 'block';
+      statusElement.textContent = `${watchTabsReadyCount}/${totalWatchTabsInWindow} ready for sort.`;
+      statusElement.style.color = 'white';
     } else {
-      statusEl.style.display = 'none';
+      statusElement.style.display = 'none';
     }
   }
 
   // “Tabs sorted” shows ONLY when all tabs known AND ordered
-  if (tabsSortedEl) {
-    tabsSortedEl.style.display = tabsInCurrentWindowAreKnownToBeSorted ? 'block' : 'none';
+  if (tabsSortedElement) {
+    tabsSortedElement.style.display = tabsInCurrentWindowAreKnownToBeSorted ? 'block' : 'none';
   }
 
-  // Sort button: show only if ≥2 finite AND they’re out of order; hide otherwise
   if (sortButton) {
     const shouldShowSort =
-      (youtubeWatchTabsReadyCount >= 2) &&
-      finiteSubsetIsOutOfOrder &&
+      (watchTabsReadyCount >= 2) &&
+      knownWatchTabsOutOfOrder &&
       !tabsInCurrentWindowAreKnownToBeSorted;
 
     if (shouldShowSort) {
       // small delay prevents a first-paint flicker
       setTimeout(() => sortButton.style.setProperty('display', 'block', 'important'), 100);
-      sortButton.style.backgroundColor = (youtubeWatchTabsReadyCount === totalYoutubeWatchTabsInWindow) ? 'forestgreen' : 'white';
-      sortButton.textContent = (youtubeWatchTabsReadyCount === totalYoutubeWatchTabsInWindow)
+
+      sortButton.style.backgroundColor = (watchTabsReadyCount === totalWatchTabsInWindow) ? 'forestgreen' : 'white';
+      sortButton.textContent = (watchTabsReadyCount === totalWatchTabsInWindow)
         ? 'Sort All Tabs'
         : 'Sort Ready & Non Youtube Watch Tabs';
     } else {
@@ -268,7 +268,6 @@ function updateHeaderFooter() {
     }
   }
 
-  // remove “ready-row” highlight when sorted
   if (tabsInCurrentWindowAreKnownToBeSorted && table) {
     for (let i = 1; i < table.rows.length; i++) table.rows[i].classList.remove('ready-row');
   }
