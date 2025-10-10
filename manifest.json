@@ -1,26 +1,30 @@
 {
-"manifest_version": 3,
-"name": "TabSort",
-"version": "1.0",
-"description": "Sorts tabs by length of youtube video, and groups tabs from the same domain",
-"author": "Lawrence Awe",
-"permissions": ["tabs", "scripting", "activeTab", "storage", "windows"],
-"host_permissions": ["*://*.youtube.com/watch*"],
-"action" : {
-    "default_popup": "popup.html",
-    "default_popup_dimensions": {
-        "width": 800,
-        "height": 600
-      }
-},
-"content_scripts": [
-    {
+    "manifest_version": 3,
+    "name": "TabSort for YouTube",
+    "version": "1.0.0",
+    "description": "Sort YouTube watch tabs by remaining time (robust to BFCache/unsuspension).",
+    "permissions": [
+      "tabs",
+      "alarms",
+      "webNavigation",
+      "storage"
+    ],
+    "host_permissions": [
+      "*://*.youtube.com/*"
+    ],
+    "background": {
+      "service_worker": "background.js",
+      "type": "module"
+    },
+    "action": {
+      "default_popup": "popup.html",
+      "default_title": "TabSort"
+    },
+    "content_scripts": [
+      {
         "matches": ["*://*.youtube.com/watch*"],
-        "js": ["content.js"]
-    }
-],
-"background": {
-    "service_worker": "background.js",
-    "type": "module"
-  }       
-}
+        "js": ["content.js"],
+        "run_at": "document_end"
+      }
+    ]
+  }

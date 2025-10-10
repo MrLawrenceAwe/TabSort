@@ -1,175 +1,138 @@
-chrome.runtime.onMessage.addListener(handleMessage);
+(function () {
+  function isoToSeconds(iso) {
+    if (!iso) return null;
+    const m = String(iso).match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?/);
+    if (!m) return null;
+    const h = parseFloat(m[1] || 0), mn = parseFloat(m[2] || 0), s = parseFloat(m[3] || 0);
+    return h * 3600 + mn * 60 + s;
+  }
+  const getVideoEl = () => document.querySelector('video');
 
-window.addEventListener('load', () => initialise());
+  function parseYtInitialPlayerResponse() {
+    let obj = null;
+    try { if (window.ytInitialPlayerResponse) obj = window.ytInitialPlayerResponse; } catch (_) {}
+    if (!obj) {
+      const script = [...document.scripts].find(s => s.textContent.includes('ytInitialPlayerResponse'));
+      if (script) {
+        const m = script.textContent.match(/ytInitialPlayerResponse\s*=\s*(\{.*?\})\s*;/s);
+        if (m) { try { obj = JSON.parse(m[1]); } catch (_) {} }
+      }
+    }
+    return obj || {};
+  }
 
-//#region Functions
-async function initialise() {
-    addMetadataLoadedListener();
-    sendContentScriptReady();
-}
+  function getLightweightDetails() {
+    const title =
+      document.querySelector('meta[property="og:title"]')?.content ||
+      document.querySelector('meta[itemprop="name"]')?.content ||
+      document.title || null;
 
-async function handleMessage(request, sender, sendResponse) {
-    //#region Inner Functions
-    async function handleSendDetailsRequest(sendResponse) {
-        const details = await getVideoDetails();
-        sendResponse({
-            remainingTime: details.remainingTime,
-            title: details.title
-        });
-    }
-    
-    async function handleSendRemainingTimeRequest(sendResponse) {
-        const remainingTime = await getRemainingTimeOfVideo();
-        sendResponse({remainingTime: remainingTime});
-    }
-    
-    function handleSendContentScriptReadyRequest() {
-        sendContentScriptReady();
-    }
-    
-    function handleSendMetadataLoadedRequest() {
-        addMetadataLoadedListener();
-    }
-    //#endregion 
+    let lengthSeconds = isoToSeconds(
+      document.querySelector('meta[itemprop="duration"]')?.getAttribute('content')
+    );
 
-    const handlerMap = {
-        'sendDetails': { handler: handleSendDetailsRequest, async: true },
-        'sendRemainingTime': { handler: handleSendRemainingTimeRequest, async: true },
-        'sendContentScriptReady': { handler: handleSendContentScriptReadyRequest, async: false },
-        'sendMetadataLoaded': { handler: handleSendMetadataLoadedRequest, async: false },
+    let isLive = false;
+
+    if (lengthSeconds == null) {
+      const yipr = parseYtInitialPlayerResponse();
+      const ls = yipr?.videoDetails?.lengthSeconds;
+      if (ls != null) lengthSeconds = Number(ls);
+      if (yipr?.videoDetails?.isLiveContent === true ||
+          yipr?.playabilityStatus?.liveStreamability ||
+          yipr?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails) {
+        isLive = true;
+      }
+    }
+
+    if (lengthSeconds == null) isLive = true;
+
+    return { title, lengthSeconds, isLive, url: location.href };
+  }
+
+  function sendLightweightDetails() {
+    try {
+      const d = getLightweightDetails();
+      if (d.title || d.lengthSeconds != null) {
+        chrome.runtime.sendMessage({ message: 'lightweightDetails', details: d });
+      }
+    } catch (_) {}
+  }
+
+  function sendContentReadyOnce() {
+    if (sendContentReadyOnce._sent) return;
+    sendContentReadyOnce._sent = true;
+    try { chrome.runtime.sendMessage({ message: 'contentScriptReady' }, () => {}); } catch (_) {}
+  }
+
+  function attachVideoReadyListener() {
+    const video = getVideoEl();
+    if (!video) return false;
+
+    const send = () => { chrome.runtime.sendMessage({ message: 'metadataLoaded' }); cleanup(); };
+    const cleanup = () => {
+      video.removeEventListener('loadedmetadata', onAny);
+      video.removeEventListener('loadeddata', onAny);
+      video.removeEventListener('durationchange', onAny);
+      video.removeEventListener('canplay', onAny);
     };
+    const onAny = () => send();
 
-    try {
-        if (handlerMap.hasOwnProperty(request.action)) {
-            const handlerData = handlerMap[request.action];
-
-            if (handlerData.async) {
-                await handlerData.handler(sendResponse);
-            } else {
-                handlerData.handler(sendResponse);
-            }
-        } else {
-            throw new Error(`Unknown request action: ${request.action}`);
-        }
-    } catch (error) {
-        logAndSend('error', `An error occurred while handling the ${request.action} request: ${error.message}`);
-        sendResponse({
-            error: `An error occurred while handling the ${request.action} request: ${error.message}`
-        });
-    }
-
-    // Indicates that the response will be sent asynchronously
-    return true;
-}
-
-function logAndSend(type, message) {
-    if (message !== undefined) {
-        const formattedMessage = typeof message === 'string' ? message : (message.message || JSON.stringify(message));
-        
-        if (typeof console[type] === 'function') {
-            console[type](formattedMessage);
-        } else {
-            console.log(formattedMessage);
-        }
-
-        chrome.runtime.sendMessage({action: "logMessage", type, info: formattedMessage});
+    if (video.readyState >= 2 && isFinite(video.duration)) {
+      send();
     } else {
-        logAndSend('error', "Message is undefined");
+      video.addEventListener('loadedmetadata', onAny, { once: true });
+      video.addEventListener('loadeddata', onAny, { once: true });
+      video.addEventListener('durationchange', onAny, { once: true });
+      video.addEventListener('canplay', onAny, { once: true });
     }
-}
+    return true;
+  }
 
-async function getVideoDetails(maxAttempts = 100) {
-    try {
-        const video = await getVideoWithLoadedMetadata(0, maxAttempts);
-        const titleElement = document.querySelector('title');
+  function watchForVideoMount() {
+    if (attachVideoReadyListener()) return;
+    const obs = new MutationObserver(() => { if (attachVideoReadyListener()) obs.disconnect(); });
+    obs.observe(document.documentElement, { childList: true, subtree: true });
+  }
 
-        const remainingTime = calculateRemainingTime(video);
-        const title = titleElement.innerHTML;
-
-        if (isNaN(remainingTime)) {
-            throw new Error("Invalid remaining time.");
-        } 
-
-        return {remainingTime, title};
-    } catch (error) {
-        throw new Error("Error getting video details: " + error.message);
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    if (msg && msg.message === 'getVideoMetrics') {
+      const video = getVideoEl();
+      const light = getLightweightDetails();
+      const payload = {
+        title: light.title || null,
+        url: light.url,
+        lengthSeconds: (typeof light.lengthSeconds === 'number' && isFinite(light.lengthSeconds)) ? light.lengthSeconds : null,
+        isLive: Boolean(light.isLive),
+        duration: (video && isFinite(video.duration)) ? video.duration : null,
+        currentTime: (video && isFinite(video.currentTime)) ? video.currentTime : null,
+        playbackRate: (video && isFinite(video.playbackRate) && video.playbackRate > 0) ? video.playbackRate : 1,
+        paused: video ? video.paused : null,
+      };
+      sendResponse(payload);
+      return true;
     }
-}
+    return false;
+  });
 
-async function getVideoWithLoadedMetadata(attempts = 0, maxAttempts = 100, waitTime = 100) {
-    const video = document.querySelector("video");
+  function initialise() {
+    sendContentReadyOnce();
+    sendLightweightDetails();
+    watchForVideoMount();
+  }
 
-    if (video && video.readyState >= 2) {
-        return video;
-    } else if (attempts >= maxAttempts) {
-        throw new Error("Maximum attempts reached. Needed video element or metadata not available");
+  if (document.readyState === 'complete' || document.readyState === 'interactive') initialise();
+  else window.addEventListener('DOMContentLoaded', initialise, { once: true });
+
+  window.addEventListener('yt-navigate-finish', () => {
+    sendLightweightDetails();
+    watchForVideoMount();
+  });
+
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted) {
+      sendContentReadyOnce();
+      sendLightweightDetails();
+      watchForVideoMount();
     }
-
-    await new Promise(resolve => setTimeout(resolve, waitTime));
-    return getVideoWithLoadedMetadata(attempts + 1, maxAttempts, waitTime);
-}
-
-async function sleep(duration) {
-    return new Promise(resolve => setTimeout(resolve, duration));
-}
-
-async function getRemainingTimeOfVideo(maxAttempts = 100) {
-    try {
-        const video = await getVideoWithLoadedMetadata(0, maxAttempts);
-        const remainingTime = calculateRemainingTime(video);
-
-        if (isNaN(remainingTime)) {
-            throw new Error("Invalid remaining time.");
-        } 
-
-        return remainingTime;
-    } catch (error) {
-        throw new Error("Error getting remaining time: " + error.message);
-    }
-}
-
-function calculateRemainingTime(video) {
-    //#region Inner Function
-    function isLiveStream() {
-        const hasLiveBadge = document.querySelector('.ytp-live');
-        return hasLiveBadge;
-    }
-    //#endregion
-
-    return (!isLiveStream()) ? (video.duration - video.currentTime) : 172800.5;
-}
-
-async function sendContentScriptReady() {
-    try {
-        chrome.runtime.sendMessage({message: "contentScriptReady"});
-    } catch (error) {
-        logAndSend('error', 'An error occurred sending contentScriptReady message: ' + error.message);
-    }
-}
-
-async function addMetadataLoadedListener() {
-    //#region Inner Functions
-    function metadataLoadedListener(video) {
-        chrome.runtime.sendMessage({message: 'metadataLoaded'});
-        video.removeEventListener('loadedmetadata', () => metadataLoadedListener(video));
-    }
-    //#endregion  
-
-    try {
-        const video = document.querySelector('video');
-        if (!video) {
-            throw new Error('Could not find video element on the page.');
-        }
-
-        if (video.readyState >= 2){
-            chrome.runtime.sendMessage({message: 'metadataLoaded'});
-            return;
-        }
-
-
-        video.addEventListener('loadedmetadata', () => metadataLoadedListener(video));
-    } catch (error) {
-        console.error('Error in content script:', error);
-    }
-}
-//#endregion
+  });
+})();
