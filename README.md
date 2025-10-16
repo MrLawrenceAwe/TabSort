@@ -11,7 +11,7 @@ Chrome extension that keeps YouTube watch tabs organised by the time you still h
 ## Using the popup
 - Open some YouTube watch pages in the same Chrome window, then click the TabSort extension.
 - The popup lists each watch tab, shows whether its remaining time is known, and highlights tabs that are ready.
-- Follow the suggested action links (reload/activate) if a tab is missing metadata.
+- Follow the suggested action links (reload/interact) if a tab is missing metadata.
 - When at least two tabs have known remaining time and are out of order, the **Sort** button appears; click it to reorder the ready tabs.
 
 ## Development notes
