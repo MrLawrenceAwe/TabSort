@@ -6,7 +6,7 @@ Chrome extension that keeps YouTube watch tabs organised by the time you still h
 ## Install (unpacked)
 1. Clone or download this repository.
 2. Visit `chrome://extensions`, enable **Developer mode**, and choose **Load unpacked**.
-3. Select the project directory (the folder containing `manifest.json`).
+3. Select the project directory.
 
 ## Using the popup
 - Open some YouTube watch pages in the same Chrome window, then click the TabSort extension.
