@@ -31,7 +31,17 @@ const TAB_STATES = {
     });
   }
   function sendMessageToTab(tabId, payload) {
-    return new Promise((resolve) => chrome.tabs.sendMessage(tabId, payload, (resp) => resolve(resp)));
+    return new Promise((resolve) => {
+      chrome.tabs.sendMessage(tabId, payload, (resp) => {
+        const err = chrome.runtime.lastError;
+        if (err) {
+          console.debug(`[TabSort] skipped message to tab ${tabId}: ${err.message}`);
+          resolve({ ok: false, error: err });
+          return;
+        }
+        resolve({ ok: true, data: resp });
+      });
+    });
   }
   
   function statusFromTab(tab) {
@@ -57,12 +67,13 @@ const TAB_STATES = {
       const prev = youtubeWatchTabsInfosOfCurrentWindow[tab.id] || {};
       const nextStatus = statusFromTab(tab);
   
+      const prevContentReady = Boolean(prev.contentScriptReady);
       const base = youtubeWatchTabsInfosOfCurrentWindow[tab.id] = {
         id: tab.id,
         url: tab.url,
         index: tab.index,
         status: nextStatus,
-        contentScriptReady: Boolean(prev.contentScriptReady),
+        contentScriptReady: nextStatus === TAB_STATES.UNSUSPENDED ? prevContentReady : false,
         metadataLoaded: Boolean(prev.metadataLoaded),
         isLiveStream: Boolean(prev.isLiveStream),
         videoDetails: prev.videoDetails || null, // { title, lengthSeconds, remainingTime }
@@ -118,15 +129,21 @@ const TAB_STATES = {
   
   async function refreshMetricsForTab(tabId) {
     try {
+      const info = youtubeWatchTabsInfosOfCurrentWindow[tabId];
+      if (!info) return;
+
+      // only poll active, unsuspended tabs whose content script announced readiness
+      if (info.status !== TAB_STATES.UNSUSPENDED || !info.contentScriptReady) return;
+
       const tab = await getTab(tabId);
       if (!isWatch(tab.url)) return;
   
-      const resp = await sendMessageToTab(tabId, { message: 'getVideoMetrics' });
+      const result = await sendMessageToTab(tabId, { message: 'getVideoMetrics' });
+      if (!result || result.ok !== true) return;
+
+      const resp = result.data;
       if (!resp || typeof resp !== 'object') return;
-  
-      const info = youtubeWatchTabsInfosOfCurrentWindow[tabId];
-      if (!info) return;
-  
+
       if (resp.title || resp.url) {
         info.videoDetails = info.videoDetails || {};
         if (resp.title) info.videoDetails.title = resp.title;
