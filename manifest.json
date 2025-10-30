@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "TabSort for YouTube",
     "version": "1.0.0",
-    "description": "Sort YouTube watch tabs by remaining time (robust to BFCache/unsuspension).",
+    "description": "Sort YouTube watch tabs by remaining time.",
     "permissions": [
       "tabs",
       "alarms",
