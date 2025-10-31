@@ -132,17 +132,21 @@ const TAB_STATES = {
       const info = youtubeWatchTabsInfosOfCurrentWindow[tabId];
       if (!info) return;
 
-      // only poll active, unsuspended tabs whose content script announced readiness
-      if (info.status !== TAB_STATES.UNSUSPENDED || !info.contentScriptReady) return;
+      // only poll active, unsuspended tabs
+      if (info.status !== TAB_STATES.UNSUSPENDED) return;
 
       const tab = await getTab(tabId);
       if (!isWatch(tab.url)) return;
   
       const result = await sendMessageToTab(tabId, { message: 'getVideoMetrics' });
-      if (!result || result.ok !== true) return;
+      if (!result || result.ok !== true) {
+        info.contentScriptReady = false;
+        return;
+      }
 
       const resp = result.data;
       if (!resp || typeof resp !== 'object') return;
+      info.contentScriptReady = true;
 
       if (resp.title || resp.url) {
         info.videoDetails = info.videoDetails || {};
