@@ -24,8 +24,8 @@ initialise();
 
 async function initialise() {
   await refreshActiveContext().catch(() => null);
-  sendMessageWithWindow("updateYoutubeWatchTabsInfos");
-  const refreshBg = setInterval(() => sendMessageWithWindow("updateYoutubeWatchTabsInfos"), 1000);
+  sendMessageWithWindow("updateYoutubeWatchTabRecords");
+  const refreshBg = setInterval(() => sendMessageWithWindow("updateYoutubeWatchTabRecords"), 1000);
 
   updatePopup();
   const refreshPopup = setInterval(updatePopup, 500);
@@ -42,33 +42,33 @@ async function updatePopup() {
   const context = await refreshActiveContext().catch(() => null);
   const activeTabId = context?.tabId ?? null;
 
-  sendMessageWithWindow("sendTabsInfos", {}, (response) => {
+  sendMessageWithWindow("sendTabRecords", {}, (response) => {
     if (!response) return;
 
     const table = document.getElementById('infoTable');
     if (!table) return;
 
-    const tabsInfos = response.youtubeWatchTabsInfosOfCurrentWindow || {};
-    const orderIds = response.youtubeWatchTabsInfosOfCurrentWindowIDsSortedByRemainingTime || [];
+    const tabRecords = response.youtubeWatchTabRecordsOfCurrentWindow || {};
+    const orderIds = response.youtubeWatchTabRecordIdsSortedByRemainingTime || [];
 
     // rebuild table body
     while (table.rows.length > 1) table.deleteRow(1);
     const frag = document.createDocumentFragment();
     for (const tabId of orderIds) {
       const row = table.insertRow(-1);
-      const tabInfo = tabsInfos[tabId];
-      if (!tabInfo) continue;
-      tabInfo.isActiveTab = (String(tabId) === String(activeTabId));
-      insertRowCells(row, tabInfo);
+      const tabRecord = tabRecords[tabId];
+      if (!tabRecord) continue;
+      tabRecord.isActiveTab = (String(tabId) === String(activeTabId));
+      insertRowCells(row, tabRecord);
       frag.appendChild(row);
     }
     table.appendChild(frag);
 
     // recompute state for header/footer
-    totalWatchTabsInWindow = Object.keys(tabsInfos).length;
-    watchTabsReadyCount = countTabsReadyForSorting(tabsInfos);
-    knownWatchTabsOutOfOrder = areFiniteTabsOutOfOrder(tabsInfos);
-    tabsInCurrentWindowAreKnownToBeSorted = allTabsKnownAndSorted(tabsInfos);
+    totalWatchTabsInWindow = Object.keys(tabRecords).length;
+    watchTabsReadyCount = countTabsReadyForSorting(tabRecords);
+    knownWatchTabsOutOfOrder = areFiniteTabsOutOfOrder(tabRecords);
+    tabsInCurrentWindowAreKnownToBeSorted = allTabsKnownAndSorted(tabRecords);
 
     setActionAndStatusColumnsVisibility(!tabsInCurrentWindowAreKnownToBeSorted);
 
@@ -122,39 +122,39 @@ function setActionAndStatusColumnsVisibility(visible) {
   if (tabStatus) tabStatus.classList[method]('hide');
 }
 
-function insertRowCells(row, tabInfo) {
+function insertRowCells(row, tabRecord) {
   const ACTIVATE_TAB = 'activateTab';
   const RELOAD_TAB_ACTION = 'reloadTab';
 
   // Title / URL
-  row.insertCell(0).textContent = (tabInfo.videoDetails?.title) ? tabInfo.videoDetails.title : tabInfo.url;
+  row.insertCell(0).textContent = (tabRecord.videoDetails?.title) ? tabRecord.videoDetails.title : tabRecord.url;
 
   // Action column (only when NOT “Tabs sorted”)
-  const userAction = determineUserAction(tabInfo);
-  if (!tabsInCurrentWindowAreKnownToBeSorted) insertUserActionCell(row, tabInfo, userAction);
+  const userAction = determineUserAction(tabRecord);
+  if (!tabsInCurrentWindowAreKnownToBeSorted) insertUserActionCell(row, tabRecord, userAction);
 
-  // Info columns
-  insertInfoCells(row, tabInfo);
+  // Record columns
+  insertInfoCells(row, tabRecord);
 
   // Row highlight when ready to sort
-  const rt = tabInfo?.videoDetails?.remainingTime;
+  const rt = tabRecord?.videoDetails?.remainingTime;
   const remainingTimeAvailable = (typeof rt === 'number' && isFinite(rt));
   if (remainingTimeAvailable && !tabsInCurrentWindowAreKnownToBeSorted) row.classList.add('ready-row');
 
-  function insertInfoCells(r, info) {
-    const INFO_KEYS = (tabsInCurrentWindowAreKnownToBeSorted)
+  function insertInfoCells(r, record) {
+    const RECORD_KEYS = (tabsInCurrentWindowAreKnownToBeSorted)
       ? ['videoDetails', 'index']
       : ['videoDetails', 'index', 'status'];
 
-    INFO_KEYS.forEach((key, i) => {
+    RECORD_KEYS.forEach((key, i) => {
       const offset = (tabsInCurrentWindowAreKnownToBeSorted) ? 1 : 2;
       const cell = r.insertCell(i + offset);
 
-      let value = info[key];
+      let value = record[key];
       if (key === 'videoDetails') {
-        const rt2 = info?.videoDetails?.remainingTime;
+        const rt2 = record?.videoDetails?.remainingTime;
         value = (typeof rt2 === 'number' && isFinite(rt2))
-          ? (!info.isLiveStream ? formatRemaining(rt2) : 'Live Stream')
+          ? (!record.isLiveStream ? formatRemaining(rt2) : 'Live Stream')
           : 'unavailable';
       }
       if (key === 'index') value = (Number.isFinite(value) ? value + 1 : '');
@@ -165,17 +165,17 @@ function insertRowCells(row, tabInfo) {
     });
   }
 
-  function insertUserActionCell(r, info, action) {
+  function insertUserActionCell(r, record, action) {
     const cell = r.insertCell(1);
 
     if (action === USER_ACTIONS.INTERACT_WITH_TAB_THEN_RELOAD) {
-      const interact = createLink(USER_ACTIONS.INTERACT_WITH_TAB, ACTIVATE_TAB, info.id);
-      const reload = createLink(USER_ACTIONS.RELOAD_TAB, RELOAD_TAB_ACTION, info.id);
+      const interact = createLink(USER_ACTIONS.INTERACT_WITH_TAB, ACTIVATE_TAB, record.id);
+      const reload = createLink(USER_ACTIONS.RELOAD_TAB, RELOAD_TAB_ACTION, record.id);
       cell.appendChild(interact);
       cell.appendChild(document.createTextNode('/'));
       cell.appendChild(reload);
     } else {
-      const link = createLink(action, (action === USER_ACTIONS.RELOAD_TAB) ? RELOAD_TAB_ACTION : ACTIVATE_TAB, info.id);
+      const link = createLink(action, (action === USER_ACTIONS.RELOAD_TAB) ? RELOAD_TAB_ACTION : ACTIVATE_TAB, record.id);
       cell.appendChild(link);
     }
   }
@@ -200,19 +200,19 @@ function formatRemaining(seconds) {
 }
 
 // Count tabs with usable remaining time
-function countTabsReadyForSorting(tabsInfos) {
-  return Object.values(tabsInfos).filter(t => {
+function countTabsReadyForSorting(tabRecords) {
+  return Object.values(tabRecords).filter(t => {
     const rt = t?.videoDetails?.remainingTime;
     return typeof rt === 'number' && isFinite(rt);
   }).length;
 }
 
 // Are the known (finite) tabs out of order relative to their current tab positions?
-function areFiniteTabsOutOfOrder(tabsInfos) {
-  const infos = Object.values(tabsInfos);
-  if (infos.length === 0) return false;
+function areFiniteTabsOutOfOrder(tabRecords) {
+  const records = Object.values(tabRecords);
+  if (records.length === 0) return false;
 
-  const withRt = infos.map(t => {
+  const withRt = records.map(t => {
     const rt = t?.videoDetails?.remainingTime;
     return { id: t.id, index: t.index, remaining: (typeof rt === 'number' && isFinite(rt)) ? rt : null };
   });
@@ -233,17 +233,17 @@ function areFiniteTabsOutOfOrder(tabsInfos) {
 }
 
 // Only true when every tab has a known remaining time AND the whole window is ordered
-function allTabsKnownAndSorted(tabsInfos) {
-  const infos = Object.values(tabsInfos);
-  if (infos.length <= 1) return false; // don’t flash “Tabs sorted” for 0/1 watch tabs
+function allTabsKnownAndSorted(tabRecords) {
+  const records = Object.values(tabRecords);
+  if (records.length <= 1) return false; // don’t flash “Tabs sorted” for 0/1 watch tabs
 
   // all known?
-  const allKnown = infos.every(t => typeof t?.videoDetails?.remainingTime === 'number' && isFinite(t.videoDetails.remainingTime));
+  const allKnown = records.every(t => typeof t?.videoDetails?.remainingTime === 'number' && isFinite(t.videoDetails.remainingTime));
   if (!allKnown) return false;
 
   // expected full order: finite (ascending) followed by nothing (since all finite)
-  const currentOrder = infos.slice().sort((a, b) => a.index - b.index).map(t => t.id);
-  const expectedOrder = infos.slice().sort((a, b) => {
+  const currentOrder = records.slice().sort((a, b) => a.index - b.index).map(t => t.id);
+  const expectedOrder = records.slice().sort((a, b) => {
     const ar = a.videoDetails.remainingTime, br = b.videoDetails.remainingTime;
     return ar - br;
   }).map(t => t.id);
@@ -304,19 +304,19 @@ function addClassToAllRows(table, className) {
   for (let i = 0; i < table.rows.length; i++) table.rows[i].classList.add(className);
 }
 
-function determineUserAction(tabInfo) {
+function determineUserAction(tabRecord) {
   const remainingTimeAvailable =
-    (typeof tabInfo?.videoDetails?.remainingTime === 'number' && isFinite(tabInfo.videoDetails.remainingTime));
-  tabInfo.remainingTimeAvailable = remainingTimeAvailable;
+    (typeof tabRecord?.videoDetails?.remainingTime === 'number' && isFinite(tabRecord.videoDetails.remainingTime));
+  tabRecord.remainingTimeAvailable = remainingTimeAvailable;
 
   const recentlyUnsuspended =
-    tabInfo.unsuspendedTimestamp && (Date.now() - tabInfo.unsuspendedTimestamp) < 5000;
+    tabRecord.unsuspendedTimestamp && (Date.now() - tabRecord.unsuspendedTimestamp) < 5000;
 
   if (!remainingTimeAvailable) {
-    switch (tabInfo.status) {
+    switch (tabRecord.status) {
       case TAB_STATES.UNSUSPENDED:
         if (recentlyUnsuspended) return USER_ACTIONS.NO_ACTION;
-        if (tabInfo.isActiveTab || !tabInfo.contentScriptReady) return USER_ACTIONS.RELOAD_TAB;
+        if (tabRecord.isActiveTab || !tabRecord.contentScriptReady) return USER_ACTIONS.RELOAD_TAB;
         return USER_ACTIONS.INTERACT_WITH_TAB_THEN_RELOAD;
       case TAB_STATES.SUSPENDED:
         return USER_ACTIONS.INTERACT_WITH_TAB;

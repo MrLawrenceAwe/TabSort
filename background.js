@@ -6,8 +6,8 @@ const TAB_STATES = {
   
   const YT_WATCH_REGEX = /^https?:\/\/(www\.)?youtube\.com\/watch\?/i;
   
-  let youtubeWatchTabsInfosOfCurrentWindow = {}; // { [tabId]: TabInfo }
-  let youtubeWatchTabsInfosOfCurrentWindowIDsSortedByRemainingTime = [];
+  let youtubeWatchTabRecordsOfCurrentWindow = {}; // { [tabId]: TabRecord }
+  let youtubeWatchTabRecordIdsSortedByRemainingTime = [];
   let tabsInCurrentWindowAreKnownToBeSorted = false;
   let trackedWindowId = null;
   
@@ -92,14 +92,14 @@ const TAB_STATES = {
     if (tab.status === 'loading') return TAB_STATES.LOADING;
     return TAB_STATES.UNSUSPENDED;
   }
-  function setUnsuspendTimestamp(info, prevStatus, nextStatus) {
+  function setUnsuspendTimestamp(record, prevStatus, nextStatus) {
     if ((prevStatus === TAB_STATES.SUSPENDED || prevStatus === TAB_STATES.LOADING) &&
         nextStatus === TAB_STATES.UNSUSPENDED) {
-      info.unsuspendedTimestamp = now();
+      record.unsuspendedTimestamp = now();
     }
   }
   
-  async function updateYoutubeWatchTabsInfos(windowId) {
+  async function updateYoutubeWatchTabRecords(windowId) {
     const { tabs, windowId: targetWindowId } = await getTabsForTrackedWindow(windowId);
     if (targetWindowId == null && tabs.length === 0) return;
     const visibleIds = new Set();
@@ -108,11 +108,11 @@ const TAB_STATES = {
       if (!isWatch(tab.url)) continue;
       visibleIds.add(tab.id);
   
-      const prev = youtubeWatchTabsInfosOfCurrentWindow[tab.id] || {};
+      const prev = youtubeWatchTabRecordsOfCurrentWindow[tab.id] || {};
       const nextStatus = statusFromTab(tab);
   
       const prevContentReady = Boolean(prev.contentScriptReady);
-      const base = youtubeWatchTabsInfosOfCurrentWindow[tab.id] = {
+      const base = youtubeWatchTabRecordsOfCurrentWindow[tab.id] = {
         id: tab.id,
         windowId: tab.windowId,
         url: tab.url,
@@ -128,97 +128,97 @@ const TAB_STATES = {
       setUnsuspendTimestamp(base, prev.status, nextStatus);
     }
   
-    for (const id of Object.keys(youtubeWatchTabsInfosOfCurrentWindow)) {
-      if (!visibleIds.has(Number(id))) delete youtubeWatchTabsInfosOfCurrentWindow[id];
+    for (const id of Object.keys(youtubeWatchTabRecordsOfCurrentWindow)) {
+      if (!visibleIds.has(Number(id))) delete youtubeWatchTabRecordsOfCurrentWindow[id];
     }
   
     computeSorting();
   }
   
   function computeSorting() {
-  const entries = Object.values(youtubeWatchTabsInfosOfCurrentWindow);
+    const entries = Object.values(youtubeWatchTabRecordsOfCurrentWindow);
 
-  const currentOrder = entries
-    .slice()
-    .sort((a, b) => a.index - b.index)
-    .map(t => t.id);
+    const currentOrder = entries
+      .slice()
+      .sort((a, b) => a.index - b.index)
+      .map(t => t.id);
 
-  const enriched = entries.map(t => {
-    const rt = t?.videoDetails?.remainingTime;
-    const val = (typeof rt === 'number' && isFinite(rt)) ? rt : null;
-    return { id: t.id, index: t.index, remainingTime: val };
-  });
+    const enriched = entries.map(t => {
+      const rt = t?.videoDetails?.remainingTime;
+      const val = (typeof rt === 'number' && isFinite(rt)) ? rt : null;
+      return { id: t.id, index: t.index, remainingTime: val };
+    });
 
-  const finite = enriched.filter(e => e.remainingTime !== null);
-  const unknown = enriched.filter(e => e.remainingTime === null);
+    const finite = enriched.filter(e => e.remainingTime !== null);
+    const unknown = enriched.filter(e => e.remainingTime === null);
 
-  const finiteSortedIds = finite
-    .slice()
-    .sort((a, b) => a.remainingTime - b.remainingTime)
-    .map(e => e.id);
+    const finiteSortedIds = finite
+      .slice()
+      .sort((a, b) => a.remainingTime - b.remainingTime)
+      .map(e => e.id);
 
-  const unknownIdsInCurrentOrder = currentOrder.filter(id => unknown.some(u => u.id === id));
+    const unknownIdsInCurrentOrder = currentOrder.filter(id => unknown.some(u => u.id === id));
 
-  const expectedOrder = [...finiteSortedIds, ...unknownIdsInCurrentOrder];
-  youtubeWatchTabsInfosOfCurrentWindowIDsSortedByRemainingTime = expectedOrder;
+    const expectedOrder = [...finiteSortedIds, ...unknownIdsInCurrentOrder];
+    youtubeWatchTabRecordIdsSortedByRemainingTime = expectedOrder;
 
-  const allHaveFiniteRemainingTimes = unknown.length === 0;
+    const allHaveFiniteRemainingTimes = unknown.length === 0;
 
-  const alreadyInExpectedOrder =
-    currentOrder.length > 0 &&
-    currentOrder.length === expectedOrder.length &&
-    currentOrder.every((id, i) => id === expectedOrder[i]);
+    const alreadyInExpectedOrder =
+      currentOrder.length > 0 &&
+      currentOrder.length === expectedOrder.length &&
+      currentOrder.every((id, i) => id === expectedOrder[i]);
 
-  tabsInCurrentWindowAreKnownToBeSorted = allHaveFiniteRemainingTimes && alreadyInExpectedOrder;
-}
+    tabsInCurrentWindowAreKnownToBeSorted = allHaveFiniteRemainingTimes && alreadyInExpectedOrder;
+  }
   
   async function refreshMetricsForTab(tabId) {
     try {
-      const info = youtubeWatchTabsInfosOfCurrentWindow[tabId];
-      if (!info) return;
+      const record = youtubeWatchTabRecordsOfCurrentWindow[tabId];
+      if (!record) return;
 
       // only poll active, unsuspended tabs
-      if (info.status !== TAB_STATES.UNSUSPENDED) return;
+      if (record.status !== TAB_STATES.UNSUSPENDED) return;
 
       const tab = await getTab(tabId);
       if (trackedWindowId != null && tab.windowId !== trackedWindowId) return;
       if (tab.windowId != null) {
-        info.windowId = tab.windowId;
+        record.windowId = tab.windowId;
         resolveTrackedWindowId(tab.windowId);
       }
       if (!isWatch(tab.url)) return;
   
       const result = await sendMessageToTab(tabId, { message: 'getVideoMetrics' });
       if (!result || result.ok !== true) {
-        info.contentScriptReady = false;
+        record.contentScriptReady = false;
         return;
       }
 
       const resp = result.data;
       if (!resp || typeof resp !== 'object') return;
-      info.contentScriptReady = true;
+      record.contentScriptReady = true;
 
       if (resp.title || resp.url) {
-        info.videoDetails = info.videoDetails || {};
-        if (resp.title) info.videoDetails.title = resp.title;
-        if (!info.url && resp.url) info.url = resp.url;
+        record.videoDetails = record.videoDetails || {};
+        if (resp.title) record.videoDetails.title = resp.title;
+        if (!record.url && resp.url) record.url = resp.url;
       }
   
-      if (resp.isLive === true) info.isLiveStream = true;
+      if (resp.isLive === true) record.isLiveStream = true;
   
       const len = Number(resp.lengthSeconds ?? resp.duration ?? NaN);
       const cur = Number(resp.currentTime ?? NaN);
       const rate = Number(resp.playbackRate ?? 1);
   
       if (isFinite(len)) {
-        info.videoDetails = info.videoDetails || {};
-        info.videoDetails.lengthSeconds = len;
+        record.videoDetails = record.videoDetails || {};
+        record.videoDetails.lengthSeconds = len;
       }
       if (isFinite(len) && isFinite(cur)) {
         const rem = Math.max(0, (len - cur) / (isFinite(rate) && rate > 0 ? rate : 1));
-        info.videoDetails.remainingTime = rem;
-      } else if (isFinite(len) && info.videoDetails && info.videoDetails.remainingTime == null) {
-        info.videoDetails.remainingTime = len;
+        record.videoDetails.remainingTime = rem;
+      } else if (isFinite(len) && record.videoDetails && record.videoDetails.remainingTime == null) {
+        record.videoDetails.remainingTime = len;
       }
   
       computeSorting();
@@ -228,9 +228,9 @@ const TAB_STATES = {
   }
   
   async function sortTabsInCurrentWindow() {
-    const ids = youtubeWatchTabsInfosOfCurrentWindowIDsSortedByRemainingTime.slice();
+    const ids = youtubeWatchTabRecordIdsSortedByRemainingTime.slice();
     const finiteIds = ids.filter(id => {
-      const rt = safeGet(youtubeWatchTabsInfosOfCurrentWindow[id], 'videoDetails.remainingTime', null);
+      const rt = safeGet(youtubeWatchTabRecordsOfCurrentWindow[id], 'videoDetails.remainingTime', null);
       return typeof rt === 'number';
     });
     if (finiteIds.length === 0) return;
@@ -243,7 +243,7 @@ const TAB_STATES = {
     for (const id of finiteIds) {
       try { await chrome.tabs.move(id, { index: cursor++ }); } catch (_) {}
     }
-    await updateYoutubeWatchTabsInfos(trackedWindowId);
+    await updateYoutubeWatchTabRecords(trackedWindowId);
   }
   
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -255,18 +255,18 @@ const TAB_STATES = {
     };
   
     const handlers = {
-      updateYoutubeWatchTabsInfos: async () => { await updateYoutubeWatchTabsInfos(message.windowId); },
-      sendTabsInfos: async () => {
-        await updateYoutubeWatchTabsInfos(message.windowId);
-        const ids = Object.keys(youtubeWatchTabsInfosOfCurrentWindow).map(Number);
+      updateYoutubeWatchTabRecords: async () => { await updateYoutubeWatchTabRecords(message.windowId); },
+      sendTabRecords: async () => {
+        await updateYoutubeWatchTabRecords(message.windowId);
+        const ids = Object.keys(youtubeWatchTabRecordsOfCurrentWindow).map(Number);
         await Promise.all(ids.map(refreshMetricsForTab));
         return {
-          youtubeWatchTabsInfosOfCurrentWindow,
-          youtubeWatchTabsInfosOfCurrentWindowIDsSortedByRemainingTime,
+          youtubeWatchTabRecordsOfCurrentWindow,
+          youtubeWatchTabRecordIdsSortedByRemainingTime,
         };
       },
       areTabsInCurrentWindowKnownToBeSorted: async () => {
-        await updateYoutubeWatchTabsInfos(message.windowId);
+        await updateYoutubeWatchTabRecords(message.windowId);
         return tabsInCurrentWindowAreKnownToBeSorted;
       },
       sortTabs: async () => {
@@ -283,10 +283,10 @@ const TAB_STATES = {
         if (tabId) {
           if (typeof message.windowId === 'number') resolveTrackedWindowId(message.windowId);
           try { await chrome.tabs.reload(tabId); } catch (_) {}
-          const info = youtubeWatchTabsInfosOfCurrentWindow[tabId];
-          if (info) {
-            info.status = TAB_STATES.LOADING;
-            info.unsuspendedTimestamp = now();
+          const record = youtubeWatchTabRecordsOfCurrentWindow[tabId];
+          if (record) {
+            record.status = TAB_STATES.LOADING;
+            record.unsuspendedTimestamp = now();
           }
         }
       },
@@ -300,9 +300,9 @@ const TAB_STATES = {
         const tabId = sender?.tab?.id;
         resolveTrackedWindowId(sender?.tab?.windowId);
         if (!tabId) return;
-        const info = youtubeWatchTabsInfosOfCurrentWindow[tabId] || (youtubeWatchTabsInfosOfCurrentWindow[tabId] = { windowId: sender?.tab?.windowId ?? null });
-        if (sender?.tab?.windowId != null) info.windowId = sender.tab.windowId;
-        info.contentScriptReady = true;
+        const record = youtubeWatchTabRecordsOfCurrentWindow[tabId] || (youtubeWatchTabRecordsOfCurrentWindow[tabId] = { windowId: sender?.tab?.windowId ?? null });
+        if (sender?.tab?.windowId != null) record.windowId = sender.tab.windowId;
+        record.contentScriptReady = true;
         refreshMetricsForTab(tabId);
         sendResponse({ message: 'contentScriptAck' });
       },
@@ -310,8 +310,8 @@ const TAB_STATES = {
         const tabId = sender?.tab?.id;
         resolveTrackedWindowId(sender?.tab?.windowId);
         if (!tabId) return;
-        const info = youtubeWatchTabsInfosOfCurrentWindow[tabId];
-        if (info) info.metadataLoaded = true;
+        const record = youtubeWatchTabRecordsOfCurrentWindow[tabId];
+        if (record) record.metadataLoaded = true;
         await refreshMetricsForTab(tabId);
       },
       lightweightDetails: async () => {
@@ -320,18 +320,18 @@ const TAB_STATES = {
         resolveTrackedWindowId(sender?.tab?.windowId);
         if (!tabId) return;
   
-        const info = youtubeWatchTabsInfosOfCurrentWindow[tabId] ||
-                     (youtubeWatchTabsInfosOfCurrentWindow[tabId] = { id: tabId, url: d.url || sender?.tab?.url, windowId: sender?.tab?.windowId ?? null });
-  
-        if (sender?.tab?.windowId != null) info.windowId = sender.tab.windowId;
-        if (d.url) info.url = d.url;
-        info.videoDetails = info.videoDetails || {};
-        if (d.title) info.videoDetails.title = d.title;
+        const record = youtubeWatchTabRecordsOfCurrentWindow[tabId] ||
+                     (youtubeWatchTabRecordsOfCurrentWindow[tabId] = { id: tabId, url: d.url || sender?.tab?.url, windowId: sender?.tab?.windowId ?? null });
+ 
+        if (sender?.tab?.windowId != null) record.windowId = sender.tab.windowId;
+        if (d.url) record.url = d.url;
+        record.videoDetails = record.videoDetails || {};
+        if (d.title) record.videoDetails.title = d.title;
         if (typeof d.lengthSeconds === 'number' && isFinite(d.lengthSeconds)) {
-          info.videoDetails.lengthSeconds = d.lengthSeconds;
-          if (info.videoDetails.remainingTime == null) info.videoDetails.remainingTime = d.lengthSeconds;
+          record.videoDetails.lengthSeconds = d.lengthSeconds;
+          if (record.videoDetails.remainingTime == null) record.videoDetails.remainingTime = d.lengthSeconds;
         }
-        if (d.isLive) info.isLiveStream = true;
+        if (d.isLive) record.isLiveStream = true;
         computeSorting();
       },
     };
@@ -346,14 +346,14 @@ const TAB_STATES = {
     if (trackedWindowId != null && tab.windowId !== trackedWindowId) return;
     if (Object.prototype.hasOwnProperty.call(changeInfo, 'discarded') ||
         changeInfo.status === 'complete' || changeInfo.status === 'loading' || changeInfo.url) {
-      await updateYoutubeWatchTabsInfos(tab.windowId);
+      await updateYoutubeWatchTabRecords(tab.windowId);
       refreshMetricsForTab(tabId);
     }
   });
   
   chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     if (trackedWindowId != null && removeInfo && removeInfo.windowId !== trackedWindowId) return;
-    delete youtubeWatchTabsInfosOfCurrentWindow[tabId];
+    delete youtubeWatchTabRecordsOfCurrentWindow[tabId];
     computeSorting();
   });
   
@@ -374,7 +374,7 @@ const TAB_STATES = {
       } else if (trackedWindowId != null) {
         windowIdForUpdate = trackedWindowId;
       }
-      await updateYoutubeWatchTabsInfos(windowIdForUpdate);
+      await updateYoutubeWatchTabRecords(windowIdForUpdate);
       refreshMetricsForTab(details.tabId);
     }, { url: [{ hostContains: 'youtube.com' }] });
   } else {
@@ -384,6 +384,6 @@ const TAB_STATES = {
   chrome.alarms.create('refreshRemaining', { periodInMinutes: 0.5 });
   chrome.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name !== 'refreshRemaining') return;
-    const ids = Object.keys(youtubeWatchTabsInfosOfCurrentWindow).map(Number);
+    const ids = Object.keys(youtubeWatchTabRecordsOfCurrentWindow).map(Number);
     await Promise.all(ids.map(refreshMetricsForTab));
   });
