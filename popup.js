@@ -18,28 +18,31 @@ let tabsInCurrentWindowAreKnownToBeSorted = false; // only true when ALL tabs kn
 let totalWatchTabsInWindow = 0;          
 let watchTabsReadyCount = 0;     // tabs with known remaining time
 let knownWatchTabsOutOfOrder = false; // whether the known subset is out of order
+let activeWindowId = null;
 
 initialise();
 
-function initialise() {
-  chrome.runtime.sendMessage({ action: "updateYoutubeWatchTabsInfos" });
-  const refreshBg = setInterval(() => chrome.runtime.sendMessage({ action: "updateYoutubeWatchTabsInfos" }), 1000);
+async function initialise() {
+  await refreshActiveContext().catch(() => null);
+  sendMessageWithWindow("updateYoutubeWatchTabsInfos");
+  const refreshBg = setInterval(() => sendMessageWithWindow("updateYoutubeWatchTabsInfos"), 1000);
 
   updatePopup();
   const refreshPopup = setInterval(updatePopup, 500);
 
   const sortButton = document.getElementById('sortButton');
   if (sortButton) {
-    sortButton.addEventListener('click', () => chrome.runtime.sendMessage({ action: "sortTabs" }));
+    sortButton.addEventListener('click', () => sendMessageWithWindow("sortTabs"));
   }
 
   window.onunload = () => { clearInterval(refreshBg); clearInterval(refreshPopup); };
 }
 
 async function updatePopup() {
-  const activeTabId = await getActiveTabId().catch(() => null);
+  const context = await refreshActiveContext().catch(() => null);
+  const activeTabId = context?.tabId ?? null;
 
-  chrome.runtime.sendMessage({ action: "sendTabsInfos" }, (response) => {
+  sendMessageWithWindow("sendTabsInfos", {}, (response) => {
     if (!response) return;
 
     const table = document.getElementById('infoTable');
@@ -79,13 +82,36 @@ async function updatePopup() {
 
 // ---- helpers
 
-async function getActiveTabId() {
+async function refreshActiveContext() {
   return new Promise((resolve, reject) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs && tabs.length) resolve(tabs[0].id);
-      else reject(new Error('No active tab'));
+      const err = chrome.runtime.lastError;
+      if (err) {
+        activeWindowId = null;
+        reject(err);
+        return;
+      }
+      if (tabs && tabs.length) {
+        const tab = tabs[0];
+        activeWindowId = (typeof tab.windowId === 'number') ? tab.windowId : null;
+        resolve({ tabId: tab.id, windowId: activeWindowId });
+      } else {
+        activeWindowId = null;
+        reject(new Error('No active tab'));
+      }
     });
   });
+}
+
+function sendMessageWithWindow(action, extra = {}, callback) {
+  const message = Object.assign({ action }, extra);
+  if (typeof activeWindowId === 'number' && message.windowId == null) {
+    message.windowId = activeWindowId;
+  }
+  if (typeof callback === 'function') {
+    return chrome.runtime.sendMessage(message, callback);
+  }
+  return chrome.runtime.sendMessage(message);
 }
 
 function setActionAndStatusColumnsVisibility(visible) {
@@ -159,7 +185,7 @@ function insertRowCells(row, tabInfo) {
     a.href = '#';
     a.classList.add('user-action-link');
     a.textContent = text;
-    a.addEventListener('click', () => chrome.runtime.sendMessage({ action: messageAction, tabId }));
+    a.addEventListener('click', () => sendMessageWithWindow(messageAction, { tabId }));
     return a;
   }
 }
@@ -307,5 +333,5 @@ function determineUserAction(tabInfo) {
 function logAndSend(type = MESSAGE_TYPES.ERROR, message = "Message is undefined") {
   if (type === MESSAGE_TYPES.ERROR) console.error(`Error from popup script ${message}`);
   else console.log(`Message from popup script ${message}`);
-  chrome.runtime.sendMessage({ action: "logPopupMessage", type, info: message });
+  sendMessageWithWindow("logPopupMessage", { type, info: message });
 }

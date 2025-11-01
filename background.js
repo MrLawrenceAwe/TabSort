@@ -9,6 +9,7 @@ const TAB_STATES = {
   let youtubeWatchTabsInfosOfCurrentWindow = {}; // { [tabId]: TabInfo }
   let youtubeWatchTabsInfosOfCurrentWindowIDsSortedByRemainingTime = [];
   let tabsInCurrentWindowAreKnownToBeSorted = false;
+  let trackedWindowId = null;
   
   const now = () => Date.now();
   const isWatch = (url) => typeof url === 'string' && YT_WATCH_REGEX.test(url);
@@ -19,8 +20,50 @@ const TAB_STATES = {
     } catch (_) { return fallback; }
   }
   
-  function getCurrentWindowTabs() {
-    return new Promise((resolve) => chrome.tabs.query({ currentWindow: true }, (tabs) => resolve(tabs || [])));
+  function resolveTrackedWindowId(windowId) {
+    if (typeof windowId === 'number' && Number.isFinite(windowId)) {
+      trackedWindowId = windowId;
+    }
+    return (typeof trackedWindowId === 'number' && Number.isFinite(trackedWindowId))
+      ? trackedWindowId
+      : null;
+  }
+  
+  function queryTabs(query) {
+    return new Promise((resolve) => {
+      try {
+        chrome.tabs.query(query, (tabs) => {
+          const err = chrome.runtime.lastError;
+          if (err) {
+            resolve([]);
+            return;
+          }
+          resolve(Array.isArray(tabs) ? tabs : []);
+        });
+      } catch (_) {
+        resolve([]);
+      }
+    });
+  }
+  
+  async function getTabsForTrackedWindow(windowId) {
+    const targetWindowId = resolveTrackedWindowId(windowId);
+    const baseQuery = (targetWindowId != null) ? { windowId: targetWindowId } : { currentWindow: true };
+    const [visibleTabs, hiddenTabs] = await Promise.all([
+      queryTabs(baseQuery),
+      queryTabs({ ...baseQuery, hidden: true }),
+    ]);
+  
+    const deduped = [];
+    const seen = new Set();
+    for (const tab of [...visibleTabs, ...hiddenTabs]) {
+      if (!tab || typeof tab.id !== 'number') continue;
+      if (seen.has(tab.id)) continue;
+      seen.add(tab.id);
+      deduped.push(tab);
+    }
+  
+    return { tabs: deduped, windowId: targetWindowId };
   }
   function getTab(tabId) {
     return new Promise((resolve, reject) => {
@@ -56,8 +99,9 @@ const TAB_STATES = {
     }
   }
   
-  async function updateYoutubeWatchTabsInfos() {
-    const tabs = await getCurrentWindowTabs();
+  async function updateYoutubeWatchTabsInfos(windowId) {
+    const { tabs, windowId: targetWindowId } = await getTabsForTrackedWindow(windowId);
+    if (targetWindowId == null && tabs.length === 0) return;
     const visibleIds = new Set();
   
     for (const tab of tabs) {
@@ -70,6 +114,7 @@ const TAB_STATES = {
       const prevContentReady = Boolean(prev.contentScriptReady);
       const base = youtubeWatchTabsInfosOfCurrentWindow[tab.id] = {
         id: tab.id,
+        windowId: tab.windowId,
         url: tab.url,
         index: tab.index,
         status: nextStatus,
@@ -136,6 +181,11 @@ const TAB_STATES = {
       if (info.status !== TAB_STATES.UNSUSPENDED) return;
 
       const tab = await getTab(tabId);
+      if (trackedWindowId != null && tab.windowId !== trackedWindowId) return;
+      if (tab.windowId != null) {
+        info.windowId = tab.windowId;
+        resolveTrackedWindowId(tab.windowId);
+      }
       if (!isWatch(tab.url)) return;
   
       const result = await sendMessageToTab(tabId, { message: 'getVideoMetrics' });
@@ -185,7 +235,7 @@ const TAB_STATES = {
     });
     if (finiteIds.length === 0) return;
   
-    const tabs = await getCurrentWindowTabs();
+    const { tabs } = await getTabsForTrackedWindow();
     const positions = tabs.filter(t => isWatch(t.url)).map(t => t.index).sort((a,b)=>a-b);
     if (!positions.length) return;
   
@@ -193,7 +243,7 @@ const TAB_STATES = {
     for (const id of finiteIds) {
       try { await chrome.tabs.move(id, { index: cursor++ }); } catch (_) {}
     }
-    await updateYoutubeWatchTabsInfos();
+    await updateYoutubeWatchTabsInfos(trackedWindowId);
   }
   
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -205,9 +255,9 @@ const TAB_STATES = {
     };
   
     const handlers = {
-      updateYoutubeWatchTabsInfos: async () => { await updateYoutubeWatchTabsInfos(); },
+      updateYoutubeWatchTabsInfos: async () => { await updateYoutubeWatchTabsInfos(message.windowId); },
       sendTabsInfos: async () => {
-        await updateYoutubeWatchTabsInfos();
+        await updateYoutubeWatchTabsInfos(message.windowId);
         const ids = Object.keys(youtubeWatchTabsInfosOfCurrentWindow).map(Number);
         await Promise.all(ids.map(refreshMetricsForTab));
         return {
@@ -216,17 +266,22 @@ const TAB_STATES = {
         };
       },
       areTabsInCurrentWindowKnownToBeSorted: async () => {
-        await updateYoutubeWatchTabsInfos();
+        await updateYoutubeWatchTabsInfos(message.windowId);
         return tabsInCurrentWindowAreKnownToBeSorted;
       },
-      sortTabs: async () => { await sortTabsInCurrentWindow(); },
+      sortTabs: async () => {
+        resolveTrackedWindowId(message.windowId);
+        await sortTabsInCurrentWindow();
+      },
       activateTab: async () => {
         const tabId = message.tabId;
+        if (typeof message.windowId === 'number') resolveTrackedWindowId(message.windowId);
         if (tabId) { try { await chrome.tabs.update(tabId, { active: true }); } catch (_) {} }
       },
       reloadTab: async () => {
         const tabId = message.tabId;
         if (tabId) {
+          if (typeof message.windowId === 'number') resolveTrackedWindowId(message.windowId);
           try { await chrome.tabs.reload(tabId); } catch (_) {}
           const info = youtubeWatchTabsInfosOfCurrentWindow[tabId];
           if (info) {
@@ -243,14 +298,17 @@ const TAB_STATES = {
       // content -> background
       contentScriptReady: async () => {
         const tabId = sender?.tab?.id;
+        resolveTrackedWindowId(sender?.tab?.windowId);
         if (!tabId) return;
-        const info = youtubeWatchTabsInfosOfCurrentWindow[tabId] || (youtubeWatchTabsInfosOfCurrentWindow[tabId] = {});
+        const info = youtubeWatchTabsInfosOfCurrentWindow[tabId] || (youtubeWatchTabsInfosOfCurrentWindow[tabId] = { windowId: sender?.tab?.windowId ?? null });
+        if (sender?.tab?.windowId != null) info.windowId = sender.tab.windowId;
         info.contentScriptReady = true;
         refreshMetricsForTab(tabId);
         sendResponse({ message: 'contentScriptAck' });
       },
       metadataLoaded: async () => {
         const tabId = sender?.tab?.id;
+        resolveTrackedWindowId(sender?.tab?.windowId);
         if (!tabId) return;
         const info = youtubeWatchTabsInfosOfCurrentWindow[tabId];
         if (info) info.metadataLoaded = true;
@@ -259,11 +317,13 @@ const TAB_STATES = {
       lightweightDetails: async () => {
         const tabId = sender?.tab?.id;
         const d = message.details || {};
+        resolveTrackedWindowId(sender?.tab?.windowId);
         if (!tabId) return;
   
         const info = youtubeWatchTabsInfosOfCurrentWindow[tabId] ||
-                     (youtubeWatchTabsInfosOfCurrentWindow[tabId] = { id: tabId, url: d.url || sender?.tab?.url });
+                     (youtubeWatchTabsInfosOfCurrentWindow[tabId] = { id: tabId, url: d.url || sender?.tab?.url, windowId: sender?.tab?.windowId ?? null });
   
+        if (sender?.tab?.windowId != null) info.windowId = sender.tab.windowId;
         if (d.url) info.url = d.url;
         info.videoDetails = info.videoDetails || {};
         if (d.title) info.videoDetails.title = d.title;
@@ -283,14 +343,16 @@ const TAB_STATES = {
   // ----- Tab lifecycle
   chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     if (!isWatch(tab.url)) return;
+    if (trackedWindowId != null && tab.windowId !== trackedWindowId) return;
     if (Object.prototype.hasOwnProperty.call(changeInfo, 'discarded') ||
         changeInfo.status === 'complete' || changeInfo.status === 'loading' || changeInfo.url) {
-      await updateYoutubeWatchTabsInfos();
+      await updateYoutubeWatchTabsInfos(tab.windowId);
       refreshMetricsForTab(tabId);
     }
   });
   
-  chrome.tabs.onRemoved.addListener((tabId) => {
+  chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+    if (trackedWindowId != null && removeInfo && removeInfo.windowId !== trackedWindowId) return;
     delete youtubeWatchTabsInfosOfCurrentWindow[tabId];
     computeSorting();
   });
@@ -299,7 +361,20 @@ const TAB_STATES = {
     chrome.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
       if (details.frameId !== 0) return;
       if (!isWatch(details.url)) return;
-      await updateYoutubeWatchTabsInfos();
+
+      let windowIdForUpdate = null;
+      if (typeof details.tabId === 'number') {
+        try {
+          const tab = await getTab(details.tabId);
+          if (trackedWindowId != null && tab.windowId !== trackedWindowId) return;
+          windowIdForUpdate = tab.windowId;
+        } catch (_) {
+          return;
+        }
+      } else if (trackedWindowId != null) {
+        windowIdForUpdate = trackedWindowId;
+      }
+      await updateYoutubeWatchTabsInfos(windowIdForUpdate);
       refreshMetricsForTab(details.tabId);
     }, { url: [{ hostContains: 'youtube.com' }] });
   } else {
