@@ -6,15 +6,54 @@ const TAB_STATES = {
   
   const YT_WATCH_REGEX = /^https?:\/\/(www\.)?youtube\.com\/watch\?/i;
   
-  let youtubeWatchTabRecordsOfCurrentWindow = {}; // { [tabId]: TabRecord }
-  let youtubeWatchTabRecordIdsSortedByRemainingTime = [];
-  let youtubeWatchTabRecordIdsInCurrentOrder = [];
-  let tabsInCurrentWindowAreKnownToBeSorted = false;
-  let trackedWindowId = null;
-  
-  const now = () => Date.now();
-  const isWatch = (url) => typeof url === 'string' && YT_WATCH_REGEX.test(url);
-  
+let youtubeWatchTabRecordsOfCurrentWindow = {}; // { [tabId]: TabRecord }
+let youtubeWatchTabRecordIdsSortedByRemainingTime = [];
+let youtubeWatchTabRecordIdsInCurrentOrder = [];
+let tabsInCurrentWindowAreKnownToBeSorted = false;
+let trackedWindowId = null;
+let lastBroadcastSignature = null;
+
+const now = () => Date.now();
+const isWatch = (url) => typeof url === 'string' && YT_WATCH_REGEX.test(url);
+
+function cloneRecord(record) {
+  if (!record || typeof record !== 'object') return record;
+  return {
+    ...record,
+    videoDetails: record.videoDetails ? { ...record.videoDetails } : null,
+  };
+}
+
+function buildTabSnapshot() {
+  const records = Object.fromEntries(
+    Object.entries(youtubeWatchTabRecordsOfCurrentWindow).map(([id, record]) => [id, cloneRecord(record)])
+  );
+
+  return {
+    youtubeWatchTabRecordsOfCurrentWindow: records,
+    youtubeWatchTabRecordIdsSortedByRemainingTime: [...youtubeWatchTabRecordIdsSortedByRemainingTime],
+    youtubeWatchTabRecordIdsInCurrentOrder: [...youtubeWatchTabRecordIdsInCurrentOrder],
+    tabsInCurrentWindowAreKnownToBeSorted,
+  };
+}
+
+function broadcastTabSnapshot({ force = false } = {}) {
+  try {
+    const snapshot = buildTabSnapshot();
+    const signature = JSON.stringify(snapshot);
+    if (!force && signature === lastBroadcastSignature) return;
+    lastBroadcastSignature = signature;
+    chrome.runtime.sendMessage({ message: 'tabRecordsUpdated', payload: snapshot }, () => {
+      const err = chrome.runtime.lastError;
+      if (err && err.message && !/Receiving end/i.test(err.message)) {
+        console.debug(`[TabSort] broadcast warning: ${err.message}`);
+      }
+    });
+  } catch (_) {
+    // no-op: can occur if service worker is shutting down or there is no listener
+  }
+}
+
   function safeGet(obj, path, fallback = undefined) {
     try {
       return path.split('.').reduce((o, k) => (o && o[k] !== undefined ? o[k] : undefined), obj) ?? fallback;
@@ -136,8 +175,8 @@ const TAB_STATES = {
     computeSorting();
   }
   
-  function computeSorting() {
-    const entries = Object.values(youtubeWatchTabRecordsOfCurrentWindow);
+function computeSorting() {
+  const entries = Object.values(youtubeWatchTabRecordsOfCurrentWindow);
 
     const currentOrder = entries
       .slice()
@@ -166,13 +205,14 @@ const TAB_STATES = {
 
     const allHaveFiniteRemainingTimes = unknown.length === 0;
 
-    const alreadyInExpectedOrder =
-      currentOrder.length > 0 &&
-      currentOrder.length === expectedOrder.length &&
-      currentOrder.every((id, i) => id === expectedOrder[i]);
+  const alreadyInExpectedOrder =
+    currentOrder.length > 0 &&
+    currentOrder.length === expectedOrder.length &&
+    currentOrder.every((id, i) => id === expectedOrder[i]);
 
-    tabsInCurrentWindowAreKnownToBeSorted = allHaveFiniteRemainingTimes && alreadyInExpectedOrder;
-  }
+  tabsInCurrentWindowAreKnownToBeSorted = allHaveFiniteRemainingTimes && alreadyInExpectedOrder;
+  broadcastTabSnapshot();
+}
   
   async function refreshMetricsForTab(tabId) {
     try {
@@ -285,11 +325,7 @@ const TAB_STATES = {
         await updateYoutubeWatchTabRecords(message.windowId);
         const ids = Object.keys(youtubeWatchTabRecordsOfCurrentWindow).map(Number);
         await Promise.all(ids.map(refreshMetricsForTab));
-        return {
-          youtubeWatchTabRecordsOfCurrentWindow,
-          youtubeWatchTabRecordIdsSortedByRemainingTime,
-          youtubeWatchTabRecordIdsInCurrentOrder,
-        };
+        return buildTabSnapshot();
       },
       areTabsInCurrentWindowKnownToBeSorted: async () => {
         await updateYoutubeWatchTabRecords(message.windowId);
@@ -313,6 +349,7 @@ const TAB_STATES = {
           if (record) {
             record.status = TAB_STATES.LOADING;
             record.unsuspendedTimestamp = now();
+            broadcastTabSnapshot();
           }
         }
       },
@@ -329,6 +366,7 @@ const TAB_STATES = {
         const record = youtubeWatchTabRecordsOfCurrentWindow[tabId] || (youtubeWatchTabRecordsOfCurrentWindow[tabId] = { windowId: sender?.tab?.windowId ?? null });
         if (sender?.tab?.windowId != null) record.windowId = sender.tab.windowId;
         record.contentScriptReady = true;
+        broadcastTabSnapshot();
         refreshMetricsForTab(tabId);
         sendResponse({ message: 'contentScriptAck' });
       },
@@ -338,6 +376,7 @@ const TAB_STATES = {
         if (!tabId) return;
         const record = youtubeWatchTabRecordsOfCurrentWindow[tabId];
         if (record) record.metadataLoaded = true;
+        broadcastTabSnapshot();
         await refreshMetricsForTab(tabId);
       },
       lightweightDetails: async () => {
