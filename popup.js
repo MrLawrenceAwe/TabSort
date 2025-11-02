@@ -26,6 +26,7 @@ let knownWatchTabsOutOfOrder = false; // whether the known subset is out of orde
 let activeWindowId = null;
 let hiddenTabsMayHaveStaleRemaining = false;
 let readyTabsAreContiguous = true;
+let readyTabsAreAtFront = true;
 
 initialise();
 
@@ -82,6 +83,7 @@ async function renderSnapshot(snapshot) {
 
   hiddenTabsMayHaveStaleRemaining = Object.values(tabRecords).some(r => Boolean(r?.remainingTimeMayBeStale));
   readyTabsAreContiguous = areReadyTabsContiguous(tabRecords);
+  readyTabsAreAtFront = areReadyTabsAtFront(tabRecords);
 
   totalWatchTabsInWindow = Object.keys(tabRecords).length;
   watchTabsReadyCount = countTabsReadyForSorting(tabRecords);
@@ -339,6 +341,28 @@ function areReadyTabsContiguous(tabRecords) {
   return true;
 }
 
+function areReadyTabsAtFront(tabRecords) {
+  const records = Object.values(tabRecords);
+  const readyRecords = records
+    .filter(t => !t?.remainingTimeMayBeStale && typeof t?.videoDetails?.remainingTime === 'number' && isFinite(t.videoDetails.remainingTime))
+    .sort((a, b) => a.index - b.index);
+
+  if (readyRecords.length === 0) return true;
+
+  const firstReady = readyRecords[0];
+  if (!Number.isFinite(firstReady.index)) return true;
+
+  for (const record of records) {
+    if (!Number.isFinite(record?.index)) continue;
+    if (record.index < firstReady.index) {
+      const isReady = !record?.remainingTimeMayBeStale && typeof record?.videoDetails?.remainingTime === 'number' && isFinite(record.videoDetails.remainingTime);
+      if (!isReady) return false;
+    }
+  }
+
+  return true;
+}
+
 // Are the known (finite) tabs out of order relative to their current tab positions?
 function areFiniteTabsOutOfOrder(tabRecords) {
   const records = Object.values(tabRecords);
@@ -424,7 +448,7 @@ function updateHeaderFooter() {
     !tabsInCurrentWindowAreKnownToBeSorted &&
     (
       knownWatchTabsOutOfOrder ||
-      (readySubsetExists && !readyTabsAreContiguous)
+      (readySubsetExists && (!readyTabsAreContiguous || !readyTabsAreAtFront))
     );
 
   setOptionToggleVisibility(shouldShowSort);
