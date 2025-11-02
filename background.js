@@ -8,6 +8,7 @@ const TAB_STATES = {
   
   let youtubeWatchTabRecordsOfCurrentWindow = {}; // { [tabId]: TabRecord }
   let youtubeWatchTabRecordIdsSortedByRemainingTime = [];
+  let youtubeWatchTabRecordIdsInCurrentOrder = [];
   let tabsInCurrentWindowAreKnownToBeSorted = false;
   let trackedWindowId = null;
   
@@ -161,6 +162,7 @@ const TAB_STATES = {
 
     const expectedOrder = [...finiteSortedIds, ...unknownIdsInCurrentOrder];
     youtubeWatchTabRecordIdsSortedByRemainingTime = expectedOrder;
+    youtubeWatchTabRecordIdsInCurrentOrder = currentOrder;
 
     const allHaveFiniteRemainingTimes = unknown.length === 0;
 
@@ -232,21 +234,40 @@ const TAB_STATES = {
   }
   
   async function sortTabsInCurrentWindow() {
-    const ids = youtubeWatchTabRecordIdsSortedByRemainingTime.slice();
-    const finiteIds = ids.filter(id => {
-      const rt = safeGet(youtubeWatchTabRecordsOfCurrentWindow[id], 'videoDetails.remainingTime', null);
-      return typeof rt === 'number';
+    const orderedTabIds = youtubeWatchTabRecordIdsSortedByRemainingTime.slice();
+
+    const tabsWithKnownRemainingTime = orderedTabIds.filter((tabId) => {
+      const remainingTime = safeGet(
+        youtubeWatchTabRecordsOfCurrentWindow[tabId],
+        'videoDetails.remainingTime',
+        null,
+      );
+      return typeof remainingTime === 'number' && isFinite(remainingTime);
     });
-    if (finiteIds.length === 0) return;
-  
+
+    if (tabsWithKnownRemainingTime.length < 2) return;
+
     const { tabs } = await getTabsForTrackedWindow();
-    const positions = tabs.filter(t => isWatch(t.url)).map(t => t.index).sort((a,b)=>a-b);
-    if (!positions.length) return;
-  
-    let cursor = positions[0];
-    for (const id of finiteIds) {
-      try { await chrome.tabs.move(id, { index: cursor++ }); } catch (_) {}
+    const watchTabIndicesInWindow = tabs
+      .filter((tab) => isWatch(tab.url))
+      .sort((firstTab, secondTab) => firstTab.index - secondTab.index)
+      .map((tab) => tab.index);
+
+    if (watchTabIndicesInWindow.length < tabsWithKnownRemainingTime.length) return;
+
+    const targetMoves = tabsWithKnownRemainingTime.map((tabId, position) => ({
+      tabId,
+      targetIndex: watchTabIndicesInWindow[position],
+    }));
+
+    for (const move of targetMoves) {
+      try {
+        await chrome.tabs.move(move.tabId, { index: move.targetIndex });
+      } catch (_) {
+        // ignore move failures; subsequent refresh reconciles state
+      }
     }
+
     await updateYoutubeWatchTabRecords(trackedWindowId);
   }
   
@@ -267,6 +288,7 @@ const TAB_STATES = {
         return {
           youtubeWatchTabRecordsOfCurrentWindow,
           youtubeWatchTabRecordIdsSortedByRemainingTime,
+          youtubeWatchTabRecordIdsInCurrentOrder,
         };
       },
       areTabsInCurrentWindowKnownToBeSorted: async () => {
