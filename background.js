@@ -5,6 +5,10 @@ const TAB_STATES = {
   };
   
   const YT_WATCH_REGEX = /^https?:\/\/(www\.)?youtube\.com\/watch\?/i;
+
+const DEFAULT_SORT_OPTIONS = Object.freeze({
+  groupNonYoutubeTabsByDomain: false,
+});
   
 let youtubeWatchTabRecordsOfCurrentWindow = {}; // { [tabId]: TabRecord }
 let youtubeWatchTabRecordIdsSortedByRemainingTime = [];
@@ -15,6 +19,114 @@ let lastBroadcastSignature = null;
 
 const now = () => Date.now();
 const isWatch = (url) => typeof url === 'string' && YT_WATCH_REGEX.test(url);
+const YT_DOMAIN_REGEX = /(^|\.)youtube\.com$/i;
+
+function getStorageArea() {
+  if (chrome && chrome.storage && chrome.storage.sync) return chrome.storage.sync;
+  if (chrome && chrome.storage && chrome.storage.local) return chrome.storage.local;
+  return null;
+}
+
+function loadSortOptions() {
+  const storage = getStorageArea();
+  return new Promise((resolve) => {
+    if (!storage) {
+      resolve({ ...DEFAULT_SORT_OPTIONS });
+      return;
+    }
+    try {
+      storage.get(DEFAULT_SORT_OPTIONS, (items) => {
+        const err = chrome.runtime.lastError;
+        if (err) {
+          console.warn(`[TabSort] storage get failed: ${err.message}`);
+          resolve({ ...DEFAULT_SORT_OPTIONS });
+          return;
+        }
+        resolve({ ...DEFAULT_SORT_OPTIONS, ...items });
+      });
+    } catch (error) {
+      console.warn(`[TabSort] storage get threw: ${error.message}`);
+      resolve({ ...DEFAULT_SORT_OPTIONS });
+    }
+  });
+}
+
+function domainKey(url) {
+  if (typeof url !== 'string' || !url) return '';
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname || url;
+  } catch (_) {
+    return url;
+  }
+}
+
+function isYoutubeDomain(url) {
+  const host = domainKey(url);
+  if (!host) return false;
+  const lower = host.toLowerCase();
+  return YT_DOMAIN_REGEX.test(lower);
+}
+
+async function moveTabsSequentially(tabIds, startingIndex = 0) {
+  let targetIndex = startingIndex;
+  for (const tabId of tabIds) {
+    if (typeof tabId !== 'number') continue;
+    try {
+      await chrome.tabs.move(tabId, { index: targetIndex });
+      targetIndex += 1;
+    } catch (_) {
+      // ignore move failure and retry same index for next tab
+    }
+  }
+}
+
+function buildYoutubeTabOrder(unpinnedTabs, orderedWatchIds) {
+  const youtubeTabs = unpinnedTabs
+    .filter((tab) => tab && isYoutubeDomain(tab.url))
+    .sort((a, b) => a.index - b.index);
+  if (!youtubeTabs.length) return [];
+
+  const youtubeWatchTabs = youtubeTabs.filter((tab) => isWatch(tab.url));
+  const watchIdsInWindow = youtubeWatchTabs.map((tab) => tab.id);
+  const orderedFromRecords = orderedWatchIds.filter((id) => watchIdsInWindow.includes(id));
+  const seenWatch = new Set(orderedFromRecords);
+  const residualWatch = youtubeWatchTabs
+    .map((tab) => tab.id)
+    .filter((id) => !seenWatch.has(id));
+  residualWatch.forEach((id) => seenWatch.add(id));
+
+  const otherYoutube = youtubeTabs
+    .filter((tab) => !seenWatch.has(tab.id))
+    .map((tab) => tab.id);
+
+  return [...orderedFromRecords, ...residualWatch, ...otherYoutube];
+}
+
+function buildNonYoutubeOrder(unpinnedTabs, groupByDomain) {
+  const nonYoutubeTabs = unpinnedTabs
+    .filter((tab) => tab && !isYoutubeDomain(tab.url))
+    .sort((a, b) => a.index - b.index);
+  if (!nonYoutubeTabs.length) return [];
+
+  if (!groupByDomain) {
+    return nonYoutubeTabs.map((tab) => tab.id);
+  }
+
+  const domainOrder = [];
+  const domainToTabIds = new Map();
+
+  for (const tab of nonYoutubeTabs) {
+    const key = domainKey(tab.url);
+    if (!domainToTabIds.has(key)) {
+      domainToTabIds.set(key, []);
+      domainOrder.push(key);
+    }
+    domainToTabIds.get(key).push(tab.id);
+  }
+
+  return domainOrder.flatMap((key) => domainToTabIds.get(key) || []);
+}
 
 function cloneRecord(record) {
   if (!record || typeof record !== 'object') return record;
@@ -287,25 +399,20 @@ function computeSorting() {
 
     if (tabsWithKnownRemainingTime.length < 2) return;
 
+    const options = await loadSortOptions();
     const { tabs } = await getTabsForTrackedWindow();
-    const watchTabIndicesInWindow = tabs
-      .filter((tab) => isWatch(tab.url))
-      .sort((firstTab, secondTab) => firstTab.index - secondTab.index)
-      .map((tab) => tab.index);
+    if (!Array.isArray(tabs) || tabs.length === 0) return;
 
-    if (watchTabIndicesInWindow.length < tabsWithKnownRemainingTime.length) return;
+    const sortedTabs = tabs.slice().sort((a, b) => a.index - b.index);
+    const pinnedCount = sortedTabs.filter((tab) => tab && tab.pinned).length;
+    const unpinnedTabs = sortedTabs.filter((tab) => tab && !tab.pinned);
 
-    const targetMoves = tabsWithKnownRemainingTime.map((tabId, position) => ({
-      tabId,
-      targetIndex: watchTabIndicesInWindow[position],
-    }));
+    const youtubeOrder = buildYoutubeTabOrder(unpinnedTabs, orderedTabIds);
+    const nonYoutubeOrder = buildNonYoutubeOrder(unpinnedTabs, Boolean(options.groupNonYoutubeTabsByDomain));
+    const finalOrder = [...youtubeOrder, ...nonYoutubeOrder];
 
-    for (const move of targetMoves) {
-      try {
-        await chrome.tabs.move(move.tabId, { index: move.targetIndex });
-      } catch (_) {
-        // ignore move failures; subsequent refresh reconciles state
-      }
+    if (finalOrder.length) {
+      await moveTabsSequentially(finalOrder, pinnedCount);
     }
 
     await updateYoutubeWatchTabRecords(trackedWindowId);
