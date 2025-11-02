@@ -11,6 +11,7 @@ const USER_ACTIONS = {
   INTERACT_WITH_TAB: 'Interact with tab',
   FACILITATE_LOAD: 'Facilitate load',
   INTERACT_WITH_TAB_THEN_RELOAD: 'Interact with tab/Reload tab',
+  VIEW_TAB_TO_REFRESH_TIME: 'View tab to refresh time',
   NO_ACTION: ''
 };
 
@@ -23,6 +24,7 @@ let totalWatchTabsInWindow = 0;
 let watchTabsReadyCount = 0;     // tabs with known remaining time
 let knownWatchTabsOutOfOrder = false; // whether the known subset is out of order
 let activeWindowId = null;
+let hiddenTabsMayHaveStaleRemaining = false;
 
 initialise();
 
@@ -77,6 +79,8 @@ async function renderSnapshot(snapshot) {
   const tabRecords = snapshot.youtubeWatchTabRecordsOfCurrentWindow || {};
   const currentOrderIds = snapshot.youtubeWatchTabRecordIdsInCurrentOrder || [];
 
+  hiddenTabsMayHaveStaleRemaining = Object.values(tabRecords).some(r => Boolean(r?.remainingTimeMayBeStale));
+
   totalWatchTabsInWindow = Object.keys(tabRecords).length;
   watchTabsReadyCount = countTabsReadyForSorting(tabRecords);
   knownWatchTabsOutOfOrder = areFiniteTabsOutOfOrder(tabRecords);
@@ -98,6 +102,8 @@ async function renderSnapshot(snapshot) {
     const tabRecord = tabRecords[tabId];
     if (!tabRecord) continue;
     tabRecord.isActiveTab = (String(tabId) === String(activeTabId));
+    tabRecord.remainingTimeMayBeStale = Boolean(tabRecord.remainingTimeMayBeStale);
+    if (tabRecord.remainingTimeMayBeStale) row.classList.add('stale-remaining-row');
     insertRowCells(row, tabRecord, shouldShowSorted);
     frag.appendChild(row);
   }
@@ -251,10 +257,14 @@ function insertRowCells(row, tabRecord, isSortedView) {
 
       let value = record[key];
       if (key === 'videoDetails') {
-        const rt2 = record?.videoDetails?.remainingTime;
-        value = (typeof rt2 === 'number' && isFinite(rt2))
-          ? (!record.isLiveStream ? formatRemaining(rt2) : 'Live Stream')
-          : 'unavailable';
+        if (record.remainingTimeMayBeStale) {
+          value = 'View tab to refresh time';
+        } else {
+          const rt2 = record?.videoDetails?.remainingTime;
+          value = (typeof rt2 === 'number' && isFinite(rt2))
+            ? (!record.isLiveStream ? formatRemaining(rt2) : 'Live Stream')
+            : 'unavailable';
+        }
       }
       if (key === 'index') value = (Number.isFinite(value) ? value + 1 : '');
 
@@ -307,6 +317,7 @@ function formatRemaining(seconds) {
 function countTabsReadyForSorting(tabRecords) {
   return Object.values(tabRecords).filter(t => {
     const rt = t?.videoDetails?.remainingTime;
+    if (t?.remainingTimeMayBeStale) return false;
     return typeof rt === 'number' && isFinite(rt);
   }).length;
 }
@@ -318,7 +329,8 @@ function areFiniteTabsOutOfOrder(tabRecords) {
 
   const withRt = records.map(t => {
     const rt = t?.videoDetails?.remainingTime;
-    return { id: t.id, index: t.index, remaining: (typeof rt === 'number' && isFinite(rt)) ? rt : null };
+    const remaining = (!t?.remainingTimeMayBeStale && typeof rt === 'number' && isFinite(rt)) ? rt : null;
+    return { id: t.id, index: t.index, remaining };
   });
 
   const currentFiniteOrder = withRt
@@ -342,7 +354,7 @@ function allTabsKnownAndSorted(tabRecords) {
   if (records.length <= 1) return false; // don’t flash “Tabs sorted” for 0/1 watch tabs
 
   // all known?
-  const allKnown = records.every(t => typeof t?.videoDetails?.remainingTime === 'number' && isFinite(t.videoDetails.remainingTime));
+  const allKnown = records.every(t => !t?.remainingTimeMayBeStale && typeof t?.videoDetails?.remainingTime === 'number' && isFinite(t.videoDetails.remainingTime));
   if (!allKnown) return false;
 
   // expected full order: finite (ascending) followed by nothing (since all finite)
@@ -362,6 +374,7 @@ function updateHeaderFooter() {
   const sortButton = document.getElementById('sortButton');
   const tabsSortedElement = document.getElementById('tabsSorted');
   const table = document.getElementById('infoTable');
+  const hiddenWarningElement = document.getElementById('hiddenTabWarning');
 
   // Status text: N/M ready
   if (statusElement) {
@@ -377,6 +390,15 @@ function updateHeaderFooter() {
   // “Tabs sorted” shows ONLY when all tabs known AND ordered
   if (tabsSortedElement) {
     tabsSortedElement.style.display = tabsInCurrentWindowAreKnownToBeSorted ? 'block' : 'none';
+  }
+
+  if (hiddenWarningElement) {
+    if (hiddenTabsMayHaveStaleRemaining) {
+      hiddenWarningElement.textContent = 'Remaining time may stay at the full length until you view paused background tabs.';
+      hiddenWarningElement.style.display = 'block';
+    } else {
+      hiddenWarningElement.style.display = 'none';
+    }
   }
 
   const shouldShowSort =
@@ -411,6 +433,10 @@ function addClassToAllRows(table, className) {
 }
 
 function determineUserAction(tabRecord) {
+  if (tabRecord?.remainingTimeMayBeStale) {
+    tabRecord.remainingTimeAvailable = false;
+    return USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME;
+  }
   const remainingTimeAvailable =
     (typeof tabRecord?.videoDetails?.remainingTime === 'number' && isFinite(tabRecord.videoDetails.remainingTime));
   tabRecord.remainingTimeAvailable = remainingTimeAvailable;

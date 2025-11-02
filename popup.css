@@ -78,6 +78,11 @@ h2 {
     color: white !important
 }
 
+.stale-remaining-row td {
+    background-color: #4b2f2f !important;
+    color: #ffd6d6 !important;
+}
+
 
 .user-action-link {
     color: royalblue;
@@ -93,6 +98,14 @@ h2 {
 
 .status-message {
     color: #fff;
+}
+
+.warning-message {
+    display: none;
+    color: #ffdd57;
+    font-size: 12px;
+    line-height: 1.4;
+    max-width: 320px;
 }
 
 .option-toggle {

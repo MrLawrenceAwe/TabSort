@@ -275,6 +275,7 @@ function broadcastTabSnapshot({ force = false } = {}) {
         isLiveStream: Boolean(prev.isLiveStream),
         videoDetails: prev.videoDetails || null, // { title, lengthSeconds, remainingTime }
         unsuspendedTimestamp: prev.unsuspendedTimestamp || null,
+        remainingTimeMayBeStale: Boolean(prev.remainingTimeMayBeStale) || false,
       };
   
       setUnsuspendTimestamp(base, prev.status, nextStatus);
@@ -297,7 +298,8 @@ function computeSorting() {
 
     const enriched = entries.map(t => {
       const rt = t?.videoDetails?.remainingTime;
-      const val = (typeof rt === 'number' && isFinite(rt)) ? rt : null;
+      const isStale = Boolean(t?.remainingTimeMayBeStale);
+      const val = (!isStale && typeof rt === 'number' && isFinite(rt)) ? rt : null;
       return { id: t.id, index: t.index, remainingTime: val };
     });
 
@@ -348,6 +350,7 @@ function computeSorting() {
         if (record.videoDetails && record.videoDetails.remainingTime != null) {
           record.videoDetails.remainingTime = null;
         }
+        record.remainingTimeMayBeStale = false;
         computeSorting();
         return;
       }
@@ -375,8 +378,16 @@ function computeSorting() {
       if (isFinite(len) && isFinite(cur)) {
         const rem = Math.max(0, (len - cur) / (isFinite(rate) && rate > 0 ? rate : 1));
         record.videoDetails.remainingTime = rem;
-      } else if (isFinite(len) && record.videoDetails && record.videoDetails.remainingTime == null) {
-        record.videoDetails.remainingTime = len;
+        record.remainingTimeMayBeStale = false;
+      } else if (isFinite(len)) {
+        if (record.videoDetails) {
+          if (record.videoDetails.remainingTime == null) {
+            record.videoDetails.remainingTime = len;
+          }
+        }
+        record.remainingTimeMayBeStale = !tab.active;
+      } else {
+        record.remainingTimeMayBeStale = false;
       }
   
       computeSorting();
@@ -389,11 +400,9 @@ function computeSorting() {
     const orderedTabIds = youtubeWatchTabRecordIdsSortedByRemainingTime.slice();
 
     const tabsWithKnownRemainingTime = orderedTabIds.filter((tabId) => {
-      const remainingTime = safeGet(
-        youtubeWatchTabRecordsOfCurrentWindow[tabId],
-        'videoDetails.remainingTime',
-        null,
-      );
+      const record = youtubeWatchTabRecordsOfCurrentWindow[tabId];
+      const remainingTime = safeGet(record, 'videoDetails.remainingTime', null);
+      if (record && record.remainingTimeMayBeStale) return false;
       return typeof remainingTime === 'number' && isFinite(remainingTime);
     });
 
