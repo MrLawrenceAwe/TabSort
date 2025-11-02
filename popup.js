@@ -168,6 +168,11 @@ function insertRowCells(row, tabRecord) {
   function insertUserActionCell(r, record, action) {
     const cell = r.insertCell(1);
 
+    if (!action) {
+      cell.textContent = '—';
+      return;
+    }
+
     if (action === USER_ACTIONS.INTERACT_WITH_TAB_THEN_RELOAD) {
       const interact = createLink(USER_ACTIONS.INTERACT_WITH_TAB, ACTIVATE_TAB, record.id);
       const reload = createLink(USER_ACTIONS.RELOAD_TAB, RELOAD_TAB_ACTION, record.id);
