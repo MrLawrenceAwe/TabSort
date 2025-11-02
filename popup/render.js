@@ -10,8 +10,8 @@ import {
   countTabsReadyForSorting,
   areReadyTabsContiguous,
   areReadyTabsAtFront,
-  areFiniteTabsOutOfOrder,
-  allTabsKnownAndSorted,
+  areTabsWithKnownDurationOutOfOrder,
+  allRecordsHaveKnownRemainingTimeAndAreInOrder,
 } from './metrics.js';
 
 export function requestAndRenderSnapshot() {
@@ -46,10 +46,10 @@ export async function renderSnapshot(snapshot) {
 
   const totalWatchTabsInWindow = Object.keys(tabRecords).length;
   const watchTabsReadyCount = countTabsReadyForSorting(tabRecords);
-  const knownWatchTabsOutOfOrder = areFiniteTabsOutOfOrder(tabRecords);
+  const knownWatchTabsOutOfOrder = areTabsWithKnownDurationOutOfOrder(tabRecords);
   const backgroundSortedFlag = snapshot.tabsInCurrentWindowAreKnownToBeSorted === true;
   const allKnown = totalWatchTabsInWindow > 1 && watchTabsReadyCount === totalWatchTabsInWindow;
-  const computedAllSorted = allTabsKnownAndSorted(tabRecords);
+  const computedAllSorted = allRecordsHaveKnownRemainingTimeAndAreInOrder(tabRecords);
   const shouldShowSorted =
     computedAllSorted || (backgroundSortedFlag && allKnown && !knownWatchTabsOutOfOrder);
 

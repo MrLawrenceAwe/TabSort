@@ -56,43 +56,48 @@ export function areReadyTabsAtFront(tabRecords) {
   return true;
 }
 
-export function areFiniteTabsOutOfOrder(tabRecords) {
+export function areTabsWithKnownDurationOutOfOrder(tabRecords) {
   const records = Object.values(tabRecords);
   if (records.length === 0) return false;
 
-  const withRemaining = records.map((record) => {
-    const rt = record?.videoDetails?.remainingTime;
+  const recordsWithRemainingTime = records.map((record) => {
+    const remainingTime = record?.videoDetails?.remainingTime;
     const remaining =
-      !record?.remainingTimeMayBeStale && typeof rt === 'number' && isFinite(rt) ? rt : null;
+      !record?.remainingTimeMayBeStale && typeof remainingTime === 'number' && isFinite(remainingTime) ? remainingTime : null;
     return { id: record.id, index: record.index, remaining };
   });
 
-  const currentFiniteOrder = withRemaining
+  const currentTabsWithKnownDurationOrder = recordsWithRemainingTime
     .filter((item) => item.remaining !== null)
     .sort((a, b) => a.index - b.index)
     .map((item) => item.id);
 
-  const expectedFiniteOrder = withRemaining
+  const expectedTabsWithKnownDurationOrder = recordsWithRemainingTime
     .filter((item) => item.remaining !== null)
     .sort((a, b) => a.remaining - b.remaining)
     .map((item) => item.id);
 
-  if (currentFiniteOrder.length < 2) return false;
-  if (currentFiniteOrder.length !== expectedFiniteOrder.length) return true;
-  return !currentFiniteOrder.every((id, i) => id === expectedFiniteOrder[i]);
+  if (currentTabsWithKnownDurationOrder.length < 2) return false;
+  if (currentTabsWithKnownDurationOrder.length !== expectedTabsWithKnownDurationOrder.length)
+    return true;
+  return !currentTabsWithKnownDurationOrder.every(
+    (id, i) => id === expectedTabsWithKnownDurationOrder[i],
+  );
 }
 
-export function allTabsKnownAndSorted(tabRecords) {
-  const records = Object.values(tabRecords);
-  if (records.length <= 1) return false;
-
-  const allKnown = records.every(
+function allRecordsHaveKnownRemainingTime(tabRecords) {
+  return Object.values(tabRecords).every(
     (record) =>
       !record?.remainingTimeMayBeStale &&
       typeof record?.videoDetails?.remainingTime === 'number' &&
       isFinite(record.videoDetails.remainingTime),
   );
-  if (!allKnown) return false;
+}
+
+export function allRecordsHaveKnownRemainingTimeAndAreInOrder(tabRecords) {
+  const records = Object.values(tabRecords);
+  if (records.length <= 1) return false;
+  if (!allRecordsHaveKnownRemainingTime(tabRecords)) return false;
 
   const currentOrder = records.slice().sort((a, b) => a.index - b.index).map((record) => record.id);
   const expectedOrder = records

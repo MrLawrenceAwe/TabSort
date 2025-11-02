@@ -112,23 +112,23 @@ function computeSorting() {
     return { id: t.id, index: t.index, remainingTime: val };
   });
 
-  const finite = enriched.filter((e) => e.remainingTime !== null);
-  const unknown = enriched.filter((e) => e.remainingTime === null);
+  const knownDurationEntries = enriched.filter((e) => e.remainingTime !== null);
+  const unknownDurationEntries = enriched.filter((e) => e.remainingTime === null);
 
-  const finiteSortedIds = finite
+  const knownDurationSortedIds = knownDurationEntries
     .slice()
     .sort((a, b) => a.remainingTime - b.remainingTime)
     .map((e) => e.id);
 
   const unknownIdsInCurrentOrder = currentOrder.filter((id) =>
-    unknown.some((u) => u.id === id),
+    unknownDurationEntries.some((u) => u.id === id),
   );
 
-  const expectedOrder = [...finiteSortedIds, ...unknownIdsInCurrentOrder];
+  const expectedOrder = [...knownDurationSortedIds, ...unknownIdsInCurrentOrder];
   backgroundState.youtubeWatchTabRecordIdsSortedByRemainingTime = expectedOrder;
   backgroundState.youtubeWatchTabRecordIdsInCurrentOrder = currentOrder;
 
-  const allHaveFiniteRemainingTimes = unknown.length === 0;
+  const allRemainingTimesKnown = unknownDurationEntries.length === 0;
 
   const alreadyInExpectedOrder =
     currentOrder.length > 0 &&
@@ -136,7 +136,7 @@ function computeSorting() {
     currentOrder.every((id, i) => id === expectedOrder[i]);
 
   backgroundState.tabsInCurrentWindowAreKnownToBeSorted =
-    allHaveFiniteRemainingTimes && alreadyInExpectedOrder;
+    allRemainingTimesKnown && alreadyInExpectedOrder;
   broadcastTabSnapshot();
 }
 
