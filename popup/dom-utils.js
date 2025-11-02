@@ -1,0 +1,87 @@
+import { popupState } from './state.js';
+
+export function setActionAndStatusColumnsVisibility(visible) {
+  const actionRequired = document.querySelector('.action-required');
+  const tabStatus = document.querySelector('.tab-status');
+  const method = visible ? 'remove' : 'add';
+  actionRequired?.classList[method]('hide');
+  tabStatus?.classList[method]('hide');
+}
+
+export function setOptionToggleVisibility(visible) {
+  document.querySelectorAll('.option-toggle').forEach((toggle) => {
+    if (toggle instanceof HTMLElement) {
+      toggle.style.display = visible ? 'flex' : 'none';
+    }
+  });
+}
+
+export function updateHeaderFooter() {
+  const statusElement = document.getElementById('youtubeWatchTabsReadyStatus');
+  const sortButton = document.getElementById('sortButton');
+  const tabsSortedElement = document.getElementById('tabsSorted');
+  const table = document.getElementById('infoTable');
+  const hiddenWarningElement = document.getElementById('hiddenTabWarning');
+
+  if (statusElement) {
+    if (!popupState.tabsInCurrentWindowAreKnownToBeSorted) {
+      statusElement.style.display = popupState.totalWatchTabsInWindow <= 1 ? 'none' : 'block';
+      statusElement.textContent = `${popupState.watchTabsReadyCount}/${popupState.totalWatchTabsInWindow} ready for sort.`;
+      statusElement.style.color = 'white';
+    } else {
+      statusElement.style.display = 'none';
+    }
+  }
+
+  if (tabsSortedElement) {
+    tabsSortedElement.style.display = popupState.tabsInCurrentWindowAreKnownToBeSorted ? 'block' : 'none';
+  }
+
+  if (hiddenWarningElement) {
+    if (popupState.hiddenTabsMayHaveStaleRemaining) {
+      hiddenWarningElement.textContent =
+        'Remaining time may stay at the full length until you view paused background tabs.';
+      hiddenWarningElement.style.display = 'block';
+    } else {
+      hiddenWarningElement.style.display = 'none';
+    }
+  }
+
+  const readySubsetExists =
+    popupState.watchTabsReadyCount >= 2 &&
+    popupState.watchTabsReadyCount < popupState.totalWatchTabsInWindow;
+  const shouldShowSort =
+    popupState.watchTabsReadyCount >= 2 &&
+    !popupState.tabsInCurrentWindowAreKnownToBeSorted &&
+    (popupState.knownWatchTabsOutOfOrder ||
+      (readySubsetExists && (!popupState.readyTabsAreContiguous || !popupState.readyTabsAreAtFront)));
+
+  setOptionToggleVisibility(shouldShowSort);
+
+  if (sortButton) {
+    if (shouldShowSort) {
+      setTimeout(() => sortButton.style.setProperty('display', 'block', 'important'), 100);
+
+      sortButton.style.backgroundColor =
+        popupState.watchTabsReadyCount === popupState.totalWatchTabsInWindow ? 'forestgreen' : 'white';
+      sortButton.textContent =
+        popupState.watchTabsReadyCount === popupState.totalWatchTabsInWindow
+          ? 'Sort All Tabs'
+          : 'Sort Ready Tabs';
+    } else {
+      sortButton.style.display = 'none';
+    }
+  }
+
+  if (popupState.tabsInCurrentWindowAreKnownToBeSorted && table) {
+    for (let i = 1; i < table.rows.length; i += 1) {
+      table.rows[i].classList.remove('ready-row');
+    }
+  }
+}
+
+export function addClassToAllRows(table, className) {
+  for (let i = 0; i < table.rows.length; i += 1) {
+    table.rows[i].classList.add(className);
+  }
+}
