@@ -1,8 +1,8 @@
 export function countTabsReadyForSorting(tabRecords) {
   return Object.values(tabRecords).filter((record) => {
-    const rt = record?.videoDetails?.remainingTime;
+    const remainingTime = record?.videoDetails?.remainingTime;
     if (record?.remainingTimeMayBeStale) return false;
-    return typeof rt === 'number' && isFinite(rt);
+    return typeof remainingTime === 'number' && isFinite(remainingTime);
   }).length;
 }
 
@@ -56,7 +56,7 @@ export function areReadyTabsAtFront(tabRecords) {
   return true;
 }
 
-export function areTabsWithKnownDurationOutOfOrder(tabRecords) {
+export function areRecordsWithKnownDurationOutOfOrder(tabRecords) {
   const records = Object.values(tabRecords);
   if (records.length === 0) return false;
 
@@ -67,21 +67,21 @@ export function areTabsWithKnownDurationOutOfOrder(tabRecords) {
     return { id: record.id, index: record.index, remaining };
   });
 
-  const currentTabsWithKnownDurationOrder = recordsWithRemainingTime
+  const currentRecordsWithKnownDurationOrder = recordsWithRemainingTime
     .filter((item) => item.remaining !== null)
     .sort((a, b) => a.index - b.index)
     .map((item) => item.id);
 
-  const expectedTabsWithKnownDurationOrder = recordsWithRemainingTime
+  const expectedRecordsWithKnownDurationOrder = recordsWithRemainingTime
     .filter((item) => item.remaining !== null)
     .sort((a, b) => a.remaining - b.remaining)
     .map((item) => item.id);
 
-  if (currentTabsWithKnownDurationOrder.length < 2) return false;
-  if (currentTabsWithKnownDurationOrder.length !== expectedTabsWithKnownDurationOrder.length)
+  if (currentRecordsWithKnownDurationOrder.length < 2) return false;
+  if (currentRecordsWithKnownDurationOrder.length !== expectedRecordsWithKnownDurationOrder.length)
     return true;
-  return !currentTabsWithKnownDurationOrder.every(
-    (id, i) => id === expectedTabsWithKnownDurationOrder[i],
+  return !currentRecordsWithKnownDurationOrder.every(
+    (id, i) => id === expectedRecordsWithKnownDurationOrder[i],
   );
 }
 
