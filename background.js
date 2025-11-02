@@ -191,6 +191,10 @@ const TAB_STATES = {
       const result = await sendMessageToTab(tabId, { message: 'getVideoMetrics' });
       if (!result || result.ok !== true) {
         record.contentScriptReady = false;
+        if (record.videoDetails && record.videoDetails.remainingTime != null) {
+          record.videoDetails.remainingTime = null;
+        }
+        computeSorting();
         return;
       }
 
