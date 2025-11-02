@@ -214,6 +214,13 @@ function setActionAndStatusColumnsVisibility(visible) {
   if (tabStatus) tabStatus.classList[method]('hide');
 }
 
+function setOptionToggleVisibility(visible) {
+  document.querySelectorAll('.option-toggle').forEach((toggle) => {
+    if (!(toggle instanceof HTMLElement)) return;
+    toggle.style.display = visible ? 'flex' : 'none';
+  });
+}
+
 function insertRowCells(row, tabRecord, isSortedView) {
   const ACTIVATE_TAB = 'activateTab';
   const RELOAD_TAB_ACTION = 'reloadTab';
@@ -372,18 +379,14 @@ function updateHeaderFooter() {
     tabsSortedElement.style.display = tabsInCurrentWindowAreKnownToBeSorted ? 'block' : 'none';
   }
 
-  const optionToggles = document.querySelectorAll('.option-toggle');
-  optionToggles.forEach((toggle) => {
-    if (!toggle) return;
-    toggle.style.display = tabsInCurrentWindowAreKnownToBeSorted ? 'none' : 'flex';
-  });
+  const shouldShowSort =
+    (watchTabsReadyCount >= 2) &&
+    knownWatchTabsOutOfOrder &&
+    !tabsInCurrentWindowAreKnownToBeSorted;
+
+  setOptionToggleVisibility(shouldShowSort);
 
   if (sortButton) {
-    const shouldShowSort =
-      (watchTabsReadyCount >= 2) &&
-      knownWatchTabsOutOfOrder &&
-      !tabsInCurrentWindowAreKnownToBeSorted;
-
     if (shouldShowSort) {
       // small delay prevents a first-paint flicker
       setTimeout(() => sortButton.style.setProperty('display', 'block', 'important'), 100);
@@ -391,7 +394,7 @@ function updateHeaderFooter() {
       sortButton.style.backgroundColor = (watchTabsReadyCount === totalWatchTabsInWindow) ? 'forestgreen' : 'white';
       sortButton.textContent = (watchTabsReadyCount === totalWatchTabsInWindow)
         ? 'Sort All Tabs'
-        : 'Sort Ready & Non Youtube Watch Tabs';
+        : 'Sort Ready Tabs';
     } else {
       sortButton.style.display = 'none';
     }
