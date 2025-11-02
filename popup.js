@@ -14,6 +14,10 @@ const USER_ACTIONS = {
   NO_ACTION: ''
 };
 
+const DEFAULT_SORT_OPTIONS = Object.freeze({
+  groupNonYoutubeTabsByDomain: false,
+});
+
 let tabsInCurrentWindowAreKnownToBeSorted = false; // only true when ALL tabs known AND ordered
 let totalWatchTabsInWindow = 0;          
 let watchTabsReadyCount = 0;     // tabs with known remaining time
@@ -26,6 +30,7 @@ let messageListener = null;
 
 async function initialise() {
   await refreshActiveContext().catch(() => null);
+  await setupOptionControls().catch(() => null);
   await requestAndRenderSnapshot();
 
   messageListener = (msg) => {
@@ -137,6 +142,68 @@ function sendMessageWithWindow(action, extra = {}, callback) {
     return chrome.runtime.sendMessage(message, callback);
   }
   return chrome.runtime.sendMessage(message);
+}
+
+function getStorageArea() {
+  if (chrome && chrome.storage && chrome.storage.sync) return chrome.storage.sync;
+  if (chrome && chrome.storage && chrome.storage.local) return chrome.storage.local;
+  return null;
+}
+
+function loadSortOptions() {
+  const storage = getStorageArea();
+  return new Promise((resolve) => {
+    if (!storage) {
+      resolve({ ...DEFAULT_SORT_OPTIONS });
+      return;
+    }
+    try {
+      storage.get(DEFAULT_SORT_OPTIONS, (items) => {
+        const err = chrome.runtime.lastError;
+        if (err) {
+          console.warn(`[TabSort] storage get failed: ${err.message}`);
+          resolve({ ...DEFAULT_SORT_OPTIONS });
+          return;
+        }
+        resolve({ ...DEFAULT_SORT_OPTIONS, ...items });
+      });
+    } catch (error) {
+      console.warn(`[TabSort] storage get threw: ${error.message}`);
+      resolve({ ...DEFAULT_SORT_OPTIONS });
+    }
+  });
+}
+
+function persistSortOptions(update) {
+  const storage = getStorageArea();
+  return new Promise((resolve) => {
+    if (!storage) {
+      resolve();
+      return;
+    }
+    try {
+      storage.set(update, () => {
+        const err = chrome.runtime.lastError;
+        if (err) console.warn(`[TabSort] storage set failed: ${err.message}`);
+        resolve();
+      });
+    } catch (error) {
+      console.warn(`[TabSort] storage set threw: ${error.message}`);
+      resolve();
+    }
+  });
+}
+
+async function setupOptionControls() {
+  const options = await loadSortOptions();
+  const groupNonYoutubeToggle = document.getElementById('groupNonYoutubeTabsToggle');
+
+  if (groupNonYoutubeToggle) {
+    groupNonYoutubeToggle.checked = Boolean(options.groupNonYoutubeTabsByDomain);
+    groupNonYoutubeToggle.addEventListener('change', () => {
+      persistSortOptions({ groupNonYoutubeTabsByDomain: groupNonYoutubeToggle.checked });
+    });
+  }
 }
 
 function setActionAndStatusColumnsVisibility(visible) {
@@ -304,6 +371,12 @@ function updateHeaderFooter() {
   if (tabsSortedElement) {
     tabsSortedElement.style.display = tabsInCurrentWindowAreKnownToBeSorted ? 'block' : 'none';
   }
+
+  const optionToggles = document.querySelectorAll('.option-toggle');
+  optionToggles.forEach((toggle) => {
+    if (!toggle) return;
+    toggle.style.display = tabsInCurrentWindowAreKnownToBeSorted ? 'none' : 'flex';
+  });
 
   if (sortButton) {
     const shouldShowSort =
