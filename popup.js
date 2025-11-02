@@ -49,12 +49,12 @@ async function updatePopup() {
     if (!table) return;
 
     const tabRecords = response.youtubeWatchTabRecordsOfCurrentWindow || {};
-    const orderIds = response.youtubeWatchTabRecordIdsSortedByRemainingTime || [];
+    const currentOrderIds = response.youtubeWatchTabRecordIdsInCurrentOrder || [];
 
     // rebuild table body
     while (table.rows.length > 1) table.deleteRow(1);
     const frag = document.createDocumentFragment();
-    for (const tabId of orderIds) {
+    for (const tabId of currentOrderIds) {
       const row = table.insertRow(-1);
       const tabRecord = tabRecords[tabId];
       if (!tabRecord) continue;
