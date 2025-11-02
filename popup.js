@@ -22,62 +22,87 @@ let activeWindowId = null;
 
 initialise();
 
+let messageListener = null;
+
 async function initialise() {
   await refreshActiveContext().catch(() => null);
-  sendMessageWithWindow("updateYoutubeWatchTabRecords");
-  const refreshBg = setInterval(() => sendMessageWithWindow("updateYoutubeWatchTabRecords"), 1000);
+  await requestAndRenderSnapshot();
 
-  updatePopup();
-  const refreshPopup = setInterval(updatePopup, 500);
+  messageListener = (msg) => {
+    if (msg && msg.message === 'tabRecordsUpdated' && msg.payload) {
+      Promise.resolve(renderSnapshot(msg.payload)).catch(() => {});
+    }
+  };
+  chrome.runtime.onMessage.addListener(messageListener);
 
   const sortButton = document.getElementById('sortButton');
   if (sortButton) {
     sortButton.addEventListener('click', () => sendMessageWithWindow("sortTabs"));
   }
 
-  window.onunload = () => { clearInterval(refreshBg); clearInterval(refreshPopup); };
+  window.onunload = () => {
+    if (messageListener) {
+      chrome.runtime.onMessage.removeListener(messageListener);
+      messageListener = null;
+    }
+  };
 }
 
-async function updatePopup() {
+function requestAndRenderSnapshot() {
+  return new Promise((resolve) => {
+    sendMessageWithWindow("sendTabRecords", {}, (response) => {
+      if (!response) {
+        resolve();
+        return;
+      }
+      Promise.resolve(renderSnapshot(response)).finally(resolve);
+    });
+  });
+}
+
+async function renderSnapshot(snapshot) {
+  if (!snapshot) return;
+
   const context = await refreshActiveContext().catch(() => null);
   const activeTabId = context?.tabId ?? null;
 
-  sendMessageWithWindow("sendTabRecords", {}, (response) => {
-    if (!response) return;
+  const table = document.getElementById('infoTable');
+  if (!table) return;
 
-    const table = document.getElementById('infoTable');
-    if (!table) return;
+  const tabRecords = snapshot.youtubeWatchTabRecordsOfCurrentWindow || {};
+  const currentOrderIds = snapshot.youtubeWatchTabRecordIdsInCurrentOrder || [];
 
-    const tabRecords = response.youtubeWatchTabRecordsOfCurrentWindow || {};
-    const currentOrderIds = response.youtubeWatchTabRecordIdsInCurrentOrder || [];
+  totalWatchTabsInWindow = Object.keys(tabRecords).length;
+  watchTabsReadyCount = countTabsReadyForSorting(tabRecords);
+  knownWatchTabsOutOfOrder = areFiniteTabsOutOfOrder(tabRecords);
+  const backgroundSortedFlag = snapshot.tabsInCurrentWindowAreKnownToBeSorted === true;
+  const allKnown = totalWatchTabsInWindow > 1 && watchTabsReadyCount === totalWatchTabsInWindow;
+  const computedAllSorted = allTabsKnownAndSorted(tabRecords);
+  const shouldShowSorted =
+    computedAllSorted ||
+    (backgroundSortedFlag && allKnown && !knownWatchTabsOutOfOrder);
 
-    // rebuild table body
-    while (table.rows.length > 1) table.deleteRow(1);
-    const frag = document.createDocumentFragment();
-    for (const tabId of currentOrderIds) {
-      const row = table.insertRow(-1);
-      const tabRecord = tabRecords[tabId];
-      if (!tabRecord) continue;
-      tabRecord.isActiveTab = (String(tabId) === String(activeTabId));
-      insertRowCells(row, tabRecord);
-      frag.appendChild(row);
-    }
-    table.appendChild(frag);
+  tabsInCurrentWindowAreKnownToBeSorted = shouldShowSorted;
+  setActionAndStatusColumnsVisibility(!shouldShowSorted);
 
-    // recompute state for header/footer
-    totalWatchTabsInWindow = Object.keys(tabRecords).length;
-    watchTabsReadyCount = countTabsReadyForSorting(tabRecords);
-    knownWatchTabsOutOfOrder = areFiniteTabsOutOfOrder(tabRecords);
-    tabsInCurrentWindowAreKnownToBeSorted = allTabsKnownAndSorted(tabRecords);
+  // rebuild table body
+  while (table.rows.length > 1) table.deleteRow(1);
+  const frag = document.createDocumentFragment();
+  for (const tabId of currentOrderIds) {
+    const row = table.insertRow(-1);
+    const tabRecord = tabRecords[tabId];
+    if (!tabRecord) continue;
+    tabRecord.isActiveTab = (String(tabId) === String(activeTabId));
+    insertRowCells(row, tabRecord, shouldShowSorted);
+    frag.appendChild(row);
+  }
+  table.appendChild(frag);
 
-    setActionAndStatusColumnsVisibility(!tabsInCurrentWindowAreKnownToBeSorted);
+  if (allKnown && !shouldShowSorted) {
+    addClassToAllRows(table, "all-ready-row");
+  }
 
-    if ((totalWatchTabsInWindow === watchTabsReadyCount) && !tabsInCurrentWindowAreKnownToBeSorted) {
-      addClassToAllRows(table, "all-ready-row");
-    }
-
-    updateHeaderFooter();
-  });
+  updateHeaderFooter();
 }
 
 // ---- helpers
@@ -122,7 +147,7 @@ function setActionAndStatusColumnsVisibility(visible) {
   if (tabStatus) tabStatus.classList[method]('hide');
 }
 
-function insertRowCells(row, tabRecord) {
+function insertRowCells(row, tabRecord, isSortedView) {
   const ACTIVATE_TAB = 'activateTab';
   const RELOAD_TAB_ACTION = 'reloadTab';
 
@@ -131,23 +156,23 @@ function insertRowCells(row, tabRecord) {
 
   // Action column (only when NOT “Tabs sorted”)
   const userAction = determineUserAction(tabRecord);
-  if (!tabsInCurrentWindowAreKnownToBeSorted) insertUserActionCell(row, tabRecord, userAction);
+  if (!isSortedView) insertUserActionCell(row, tabRecord, userAction);
 
   // Record columns
-  insertInfoCells(row, tabRecord);
+  insertInfoCells(row, tabRecord, isSortedView);
 
   // Row highlight when ready to sort
   const rt = tabRecord?.videoDetails?.remainingTime;
   const remainingTimeAvailable = (typeof rt === 'number' && isFinite(rt));
-  if (remainingTimeAvailable && !tabsInCurrentWindowAreKnownToBeSorted) row.classList.add('ready-row');
+  if (remainingTimeAvailable && !isSortedView) row.classList.add('ready-row');
 
-  function insertInfoCells(r, record) {
-    const RECORD_KEYS = (tabsInCurrentWindowAreKnownToBeSorted)
+  function insertInfoCells(r, record, sortedView) {
+    const RECORD_KEYS = (sortedView)
       ? ['videoDetails', 'index']
       : ['videoDetails', 'index', 'status'];
 
     RECORD_KEYS.forEach((key, i) => {
-      const offset = (tabsInCurrentWindowAreKnownToBeSorted) ? 1 : 2;
+      const offset = (sortedView) ? 1 : 2;
       const cell = r.insertCell(i + offset);
 
       let value = record[key];
