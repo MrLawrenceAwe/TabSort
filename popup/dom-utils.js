@@ -50,11 +50,12 @@ export function updateHeaderFooter() {
   const readySubsetExists =
     popupState.watchTabsReadyCount >= 2 &&
     popupState.watchTabsReadyCount < popupState.totalWatchTabsInWindow;
+  const readySubsetNeedsSorting =
+    readySubsetExists && (!popupState.readyTabsAreContiguous || !popupState.readyTabsAreAtFront);
   const shouldShowSort =
     popupState.watchTabsReadyCount >= 2 &&
     !popupState.tabsInCurrentWindowAreKnownToBeSorted &&
-    (popupState.knownWatchTabsOutOfOrder ||
-      (readySubsetExists && (!popupState.readyTabsAreContiguous || !popupState.readyTabsAreAtFront)));
+    (popupState.knownWatchTabsOutOfOrder || readySubsetNeedsSorting);
 
   setOptionToggleVisibility(shouldShowSort);
 
