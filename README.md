@@ -14,5 +14,5 @@ Chrome extension that keeps YouTube watch tabs organised by the time you still h
 - The popup lists each watch tab, shows whether its remaining time is known, and highlights tabs that are ready.
 - Follow the suggested action links (reload/interact) if a tab is missing metadata.
 - When at least two tabs have known remaining time and are out of order, the **Sort** button appears; click it to reorder the ready tabs.
-- When you sort, all YouTube tabs (watch, home, shorts, etc.) move to the front with watch pages first; flip the popup toggle if you also want the remaining non-YouTube tabs grouped by domain.
+- When you sort, all YouTube tabs (watch, home, shorts, etc.) move to the front with watch pages first; tick the popup option if you also want the remaining non-YouTube tabs grouped by domain.
 - If the popup warns that a background tab needs viewing, open that tab once so Chrome exposes the accurate remaining time.
