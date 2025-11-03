@@ -94,54 +94,85 @@ export async function updateYoutubeWatchTabRecords(windowId) {
     }
   }
 
-  computeSorting();
+  recalculateOrderingState();
 }
 
-function computeSorting() {
-  const entries = Object.values(backgroundState.youtubeWatchTabRecordsOfCurrentWindow);
-
-  const currentOrder = entries
+function deriveCurrentOrder(records) {
+  return records
     .slice()
     .sort((a, b) => a.index - b.index)
-    .map((t) => t.id);
+    .map((record) => record.id);
+}
 
-  const enriched = entries.map((t) => {
-    const rt = t?.videoDetails?.remainingTime;
-    const isStale = Boolean(t?.remainingTimeMayBeStale);
-    const val = !isStale && typeof rt === 'number' && isFinite(rt) ? rt : null;
-    return { id: t.id, index: t.index, remainingTime: val };
+function buildRemainingTimeEntries(records) {
+  return records.map((record) => {
+    const remainingTime = record?.videoDetails?.remainingTime;
+    const isStale = Boolean(record?.remainingTimeMayBeStale);
+    const value =
+      !isStale && typeof remainingTime === 'number' && isFinite(remainingTime) ? remainingTime : null;
+    return { id: record.id, remainingTime: value };
   });
+}
 
-  const knownDurationEntries = enriched.filter((e) => e.remainingTime !== null);
-  const unknownDurationEntries = enriched.filter((e) => e.remainingTime === null);
-
-  const knownDurationSortedIds = knownDurationEntries
+function buildExpectedOrder(knownEntries, unknownEntries, currentOrder) {
+  const knownDurationSortedIds = knownEntries
     .slice()
     .sort((a, b) => a.remainingTime - b.remainingTime)
-    .map((e) => e.id);
+    .map((entry) => entry.id);
 
   const unknownIdsInCurrentOrder = currentOrder.filter((id) =>
-    unknownDurationEntries.some((u) => u.id === id),
+    unknownEntries.some((entry) => entry.id === id),
   );
 
-  const expectedOrder = [...knownDurationSortedIds, ...unknownIdsInCurrentOrder];
-  backgroundState.youtubeWatchTabRecordIdsSortedByRemainingTime = expectedOrder;
-  backgroundState.youtubeWatchTabRecordIdsInCurrentOrder = currentOrder;
+  return [...knownDurationSortedIds, ...unknownIdsInCurrentOrder];
+}
 
+function computeDerivedOrderingState(records) {
+  const currentOrder = deriveCurrentOrder(records);
+  const enriched = buildRemainingTimeEntries(records);
+
+  const knownDurationEntries = enriched.filter((entry) => entry.remainingTime !== null);
+  const unknownDurationEntries = enriched.filter((entry) => entry.remainingTime === null);
+
+  const expectedOrder = buildExpectedOrder(knownDurationEntries, unknownDurationEntries, currentOrder);
   const allRemainingTimesKnown = unknownDurationEntries.length === 0;
 
   const alreadyInExpectedOrder =
     currentOrder.length > 0 &&
     currentOrder.length === expectedOrder.length &&
-    currentOrder.every((id, i) => id === expectedOrder[i]);
+    currentOrder.every((id, index) => id === expectedOrder[index]);
 
+  return {
+    currentOrder,
+    expectedOrder,
+    allRemainingTimesKnown,
+    alreadyInExpectedOrder,
+  };
+}
+
+function updateBackgroundOrderingState({
+  currentOrder,
+  expectedOrder,
+  allRemainingTimesKnown,
+  alreadyInExpectedOrder,
+}) {
+  backgroundState.youtubeWatchTabRecordIdsSortedByRemainingTime = expectedOrder;
+  backgroundState.youtubeWatchTabRecordIdsInCurrentOrder = currentOrder;
   backgroundState.tabsInCurrentWindowAreKnownToBeSorted =
     allRemainingTimesKnown && alreadyInExpectedOrder;
+
+  // Notify listeners that the ordering-related state has changed.
   broadcastTabSnapshot();
 }
 
+function recalculateOrderingState() {
+  const records = Object.values(backgroundState.youtubeWatchTabRecordsOfCurrentWindow);
+  const derivedState = computeDerivedOrderingState(records);
+  updateBackgroundOrderingState(derivedState);
+}
+
 export function recomputeSorting() {
-  computeSorting();
+  recalculateOrderingState();
 }
 
 export async function refreshMetricsForTab(tabId) {
@@ -166,7 +197,7 @@ export async function refreshMetricsForTab(tabId) {
         record.videoDetails.remainingTime = null;
       }
       record.remainingTimeMayBeStale = false;
-      computeSorting();
+      recalculateOrderingState();
       return;
     }
 
@@ -203,7 +234,7 @@ export async function refreshMetricsForTab(tabId) {
       record.remainingTimeMayBeStale = false;
     }
 
-    computeSorting();
+    recalculateOrderingState();
   } catch (_) {
     // ignore; will retry later
   }
