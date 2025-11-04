@@ -13,7 +13,7 @@
     --action-button-border-color: transparent;
     --ready-row-background: #ffffff;
     --ready-row-text: #000000;
-    --all-ready-row-background: green;
+    --all-ready-row-background: #1f8c3a;
     --all-ready-row-text: #ffffff;
     --stale-row-background: #4b2f2f;
     --stale-row-text: #ffd6d6;
@@ -33,9 +33,9 @@
     --action-button-background: #ffffff;
     --action-button-color: #1a1a1a;
     --action-button-border-color: #cbd0d6;
-    --ready-row-background: #d6e4ff;
-    --ready-row-text: #1b2f52;
-    --all-ready-row-background: #4caf50;
+    --ready-row-background: #c5d4ff;
+    --ready-row-text: #173566;
+    --all-ready-row-background: #1f8c3a;
     --all-ready-row-text: #ffffff;
     --stale-row-background: #fbe9e7;
     --stale-row-text: #7b2e2e;
