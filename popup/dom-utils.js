@@ -27,7 +27,7 @@ export function updateHeaderFooter() {
     if (!popupState.tabsInCurrentWindowAreKnownToBeSorted) {
       statusElement.style.display = popupState.totalWatchTabsInWindow <= 1 ? 'none' : 'block';
       statusElement.textContent = `${popupState.watchTabsReadyCount}/${popupState.totalWatchTabsInWindow} ready for sort.`;
-      statusElement.style.color = 'white';
+      statusElement.style.color = 'var(--status-text-color)';
     } else {
       statusElement.style.display = 'none';
     }
@@ -63,12 +63,12 @@ export function updateHeaderFooter() {
     if (shouldShowSort) {
       setTimeout(() => sortButton.style.setProperty('display', 'block', 'important'), 100);
 
-      sortButton.style.backgroundColor =
-        popupState.watchTabsReadyCount === popupState.totalWatchTabsInWindow ? 'forestgreen' : 'white';
+      const allTabsReady = popupState.watchTabsReadyCount === popupState.totalWatchTabsInWindow;
+      sortButton.style.backgroundColor = allTabsReady ? 'forestgreen' : 'var(--action-button-background)';
+      sortButton.style.color = allTabsReady ? '#ffffff' : 'var(--action-button-color)';
+      sortButton.style.borderColor = allTabsReady ? 'forestgreen' : 'var(--action-button-border-color)';
       sortButton.textContent =
-        popupState.watchTabsReadyCount === popupState.totalWatchTabsInWindow
-          ? 'Sort All Tabs'
-          : 'Sort Ready Tabs';
+        allTabsReady ? 'Sort All Tabs' : 'Sort Ready Tabs';
     } else {
       sortButton.style.display = 'none';
     }
