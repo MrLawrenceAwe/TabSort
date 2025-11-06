@@ -1,4 +1,4 @@
-import { TAB_STATES } from './shared/constants.js';
+import { TAB_STATES } from '../shared/constants.js';
 import {
   broadcastTabSnapshot,
   buildTabSnapshot,
@@ -6,10 +6,10 @@ import {
   refreshMetricsForTab,
   sortTabsInCurrentWindow,
   updateYoutubeWatchTabRecords,
-} from './background/records.js';
-import { backgroundState, now, resolveTrackedWindowId } from './background/state.js';
-import { isWatch } from './background/helpers.js';
-import { getTab } from './background/tab-service.js';
+} from './records.js';
+import { backgroundState, now, resolveTrackedWindowId } from './state.js';
+import { isWatch } from './helpers.js';
+import { getTab } from './tab-service.js';
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const type = message?.action || message?.message;
