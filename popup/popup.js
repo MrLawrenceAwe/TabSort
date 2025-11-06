@@ -1,6 +1,6 @@
-import { initialisePopup } from './popup/init.js';
-import { logAndSend } from './popup/runtime.js';
-import { MESSAGE_TYPES } from './shared/constants.js';
+import { initialisePopup } from './init.js';
+import { logAndSend } from './runtime.js';
+import { MESSAGE_TYPES } from '../shared/constants.js';
 
 initialisePopup().catch((error) => {
   const message = error instanceof Error ? error.message : String(error);
