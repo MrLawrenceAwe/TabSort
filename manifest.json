@@ -14,7 +14,7 @@
       "*://*.youtube.com/*"
     ],
     "background": {
-      "service_worker": "background.js",
+      "service_worker": "background/index.js",
       "type": "module"
     },
     "action": {
@@ -24,7 +24,7 @@
     "content_scripts": [
       {
         "matches": ["*://*.youtube.com/watch*"],
-        "js": ["content.js"],
+        "js": ["content/index.js"],
         "run_at": "document_end"
       }
     ]
