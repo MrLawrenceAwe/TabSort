@@ -30,12 +30,12 @@
     --table-odd-row-background: #f0f3f8;
     --status-text-color: #1a1a1a;
     --warning-text-color: #8a6d3b;
-    --action-button-background: #ffffff;
-    --action-button-color: #1a1a1a;
-    --action-button-border-color: #cbd0d6;
+    --action-button-background: #63c56c;
+    --action-button-color: #ffffff;
+    --action-button-border-color: #3e9d47;
     --ready-row-background: #c5d4ff;
     --ready-row-text: #173566;
-    --all-ready-row-background: #1f8c3a;
+    --all-ready-row-background: #63c56c;
     --all-ready-row-text: #ffffff;
     --stale-row-background: #fbe9e7;
     --stale-row-text: #7b2e2e;
