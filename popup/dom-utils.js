@@ -64,9 +64,11 @@ export function updateHeaderFooter() {
       setTimeout(() => sortButton.style.setProperty('display', 'block', 'important'), 100);
 
       const allTabsReady = popupState.watchTabsReadyCount === popupState.totalWatchTabsInWindow;
-      sortButton.style.backgroundColor = allTabsReady ? 'forestgreen' : 'var(--action-button-background)';
-      sortButton.style.color = allTabsReady ? '#ffffff' : 'var(--action-button-color)';
-      sortButton.style.borderColor = allTabsReady ? 'forestgreen' : 'var(--action-button-border-color)';
+      const readyBackground = 'var(--all-ready-row-background)';
+      const readyText = 'var(--all-ready-row-text)';
+      sortButton.style.backgroundColor = allTabsReady ? readyBackground : 'var(--action-button-background)';
+      sortButton.style.color = allTabsReady ? readyText : 'var(--action-button-color)';
+      sortButton.style.borderColor = allTabsReady ? readyBackground : 'var(--action-button-border-color)';
       sortButton.textContent =
         allTabsReady ? 'Sort All Tabs' : 'Sort Ready Tabs';
     } else {
