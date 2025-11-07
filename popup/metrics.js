@@ -1,19 +1,16 @@
+export function hasFreshRemainingTime(record) {
+  if (!record || record.remainingTimeMayBeStale) return false;
+  const remainingTime = record?.videoDetails?.remainingTime;
+  return typeof remainingTime === 'number' && isFinite(remainingTime);
+}
+
 export function countTabsReadyForSorting(tabRecords) {
-  return Object.values(tabRecords).filter((record) => {
-    const remainingTime = record?.videoDetails?.remainingTime;
-    if (record?.remainingTimeMayBeStale) return false;
-    return typeof remainingTime === 'number' && isFinite(remainingTime);
-  }).length;
+  return Object.values(tabRecords).filter((record) => hasFreshRemainingTime(record)).length;
 }
 
 export function areReadyTabsContiguous(tabRecords) {
   const readyRecords = Object.values(tabRecords)
-    .filter(
-      (record) =>
-        !record?.remainingTimeMayBeStale &&
-        typeof record?.videoDetails?.remainingTime === 'number' &&
-        isFinite(record.videoDetails.remainingTime),
-    )
+    .filter((record) => hasFreshRemainingTime(record))
     .sort((a, b) => a.index - b.index);
 
   if (readyRecords.length < 2) return true;
@@ -29,12 +26,7 @@ export function areReadyTabsContiguous(tabRecords) {
 export function areReadyTabsAtFront(tabRecords) {
   const records = Object.values(tabRecords);
   const readyRecords = records
-    .filter(
-      (record) =>
-        !record?.remainingTimeMayBeStale &&
-        typeof record?.videoDetails?.remainingTime === 'number' &&
-        isFinite(record.videoDetails.remainingTime),
-    )
+    .filter((record) => hasFreshRemainingTime(record))
     .sort((a, b) => a.index - b.index);
 
   if (readyRecords.length === 0) return true;
@@ -45,10 +37,7 @@ export function areReadyTabsAtFront(tabRecords) {
   for (const record of records) {
     if (!Number.isFinite(record?.index)) continue;
     if (record.index < firstReady.index) {
-      const isReady =
-        !record?.remainingTimeMayBeStale &&
-        typeof record?.videoDetails?.remainingTime === 'number' &&
-        isFinite(record.videoDetails.remainingTime);
+      const isReady = hasFreshRemainingTime(record);
       if (!isReady) return false;
     }
   }
@@ -62,8 +51,7 @@ export function areRecordsWithKnownDurationOutOfOrder(tabRecords) {
 
   const recordsWithRemainingTime = records.map((record) => {
     const remainingTime = record?.videoDetails?.remainingTime;
-    const remaining =
-      !record?.remainingTimeMayBeStale && typeof remainingTime === 'number' && isFinite(remainingTime) ? remainingTime : null;
+    const remaining = hasFreshRemainingTime(record) ? remainingTime : null;
     return { id: record.id, index: record.index, remaining };
   });
 
@@ -86,12 +74,7 @@ export function areRecordsWithKnownDurationOutOfOrder(tabRecords) {
 }
 
 function allRecordsHaveKnownRemainingTime(tabRecords) {
-  return Object.values(tabRecords).every(
-    (record) =>
-      !record?.remainingTimeMayBeStale &&
-      typeof record?.videoDetails?.remainingTime === 'number' &&
-      isFinite(record.videoDetails.remainingTime),
-  );
+  return Object.values(tabRecords).every((record) => hasFreshRemainingTime(record));
 }
 
 export function allRecordsHaveKnownRemainingTimeAndAreInOrder(tabRecords) {
