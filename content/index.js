@@ -84,11 +84,20 @@
     return obj || {};
   }
 
+  const cleanTitle = (raw) => {
+    if (!raw) return null;
+    const suffix = ' - YouTube';
+    const trimmed = String(raw).trim();
+    return trimmed.endsWith(suffix) ? trimmed.slice(0, -suffix.length) : trimmed;
+  };
+
   function getLightweightDetails() {
-    const title =
-      document.querySelector('meta[property="og:title"]')?.content ||
-      document.querySelector('meta[itemprop="name"]')?.content ||
-      document.title || null;
+    const docTitle = cleanTitle(document.title);
+    const ogTitle = cleanTitle(document.querySelector('meta[property="og:title"]')?.content);
+    const itempropTitle = cleanTitle(document.querySelector('meta[itemprop="name"]')?.content);
+    const yipr = parseYtInitialPlayerResponse();
+
+    let title = docTitle || ogTitle || itempropTitle || cleanTitle(yipr?.videoDetails?.title) || null;
 
     let lengthSeconds = isoToSeconds(
       document.querySelector('meta[itemprop="duration"]')?.getAttribute('content')
@@ -97,7 +106,6 @@
     let isLive = false;
 
     if (lengthSeconds == null) {
-      const yipr = parseYtInitialPlayerResponse();
       const ls = yipr?.videoDetails?.lengthSeconds;
       if (ls != null) lengthSeconds = Number(ls);
       if (yipr?.videoDetails?.isLiveContent === true ||
