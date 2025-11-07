@@ -1,4 +1,4 @@
-import { popupState, updateSortingState } from './state.js';
+import { updateSortingState } from './state.js';
 import { refreshActiveContext, sendMessageWithWindow } from './runtime.js';
 import {
   setActionAndStatusColumnsVisibility,
