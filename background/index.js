@@ -45,6 +45,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sortTabs: async () => {
       resolveTrackedWindowId(message.windowId);
       await sortTabsInCurrentWindow();
+      await updateYoutubeWatchTabRecords(backgroundState.trackedWindowId);
     },
     activateTab: async () => {
       const tabId = message.tabId;
