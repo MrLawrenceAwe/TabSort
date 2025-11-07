@@ -22,8 +22,8 @@ export function refreshActiveContext() {
   });
 }
 
-export function sendMessageWithWindow(action, extra = {}, callback) {
-  const message = { action, ...extra };
+export function sendMessageWithWindow(action, data = {}, callback) {
+  const message = { action, ...data };
   if (typeof popupState.activeWindowId === 'number' && message.windowId == null) {
     message.windowId = popupState.activeWindowId;
   }
