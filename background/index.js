@@ -14,10 +14,17 @@ import { getTab } from './tab-service.js';
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const type = message?.action || message?.message;
 
-  const respondAsync = (fn) => {
-    Promise.resolve(fn()).then((res) => {
-      if (res !== undefined) sendResponse(res);
-    });
+  const respondAsync = (fn, label) => {
+    Promise.resolve()
+      .then(() => fn())
+      .then((res) => {
+        if (res !== undefined) sendResponse(res);
+      })
+      .catch((error) => {
+        const messageText = error instanceof Error ? error.message : String(error);
+        console.error(`[TabSort] handler "${label}" failed: ${messageText}`);
+        sendResponse({ error: messageText });
+      });
     return true;
   };
 
@@ -122,7 +129,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   };
 
   if (handlers[type]) {
-    return respondAsync(handlers[type]);
+    return respondAsync(handlers[type], type);
   }
   return false;
 });

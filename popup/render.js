@@ -34,6 +34,7 @@ export async function renderSnapshot(snapshot) {
 
   const table = document.getElementById('infoTable');
   if (!table) return;
+  const tbody = table.tBodies[0] ?? table.createTBody();
 
   const tabRecords = snapshot.youtubeWatchTabRecordsOfCurrentWindow || {};
   const currentOrderIds = snapshot.youtubeWatchTabRecordIdsInCurrentOrder || [];
@@ -65,10 +66,9 @@ export async function renderSnapshot(snapshot) {
 
   setActionAndStatusColumnsVisibility(!shouldShowSorted);
 
-  while (table.rows.length > 1) table.deleteRow(1);
   const frag = document.createDocumentFragment();
   for (const tabId of currentOrderIds) {
-    const row = table.insertRow(-1);
+    const row = document.createElement('tr');
     const tabRecord = tabRecords[tabId];
     if (!tabRecord) continue;
     tabRecord.isActiveTab = String(tabId) === String(activeTabId);
@@ -77,7 +77,7 @@ export async function renderSnapshot(snapshot) {
     insertRowCells(row, tabRecord, shouldShowSorted);
     frag.appendChild(row);
   }
-  table.appendChild(frag);
+  tbody.replaceChildren(frag);
 
   if (allKnown && !shouldShowSorted) {
     addClassToAllRows(table, 'all-ready-row');

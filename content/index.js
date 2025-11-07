@@ -1,4 +1,9 @@
 (function () {
+  function logContentError(context, error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[TabSort] ${context}: ${message}`);
+  }
+
   function isoToSeconds(iso) {
     if (!iso) return null;
     const m = String(iso).match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?/);
@@ -8,14 +13,72 @@
   }
   const getVideoEl = () => document.querySelector('video');
 
+  function extractYtInitialPlayerResponseFromScript(source) {
+    if (typeof source !== 'string') return null;
+    const identifier = 'ytInitialPlayerResponse';
+    const idIndex = source.indexOf(identifier);
+    if (idIndex === -1) return null;
+    const equalsIndex = source.indexOf('=', idIndex);
+    if (equalsIndex === -1) return null;
+    let start = source.indexOf('{', equalsIndex);
+    if (start === -1) return null;
+
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+
+    for (let i = start; i < source.length; i += 1) {
+      const char = source[i];
+
+      if (inString) {
+        if (escape) {
+          escape = false;
+        } else if (char === '\\') {
+          escape = true;
+        } else if (char === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (char === '{') {
+        depth += 1;
+      } else if (char === '}') {
+        depth -= 1;
+        if (depth === 0) {
+          const jsonText = source.slice(start, i + 1);
+          try {
+            return JSON.parse(jsonText);
+          } catch (error) {
+            logContentError('Parsing inline ytInitialPlayerResponse', error);
+            return null;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
   function parseYtInitialPlayerResponse() {
     let obj = null;
-    try { if (window.ytInitialPlayerResponse) obj = window.ytInitialPlayerResponse; } catch (_) {}
+    try {
+      if (window.ytInitialPlayerResponse) obj = window.ytInitialPlayerResponse;
+    } catch (error) {
+      logContentError('Reading window.ytInitialPlayerResponse', error);
+    }
     if (!obj) {
-      const script = [...document.scripts].find(s => s.textContent.includes('ytInitialPlayerResponse'));
-      if (script) {
-        const m = script.textContent.match(/ytInitialPlayerResponse\s*=\s*(\{.*?\})\s*;/s);
-        if (m) { try { obj = JSON.parse(m[1]); } catch (_) {} }
+      const script = Array.from(document.scripts || []).find((s) =>
+        s?.textContent?.includes('ytInitialPlayerResponse'),
+      );
+      if (script?.textContent) {
+        const parsed = extractYtInitialPlayerResponseFromScript(script.textContent);
+        if (parsed) obj = parsed;
       }
     }
     return obj || {};
@@ -55,13 +118,19 @@
       if (d.title || d.lengthSeconds != null) {
         chrome.runtime.sendMessage({ message: 'lightweightDetails', details: d });
       }
-    } catch (_) {}
+    } catch (error) {
+      logContentError('Sending lightweight details', error);
+    }
   }
 
   function sendContentReadyOnce() {
     if (sendContentReadyOnce._sent) return;
     sendContentReadyOnce._sent = true;
-    try { chrome.runtime.sendMessage({ message: 'contentScriptReady' }, () => {}); } catch (_) {}
+    try {
+      chrome.runtime.sendMessage({ message: 'contentScriptReady' }, () => {});
+    } catch (error) {
+      logContentError('Sending content script ready message', error);
+    }
   }
 
   function attachVideoReadyListener() {
