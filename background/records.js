@@ -272,6 +272,4 @@ export async function sortTabsInCurrentWindow() {
   if (finalOrder.length) {
     await moveTabsSequentially(finalOrder, pinnedCount);
   }
-
-  await updateYoutubeWatchTabRecords(backgroundState.trackedWindowId);
 }
