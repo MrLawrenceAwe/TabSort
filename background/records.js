@@ -80,6 +80,7 @@ export async function updateYoutubeWatchTabRecords(windowId) {
       contentScriptReady: nextStatus === TAB_STATES.UNSUSPENDED ? prevContentReady : false,
       metadataLoaded: Boolean(prev.metadataLoaded),
       isLiveStream: Boolean(prev.isLiveStream),
+      isActiveTab: Boolean(tab.active),
       videoDetails: prev.videoDetails || null,
       unsuspendedTimestamp: prev.unsuspendedTimestamp || null,
       remainingTimeMayBeStale: Boolean(prev.remainingTimeMayBeStale) || false,
@@ -188,6 +189,7 @@ export async function refreshMetricsForTab(tabId) {
       record.windowId = tab.windowId;
       resolveTrackedWindowId(tab.windowId);
     }
+    record.isActiveTab = Boolean(tab.active);
     if (!isWatch(tab.url)) return;
 
     const result = await sendMessageToTab(tabId, { message: 'getVideoMetrics' });
