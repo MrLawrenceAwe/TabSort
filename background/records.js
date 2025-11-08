@@ -58,8 +58,8 @@ export function broadcastTabSnapshot({ force = false } = {}) {
   }
 }
 
-export async function updateYoutubeWatchTabRecords(windowId) {
-  const { tabs, windowId: targetWindowId } = await getTabsForTrackedWindow(windowId);
+export async function updateYoutubeWatchTabRecords(windowId, options = {}) {
+  const { tabs, windowId: targetWindowId } = await getTabsForTrackedWindow(windowId, options);
   if (targetWindowId == null && tabs.length === 0) return;
   const visibleIds = new Set();
 
