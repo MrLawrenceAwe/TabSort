@@ -20,19 +20,25 @@ export function queryTabs(query) {
       chrome.tabs.query(query, (tabs) => {
         const err = chrome.runtime.lastError;
         if (err) {
+          console.warn(
+            `[TabSort] tabs.query failed for ${JSON.stringify(query)}: ${err.message}`,
+          );
           resolve([]);
           return;
         }
         resolve(Array.isArray(tabs) ? tabs : []);
       });
-    } catch (_) {
+    } catch (error) {
+      console.warn(
+        `[TabSort] tabs.query threw for ${JSON.stringify(query)}: ${error.message}`,
+      );
       resolve([]);
     }
   });
 }
 
-export async function getTabsForTrackedWindow(windowId) {
-  const targetWindowId = resolveTrackedWindowId(windowId);
+export async function getTabsForTrackedWindow(windowId, options = {}) {
+  const targetWindowId = resolveTrackedWindowId(windowId, options);
   const baseQuery =
     targetWindowId != null ? { windowId: targetWindowId } : { currentWindow: true };
 

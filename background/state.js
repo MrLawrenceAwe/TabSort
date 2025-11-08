@@ -9,9 +9,13 @@ export const backgroundState = {
 
 export const now = () => Date.now();
 
-export function resolveTrackedWindowId(windowId) {
+export function resolveTrackedWindowId(windowId, { force = false } = {}) {
   if (typeof windowId === 'number' && Number.isFinite(windowId)) {
-    backgroundState.trackedWindowId = windowId;
+    if (force || !Number.isFinite(backgroundState.trackedWindowId)) {
+      backgroundState.trackedWindowId = windowId;
+    }
+  } else if (force && windowId == null) {
+    backgroundState.trackedWindowId = null;
   }
   return Number.isFinite(backgroundState.trackedWindowId) ? backgroundState.trackedWindowId : null;
 }

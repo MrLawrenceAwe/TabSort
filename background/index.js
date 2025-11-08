@@ -11,6 +11,19 @@ import { backgroundState, now, resolveTrackedWindowId } from './state.js';
 import { isWatch } from './helpers.js';
 import { getTab } from './tab-service.js';
 
+function canUseSenderWindow(windowId) {
+  if (backgroundState.trackedWindowId == null) return true;
+  return typeof windowId === 'number' && windowId === backgroundState.trackedWindowId;
+}
+
+function hasExplicitWindowId(windowId) {
+  return typeof windowId === 'number' && Number.isFinite(windowId);
+}
+
+function buildForceOption(windowId) {
+  return hasExplicitWindowId(windowId) ? { force: true } : undefined;
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const type = message?.action || message?.message;
 
@@ -30,27 +43,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   const handlers = {
     updateYoutubeWatchTabRecords: async () => {
-      await updateYoutubeWatchTabRecords(message.windowId);
+      await updateYoutubeWatchTabRecords(message.windowId, buildForceOption(message.windowId));
     },
     sendTabRecords: async () => {
-      await updateYoutubeWatchTabRecords(message.windowId);
+      await updateYoutubeWatchTabRecords(message.windowId, buildForceOption(message.windowId));
       const ids = Object.keys(backgroundState.youtubeWatchTabRecordsOfCurrentWindow).map(Number);
       await Promise.all(ids.map(refreshMetricsForTab));
       return buildTabSnapshot();
     },
     areTabsInCurrentWindowKnownToBeSorted: async () => {
-      await updateYoutubeWatchTabRecords(message.windowId);
+      await updateYoutubeWatchTabRecords(message.windowId, buildForceOption(message.windowId));
       return backgroundState.tabsInCurrentWindowAreKnownToBeSorted;
     },
     sortTabs: async () => {
-      resolveTrackedWindowId(message.windowId);
+      if (hasExplicitWindowId(message.windowId)) {
+        resolveTrackedWindowId(message.windowId, { force: true });
+      }
       await sortTabsInCurrentWindow();
       await updateYoutubeWatchTabRecords(backgroundState.trackedWindowId);
     },
     activateTab: async () => {
       const tabId = message.tabId;
       if (!tabId) return;
-      if (typeof message.windowId === 'number') resolveTrackedWindowId(message.windowId);
+      if (hasExplicitWindowId(message.windowId)) {
+        resolveTrackedWindowId(message.windowId, { force: true });
+      }
       try {
         await chrome.tabs.update(tabId, { active: true });
       } catch (_) {
@@ -60,7 +77,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     reloadTab: async () => {
       const tabId = message.tabId;
       if (!tabId) return;
-      if (typeof message.windowId === 'number') resolveTrackedWindowId(message.windowId);
+      if (hasExplicitWindowId(message.windowId)) {
+        resolveTrackedWindowId(message.windowId, { force: true });
+      }
       try {
         await chrome.tabs.reload(tabId);
       } catch (_) {
@@ -79,15 +98,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     },
     contentScriptReady: async () => {
       const tabId = sender?.tab?.id;
-      resolveTrackedWindowId(sender?.tab?.windowId);
+      const senderWindowId = sender?.tab?.windowId;
+      if (!canUseSenderWindow(senderWindowId)) return;
+      resolveTrackedWindowId(senderWindowId);
       if (!tabId) return;
       const record =
         backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId] ||
         (backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId] = {
           id: tabId,
-          windowId: sender?.tab?.windowId ?? null,
+          windowId: senderWindowId ?? null,
         });
-      if (sender?.tab?.windowId != null) record.windowId = sender.tab.windowId;
+      if (senderWindowId != null) record.windowId = senderWindowId;
       record.contentScriptReady = true;
       broadcastTabSnapshot();
       await refreshMetricsForTab(tabId);
@@ -95,7 +116,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     },
     metadataLoaded: async () => {
       const tabId = sender?.tab?.id;
-      resolveTrackedWindowId(sender?.tab?.windowId);
+      const senderWindowId = sender?.tab?.windowId;
+      if (!canUseSenderWindow(senderWindowId)) return;
+      resolveTrackedWindowId(senderWindowId);
       if (!tabId) return;
       const record = backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId];
       if (record) record.metadataLoaded = true;
@@ -105,16 +128,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     lightweightDetails: async () => {
       const tabId = sender?.tab?.id;
       const details = message.details || {};
-      resolveTrackedWindowId(sender?.tab?.windowId);
+      const senderWindowId = sender?.tab?.windowId;
+      if (!canUseSenderWindow(senderWindowId)) return;
+      resolveTrackedWindowId(senderWindowId);
       if (!tabId) return;
       const record =
         backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId] ||
         (backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId] = {
           id: tabId,
           url: details.url || sender?.tab?.url,
-          windowId: sender?.tab?.windowId ?? null,
+          windowId: senderWindowId ?? null,
         });
-      if (sender?.tab?.windowId != null) record.windowId = sender.tab.windowId;
+      if (senderWindowId != null) record.windowId = senderWindowId;
       if (details.url) record.url = details.url;
       record.videoDetails = record.videoDetails || {};
       if (details.title) record.videoDetails.title = details.title;
