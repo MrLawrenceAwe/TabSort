@@ -30,9 +30,9 @@
     --table-odd-row-background: #f0f3f8;
     --status-text-color: #1a1a1a;
     --warning-text-color: #8a6d3b;
-    --action-button-background: #63c56c;
-    --action-button-color: #ffffff;
-    --action-button-border-color: #3e9d47;
+    --action-button-background: #ffffff;
+    --action-button-color: #1a1a1a;
+    --action-button-border-color: #d2d2d7;
     --ready-row-background: #c5d4ff;
     --ready-row-text: #173566;
     --all-ready-row-background: #63c56c;
