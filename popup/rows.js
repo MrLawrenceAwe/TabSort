@@ -23,8 +23,8 @@ export function insertRowCells(row, tabRecord, isSortedView) {
   insertInfoCells(row, tabRecord, isSortedView);
 
   const remaining = tabRecord?.videoDetails?.remainingTime;
-  const remainingTimeAvailable = typeof remaining === 'number' && isFinite(remaining);
-  if (remainingTimeAvailable && !isSortedView) row.classList.add('ready-row');
+  const hasRemainingTime = typeof remaining === 'number' && isFinite(remaining);
+  if (hasRemainingTime && !isSortedView) row.classList.add('ready-row');
 
   function insertInfoCells(r, record, sortedView) {
     const RECORD_KEYS = sortedView ? ['videoDetails', 'index'] : ['videoDetails', 'index', 'status'];
@@ -104,19 +104,17 @@ function formatRemaining(seconds) {
 
 function determineUserAction(tabRecord) {
   if (tabRecord?.remainingTimeMayBeStale) {
-    tabRecord.remainingTimeAvailable = false;
     return USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME;
   }
 
-  const remainingTimeAvailable =
+  const hasRemainingTime =
     typeof tabRecord?.videoDetails?.remainingTime === 'number' &&
     isFinite(tabRecord.videoDetails.remainingTime);
-  tabRecord.remainingTimeAvailable = remainingTimeAvailable;
 
   const recentlyUnsuspended =
     tabRecord.unsuspendedTimestamp && Date.now() - tabRecord.unsuspendedTimestamp < 5000;
 
-  if (!remainingTimeAvailable) {
+  if (!hasRemainingTime) {
     switch (tabRecord.status) {
       case TAB_STATES.UNSUSPENDED:
         if (recentlyUnsuspended) return USER_ACTIONS.NO_ACTION;
