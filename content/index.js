@@ -171,6 +171,42 @@
     obs.observe(document.documentElement, { childList: true, subtree: true });
   }
 
+  let titleElementObserver = null;
+  let titleTextObserver = null;
+  let observedTitleElement = null;
+  let lastKnownTitleText = null;
+
+  function observeTitleElement(titleEl) {
+    if (!titleEl || titleEl === observedTitleElement) return;
+    const shouldSendUpdate = observedTitleElement !== null;
+    observedTitleElement = titleEl;
+    lastKnownTitleText = titleEl.textContent;
+
+    if (titleTextObserver) titleTextObserver.disconnect();
+    titleTextObserver = new MutationObserver(() => {
+      const nextTitle = titleEl.textContent;
+      if (nextTitle === lastKnownTitleText) return;
+      lastKnownTitleText = nextTitle;
+      sendLightweightDetails();
+    });
+    titleTextObserver.observe(titleEl, { childList: true, characterData: true, subtree: true });
+
+    if (shouldSendUpdate) {
+      sendLightweightDetails();
+    }
+  }
+
+  function watchTitleChanges() {
+    observeTitleElement(document.querySelector('title'));
+    if (titleElementObserver) return;
+    const target = document.head || document.documentElement;
+    if (!target) return;
+    titleElementObserver = new MutationObserver(() => {
+      observeTitleElement(document.querySelector('title'));
+    });
+    titleElementObserver.observe(target, { childList: true, subtree: true });
+  }
+
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg && msg.message === 'getVideoMetrics') {
       const video = getVideoEl();
@@ -195,6 +231,7 @@
     sendContentReadyOnce();
     sendLightweightDetails();
     watchForVideoMount();
+    watchTitleChanges();
   }
 
   if (document.readyState === 'complete' || document.readyState === 'interactive') initialise();
@@ -203,6 +240,7 @@
   window.addEventListener('yt-navigate-finish', () => {
     sendLightweightDetails();
     watchForVideoMount();
+    watchTitleChanges();
   });
 
   window.addEventListener('pageshow', (e) => {
@@ -210,6 +248,7 @@
       sendContentReadyOnce();
       sendLightweightDetails();
       watchForVideoMount();
+      watchTitleChanges();
     }
   });
 })();
