@@ -1,5 +1,1 @@
-export function hasFreshRemainingTime(record) {
-  if (!record || record.remainingTimeMayBeStale) return false;
-  const remainingTime = record?.videoDetails?.remainingTime;
-  return typeof remainingTime === 'number' && isFinite(remainingTime);
-}
+export { hasFreshRemainingTime } from '../shared/tab-metrics.js';

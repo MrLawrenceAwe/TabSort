@@ -1,7 +1,8 @@
 import { TAB_STATES } from '../shared/constants.js';
 import { loadSortOptions } from '../shared/storage.js';
+import { hasFreshRemainingTime } from '../shared/tab-metrics.js';
 import { backgroundState, resolveTrackedWindowId } from './state.js';
-import { isWatch, safeGet } from './helpers.js';
+import { isWatch } from './helpers.js';
 import { buildNonYoutubeOrder, buildYoutubeTabOrder } from './sort-strategy.js';
 import {
   getTab,
@@ -107,10 +108,9 @@ function deriveCurrentOrder(records) {
 
 function buildRemainingTimeEntries(records) {
   return records.map((record) => {
-    const remainingTime = record?.videoDetails?.remainingTime;
-    const isStale = Boolean(record?.remainingTimeMayBeStale);
-    const value =
-      !isStale && typeof remainingTime === 'number' && isFinite(remainingTime) ? remainingTime : null;
+    const value = hasFreshRemainingTime(record)
+      ? record.videoDetails?.remainingTime ?? null
+      : null;
     return { id: record.id, remainingTime: value };
   });
 }
@@ -249,9 +249,7 @@ export async function sortTabsInCurrentWindow() {
 
   const tabsWithKnownRemainingTime = orderedTabIds.filter((tabId) => {
     const record = backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId];
-    const remainingTime = safeGet(record, 'videoDetails.remainingTime', null);
-    if (record && record.remainingTimeMayBeStale) return false;
-    return typeof remainingTime === 'number' && isFinite(remainingTime);
+    return hasFreshRemainingTime(record);
   });
 
   if (tabsWithKnownRemainingTime.length < 2) return;
