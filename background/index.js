@@ -9,6 +9,7 @@ import {
 } from './records.js';
 import { backgroundState, now, resolveTrackedWindowId } from './state.js';
 import { isWatch } from './helpers.js';
+import { ensureTabRecord } from './tab-record.js';
 import { getTab } from './tab-service.js';
 
 function canUseSenderWindow(windowId) {
@@ -102,13 +103,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (!canUseSenderWindow(senderWindowId)) return;
       resolveTrackedWindowId(senderWindowId);
       if (!tabId) return;
-      const record =
-        backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId] ||
-        (backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId] = {
-          id: tabId,
-          windowId: senderWindowId ?? null,
-        });
-      if (senderWindowId != null) record.windowId = senderWindowId;
+      const record = ensureTabRecord(tabId, senderWindowId);
       record.contentScriptReady = true;
       broadcastTabSnapshot();
       await refreshMetricsForTab(tabId);
@@ -132,14 +127,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (!canUseSenderWindow(senderWindowId)) return;
       resolveTrackedWindowId(senderWindowId);
       if (!tabId) return;
-      const record =
-        backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId] ||
-        (backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId] = {
-          id: tabId,
-          url: details.url || sender?.tab?.url,
-          windowId: senderWindowId ?? null,
-        });
-      if (senderWindowId != null) record.windowId = senderWindowId;
+      const record = ensureTabRecord(tabId, senderWindowId, {
+        url: details.url || sender?.tab?.url,
+      });
       if (details.url) record.url = details.url;
       record.videoDetails = record.videoDetails || {};
       if (details.title) record.videoDetails.title = details.title;
