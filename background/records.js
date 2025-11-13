@@ -214,12 +214,14 @@ export async function refreshMetricsForTab(tabId) {
     }
 
     if (resp.isLive === true) record.isLiveStream = true;
+    if (resp.isLive === false) record.isLiveStream = false;
 
     const len = Number(resp.lengthSeconds ?? resp.duration ?? NaN);
     const cur = Number(resp.currentTime ?? NaN);
     const rate = Number(resp.playbackRate ?? 1);
 
     if (isFinite(len)) {
+      record.isLiveStream = false;
       record.videoDetails = record.videoDetails || {};
       record.videoDetails.lengthSeconds = len;
     }

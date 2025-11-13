@@ -149,7 +149,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           record.videoDetails.remainingTime = details.lengthSeconds;
         }
       }
-      if (details.isLive) record.isLiveStream = true;
+      if (typeof details.isLive === 'boolean') record.isLiveStream = details.isLive;
       recomputeSorting();
     },
   };
