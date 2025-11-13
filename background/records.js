@@ -20,6 +20,33 @@ function cloneRecord(record) {
   };
 }
 
+function createEmptyReadinessMetrics() {
+  return {
+    totalWatchTabsInWindow: 0,
+    watchTabsReadyCount: 0,
+    hiddenTabsMayHaveStaleRemaining: false,
+    readyTabsAreContiguous: true,
+    readyTabsAreAtFront: true,
+    knownWatchTabsOutOfOrder: false,
+    allKnown: false,
+    computedAllSorted: false,
+  };
+}
+
+function recordHasFreshRemainingTime(record) {
+  if (!record || record.remainingTimeMayBeStale) return false;
+  const remainingTime = record?.videoDetails?.remainingTime;
+  return typeof remainingTime === 'number' && isFinite(remainingTime);
+}
+
+function areIdListsEqual(a, b) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (String(a[i]) !== String(b[i])) return false;
+  }
+  return true;
+}
+
 export function buildTabSnapshot() {
   const records = Object.fromEntries(
     Object.entries(backgroundState.youtubeWatchTabRecordsOfCurrentWindow).map(([id, record]) => [
@@ -37,6 +64,9 @@ export function buildTabSnapshot() {
       ...backgroundState.youtubeWatchTabRecordIdsInCurrentOrder,
     ],
     tabsInCurrentWindowAreKnownToBeSorted: backgroundState.tabsInCurrentWindowAreKnownToBeSorted,
+    readinessMetrics: {
+      ...(backgroundState.readinessMetrics || createEmptyReadinessMetrics()),
+    },
   };
 }
 
@@ -128,6 +158,81 @@ function buildExpectedOrder(knownEntries, unknownEntries, currentOrder) {
   return [...knownDurationSortedIds, ...unknownIdsInCurrentOrder];
 }
 
+function buildReadinessMetrics(records, currentOrder) {
+  if (!Array.isArray(records) || records.length === 0) {
+    return createEmptyReadinessMetrics();
+  }
+
+  const recordMap = new Map(records.map((record) => [record.id, record]));
+  const totalWatchTabsInWindow = records.length;
+
+  let hiddenTabsMayHaveStaleRemaining = false;
+  let watchTabsReadyCount = 0;
+  let readyTabsAreContiguous = true;
+  let readyTabsAreAtFront = true;
+  let knownWatchTabsOutOfOrder = false;
+
+  const readyIdsInCurrentOrder = [];
+  const readyEntries = [];
+  const orderedIdsWithRecords = [];
+
+  let encounteredReady = false;
+  let encounteredNonReadyBeforeReady = false;
+  let gapAfterReady = false;
+
+  for (const tabId of currentOrder) {
+    const record = recordMap.get(tabId);
+    if (!record) continue;
+    orderedIdsWithRecords.push(tabId);
+
+    if (record.remainingTimeMayBeStale) hiddenTabsMayHaveStaleRemaining = true;
+
+    const isReady = recordHasFreshRemainingTime(record);
+    if (isReady) {
+      watchTabsReadyCount += 1;
+      readyIdsInCurrentOrder.push(record.id);
+      readyEntries.push({ id: record.id, remaining: record.videoDetails?.remainingTime || 0 });
+      encounteredReady = true;
+      if (gapAfterReady) readyTabsAreContiguous = false;
+      continue;
+    }
+
+    if (!encounteredReady) {
+      encounteredNonReadyBeforeReady = true;
+    } else {
+      gapAfterReady = true;
+    }
+  }
+
+  if (encounteredReady && encounteredNonReadyBeforeReady) {
+    readyTabsAreAtFront = false;
+  }
+
+  const readyIdsByRemaining = readyEntries
+    .slice()
+    .sort((a, b) => a.remaining - b.remaining)
+    .map((entry) => entry.id);
+
+  if (readyIdsInCurrentOrder.length >= 2) {
+    knownWatchTabsOutOfOrder = !areIdListsEqual(readyIdsInCurrentOrder, readyIdsByRemaining);
+  }
+
+  const allKnown = totalWatchTabsInWindow > 1 && watchTabsReadyCount === totalWatchTabsInWindow;
+  const computedAllSorted =
+    allKnown && areIdListsEqual(orderedIdsWithRecords, readyIdsByRemaining);
+
+  return {
+    totalWatchTabsInWindow,
+    watchTabsReadyCount,
+    hiddenTabsMayHaveStaleRemaining,
+    readyTabsAreContiguous,
+    readyTabsAreAtFront,
+    knownWatchTabsOutOfOrder,
+    allKnown,
+    computedAllSorted,
+  };
+}
+
 function computeDerivedOrderingState(records) {
   const currentOrder = deriveCurrentOrder(records);
   const enriched = buildRemainingTimeEntries(records);
@@ -148,6 +253,7 @@ function computeDerivedOrderingState(records) {
     expectedOrder,
     allRemainingTimesKnown,
     alreadyInExpectedOrder,
+    readinessMetrics: buildReadinessMetrics(records, currentOrder),
   };
 }
 
@@ -156,11 +262,13 @@ function updateBackgroundOrderingState({
   expectedOrder,
   allRemainingTimesKnown,
   alreadyInExpectedOrder,
+  readinessMetrics,
 }) {
   backgroundState.youtubeWatchTabRecordIdsSortedByRemainingTime = expectedOrder;
   backgroundState.youtubeWatchTabRecordIdsInCurrentOrder = currentOrder;
   backgroundState.tabsInCurrentWindowAreKnownToBeSorted =
     allRemainingTimesKnown && alreadyInExpectedOrder;
+  backgroundState.readinessMetrics = readinessMetrics ? { ...readinessMetrics } : null;
 
   // Notify listeners that the ordering-related state has changed.
   broadcastTabSnapshot();
