@@ -3,6 +3,7 @@ export const backgroundState = {
   youtubeWatchTabRecordIdsSortedByRemainingTime: [],
   youtubeWatchTabRecordIdsInCurrentOrder: [],
   tabsInCurrentWindowAreKnownToBeSorted: false,
+  readinessMetrics: null,
   trackedWindowId: null,
   lastBroadcastSignature: null,
 };
