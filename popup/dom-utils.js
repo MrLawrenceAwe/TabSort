@@ -61,8 +61,7 @@ export function updateHeaderFooter() {
 
   if (sortButton) {
     if (shouldShowSort) {
-      setTimeout(() => sortButton.style.setProperty('display', 'block', 'important'), 100);
-
+      sortButton.style.setProperty('display', 'block', 'important');
       const allTabsReady = popupState.watchTabsReadyCount === popupState.totalWatchTabsInWindow;
       const readyBackground = 'var(--all-ready-row-background)';
       const readyText = 'var(--all-ready-row-text)';
@@ -72,7 +71,7 @@ export function updateHeaderFooter() {
       sortButton.textContent =
         allTabsReady ? 'Sort All Tabs' : 'Sort Ready Tabs';
     } else {
-      sortButton.style.display = 'none';
+      sortButton.style.setProperty('display', 'none', 'important');
     }
   }
 
