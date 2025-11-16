@@ -1,6 +1,7 @@
 import { TAB_STATES } from '../shared/constants.js';
 import { loadSortOptions } from '../shared/storage.js';
 import { hasFreshRemainingTime } from '../shared/tab-metrics.js';
+import { createEmptyReadinessMetrics } from '../shared/readiness.js';
 import { backgroundState, resolveTrackedWindowId } from './state.js';
 import { isWatch } from './helpers.js';
 import { buildNonYoutubeOrder, buildYoutubeTabOrder } from './sort-strategy.js';
@@ -18,19 +19,6 @@ function cloneRecord(record) {
   return {
     ...record,
     videoDetails: record.videoDetails ? { ...record.videoDetails } : null,
-  };
-}
-
-function createEmptyReadinessMetrics() {
-  return {
-    totalWatchTabsInWindow: 0,
-    watchTabsReadyCount: 0,
-    hiddenTabsMayHaveStaleRemaining: false,
-    readyTabsAreContiguous: true,
-    readyTabsAreAtFront: true,
-    knownWatchTabsOutOfOrder: false,
-    allKnown: false,
-    computedAllSorted: false,
   };
 }
 

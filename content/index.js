@@ -227,28 +227,29 @@
     return false;
   });
 
-  function initialise() {
-    sendContentReadyOnce();
+  function refreshMetadata(includeReadySignal = false) {
+    if (includeReadySignal) {
+      sendContentReadyOnce();
+    }
     sendLightweightDetails();
     watchForVideoMount();
     watchTitleChanges();
+  }
+
+  function initialise() {
+    refreshMetadata(true);
   }
 
   if (document.readyState === 'complete' || document.readyState === 'interactive') initialise();
   else window.addEventListener('DOMContentLoaded', initialise, { once: true });
 
   window.addEventListener('yt-navigate-finish', () => {
-    sendLightweightDetails();
-    watchForVideoMount();
-    watchTitleChanges();
+    refreshMetadata();
   });
 
   window.addEventListener('pageshow', (e) => {
     if (e.persisted) {
-      sendContentReadyOnce();
-      sendLightweightDetails();
-      watchForVideoMount();
-      watchTitleChanges();
+      refreshMetadata(true);
     }
   });
 })();

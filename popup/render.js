@@ -6,17 +6,7 @@ import {
   addClassToAllRows,
 } from './dom-utils.js';
 import { insertRowCells } from './rows.js';
-
-const EMPTY_METRICS = {
-  totalWatchTabsInWindow: 0,
-  watchTabsReadyCount: 0,
-  hiddenTabsMayHaveStaleRemaining: false,
-  readyTabsAreContiguous: true,
-  readyTabsAreAtFront: true,
-  knownWatchTabsOutOfOrder: false,
-  allKnown: false,
-  computedAllSorted: false,
-};
+import { EMPTY_READINESS_METRICS } from '../shared/readiness.js';
 
 export function requestAndRenderSnapshot() {
   return new Promise((resolve) => {
@@ -40,10 +30,7 @@ export async function renderSnapshot(snapshot) {
   const tabRecords = snapshot.youtubeWatchTabRecordsOfCurrentWindow || {};
   const currentOrderIds = snapshot.youtubeWatchTabRecordIdsInCurrentOrder || [];
 
-  const metrics = {
-    ...EMPTY_METRICS,
-    ...(snapshot.readinessMetrics || {}),
-  };
+  const metrics = { ...EMPTY_READINESS_METRICS, ...(snapshot.readinessMetrics || {}) };
   const backgroundSortedFlag = snapshot.tabsInCurrentWindowAreKnownToBeSorted === true;
   const shouldShowSorted =
     metrics.computedAllSorted ||
