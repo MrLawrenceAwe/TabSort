@@ -18,11 +18,3 @@ export function isYoutubeDomain(url) {
   if (!host) return false;
   return YT_DOMAIN_REGEX.test(host.toLowerCase());
 }
-
-export function safeGet(obj, path, fallback = undefined) {
-  try {
-    return path.split('.').reduce((acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined), obj) ?? fallback;
-  } catch (_) {
-    return fallback;
-  }
-}
