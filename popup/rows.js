@@ -107,9 +107,9 @@ function determineUserAction(tabRecord) {
     return USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME;
   }
 
+  const videoDetails = tabRecord?.videoDetails;
   const hasRemainingTime =
-    typeof tabRecord?.videoDetails?.remainingTime === 'number' &&
-    isFinite(tabRecord.videoDetails.remainingTime);
+    typeof videoDetails?.remainingTime === 'number' && isFinite(videoDetails.remainingTime);
 
   const recentlyUnsuspended =
     tabRecord.unsuspendedTimestamp && Date.now() - tabRecord.unsuspendedTimestamp < 5000;

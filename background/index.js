@@ -151,7 +151,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  if (!isWatch(tab.url)) return;
+  if (!tab) return;
   if (backgroundState.trackedWindowId != null && tab.windowId !== backgroundState.trackedWindowId) return;
   if (
     Object.prototype.hasOwnProperty.call(changeInfo, 'discarded') ||
@@ -160,7 +160,9 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     changeInfo.url
   ) {
     await updateYoutubeWatchTabRecords(tab.windowId);
-    refreshMetricsForTab(tabId);
+    if (isWatch(tab.url)) {
+      refreshMetricsForTab(tabId);
+    }
   }
 });
 
