@@ -1,6 +1,6 @@
 # TabSort for YouTube
 
-Chrome extension that keeps YouTube watch tabs organised by the time you still have left in each video. It tracks every watch tab in the current window, gathers the remaining playback times and lets you sort the ready tabs with one click.
+Chrome extension that keeps YouTube watch and shorts tabs organised by the time you still have left in each video. It tracks every watch tab in the current window, gathers the remaining playback times and lets you sort the ready tabs with one click.
 
 ## Install (unpacked)
 
