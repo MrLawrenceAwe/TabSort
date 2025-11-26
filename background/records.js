@@ -296,9 +296,9 @@ export async function refreshMetricsForTab(tabId) {
     const resp = result.data;
     if (!resp || typeof resp !== 'object') return;
     record.contentScriptReady = true;
+    record.videoDetails = record.videoDetails || {};
 
     if (resp.title || resp.url) {
-      record.videoDetails = record.videoDetails || {};
       if (resp.title) record.videoDetails.title = resp.title;
       if (!record.url && resp.url) record.url = resp.url;
     }
@@ -312,10 +312,16 @@ export async function refreshMetricsForTab(tabId) {
 
     if (isFinite(len)) {
       record.isLiveStream = false;
-      record.videoDetails = record.videoDetails || {};
       record.videoDetails.lengthSeconds = len;
     }
-    if (isFinite(len) && isFinite(cur)) {
+    if (!isFinite(len)) {
+      record.videoDetails.lengthSeconds = null;
+      record.videoDetails.remainingTime = null;
+      record.remainingTimeMayBeStale = false;
+      recalculateOrderingState();
+      return;
+    }
+    if (isFinite(cur)) {
       const rem = Math.max(0, (len - cur) / (isFinite(rate) && rate > 0 ? rate : 1));
       record.videoDetails.remainingTime = rem;
       record.remainingTimeMayBeStale = false;

@@ -25,6 +25,13 @@ function buildForceOption(windowId) {
   return hasExplicitWindowId(windowId) ? { force: true } : undefined;
 }
 
+function resetTrackedWindow() {
+  resolveTrackedWindowId(null, { force: true });
+  backgroundState.youtubeWatchTabRecordsOfCurrentWindow = {};
+  backgroundState.lastBroadcastSignature = null;
+  recomputeSorting();
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const type = message?.action || message?.message;
 
@@ -169,6 +176,10 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
   if (backgroundState.trackedWindowId != null && removeInfo?.windowId !== backgroundState.trackedWindowId) return;
   delete backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId];
+  if (removeInfo?.isWindowClosing && removeInfo.windowId === backgroundState.trackedWindowId) {
+    resetTrackedWindow();
+    return;
+  }
   recomputeSorting();
 });
 
@@ -206,4 +217,10 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== 'refreshRemaining') return;
   const ids = Object.keys(backgroundState.youtubeWatchTabRecordsOfCurrentWindow).map(Number);
   await Promise.all(ids.map(refreshMetricsForTab));
+});
+
+chrome.windows.onRemoved.addListener((windowId) => {
+  if (windowId === backgroundState.trackedWindowId) {
+    resetTrackedWindow();
+  }
 });
