@@ -1,7 +1,9 @@
-export const YT_WATCH_REGEX = /^https?:\/\/(www\.)?youtube\.com\/watch\?/i;
+export const YT_WATCH_REGEX = /^https?:\/\/([^/]+\.)?youtube\.com\/watch\?/i;
+export const YT_SHORTS_REGEX = /^https?:\/\/([^/]+\.)?youtube\.com\/shorts\//i;
 export const YT_DOMAIN_REGEX = /(^|\.)youtube\.com$/i;
 
-export const isWatch = (url) => typeof url === 'string' && YT_WATCH_REGEX.test(url);
+export const isWatch = (url) =>
+  typeof url === 'string' && (YT_WATCH_REGEX.test(url) || YT_SHORTS_REGEX.test(url));
 
 export function domainKey(url) {
   if (typeof url !== 'string' || !url) return '';
