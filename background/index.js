@@ -70,6 +70,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       await sortTabsInCurrentWindow();
       await updateYoutubeWatchTabRecords(backgroundState.trackedWindowId);
     },
+    ping: async () => ({ ok: true }),
     activateTab: async () => {
       const tabId = message.tabId;
       if (!tabId) return;
@@ -212,9 +213,29 @@ if (chrome.webNavigation?.onHistoryStateUpdated) {
   );
 }
 
-chrome.alarms.create('refreshRemaining', { periodInMinutes: 0.5 });
+const REFRESH_ALARM_NAME = 'refreshRemaining';
+
+function ensureRefreshAlarm() {
+  try {
+    chrome.alarms.get(REFRESH_ALARM_NAME, (alarm) => {
+      if (chrome.runtime.lastError) {
+        console.debug(`[TabSort] alarm get failed: ${chrome.runtime.lastError.message}`);
+        return;
+      }
+      if (!alarm) {
+        chrome.alarms.create(REFRESH_ALARM_NAME, { periodInMinutes: 0.5 });
+      }
+    });
+  } catch (_) {
+    // ignore; will retry on next wake
+  }
+}
+
+chrome.alarms.create(REFRESH_ALARM_NAME, { periodInMinutes: 0.5 });
+ensureRefreshAlarm();
+
 chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name !== 'refreshRemaining') return;
+  if (alarm.name !== REFRESH_ALARM_NAME) return;
   const ids = Object.keys(backgroundState.youtubeWatchTabRecordsOfCurrentWindow).map(Number);
   await Promise.all(ids.map(refreshMetricsForTab));
 });
@@ -224,3 +245,6 @@ chrome.windows.onRemoved.addListener((windowId) => {
     resetTrackedWindow();
   }
 });
+
+chrome.runtime.onStartup?.addListener(ensureRefreshAlarm);
+chrome.runtime.onInstalled?.addListener(ensureRefreshAlarm);
