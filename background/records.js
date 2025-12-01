@@ -83,12 +83,15 @@ export async function updateYoutubeWatchTabRecords(windowId, options = {}) {
     const prev = backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tab.id] || {};
     const nextStatus = statusFromTab(tab);
     const prevContentReady = Boolean(prev.contentScriptReady);
+    const statusChanged = prev.status && prev.status !== nextStatus;
+    const isUnsuspended = nextStatus === TAB_STATES.UNSUSPENDED;
 
     const base = (backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tab.id] = {
       id: tab.id,
       windowId: tab.windowId,
       url: tab.url,
       index: tab.index,
+      pinned: Boolean(tab.pinned),
       status: nextStatus,
       contentScriptReady: nextStatus === TAB_STATES.UNSUSPENDED ? prevContentReady : false,
       metadataLoaded: Boolean(prev.metadataLoaded),
@@ -96,10 +99,15 @@ export async function updateYoutubeWatchTabRecords(windowId, options = {}) {
       isActiveTab: Boolean(tab.active),
       videoDetails: prev.videoDetails || null,
       unsuspendedTimestamp: prev.unsuspendedTimestamp || null,
-      remainingTimeMayBeStale: Boolean(prev.remainingTimeMayBeStale) || false,
+      remainingTimeMayBeStale:
+        !isUnsuspended || Boolean(prev.remainingTimeMayBeStale) || statusChanged,
     });
 
     setUnsuspendTimestamp(base, prev.status, nextStatus);
+
+    if (!isUnsuspended && base.videoDetails && base.videoDetails.remainingTime != null) {
+      base.videoDetails.remainingTime = null;
+    }
   }
 
   for (const id of Object.keys(backgroundState.youtubeWatchTabRecordsOfCurrentWindow)) {
@@ -216,8 +224,10 @@ function buildReadinessMetrics(records, currentOrder) {
 }
 
 function computeDerivedOrderingState(records) {
-  const currentOrder = deriveCurrentOrder(records);
-  const enriched = buildRemainingTimeEntries(records);
+  const displayOrder = deriveCurrentOrder(records);
+  const actionableRecords = records.filter((record) => !record.pinned);
+  const currentOrder = deriveCurrentOrder(actionableRecords);
+  const enriched = buildRemainingTimeEntries(actionableRecords);
 
   const knownDurationEntries = enriched.filter((entry) => entry.remainingTime !== null);
   const unknownDurationEntries = enriched.filter((entry) => entry.remainingTime === null);
@@ -231,15 +241,17 @@ function computeDerivedOrderingState(records) {
     currentOrder.every((id, index) => id === expectedOrder[index]);
 
   return {
+    displayOrder,
     currentOrder,
     expectedOrder,
     allRemainingTimesKnown,
     alreadyInExpectedOrder,
-    readinessMetrics: buildReadinessMetrics(records, currentOrder),
+    readinessMetrics: buildReadinessMetrics(actionableRecords, currentOrder),
   };
 }
 
 function updateBackgroundOrderingState({
+  displayOrder,
   currentOrder,
   expectedOrder,
   allRemainingTimesKnown,
@@ -247,7 +259,7 @@ function updateBackgroundOrderingState({
   readinessMetrics,
 }) {
   backgroundState.youtubeWatchTabRecordIdsSortedByRemainingTime = expectedOrder;
-  backgroundState.youtubeWatchTabRecordIdsInCurrentOrder = currentOrder;
+  backgroundState.youtubeWatchTabRecordIdsInCurrentOrder = displayOrder;
   backgroundState.tabsInCurrentWindowAreKnownToBeSorted =
     allRemainingTimesKnown && alreadyInExpectedOrder;
   backgroundState.readinessMetrics = readinessMetrics ? { ...readinessMetrics } : null;

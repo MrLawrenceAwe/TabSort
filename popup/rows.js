@@ -23,7 +23,8 @@ export function insertRowCells(row, tabRecord, isSortedView) {
   insertInfoCells(row, tabRecord, isSortedView);
 
   const remaining = tabRecord?.videoDetails?.remainingTime;
-  const hasRemainingTime = typeof remaining === 'number' && isFinite(remaining);
+  const hasRemainingTime =
+    typeof remaining === 'number' && isFinite(remaining) && !tabRecord.remainingTimeMayBeStale;
   if (hasRemainingTime && !isSortedView) row.classList.add('ready-row');
 
   function insertInfoCells(r, record, sortedView) {
@@ -35,15 +36,15 @@ export function insertRowCells(row, tabRecord, isSortedView) {
 
       let value = record[key];
       if (key === 'videoDetails') {
-        if (record.remainingTimeMayBeStale) {
+        if (record.isLiveStream) {
+          value = 'Live Stream';
+        } else if (record.remainingTimeMayBeStale) {
           value = 'View tab to refresh time';
         } else {
           const rt2 = record?.videoDetails?.remainingTime;
           value =
             typeof rt2 === 'number' && isFinite(rt2)
-              ? !record.isLiveStream
-                ? formatRemaining(rt2)
-                : 'Live Stream'
+              ? formatRemaining(rt2)
               : 'unavailable';
         }
       }
@@ -103,6 +104,10 @@ function formatRemaining(seconds) {
 }
 
 function determineUserAction(tabRecord) {
+  if (tabRecord?.isLiveStream) {
+    return USER_ACTIONS.NO_ACTION;
+  }
+
   if (tabRecord?.remainingTimeMayBeStale) {
     return USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME;
   }
