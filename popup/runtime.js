@@ -33,6 +33,19 @@ export function sendMessageWithWindow(action, data = {}, callback) {
   return chrome.runtime.sendMessage(message);
 }
 
+export function sendMessageWithWindowAsync(action, data = {}) {
+  return new Promise((resolve, reject) => {
+    sendMessageWithWindow(action, data, (response) => {
+      const err = chrome.runtime.lastError;
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(response);
+    });
+  });
+}
+
 export function logAndSend(type = MESSAGE_TYPES.ERROR, message = 'Message is undefined') {
   const logger = type === MESSAGE_TYPES.ERROR ? 'error' : 'log';
   console[logger](`[Popup] ${message}`);

@@ -1,5 +1,5 @@
 import { updateSortingState } from './state.js';
-import { sendMessageWithWindow } from './runtime.js';
+import { sendMessageWithWindowAsync } from './runtime.js';
 import {
   setActionAndStatusColumnsVisibility,
   updateHeaderFooter,
@@ -8,16 +8,10 @@ import {
 import { insertRowCells } from './rows.js';
 import { EMPTY_READINESS_METRICS } from '../shared/readiness.js';
 
-export function requestAndRenderSnapshot() {
-  return new Promise((resolve) => {
-    sendMessageWithWindow('sendTabRecords', {}, (response) => {
-      if (!response) {
-        resolve();
-        return;
-      }
-      Promise.resolve(renderSnapshot(response)).finally(resolve);
-    });
-  });
+export async function requestAndRenderSnapshot() {
+  const response = await sendMessageWithWindowAsync('sendTabRecords', {});
+  if (!response) return;
+  await renderSnapshot(response);
 }
 
 export async function renderSnapshot(snapshot) {
