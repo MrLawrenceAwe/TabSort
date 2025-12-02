@@ -11,10 +11,24 @@ const USER_ACTIONS = {
   NO_ACTION: '',
 };
 
-export function insertRowCells(row, tabRecord, isSortedView) {
-  const ACTIVATE_TAB = 'activateTab';
-  const RELOAD_TAB_ACTION = 'reloadTab';
+const MESSAGE_ACTIONS = Object.freeze({
+  ACTIVATE_TAB: 'activateTab',
+  RELOAD_TAB: 'reloadTab',
+});
 
+const COLUMN_CONFIG = Object.freeze({
+  sorted: [
+    { key: 'videoDetails', getter: formatVideoDetails },
+    { key: 'index', getter: formatIndex },
+  ],
+  unsorted: [
+    { key: 'videoDetails', getter: formatVideoDetails },
+    { key: 'index', getter: formatIndex },
+    { key: 'status', getter: (record) => record.status },
+  ],
+});
+
+export function insertRowCells(row, tabRecord, isSortedView) {
   row.insertCell(0).textContent = tabRecord.videoDetails?.title ?? tabRecord.url;
 
   const userAction = determineUserAction(tabRecord);
@@ -26,72 +40,73 @@ export function insertRowCells(row, tabRecord, isSortedView) {
   const hasRemainingTime =
     typeof remaining === 'number' && isFinite(remaining) && !tabRecord.remainingTimeMayBeStale;
   if (hasRemainingTime && !isSortedView) row.classList.add('ready-row');
+}
 
-  function insertInfoCells(r, record, sortedView) {
-    const RECORD_KEYS = sortedView ? ['videoDetails', 'index'] : ['videoDetails', 'index', 'status'];
+function insertInfoCells(row, record, sortedView) {
+  const columns = sortedView ? COLUMN_CONFIG.sorted : COLUMN_CONFIG.unsorted;
 
-    RECORD_KEYS.forEach((key, i) => {
-      const offset = sortedView ? 1 : 2;
-      const cell = r.insertCell(i + offset);
+  columns.forEach((column) => {
+    const cell = row.insertCell(row.cells.length);
+    const value = column.getter(record);
 
-      let value = record[key];
-      if (key === 'videoDetails') {
-        if (record.isLiveStream) {
-          value = 'Live Stream';
-        } else if (record.remainingTimeMayBeStale) {
-          value = 'View tab to refresh time';
-        } else {
-          const rt2 = record?.videoDetails?.remainingTime;
-          value =
-            typeof rt2 === 'number' && isFinite(rt2)
-              ? formatRemaining(rt2)
-              : 'unavailable';
-        }
-      }
-      if (key === 'index') value = Number.isFinite(value) ? value + 1 : '';
+    cell.textContent = popupState.tabsInCurrentWindowAreKnownToBeSorted
+      ? value
+      : getFallbackValue(column.key, value);
+  });
+}
 
-      cell.textContent = popupState.tabsInCurrentWindowAreKnownToBeSorted
-        ? value
-        : getFallbackValue(key, value);
-    });
+function insertUserActionCell(row, record, action) {
+  const cell = row.insertCell(1);
+  if (!action) {
+    cell.textContent = '—';
+    return;
   }
 
-  function insertUserActionCell(r, record, action) {
-    const cell = r.insertCell(1);
-    if (!action) {
-      cell.textContent = '—';
-      return;
-    }
-    if (action === USER_ACTIONS.INTERACT_WITH_TAB_THEN_RELOAD) {
-      const interact = createLink(USER_ACTIONS.INTERACT_WITH_TAB, ACTIVATE_TAB, record.id);
-      const reload = createLink(USER_ACTIONS.RELOAD_TAB, RELOAD_TAB_ACTION, record.id);
-      cell.appendChild(interact);
-      cell.appendChild(document.createTextNode('/'));
-      cell.appendChild(reload);
-      return;
-    }
-    const link = createLink(
-      action,
-      action === USER_ACTIONS.RELOAD_TAB ? RELOAD_TAB_ACTION : ACTIVATE_TAB,
-      record.id,
-    );
-    cell.appendChild(link);
+  if (action === USER_ACTIONS.INTERACT_WITH_TAB_THEN_RELOAD) {
+    const interact = createLink(USER_ACTIONS.INTERACT_WITH_TAB, MESSAGE_ACTIONS.ACTIVATE_TAB, record.id);
+    const reload = createLink(USER_ACTIONS.RELOAD_TAB, MESSAGE_ACTIONS.RELOAD_TAB, record.id);
+    cell.appendChild(interact);
+    cell.appendChild(document.createTextNode('/'));
+    cell.appendChild(reload);
+    return;
   }
 
-  function createLink(text, messageAction, tabId) {
-    const a = document.createElement('a');
-    a.href = '#';
-    a.classList.add('user-action-link');
-    a.textContent = text;
-    a.addEventListener('click', () => sendMessageWithWindow(messageAction, { tabId }));
-    return a;
-  }
+  const link = createLink(
+    action,
+    action === USER_ACTIONS.RELOAD_TAB ? MESSAGE_ACTIONS.RELOAD_TAB : MESSAGE_ACTIONS.ACTIVATE_TAB,
+    record.id,
+  );
+  cell.appendChild(link);
+}
 
-  function getFallbackValue(key, value) {
-    if (value) return value;
-    if (key === 'contentScriptReady' || key === 'metadataLoaded') return false;
-    return USER_ACTIONS.NO_ACTION;
-  }
+function createLink(text, messageAction, tabId) {
+  const a = document.createElement('a');
+  a.href = '#';
+  a.classList.add('user-action-link');
+  a.textContent = text;
+  a.addEventListener('click', () => sendMessageWithWindow(messageAction, { tabId }));
+  return a;
+}
+
+function formatVideoDetails(record) {
+  if (record.isLiveStream) return 'Live Stream';
+  if (record.remainingTimeMayBeStale) return 'View tab to refresh time';
+
+  const remaining = record?.videoDetails?.remainingTime;
+  return typeof remaining === 'number' && isFinite(remaining)
+    ? formatRemaining(remaining)
+    : 'unavailable';
+}
+
+function formatIndex(record) {
+  const idx = record.index;
+  return Number.isFinite(idx) ? idx + 1 : '';
+}
+
+function getFallbackValue(key, value) {
+  if (value) return value;
+  if (key === 'contentScriptReady' || key === 'metadataLoaded') return false;
+  return USER_ACTIONS.NO_ACTION;
 }
 
 function formatRemaining(seconds) {
