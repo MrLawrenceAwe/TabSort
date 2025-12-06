@@ -337,13 +337,12 @@ export async function refreshMetricsForTab(tabId) {
       const rem = Math.max(0, (len - cur) / (isFinite(rate) && rate > 0 ? rate : 1));
       record.videoDetails.remainingTime = rem;
       record.remainingTimeMayBeStale = false;
-    } else if (isFinite(len)) {
+    } else {
+      // cur is not finite but len is (we returned early if len wasn't finite)
       if (record.videoDetails && record.videoDetails.remainingTime == null) {
         record.videoDetails.remainingTime = len;
       }
       record.remainingTimeMayBeStale = !tab.active;
-    } else {
-      record.remainingTimeMayBeStale = false;
     }
 
     recalculateOrderingState();
