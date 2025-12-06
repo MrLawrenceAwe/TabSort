@@ -169,7 +169,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   ) {
     await updateYoutubeWatchTabRecords(tab.windowId);
     if (isWatch(tab.url)) {
-      refreshMetricsForTab(tabId);
+      await refreshMetricsForTab(tabId);
     }
   }
 });
@@ -203,7 +203,7 @@ if (chrome.webNavigation?.onHistoryStateUpdated) {
         windowIdForUpdate = backgroundState.trackedWindowId;
       }
       await updateYoutubeWatchTabRecords(windowIdForUpdate);
-      refreshMetricsForTab(details.tabId);
+      await refreshMetricsForTab(details.tabId);
     },
     { url: [{ hostContains: 'youtube.com' }] },
   );
@@ -231,7 +231,6 @@ function ensureRefreshAlarm() {
   }
 }
 
-chrome.alarms.create(REFRESH_ALARM_NAME, { periodInMinutes: 0.5 });
 ensureRefreshAlarm();
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {

@@ -84,7 +84,10 @@ function createLink(text, messageAction, tabId) {
   a.href = '#';
   a.classList.add('user-action-link');
   a.textContent = text;
-  a.addEventListener('click', () => sendMessageWithWindow(messageAction, { tabId }));
+  a.addEventListener('click', (event) => {
+    event.preventDefault();
+    sendMessageWithWindow(messageAction, { tabId });
+  });
   return a;
 }
 

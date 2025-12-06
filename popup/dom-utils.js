@@ -83,7 +83,7 @@ export function updateHeaderFooter() {
 }
 
 export function addClassToAllRows(table, className) {
-  for (let i = 0; i < table.rows.length; i += 1) {
+  for (let i = 1; i < table.rows.length; i += 1) {
     table.rows[i].classList.add(className);
   }
 }
