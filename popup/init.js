@@ -1,10 +1,12 @@
 import { MESSAGE_TYPES } from '../shared/constants.js';
+import { toErrorMessage } from '../shared/utils.js';
 import { setupOptionControls } from './options.js';
 import { requestAndRenderSnapshot, renderSnapshot } from './render.js';
 import { refreshActiveContext, sendMessageWithWindow, logAndSend } from './runtime.js';
+import { initializeDomCache } from './dom-utils.js';
 
 function logPopupError(context, error) {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = toErrorMessage(error);
   if (message === 'No active tab') {
     console.debug(`[Popup] ${context}: ${message}`);
     return;
@@ -13,6 +15,9 @@ function logPopupError(context, error) {
 }
 
 export async function initialisePopup() {
+  // Initialize DOM cache early for performance
+  initializeDomCache();
+
   await refreshActiveContext().catch((error) => {
     logPopupError('Failed to refresh active context', error);
     return null;

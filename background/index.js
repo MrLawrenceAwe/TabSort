@@ -1,29 +1,24 @@
-import { TAB_STATES } from '../shared/constants.js';
+import { toErrorMessage } from '../shared/utils.js';
 import {
   broadcastTabSnapshot,
-  buildTabSnapshot,
   recomputeSorting,
   refreshMetricsForTab,
-  sortTabsInCurrentWindow,
   updateYoutubeWatchTabRecords,
 } from './records.js';
-import { backgroundState, now, resolveTrackedWindowId } from './state.js';
+import { backgroundState, resolveTrackedWindowId } from './state.js';
 import { isWatch } from './helpers.js';
-import { ensureTabRecord } from './tab-record.js';
 import { getTab } from './tab-service.js';
-
-function canUseSenderWindow(windowId) {
-  if (backgroundState.trackedWindowId == null) return true;
-  return typeof windowId === 'number' && windowId === backgroundState.trackedWindowId;
-}
-
-function hasExplicitWindowId(windowId) {
-  return typeof windowId === 'number' && Number.isFinite(windowId);
-}
-
-function buildForceOption(windowId) {
-  return hasExplicitWindowId(windowId) ? { force: true } : undefined;
-}
+import {
+  activateTab,
+  reloadTab,
+  handleUpdateYoutubeWatchTabRecords,
+  handleSendTabRecords,
+  handleAreTabsInCurrentWindowKnownToBeSorted,
+  handleSortTabs,
+  handleContentScriptReady,
+  handleMetadataLoaded,
+  handleLightweightDetails,
+} from './handlers/index.js';
 
 function resetTrackedWindow() {
   resolveTrackedWindowId(null, { force: true });
@@ -42,7 +37,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (res !== undefined) sendResponse(res);
       })
       .catch((error) => {
-        const messageText = error instanceof Error ? error.message : String(error);
+        const messageText = toErrorMessage(error);
         console.error(`[TabSort] handler "${label}" failed: ${messageText}`);
         sendResponse({ error: messageText });
       });
@@ -50,106 +45,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   };
 
   const handlers = {
-    updateYoutubeWatchTabRecords: async () => {
-      await updateYoutubeWatchTabRecords(message.windowId, buildForceOption(message.windowId));
-    },
-    sendTabRecords: async () => {
-      await updateYoutubeWatchTabRecords(message.windowId, buildForceOption(message.windowId));
-      const ids = Object.keys(backgroundState.youtubeWatchTabRecordsOfCurrentWindow).map(Number);
-      await Promise.all(ids.map(refreshMetricsForTab));
-      return buildTabSnapshot();
-    },
-    areTabsInCurrentWindowKnownToBeSorted: async () => {
-      await updateYoutubeWatchTabRecords(message.windowId, buildForceOption(message.windowId));
-      return backgroundState.tabsInCurrentWindowAreKnownToBeSorted;
-    },
-    sortTabs: async () => {
-      if (hasExplicitWindowId(message.windowId)) {
-        resolveTrackedWindowId(message.windowId, { force: true });
-      }
-      await sortTabsInCurrentWindow();
-      await updateYoutubeWatchTabRecords(backgroundState.trackedWindowId);
-    },
+    updateYoutubeWatchTabRecords: () => handleUpdateYoutubeWatchTabRecords(message),
+    sendTabRecords: () => handleSendTabRecords(message),
+    areTabsInCurrentWindowKnownToBeSorted: () => handleAreTabsInCurrentWindowKnownToBeSorted(message),
+    sortTabs: () => handleSortTabs(message),
     ping: async () => ({ ok: true }),
-    activateTab: async () => {
-      const tabId = message.tabId;
-      if (!tabId) return;
-      if (hasExplicitWindowId(message.windowId)) {
-        resolveTrackedWindowId(message.windowId, { force: true });
-      }
-      try {
-        await chrome.tabs.update(tabId, { active: true });
-      } catch (_) {
-        // ignore activation failure
-      }
-    },
-    reloadTab: async () => {
-      const tabId = message.tabId;
-      if (!tabId) return;
-      if (hasExplicitWindowId(message.windowId)) {
-        resolveTrackedWindowId(message.windowId, { force: true });
-      }
-      try {
-        await chrome.tabs.reload(tabId);
-      } catch (_) {
-        // ignore reload failure
-      }
-      const record = backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId];
-      if (record) {
-        record.status = TAB_STATES.LOADING;
-        record.unsuspendedTimestamp = now();
-        broadcastTabSnapshot();
-      }
-    },
+    activateTab: () => activateTab(message),
+    reloadTab: () => reloadTab(message),
     logPopupMessage: async () => {
       const level = message.type === 'error' ? 'error' : 'log';
       console[level](`[Popup] ${message.info}`);
     },
-    contentScriptReady: async () => {
-      const tabId = sender?.tab?.id;
-      const senderWindowId = sender?.tab?.windowId;
-      if (!canUseSenderWindow(senderWindowId)) return;
-      resolveTrackedWindowId(senderWindowId);
-      if (!tabId) return;
-      const record = ensureTabRecord(tabId, senderWindowId);
-      record.contentScriptReady = true;
-      broadcastTabSnapshot();
-      await refreshMetricsForTab(tabId);
-      return { message: 'contentScriptAck' };
-    },
-    metadataLoaded: async () => {
-      const tabId = sender?.tab?.id;
-      const senderWindowId = sender?.tab?.windowId;
-      if (!canUseSenderWindow(senderWindowId)) return;
-      resolveTrackedWindowId(senderWindowId);
-      if (!tabId) return;
-      const record = backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId];
-      if (record) record.metadataLoaded = true;
-      broadcastTabSnapshot();
-      await refreshMetricsForTab(tabId);
-    },
-    lightweightDetails: async () => {
-      const tabId = sender?.tab?.id;
-      const details = message.details || {};
-      const senderWindowId = sender?.tab?.windowId;
-      if (!canUseSenderWindow(senderWindowId)) return;
-      resolveTrackedWindowId(senderWindowId);
-      if (!tabId) return;
-      const record = ensureTabRecord(tabId, senderWindowId, {
-        url: details.url || sender?.tab?.url,
-      });
-      if (details.url) record.url = details.url;
-      record.videoDetails = record.videoDetails || {};
-      if (details.title) record.videoDetails.title = details.title;
-      if (typeof details.lengthSeconds === 'number' && isFinite(details.lengthSeconds)) {
-        record.videoDetails.lengthSeconds = details.lengthSeconds;
-        if (record.videoDetails.remainingTime == null) {
-          record.videoDetails.remainingTime = details.lengthSeconds;
-        }
-      }
-      if (typeof details.isLive === 'boolean') record.isLiveStream = details.isLive;
-      recomputeSorting();
-    },
+    contentScriptReady: () => handleContentScriptReady(message, sender),
+    metadataLoaded: () => handleMetadataLoaded(message, sender),
+    lightweightDetails: () => handleLightweightDetails(message, sender),
   };
 
   if (handlers[type]) {
