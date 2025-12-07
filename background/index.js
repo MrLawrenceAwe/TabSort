@@ -1,7 +1,6 @@
 
 import { REFRESH_INTERVAL_MINUTES, REFRESH_ALARM_NAME } from '../shared/constants.js';
 import {
-  broadcastTabSnapshot,
   recomputeSorting,
   refreshMetricsForTab,
   updateYoutubeWatchTabRecords,
