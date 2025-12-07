@@ -15,6 +15,11 @@ import {
   statusFromTab,
 } from './tab-service.js';
 
+/**
+ * Creates a shallow clone of a tab record, including a shallow clone of videoDetails.
+ * @param {Object|null} record - The tab record to clone.
+ * @returns {Object|null} A cloned record or the original if not an object.
+ */
 function cloneRecord(record) {
   if (!record || typeof record !== 'object') return record;
   return {
@@ -23,6 +28,12 @@ function cloneRecord(record) {
   };
 }
 
+/**
+ * Compares two arrays of IDs for equality (as strings).
+ * @param {Array<number|string>} a - First array of IDs.
+ * @param {Array<number|string>} b - Second array of IDs.
+ * @returns {boolean} True if arrays contain the same IDs in the same order.
+ */
 function areIdListsEqual(a, b) {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) {
@@ -120,6 +131,11 @@ export async function updateYoutubeWatchTabRecords(windowId, options = {}) {
   recalculateOrderingState();
 }
 
+/**
+ * Derives the current tab order from an array of records, sorted by index.
+ * @param {Array<Object>} records - Array of tab records.
+ * @returns {Array<number>} Array of tab IDs in current order.
+ */
 function deriveCurrentOrder(records) {
   return records
     .slice()
@@ -127,6 +143,11 @@ function deriveCurrentOrder(records) {
     .map((record) => record.id);
 }
 
+/**
+ * Builds an array of entries with tab IDs and their remaining time values.
+ * @param {Array<Object>} records - Array of tab records.
+ * @returns {Array<{id: number, remainingTime: number|null}>} Entries with remaining times.
+ */
 function buildRemainingTimeEntries(records) {
   return records.map((record) => {
     const value = hasFreshRemainingTime(record)
@@ -136,6 +157,13 @@ function buildRemainingTimeEntries(records) {
   });
 }
 
+/**
+ * Builds the expected sort order: known-duration tabs first (sorted), then unknown tabs.
+ * @param {Array<{id: number, remainingTime: number}>} knownEntries - Tabs with known remaining time.
+ * @param {Array<{id: number, remainingTime: null}>} unknownEntries - Tabs without known remaining time.
+ * @param {Array<number>} currentOrder - Current tab order for unknown tabs.
+ * @returns {Array<number>} Expected sorted order of tab IDs.
+ */
 function buildExpectedOrder(knownEntries, unknownEntries, currentOrder) {
   const knownDurationSortedIds = knownEntries
     .slice()
@@ -326,14 +354,14 @@ export async function refreshMetricsForTab(tabId) {
     if (isFiniteNumber(len)) {
       record.isLiveStream = false;
       record.videoDetails.lengthSeconds = len;
-    }
-    if (!isFiniteNumber(len)) {
+    } else {
       record.videoDetails.lengthSeconds = null;
       record.videoDetails.remainingTime = null;
       record.remainingTimeMayBeStale = false;
       recalculateOrderingState();
       return;
     }
+
     if (isFiniteNumber(cur)) {
       const rem = Math.max(0, (len - cur) / (isFiniteNumber(rate) && rate > 0 ? rate : 1));
       record.videoDetails.remainingTime = rem;

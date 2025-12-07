@@ -1,4 +1,5 @@
 import { toErrorMessage } from '../shared/utils.js';
+import { REFRESH_INTERVAL_MINUTES } from '../shared/constants.js';
 import {
   broadcastTabSnapshot,
   recomputeSorting,
@@ -132,7 +133,7 @@ function ensureRefreshAlarm() {
         return;
       }
       if (!alarm) {
-        chrome.alarms.create(REFRESH_ALARM_NAME, { periodInMinutes: 0.5 });
+        chrome.alarms.create(REFRESH_ALARM_NAME, { periodInMinutes: REFRESH_INTERVAL_MINUTES });
       }
     });
   } catch (_) {
