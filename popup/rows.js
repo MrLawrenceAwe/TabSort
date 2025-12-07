@@ -1,4 +1,5 @@
 import { TAB_STATES, RECENTLY_UNSUSPENDED_MS } from '../shared/constants.js';
+import { isFiniteNumber } from '../shared/utils.js';
 import { popupState } from './state.js';
 import { sendMessageWithWindow } from './runtime.js';
 
@@ -37,8 +38,7 @@ export function insertRowCells(row, tabRecord, isSortedView) {
   insertInfoCells(row, tabRecord, isSortedView);
 
   const remaining = tabRecord?.videoDetails?.remainingTime;
-  const hasRemainingTime =
-    typeof remaining === 'number' && isFinite(remaining) && !tabRecord.remainingTimeMayBeStale;
+  const hasRemainingTime = isFiniteNumber(remaining) && !tabRecord.remainingTimeMayBeStale;
   if (hasRemainingTime && !isSortedView) row.classList.add('ready-row');
 }
 
@@ -96,9 +96,7 @@ function formatVideoDetails(record) {
   if (record.remainingTimeMayBeStale) return 'View tab to refresh time';
 
   const remaining = record?.videoDetails?.remainingTime;
-  return typeof remaining === 'number' && isFinite(remaining)
-    ? formatRemaining(remaining)
-    : 'unavailable';
+  return isFiniteNumber(remaining) ? formatRemaining(remaining) : 'unavailable';
 }
 
 function formatIndex(record) {
@@ -112,8 +110,13 @@ function getFallbackValue(key, value) {
   return USER_ACTIONS.NO_ACTION;
 }
 
+/**
+ * Formats remaining time in seconds to a human-readable string.
+ * @param {number} seconds - The remaining time in seconds.
+ * @returns {string} Formatted time string (e.g., "5m 30s" or "1h 30m 0s").
+ */
 function formatRemaining(seconds) {
-  if (typeof seconds !== 'number' || !isFinite(seconds)) return '—';
+  if (!isFiniteNumber(seconds)) return '—';
   const totalMinutes = Math.floor(seconds / 60);
   const h = Math.floor(totalMinutes / 60);
   const m = totalMinutes % 60;
@@ -121,6 +124,11 @@ function formatRemaining(seconds) {
   return h < 1 ? `${m}m ${s}s` : `${h}h ${m}m ${s}s`;
 }
 
+/**
+ * Determines the appropriate user action for a tab based on its state.
+ * @param {Object} tabRecord - The tab record to evaluate.
+ * @returns {string} The recommended user action from USER_ACTIONS.
+ */
 function determineUserAction(tabRecord) {
   if (tabRecord?.isLiveStream) {
     return USER_ACTIONS.NO_ACTION;
@@ -131,8 +139,7 @@ function determineUserAction(tabRecord) {
   }
 
   const videoDetails = tabRecord?.videoDetails;
-  const hasRemainingTime =
-    typeof videoDetails?.remainingTime === 'number' && isFinite(videoDetails.remainingTime);
+  const hasRemainingTime = isFiniteNumber(videoDetails?.remainingTime);
 
   const recentlyUnsuspended =
     tabRecord.unsuspendedTimestamp && Date.now() - tabRecord.unsuspendedTimestamp < RECENTLY_UNSUSPENDED_MS;

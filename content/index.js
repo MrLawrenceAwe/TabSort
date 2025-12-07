@@ -3,6 +3,27 @@
   // Note: Since Chrome extensions don't support ES modules in content scripts,
   // we keep this as an IIFE but organize the code better internally.
 
+  // ============================================================
+  // Constants
+  // ============================================================
+
+  /**
+   * HTMLMediaElement.readyState threshold for considering video ready.
+   * Value of 2 corresponds to HAVE_CURRENT_DATA.
+   */
+  const MEDIA_READY_STATE_THRESHOLD = 2;
+
+  // ============================================================
+  // Utility Functions
+  // ============================================================
+
+  /**
+   * Safely checks if a value is a finite number.
+   * @param {*} value - The value to check.
+   * @returns {boolean}
+   */
+  const isFiniteNum = (value) => typeof value === 'number' && Number.isFinite(value);
+
   const logContentError = (context, error) => {
     const message = error instanceof Error ? error.message : String(error);
     console.warn(`[TabSort] ${context}: ${message}`);
@@ -175,7 +196,7 @@
     };
     const onAny = () => send();
 
-    if (video.readyState >= 2 && isFinite(video.duration)) {
+    if (video.readyState >= MEDIA_READY_STATE_THRESHOLD && isFiniteNum(video.duration)) {
       send();
     } else {
       video.addEventListener('loadedmetadata', onAny, { once: true });
@@ -243,11 +264,11 @@
       const payload = {
         title: light.title || null,
         url: light.url,
-        lengthSeconds: (typeof light.lengthSeconds === 'number' && isFinite(light.lengthSeconds)) ? light.lengthSeconds : null,
+        lengthSeconds: isFiniteNum(light.lengthSeconds) ? light.lengthSeconds : null,
         isLive: Boolean(light.isLive),
-        duration: (video && isFinite(video.duration)) ? video.duration : null,
-        currentTime: (video && isFinite(video.currentTime)) ? video.currentTime : null,
-        playbackRate: (video && isFinite(video.playbackRate) && video.playbackRate > 0) ? video.playbackRate : 1,
+        duration: (video && isFiniteNum(video.duration)) ? video.duration : null,
+        currentTime: (video && isFiniteNum(video.currentTime)) ? video.currentTime : null,
+        playbackRate: (video && isFiniteNum(video.playbackRate) && video.playbackRate > 0) ? video.playbackRate : 1,
         paused: video ? video.paused : null,
       };
       sendResponse(payload);
@@ -284,5 +305,19 @@
     if (e.persisted) {
       refreshMetadata(true);
     }
+  });
+
+  // Cleanup observers on page unload to prevent memory leaks
+  window.addEventListener('pagehide', () => {
+    if (titleElementObserver) {
+      titleElementObserver.disconnect();
+      titleElementObserver = null;
+    }
+    if (titleTextObserver) {
+      titleTextObserver.disconnect();
+      titleTextObserver = null;
+    }
+    observedTitleElement = null;
+    lastKnownTitleText = null;
   });
 })();
