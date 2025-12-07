@@ -199,22 +199,17 @@
     const video = getVideoEl();
     if (!video) return false;
 
+    const events = ['loadedmetadata', 'loadeddata', 'durationchange', 'canplay'];
     const send = () => { chrome.runtime.sendMessage({ message: 'metadataLoaded' }); cleanup(); };
     const cleanup = () => {
-      video.removeEventListener('loadedmetadata', onAny);
-      video.removeEventListener('loadeddata', onAny);
-      video.removeEventListener('durationchange', onAny);
-      video.removeEventListener('canplay', onAny);
+      events.forEach(evt => video.removeEventListener(evt, onAny));
     };
     const onAny = () => send();
 
     if (video.readyState >= MEDIA_READY_STATE_THRESHOLD && isFiniteNum(video.duration)) {
       send();
     } else {
-      video.addEventListener('loadedmetadata', onAny, { once: true });
-      video.addEventListener('loadeddata', onAny, { once: true });
-      video.addEventListener('durationchange', onAny, { once: true });
-      video.addEventListener('canplay', onAny, { once: true });
+      events.forEach(evt => video.addEventListener(evt, onAny, { once: true }));
     }
     return true;
   }

@@ -128,7 +128,7 @@ export async function updateYoutubeWatchTabRecords(windowId, options = {}) {
     }
   }
 
-  recalculateOrderingState();
+  recomputeSorting();
 }
 
 /**
@@ -297,14 +297,10 @@ function updateBackgroundOrderingState({
   broadcastTabSnapshot();
 }
 
-function recalculateOrderingState() {
+export function recomputeSorting() {
   const records = Object.values(backgroundState.youtubeWatchTabRecordsOfCurrentWindow);
   const derivedState = computeDerivedOrderingState(records);
   updateBackgroundOrderingState(derivedState);
-}
-
-export function recomputeSorting() {
-  recalculateOrderingState();
 }
 
 export async function refreshMetricsForTab(tabId) {
@@ -330,7 +326,7 @@ export async function refreshMetricsForTab(tabId) {
         record.videoDetails.remainingTime = null;
       }
       record.remainingTimeMayBeStale = false;
-      recalculateOrderingState();
+      recomputeSorting();
       return;
     }
 
@@ -358,7 +354,7 @@ export async function refreshMetricsForTab(tabId) {
       record.videoDetails.lengthSeconds = null;
       record.videoDetails.remainingTime = null;
       record.remainingTimeMayBeStale = false;
-      recalculateOrderingState();
+      recomputeSorting();
       return;
     }
 
@@ -374,7 +370,7 @@ export async function refreshMetricsForTab(tabId) {
       record.remainingTimeMayBeStale = !tab.active;
     }
 
-    recalculateOrderingState();
+    recomputeSorting();
   } catch (_) {
     // ignore; will retry later
   }

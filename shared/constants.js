@@ -29,3 +29,6 @@ export const MEDIA_READY_STATE_THRESHOLD = 2;
 
 /** URL pattern for matching YouTube watch pages */
 export const YOUTUBE_WATCH_URL_PATTERN = /youtube\.com\/watch/;
+
+/** Name of the alarm used for periodic metric refresh */
+export const REFRESH_ALARM_NAME = 'refreshRemaining';
