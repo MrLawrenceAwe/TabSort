@@ -31,16 +31,25 @@ function resetTrackedWindow() {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const type = message?.action || message?.message;
 
+  /**
+   * Wraps an async handler to ensure a response is always sent.
+   * This prevents callers from waiting indefinitely for a response.
+   * @param {() => Promise<unknown>} fn - The async handler function.
+   * @param {string} label - Label for error logging.
+   * @returns {true} Always returns true to indicate async response.
+   */
   const respondAsync = (fn, label) => {
     Promise.resolve()
       .then(() => fn())
       .then((res) => {
-        if (res !== undefined) sendResponse(res);
+        // Always send a response, even for void handlers
+        // Use { ok: true } as default for handlers that don't return a value
+        sendResponse(res !== undefined ? res : { ok: true });
       })
       .catch((error) => {
         const messageText = toErrorMessage(error);
         console.error(`[TabSort] handler "${label}" failed: ${messageText}`);
-        sendResponse({ error: messageText });
+        sendResponse({ ok: false, error: messageText });
       });
     return true;
   };

@@ -22,6 +22,8 @@ export const REFRESH_INTERVAL_MINUTES = 0.5;
 /** 
  * HTMLMediaElement.readyState threshold for considering video ready.
  * Value of 2 corresponds to HAVE_CURRENT_DATA.
+ * @note This constant is duplicated in content/index.js since content scripts
+ *       cannot use ES modules. Keep both in sync when modifying.
  */
 export const MEDIA_READY_STATE_THRESHOLD = 2;
 

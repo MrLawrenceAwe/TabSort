@@ -1,29 +1,41 @@
 (function () {
-  // Import functions from modules (bundled via IIFE for content script)
-  // Note: Since Chrome extensions don't support ES modules in content scripts,
-  // we keep this as an IIFE but organize the code better internally.
+  // ============================================================
+  // Content Script for TabSort
+  // ============================================================
+  // IMPORTANT: Chrome extensions don't support ES modules in content scripts.
+  // Constants and utilities below are intentional duplicates of shared modules.
+  // If you modify these, update the source of truth as noted in comments.
 
   // ============================================================
-  // Constants
+  // Constants (duplicated from shared/constants.js)
   // ============================================================
 
   /**
    * HTMLMediaElement.readyState threshold for considering video ready.
    * Value of 2 corresponds to HAVE_CURRENT_DATA.
+   * @see shared/constants.js - MEDIA_READY_STATE_THRESHOLD (source of truth)
    */
   const MEDIA_READY_STATE_THRESHOLD = 2;
 
   // ============================================================
-  // Utility Functions
+  // Utility Functions (duplicated from shared/utils.js)
   // ============================================================
 
   /**
    * Safely checks if a value is a finite number.
+   * Unlike the global isFinite(), this doesn't coerce strings.
    * @param {*} value - The value to check.
    * @returns {boolean}
+   * @see shared/utils.js - isFiniteNumber (source of truth)
    */
   const isFiniteNum = (value) => typeof value === 'number' && Number.isFinite(value);
 
+  /**
+   * Logs an error from the content script with context.
+   * @param {string} context - Description of the operation that failed.
+   * @param {Error|unknown} error - The error that occurred.
+   * @see shared/utils.js - toErrorMessage (similar pattern)
+   */
   const logContentError = (context, error) => {
     const message = error instanceof Error ? error.message : String(error);
     console.warn(`[TabSort] ${context}: ${message}`);
