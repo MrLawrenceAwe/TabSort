@@ -1,7 +1,8 @@
+import { isFiniteNumber } from '../shared/utils.js';
 import { backgroundState } from './state.js';
 
 export function ensureTabRecord(tabId, senderWindowId, defaults = {}) {
-  if (typeof tabId !== 'number' || !Number.isFinite(tabId)) {
+  if (!isFiniteNumber(tabId)) {
     return undefined;
   }
 

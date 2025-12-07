@@ -5,7 +5,6 @@
 
 export { activateTab, reloadTab } from './tab-actions.js';
 export {
-    buildForceOption,
     handleUpdateYoutubeWatchTabRecords,
     handleSendTabRecords,
     handleAreTabsInCurrentWindowKnownToBeSorted,

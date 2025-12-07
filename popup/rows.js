@@ -101,7 +101,7 @@ function formatVideoDetails(record) {
 
 function formatIndex(record) {
   const idx = record.index;
-  return Number.isFinite(idx) ? idx + 1 : '';
+  return isFiniteNumber(idx) ? idx + 1 : '';
 }
 
 function getFallbackValue(key, value) {

@@ -12,12 +12,11 @@ export function isFiniteNumber(value) {
 
 /**
  * Checks if a value is a valid, finite window ID.
+ * Alias for isFiniteNumber since valid window IDs are simply finite numbers.
  * @param {*} windowId - The value to check.
  * @returns {boolean}
  */
-export function isValidWindowId(windowId) {
-    return typeof windowId === 'number' && Number.isFinite(windowId);
-}
+export const isValidWindowId = isFiniteNumber;
 
 /**
  * Extracts a message string from an error value.

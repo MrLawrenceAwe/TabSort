@@ -1,12 +1,9 @@
+import { EMPTY_READINESS_METRICS } from '../shared/readiness.js';
+
 export const popupState = {
+  ...EMPTY_READINESS_METRICS,
   tabsInCurrentWindowAreKnownToBeSorted: false,
-  totalWatchTabsInWindow: 0,
-  watchTabsReadyCount: 0,
-  knownWatchTabsOutOfOrder: false,
   activeWindowId: null,
-  hiddenTabsMayHaveStaleRemaining: false,
-  readyTabsAreContiguous: true,
-  readyTabsAreAtFront: true,
 };
 
 export function setActiveWindowId(windowId) {
@@ -16,3 +13,4 @@ export function setActiveWindowId(windowId) {
 export function updateSortingState(updates = {}) {
   Object.assign(popupState, updates);
 }
+
