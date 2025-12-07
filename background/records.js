@@ -2,6 +2,7 @@ import { TAB_STATES } from '../shared/constants.js';
 import { loadSortOptions } from '../shared/storage.js';
 import { hasFreshRemainingTime } from '../shared/tab-metrics.js';
 import { createEmptyReadinessMetrics } from '../shared/readiness.js';
+import { isFiniteNumber } from '../shared/utils.js';
 import { backgroundState, resolveTrackedWindowId } from './state.js';
 import { isWatch } from './helpers.js';
 import { buildNonYoutubeOrder, buildYoutubeTabOrder } from './sort-strategy.js';
@@ -322,19 +323,19 @@ export async function refreshMetricsForTab(tabId) {
     const cur = Number(resp.currentTime ?? NaN);
     const rate = Number(resp.playbackRate ?? 1);
 
-    if (isFinite(len)) {
+    if (isFiniteNumber(len)) {
       record.isLiveStream = false;
       record.videoDetails.lengthSeconds = len;
     }
-    if (!isFinite(len)) {
+    if (!isFiniteNumber(len)) {
       record.videoDetails.lengthSeconds = null;
       record.videoDetails.remainingTime = null;
       record.remainingTimeMayBeStale = false;
       recalculateOrderingState();
       return;
     }
-    if (isFinite(cur)) {
-      const rem = Math.max(0, (len - cur) / (isFinite(rate) && rate > 0 ? rate : 1));
+    if (isFiniteNumber(cur)) {
+      const rem = Math.max(0, (len - cur) / (isFiniteNumber(rate) && rate > 0 ? rate : 1));
       record.videoDetails.remainingTime = rem;
       record.remainingTimeMayBeStale = false;
     } else {

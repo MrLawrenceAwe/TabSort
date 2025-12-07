@@ -1,8 +1,47 @@
 import { popupState } from './state.js';
 
+/** Cached DOM element references */
+const domCache = {
+  statusElement: null,
+  sortButton: null,
+  tabsSortedElement: null,
+  table: null,
+  hiddenWarningElement: null,
+  actionRequiredColumn: null,
+  tabStatusColumn: null,
+  initialized: false,
+};
+
+/**
+ * Initializes the DOM cache with element references.
+ * Should be called once when the popup loads.
+ */
+export function initializeDomCache() {
+  if (domCache.initialized) return;
+
+  domCache.statusElement = document.getElementById('youtubeWatchTabsReadyStatus');
+  domCache.sortButton = document.getElementById('sortButton');
+  domCache.tabsSortedElement = document.getElementById('tabsSorted');
+  domCache.table = document.getElementById('infoTable');
+  domCache.hiddenWarningElement = document.getElementById('hiddenTabWarning');
+  domCache.actionRequiredColumn = document.querySelector('.action-required');
+  domCache.tabStatusColumn = document.querySelector('.tab-status');
+  domCache.initialized = true;
+}
+
+/**
+ * Gets a cached DOM element, initializing cache if needed.
+ * @param {string} key - The cache key.
+ * @returns {HTMLElement|null}
+ */
+function getCachedElement(key) {
+  if (!domCache.initialized) initializeDomCache();
+  return domCache[key];
+}
+
 export function setActionAndStatusColumnsVisibility(visible) {
-  const actionRequired = document.querySelector('.action-required');
-  const tabStatus = document.querySelector('.tab-status');
+  const actionRequired = getCachedElement('actionRequiredColumn');
+  const tabStatus = getCachedElement('tabStatusColumn');
   const method = visible ? 'remove' : 'add';
   actionRequired?.classList[method]('hide');
   tabStatus?.classList[method]('hide');
@@ -17,11 +56,11 @@ export function setOptionToggleVisibility(visible) {
 }
 
 export function updateHeaderFooter() {
-  const statusElement = document.getElementById('youtubeWatchTabsReadyStatus');
-  const sortButton = document.getElementById('sortButton');
-  const tabsSortedElement = document.getElementById('tabsSorted');
-  const table = document.getElementById('infoTable');
-  const hiddenWarningElement = document.getElementById('hiddenTabWarning');
+  const statusElement = getCachedElement('statusElement');
+  const sortButton = getCachedElement('sortButton');
+  const tabsSortedElement = getCachedElement('tabsSortedElement');
+  const table = getCachedElement('table');
+  const hiddenWarningElement = getCachedElement('hiddenWarningElement');
 
   if (statusElement) {
     if (!popupState.tabsInCurrentWindowAreKnownToBeSorted) {

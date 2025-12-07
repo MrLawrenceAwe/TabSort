@@ -1,4 +1,4 @@
-import { TAB_STATES } from '../shared/constants.js';
+import { TAB_STATES, RECENTLY_UNSUSPENDED_MS } from '../shared/constants.js';
 import { popupState } from './state.js';
 import { sendMessageWithWindow } from './runtime.js';
 
@@ -135,7 +135,7 @@ function determineUserAction(tabRecord) {
     typeof videoDetails?.remainingTime === 'number' && isFinite(videoDetails.remainingTime);
 
   const recentlyUnsuspended =
-    tabRecord.unsuspendedTimestamp && Date.now() - tabRecord.unsuspendedTimestamp < 5000;
+    tabRecord.unsuspendedTimestamp && Date.now() - tabRecord.unsuspendedTimestamp < RECENTLY_UNSUSPENDED_MS;
 
   if (!hasRemainingTime) {
     switch (tabRecord.status) {

@@ -1,17 +1,33 @@
 (function () {
-  function logContentError(context, error) {
+  // Import functions from modules (bundled via IIFE for content script)
+  // Note: Since Chrome extensions don't support ES modules in content scripts,
+  // we keep this as an IIFE but organize the code better internally.
+
+  const logContentError = (context, error) => {
     const message = error instanceof Error ? error.message : String(error);
     console.warn(`[TabSort] ${context}: ${message}`);
-  }
+  };
 
-  function isoToSeconds(iso) {
+  const isoToSeconds = (iso) => {
     if (!iso) return null;
     const m = String(iso).match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?/);
     if (!m) return null;
     const h = parseFloat(m[1] || 0), mn = parseFloat(m[2] || 0), s = parseFloat(m[3] || 0);
     return h * 3600 + mn * 60 + s;
-  }
+  };
+
   const getVideoEl = () => document.querySelector('video');
+
+  const cleanTitle = (raw) => {
+    if (!raw) return null;
+    const suffix = ' - YouTube';
+    const trimmed = String(raw).trim();
+    return trimmed.endsWith(suffix) ? trimmed.slice(0, -suffix.length) : trimmed;
+  };
+
+  // ============================================================
+  // YouTube Player Response Parsing
+  // ============================================================
 
   function extractYtInitialPlayerResponseFromScript(source) {
     if (typeof source !== 'string') return null;
@@ -84,12 +100,9 @@
     return obj || {};
   }
 
-  const cleanTitle = (raw) => {
-    if (!raw) return null;
-    const suffix = ' - YouTube';
-    const trimmed = String(raw).trim();
-    return trimmed.endsWith(suffix) ? trimmed.slice(0, -suffix.length) : trimmed;
-  };
+  // ============================================================
+  // Video Details Extraction
+  // ============================================================
 
   function getLightweightDetails() {
     const docTitle = cleanTitle(document.title);
@@ -109,8 +122,8 @@
       const ls = yipr?.videoDetails?.lengthSeconds;
       if (ls != null) lengthSeconds = Number(ls);
       if (yipr?.videoDetails?.isLiveContent === true ||
-          yipr?.playabilityStatus?.liveStreamability ||
-          yipr?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails) {
+        yipr?.playabilityStatus?.liveStreamability ||
+        yipr?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails) {
         isLive = true;
       }
     }
@@ -131,15 +144,23 @@
     }
   }
 
+  // ============================================================
+  // Content Script Lifecycle
+  // ============================================================
+
   function sendContentReadyOnce() {
     if (sendContentReadyOnce._sent) return;
     sendContentReadyOnce._sent = true;
     try {
-      chrome.runtime.sendMessage({ message: 'contentScriptReady' }, () => {});
+      chrome.runtime.sendMessage({ message: 'contentScriptReady' }, () => { });
     } catch (error) {
       logContentError('Sending content script ready message', error);
     }
   }
+
+  // ============================================================
+  // Video Element Observation
+  // ============================================================
 
   function attachVideoReadyListener() {
     const video = getVideoEl();
@@ -170,6 +191,10 @@
     const obs = new MutationObserver(() => { if (attachVideoReadyListener()) obs.disconnect(); });
     obs.observe(document.documentElement, { childList: true, subtree: true });
   }
+
+  // ============================================================
+  // Title Observation
+  // ============================================================
 
   let titleElementObserver = null;
   let titleTextObserver = null;
@@ -207,6 +232,10 @@
     titleElementObserver.observe(target, { childList: true, subtree: true });
   }
 
+  // ============================================================
+  // Message Handler
+  // ============================================================
+
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg && msg.message === 'getVideoMetrics') {
       const video = getVideoEl();
@@ -226,6 +255,10 @@
     }
     return false;
   });
+
+  // ============================================================
+  // Initialization
+  // ============================================================
 
   function refreshMetadata(includeReadySignal = false) {
     if (includeReadySignal) {
