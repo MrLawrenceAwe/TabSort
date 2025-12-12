@@ -110,11 +110,6 @@ function getFallbackValue(key, value) {
   return USER_ACTIONS.NO_ACTION;
 }
 
-/**
- * Formats remaining time in seconds to a human-readable string.
- * @param {number} seconds - The remaining time in seconds.
- * @returns {string} Formatted time string (e.g., "5m 30s" or "1h 30m 0s").
- */
 function formatRemaining(seconds) {
   if (!isFiniteNumber(seconds)) return '—';
   const totalMinutes = Math.floor(seconds / 60);
@@ -124,11 +119,6 @@ function formatRemaining(seconds) {
   return h < 1 ? `${m}m ${s}s` : `${h}h ${m}m ${s}s`;
 }
 
-/**
- * Determines the appropriate user action for a tab based on its state.
- * @param {Object} tabRecord - The tab record to evaluate.
- * @returns {string} The recommended user action from USER_ACTIONS.
- */
 function determineUserAction(tabRecord) {
   if (tabRecord?.isLiveStream) {
     return USER_ACTIONS.NO_ACTION;
