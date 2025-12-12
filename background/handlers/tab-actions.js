@@ -3,10 +3,6 @@ import { isValidWindowId } from '../../shared/utils.js';
 import { backgroundState, now, resolveTrackedWindowId } from '../state.js';
 import { broadcastTabSnapshot } from '../records.js';
 
-/**
- * Activates a tab by its ID.
- * @param {Object} message - The message containing tabId and optional windowId.
- */
 export async function activateTab(message) {
     const tabId = message.tabId;
     if (!tabId) return;
@@ -20,10 +16,6 @@ export async function activateTab(message) {
     }
 }
 
-/**
- * Reloads a tab by its ID and updates its record status.
- * @param {Object} message - The message containing tabId and optional windowId.
- */
 export async function reloadTab(message) {
     const tabId = message.tabId;
     if (!tabId) return;

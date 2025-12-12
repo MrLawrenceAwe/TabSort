@@ -21,6 +21,9 @@ import {
 } from './handlers/index.js';
 import { createAsyncResponder } from './async-responder.js';
 
+const shouldHandleWindow = (windowId) =>
+  backgroundState.trackedWindowId == null || windowId === backgroundState.trackedWindowId;
+
 function resetTrackedWindow() {
   resolveTrackedWindowId(null, { force: true });
   backgroundState.youtubeWatchTabRecordsOfCurrentWindow = {};
@@ -57,7 +60,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (!tab) return;
-  if (backgroundState.trackedWindowId != null && tab.windowId !== backgroundState.trackedWindowId) return;
+  if (!shouldHandleWindow(tab.windowId)) return;
   if (
     Object.prototype.hasOwnProperty.call(changeInfo, 'discarded') ||
     changeInfo.status === 'complete' ||
@@ -74,26 +77,26 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 chrome.tabs.onMoved.addListener(async (_tabId, moveInfo) => {
   if (!moveInfo) return;
   const { windowId } = moveInfo;
-  if (backgroundState.trackedWindowId != null && windowId !== backgroundState.trackedWindowId) return;
+  if (!shouldHandleWindow(windowId)) return;
   await updateYoutubeWatchTabRecords(windowId);
 });
 
 chrome.tabs.onDetached.addListener(async (_tabId, detachInfo) => {
   if (!detachInfo) return;
   const { oldWindowId } = detachInfo;
-  if (backgroundState.trackedWindowId != null && oldWindowId !== backgroundState.trackedWindowId) return;
+  if (!shouldHandleWindow(oldWindowId)) return;
   await updateYoutubeWatchTabRecords(oldWindowId);
 });
 
 chrome.tabs.onAttached.addListener(async (_tabId, attachInfo) => {
   if (!attachInfo) return;
   const { newWindowId } = attachInfo;
-  if (backgroundState.trackedWindowId != null && newWindowId !== backgroundState.trackedWindowId) return;
+  if (!shouldHandleWindow(newWindowId)) return;
   await updateYoutubeWatchTabRecords(newWindowId);
 });
 
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-  if (backgroundState.trackedWindowId != null && removeInfo?.windowId !== backgroundState.trackedWindowId) return;
+  if (!shouldHandleWindow(removeInfo?.windowId)) return;
   delete backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId];
   if (removeInfo?.isWindowClosing && removeInfo.windowId === backgroundState.trackedWindowId) {
     resetTrackedWindow();

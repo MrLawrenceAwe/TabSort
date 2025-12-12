@@ -1,25 +1,12 @@
 (function () {
-  // ============================================================
-  // Content Script for TabSort
-  // ============================================================
-  // IMPORTANT: Chrome extensions don't support ES modules in content scripts.
-  // Constants and utilities below are intentional duplicates of shared modules.
-  // If you modify these, update the source of truth as noted in comments.
-
-  // ============================================================
-  // Constants (duplicated from shared/constants.js)
-  // ============================================================
+  // Content script uses inline copies of shared constants/utilities (no ES modules here).
+  // Keep MEDIA_READY_STATE_THRESHOLD and isFiniteNum in sync with shared/.
 
   /**
-   * HTMLMediaElement.readyState threshold for considering video ready.
-   * Value of 2 corresponds to HAVE_CURRENT_DATA.
-   * @see shared/constants.js - MEDIA_READY_STATE_THRESHOLD (source of truth)
+   * HTMLMediaElement.readyState threshold for considering video ready (HAVE_CURRENT_DATA).
+   * @see shared/constants.js - MEDIA_READY_STATE_THRESHOLD
    */
   const MEDIA_READY_STATE_THRESHOLD = 2;
-
-  // ============================================================
-  // Utility Functions (duplicated from shared/utils.js)
-  // ============================================================
 
   /**
    * Safely checks if a value is a finite number.
