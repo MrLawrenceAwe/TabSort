@@ -71,6 +71,27 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   }
 });
 
+chrome.tabs.onMoved.addListener(async (_tabId, moveInfo) => {
+  if (!moveInfo) return;
+  const { windowId } = moveInfo;
+  if (backgroundState.trackedWindowId != null && windowId !== backgroundState.trackedWindowId) return;
+  await updateYoutubeWatchTabRecords(windowId);
+});
+
+chrome.tabs.onDetached.addListener(async (_tabId, detachInfo) => {
+  if (!detachInfo) return;
+  const { oldWindowId } = detachInfo;
+  if (backgroundState.trackedWindowId != null && oldWindowId !== backgroundState.trackedWindowId) return;
+  await updateYoutubeWatchTabRecords(oldWindowId);
+});
+
+chrome.tabs.onAttached.addListener(async (_tabId, attachInfo) => {
+  if (!attachInfo) return;
+  const { newWindowId } = attachInfo;
+  if (backgroundState.trackedWindowId != null && newWindowId !== backgroundState.trackedWindowId) return;
+  await updateYoutubeWatchTabRecords(newWindowId);
+});
+
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
   if (backgroundState.trackedWindowId != null && removeInfo?.windowId !== backgroundState.trackedWindowId) return;
   delete backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId];
