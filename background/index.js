@@ -1,5 +1,6 @@
 
 import { REFRESH_INTERVAL_MINUTES, REFRESH_ALARM_NAME } from '../shared/constants.js';
+import { isValidWindowId } from '../shared/utils.js';
 import {
   recomputeSorting,
   refreshMetricsForTab,
@@ -163,6 +164,13 @@ chrome.windows.onRemoved.addListener((windowId) => {
   if (windowId === backgroundState.trackedWindowId) {
     resetTrackedWindow();
   }
+});
+
+chrome.windows.onFocusChanged.addListener(async (windowId) => {
+  if (!isValidWindowId(windowId)) return;
+  if (windowId === backgroundState.trackedWindowId) return;
+  resolveTrackedWindowId(windowId, { force: true });
+  await updateYoutubeWatchTabRecords(windowId, { force: true });
 });
 
 chrome.runtime.onStartup?.addListener(ensureRefreshAlarm);
