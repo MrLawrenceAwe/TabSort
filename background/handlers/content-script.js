@@ -71,6 +71,7 @@ export async function handleLightweightDetails(message, sender) {
         record.videoDetails.lengthSeconds = details.lengthSeconds;
         if (record.videoDetails.remainingTime == null) {
             record.videoDetails.remainingTime = details.lengthSeconds;
+            record.remainingTimeMayBeStale = true;
         }
     }
     if (typeof details.isLive === 'boolean') record.isLiveStream = details.isLive;
