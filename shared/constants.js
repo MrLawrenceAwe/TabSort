@@ -16,8 +16,8 @@ export const DEFAULT_SORT_OPTIONS = Object.freeze({
 /** Time window (ms) to consider a tab as "recently unsuspended" */
 export const RECENTLY_UNSUSPENDED_MS = 5000;
 
-/** Interval in minutes for the refresh alarm */
-export const REFRESH_INTERVAL_MINUTES = 0.5;
+/** Interval in minutes for the refresh alarm (Chrome enforces a minimum of 1 minute) */
+export const REFRESH_INTERVAL_MINUTES = 1;
 
 /** 
  * HTMLMediaElement.readyState threshold for considering video ready.
