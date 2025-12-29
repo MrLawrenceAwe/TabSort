@@ -25,6 +25,9 @@ import { createAsyncResponder } from './async-responder.js';
 const shouldHandleWindow = (windowId) =>
   backgroundState.trackedWindowId == null || windowId === backgroundState.trackedWindowId;
 
+const MIN_REFRESH_INTERVAL_MINUTES = 1;
+const refreshIntervalMinutes = Math.max(REFRESH_INTERVAL_MINUTES, MIN_REFRESH_INTERVAL_MINUTES);
+
 function resetTrackedWindow() {
   resolveTrackedWindowId(null, { force: true });
   backgroundState.youtubeWatchTabRecordsOfCurrentWindow = {};
@@ -143,8 +146,15 @@ function ensureRefreshAlarm() {
         console.debug(`[TabSort] alarm get failed: ${chrome.runtime.lastError.message}`);
         return;
       }
-      if (!alarm) {
-        chrome.alarms.create(REFRESH_ALARM_NAME, { periodInMinutes: REFRESH_INTERVAL_MINUTES });
+      const needsCreate =
+        !alarm ||
+        !Number.isFinite(alarm.periodInMinutes) ||
+        Math.abs(alarm.periodInMinutes - refreshIntervalMinutes) > 1e-6;
+      if (!needsCreate) return;
+      try {
+        chrome.alarms.create(REFRESH_ALARM_NAME, { periodInMinutes: refreshIntervalMinutes });
+      } catch (error) {
+        console.debug(`[TabSort] alarm create failed: ${error.message}`);
       }
     });
   } catch (_) {
@@ -156,6 +166,7 @@ ensureRefreshAlarm();
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== REFRESH_ALARM_NAME) return;
+  await updateYoutubeWatchTabRecords(backgroundState.trackedWindowId, { force: true });
   const ids = Object.keys(backgroundState.youtubeWatchTabRecordsOfCurrentWindow).map(Number);
   await Promise.all(ids.map(refreshMetricsForTab));
 });
