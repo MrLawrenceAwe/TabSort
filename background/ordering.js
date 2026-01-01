@@ -174,7 +174,6 @@ function computeDerivedOrderingState(records) {
 
 function updateBackgroundOrderingState({
   displayOrder,
-  currentOrder,
   expectedOrder,
   allRemainingTimesKnown,
   alreadyInExpectedOrder,
