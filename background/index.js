@@ -22,6 +22,35 @@ import {
 } from './handlers/index.js';
 import { createAsyncResponder } from './async-responder.js';
 
+const logListenerError = (label, error) => {
+  const message = error?.message || String(error);
+  console.debug(`[TabSort] ${label} failed: ${message}`);
+};
+
+const withErrorLogging = (label, fn) => async (...args) => {
+  try {
+    await fn(...args);
+  } catch (error) {
+    logListenerError(label, error);
+  }
+};
+
+const getLastFocusedWindowId = () =>
+  new Promise((resolve) => {
+    try {
+      chrome.windows.getLastFocused({ populate: false }, (win) => {
+        const err = chrome.runtime.lastError;
+        if (err) {
+          resolve(null);
+          return;
+        }
+        resolve(typeof win?.id === 'number' ? win.id : null);
+      });
+    } catch (_) {
+      resolve(null);
+    }
+  });
+
 const shouldHandleWindow = (windowId) =>
   backgroundState.trackedWindowId == null || windowId === backgroundState.trackedWindowId;
 
@@ -62,42 +91,50 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return false;
 });
 
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  if (!tab) return;
-  if (!shouldHandleWindow(tab.windowId)) return;
-  if (
-    Object.prototype.hasOwnProperty.call(changeInfo, 'discarded') ||
-    changeInfo.status === 'complete' ||
-    changeInfo.status === 'loading' ||
-    changeInfo.url
-  ) {
-    await updateYoutubeWatchTabRecords(tab.windowId);
-    if (isWatch(tab.url)) {
-      await refreshMetricsForTab(tabId);
+chrome.tabs.onUpdated.addListener(
+  withErrorLogging('tabs.onUpdated', async (tabId, changeInfo, tab) => {
+    if (!tab) return;
+    if (!shouldHandleWindow(tab.windowId)) return;
+    if (
+      Object.prototype.hasOwnProperty.call(changeInfo, 'discarded') ||
+      changeInfo.status === 'complete' ||
+      changeInfo.status === 'loading' ||
+      changeInfo.url
+    ) {
+      await updateYoutubeWatchTabRecords(tab.windowId);
+      if (isWatch(tab.url)) {
+        await refreshMetricsForTab(tabId);
+      }
     }
-  }
-});
+  }),
+);
 
-chrome.tabs.onMoved.addListener(async (_tabId, moveInfo) => {
-  if (!moveInfo) return;
-  const { windowId } = moveInfo;
-  if (!shouldHandleWindow(windowId)) return;
-  await updateYoutubeWatchTabRecords(windowId);
-});
+chrome.tabs.onMoved.addListener(
+  withErrorLogging('tabs.onMoved', async (_tabId, moveInfo) => {
+    if (!moveInfo) return;
+    const { windowId } = moveInfo;
+    if (!shouldHandleWindow(windowId)) return;
+    await updateYoutubeWatchTabRecords(windowId);
+  }),
+);
 
-chrome.tabs.onDetached.addListener(async (_tabId, detachInfo) => {
-  if (!detachInfo) return;
-  const { oldWindowId } = detachInfo;
-  if (!shouldHandleWindow(oldWindowId)) return;
-  await updateYoutubeWatchTabRecords(oldWindowId);
-});
+chrome.tabs.onDetached.addListener(
+  withErrorLogging('tabs.onDetached', async (_tabId, detachInfo) => {
+    if (!detachInfo) return;
+    const { oldWindowId } = detachInfo;
+    if (!shouldHandleWindow(oldWindowId)) return;
+    await updateYoutubeWatchTabRecords(oldWindowId);
+  }),
+);
 
-chrome.tabs.onAttached.addListener(async (_tabId, attachInfo) => {
-  if (!attachInfo) return;
-  const { newWindowId } = attachInfo;
-  if (!shouldHandleWindow(newWindowId)) return;
-  await updateYoutubeWatchTabRecords(newWindowId);
-});
+chrome.tabs.onAttached.addListener(
+  withErrorLogging('tabs.onAttached', async (_tabId, attachInfo) => {
+    if (!attachInfo) return;
+    const { newWindowId } = attachInfo;
+    if (!shouldHandleWindow(newWindowId)) return;
+    await updateYoutubeWatchTabRecords(newWindowId);
+  }),
+);
 
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
   if (!shouldHandleWindow(removeInfo?.windowId)) return;
@@ -111,7 +148,7 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
 
 if (chrome.webNavigation?.onHistoryStateUpdated) {
   chrome.webNavigation.onHistoryStateUpdated.addListener(
-    async (details) => {
+    withErrorLogging('webNavigation.onHistoryStateUpdated', async (details) => {
       if (details.frameId !== 0) return;
       if (!isWatch(details.url)) return;
 
@@ -129,7 +166,7 @@ if (chrome.webNavigation?.onHistoryStateUpdated) {
       }
       await updateYoutubeWatchTabRecords(windowIdForUpdate);
       await refreshMetricsForTab(details.tabId);
-    },
+    }),
     { url: [{ hostContains: 'youtube.com' }] },
   );
 } else {
@@ -138,6 +175,15 @@ if (chrome.webNavigation?.onHistoryStateUpdated) {
   );
 }
 
+async function rehydrateTrackedWindowState() {
+  const lastFocusedWindowId = await getLastFocusedWindowId();
+  const targetWindowId = isValidWindowId(lastFocusedWindowId) ? lastFocusedWindowId : null;
+  await updateYoutubeWatchTabRecords(targetWindowId, { force: true });
+  const ids = Object.keys(backgroundState.youtubeWatchTabRecordsOfCurrentWindow).map(Number);
+  if (ids.length) {
+    await Promise.all(ids.map(refreshMetricsForTab));
+  }
+}
 
 function ensureRefreshAlarm() {
   try {
@@ -163,26 +209,33 @@ function ensureRefreshAlarm() {
 }
 
 ensureRefreshAlarm();
+rehydrateTrackedWindowState().catch((error) => logListenerError('rehydration', error));
 
-chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name !== REFRESH_ALARM_NAME) return;
-  await updateYoutubeWatchTabRecords(backgroundState.trackedWindowId, { force: true });
-  const ids = Object.keys(backgroundState.youtubeWatchTabRecordsOfCurrentWindow).map(Number);
-  await Promise.all(ids.map(refreshMetricsForTab));
-});
+chrome.alarms.onAlarm.addListener(
+  withErrorLogging('alarms.onAlarm', async (alarm) => {
+    if (alarm.name !== REFRESH_ALARM_NAME) return;
+    await updateYoutubeWatchTabRecords(backgroundState.trackedWindowId, { force: true });
+    const ids = Object.keys(backgroundState.youtubeWatchTabRecordsOfCurrentWindow).map(Number);
+    await Promise.all(ids.map(refreshMetricsForTab));
+  }),
+);
 
-chrome.windows.onRemoved.addListener((windowId) => {
-  if (windowId === backgroundState.trackedWindowId) {
-    resetTrackedWindow();
-  }
-});
+chrome.windows.onRemoved.addListener(
+  withErrorLogging('windows.onRemoved', async (windowId) => {
+    if (windowId === backgroundState.trackedWindowId) {
+      resetTrackedWindow();
+    }
+  }),
+);
 
-chrome.windows.onFocusChanged.addListener(async (windowId) => {
-  if (!isValidWindowId(windowId)) return;
-  if (windowId === backgroundState.trackedWindowId) return;
-  resolveTrackedWindowId(windowId, { force: true });
-  await updateYoutubeWatchTabRecords(windowId, { force: true });
-});
+chrome.windows.onFocusChanged.addListener(
+  withErrorLogging('windows.onFocusChanged', async (windowId) => {
+    if (!isValidWindowId(windowId)) return;
+    if (windowId === backgroundState.trackedWindowId) return;
+    resolveTrackedWindowId(windowId, { force: true });
+    await updateYoutubeWatchTabRecords(windowId, { force: true });
+  }),
+);
 
 chrome.runtime.onStartup?.addListener(ensureRefreshAlarm);
 chrome.runtime.onInstalled?.addListener(ensureRefreshAlarm);
