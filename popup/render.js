@@ -1,5 +1,5 @@
 import { updateSortingState } from './state.js';
-import { sendMessageWithWindowAsync } from './runtime.js';
+import { logAndSend, refreshActiveContext, sendMessageWithWindowAsync } from './runtime.js';
 import {
   setActionAndStatusColumnsVisibility,
   updateHeaderFooter,
@@ -7,11 +7,47 @@ import {
 } from './dom-utils.js';
 import { insertRowCells } from './rows.js';
 import { EMPTY_READINESS_METRICS } from '../shared/readiness.js';
+import { MESSAGE_TYPES } from '../shared/constants.js';
+import { toErrorMessage } from '../shared/utils.js';
+
+const SNAPSHOT_RETRY_DELAY_MS = 150;
+const SNAPSHOT_MAX_ATTEMPTS = 2;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isValidSnapshot = (snapshot) =>
+  snapshot && typeof snapshot === 'object' && 'youtubeWatchTabRecordsOfCurrentWindow' in snapshot;
+
+async function requestSnapshotWithRetry() {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= SNAPSHOT_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      if (attempt > 1) {
+        await refreshActiveContext().catch(() => {});
+        await sendMessageWithWindowAsync('ping').catch(() => {});
+        await sleep(SNAPSHOT_RETRY_DELAY_MS);
+      }
+      const response = await sendMessageWithWindowAsync('sendTabRecords', {});
+      if (isValidSnapshot(response)) {
+        return response;
+      }
+      lastError = new Error('Invalid snapshot response');
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (lastError) {
+    logAndSend(MESSAGE_TYPES.ERROR, `Failed to load tab records: ${toErrorMessage(lastError)}`);
+  }
+  return null;
+}
 
 export async function requestAndRenderSnapshot() {
-  const response = await sendMessageWithWindowAsync('sendTabRecords', {});
-  if (!response) return;
-  await renderSnapshot(response);
+  const snapshot = await requestSnapshotWithRetry();
+  if (!snapshot) return;
+  await renderSnapshot(snapshot);
 }
 
 export async function renderSnapshot(snapshot) {
