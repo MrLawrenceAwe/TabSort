@@ -28,6 +28,19 @@
     console.warn(`[TabSort] ${context}: ${message}`);
   };
 
+  const hasRuntime = () => Boolean(chrome?.runtime?.id);
+
+  const safeSendMessage = (payload, context) => {
+    if (!hasRuntime()) return false;
+    try {
+      chrome.runtime.sendMessage(payload);
+      return true;
+    } catch (error) {
+      if (context) logContentError(`Sending ${context}`, error);
+      return false;
+    }
+  };
+
   const isoToSeconds = (iso) => {
     if (!iso) return null;
     const m = String(iso).match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?/);
@@ -185,7 +198,7 @@
     try {
       const d = getLightweightDetails();
       if (d.title || d.lengthSeconds != null) {
-        chrome.runtime.sendMessage({ message: 'lightweightDetails', details: d });
+        safeSendMessage({ message: 'lightweightDetails', details: d }, 'lightweight details');
       }
     } catch (error) {
       logContentError('Sending lightweight details', error);
@@ -199,11 +212,7 @@
   function sendContentReadyOnce() {
     if (sendContentReadyOnce._sent) return;
     sendContentReadyOnce._sent = true;
-    try {
-      chrome.runtime.sendMessage({ message: 'contentScriptReady' }, () => { });
-    } catch (error) {
-      logContentError('Sending content script ready message', error);
-    }
+    safeSendMessage({ message: 'contentScriptReady' }, 'content script ready');
   }
 
   // ============================================================
@@ -215,7 +224,7 @@
     if (!video) return false;
 
     const events = ['loadedmetadata', 'loadeddata', 'durationchange', 'canplay'];
-    const send = () => { chrome.runtime.sendMessage({ message: 'metadataLoaded' }); cleanup(); };
+    const send = () => { safeSendMessage({ message: 'metadataLoaded' }, 'metadata loaded'); cleanup(); };
     const cleanup = () => {
       events.forEach(evt => video.removeEventListener(evt, onAny));
     };
