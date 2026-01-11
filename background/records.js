@@ -27,6 +27,7 @@ export async function updateYoutubeWatchTabRecords(windowId, options = {}) {
     visibleIds.add(tab.id);
 
     const prev = backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tab.id] || {};
+    const urlChanged = Boolean(prev.url) && Boolean(tab.url) && prev.url !== tab.url;
     const nextStatus = statusFromTab(tab);
     const prevContentReady = Boolean(prev.contentScriptReady);
     const statusChanged = prev.status && prev.status !== nextStatus;
@@ -40,18 +41,23 @@ export async function updateYoutubeWatchTabRecords(windowId, options = {}) {
       pinned: Boolean(tab.pinned),
       status: nextStatus,
       contentScriptReady: nextStatus === TAB_STATES.UNSUSPENDED ? prevContentReady : false,
-      metadataLoaded: Boolean(prev.metadataLoaded),
-      isLiveStream: Boolean(prev.isLiveStream),
+      metadataLoaded: urlChanged ? false : Boolean(prev.metadataLoaded),
+      isLiveStream: urlChanged ? false : Boolean(prev.isLiveStream),
       isActiveTab: Boolean(tab.active),
-      videoDetails: prev.videoDetails || null,
+      isHidden: Boolean(tab.hidden),
+      videoDetails: urlChanged ? null : prev.videoDetails || null,
       unsuspendedTimestamp: prev.unsuspendedTimestamp || null,
       remainingTimeMayBeStale:
-        !isUnsuspended || Boolean(prev.remainingTimeMayBeStale) || statusChanged,
+        !isUnsuspended || Boolean(prev.remainingTimeMayBeStale) || statusChanged || urlChanged,
     });
 
     setUnsuspendTimestamp(base, prev.status, nextStatus);
 
-    if (!isUnsuspended && base.videoDetails && base.videoDetails.remainingTime != null) {
+    if (
+      (!isUnsuspended || urlChanged) &&
+      base.videoDetails &&
+      base.videoDetails.remainingTime != null
+    ) {
       base.videoDetails.remainingTime = null;
     }
   }
@@ -80,6 +86,7 @@ export async function refreshMetricsForTab(tabId) {
       resolveTrackedWindowId(tab.windowId);
     }
     record.isActiveTab = Boolean(tab.active);
+    record.isHidden = Boolean(tab.hidden);
     if (!isWatch(tab.url)) return;
 
     const result = await sendMessageToTab(tabId, { message: 'getVideoMetrics' });
@@ -127,10 +134,8 @@ export async function refreshMetricsForTab(tabId) {
       record.remainingTimeMayBeStale = false;
     } else {
       // cur is not finite but len is (we returned early if len wasn't finite)
-      if (record.videoDetails && record.videoDetails.remainingTime == null) {
-        record.videoDetails.remainingTime = len;
-      }
-      record.remainingTimeMayBeStale = !tab.active;
+      record.videoDetails.remainingTime = len;
+      record.remainingTimeMayBeStale = true;
     }
 
     recomputeSorting();
