@@ -93,7 +93,8 @@ export function statusFromTab(tab) {
 
 export function setUnsuspendTimestamp(record, prevStatus, nextStatus) {
   if (
-    (prevStatus === TAB_STATES.SUSPENDED || prevStatus === TAB_STATES.LOADING) &&
+    ((prevStatus === TAB_STATES.SUSPENDED || prevStatus === TAB_STATES.LOADING) ||
+      prevStatus == null) &&
     nextStatus === TAB_STATES.UNSUSPENDED
   ) {
     record.unsuspendedTimestamp = now();
