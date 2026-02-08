@@ -1,11 +1,11 @@
 import { TAB_STATES } from '../../shared/constants.js';
-import { isValidWindowId } from '../../shared/utils.js';
+import { isFiniteNumber, isValidWindowId } from '../../shared/utils.js';
 import { backgroundState, now, resolveTrackedWindowId } from '../state.js';
 import { broadcastTabSnapshot } from '../records.js';
 
 export async function activateTab(message) {
     const tabId = message.tabId;
-    if (!tabId) return;
+    if (!isFiniteNumber(tabId)) return;
     if (isValidWindowId(message.windowId)) {
         resolveTrackedWindowId(message.windowId, { force: true });
     }
@@ -18,7 +18,7 @@ export async function activateTab(message) {
 
 export async function reloadTab(message) {
     const tabId = message.tabId;
-    if (!tabId) return;
+    if (!isFiniteNumber(tabId)) return;
     if (isValidWindowId(message.windowId)) {
         resolveTrackedWindowId(message.windowId, { force: true });
     }
