@@ -24,7 +24,7 @@ export async function handleContentScriptReady(_message, sender) {
     const senderWindowId = sender?.tab?.windowId;
     if (!canUseSenderWindow(senderWindowId)) return;
     resolveTrackedWindowId(senderWindowId);
-    if (!tabId) return;
+    if (!isFiniteNumber(tabId)) return;
     const record = ensureTabRecord(tabId, senderWindowId);
     record.contentScriptReady = true;
     broadcastTabSnapshot();
@@ -42,7 +42,7 @@ export async function handleMetadataLoaded(_message, sender) {
     const senderWindowId = sender?.tab?.windowId;
     if (!canUseSenderWindow(senderWindowId)) return;
     resolveTrackedWindowId(senderWindowId);
-    if (!tabId) return;
+    if (!isFiniteNumber(tabId)) return;
     const record = backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId];
     if (record) record.metadataLoaded = true;
     broadcastTabSnapshot();
@@ -60,7 +60,7 @@ export async function handleLightweightDetails(message, sender) {
     const senderWindowId = sender?.tab?.windowId;
     if (!canUseSenderWindow(senderWindowId)) return;
     resolveTrackedWindowId(senderWindowId);
-    if (!tabId) return;
+    if (!isFiniteNumber(tabId)) return;
     const record = ensureTabRecord(tabId, senderWindowId, {
         url: details.url || sender?.tab?.url,
     });

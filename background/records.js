@@ -95,7 +95,7 @@ export async function refreshMetricsForTab(tabId) {
       if (record.videoDetails && record.videoDetails.remainingTime != null) {
         record.videoDetails.remainingTime = null;
       }
-      record.remainingTimeMayBeStale = false;
+      record.remainingTimeMayBeStale = true;
       recomputeSorting();
       return;
     }

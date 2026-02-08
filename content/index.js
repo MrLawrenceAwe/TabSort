@@ -189,8 +189,6 @@
       }
     }
 
-    if (lengthSeconds == null) isLive = true;
-
     return { title, lengthSeconds, isLive, url: location.href };
   }
 
