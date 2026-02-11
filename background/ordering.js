@@ -97,7 +97,7 @@ function buildReadinessMetrics(records, currentOrder) {
     if (!record) continue;
     orderedIdsWithRecords.push(tabId);
 
-    if (record.remainingTimeMayBeStale && record.isHidden) {
+    if (record.remainingTimeMayBeStale && (!record.isActiveTab || record.isHidden)) {
       hiddenTabsMayHaveStaleRemaining = true;
     }
 
