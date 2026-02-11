@@ -124,10 +124,6 @@ function determineUserAction(tabRecord) {
     return USER_ACTIONS.NO_ACTION;
   }
 
-  if (tabRecord?.remainingTimeMayBeStale) {
-    return USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME;
-  }
-
   const videoDetails = tabRecord?.videoDetails;
   const hasRemainingTime = isFiniteNumber(videoDetails?.remainingTime);
 
@@ -147,6 +143,10 @@ function determineUserAction(tabRecord) {
       default:
         return USER_ACTIONS.NO_ACTION;
     }
+  }
+
+  if (tabRecord?.remainingTimeMayBeStale) {
+    return USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME;
   }
 
   return USER_ACTIONS.NO_ACTION;

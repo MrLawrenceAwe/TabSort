@@ -1,7 +1,7 @@
 import { TAB_STATES } from '../../shared/constants.js';
 import { isFiniteNumber, isValidWindowId } from '../../shared/utils.js';
 import { backgroundState, now, resolveTrackedWindowId } from '../state.js';
-import { broadcastTabSnapshot } from '../records.js';
+import { recomputeSorting } from '../records.js';
 
 export async function activateTab(message) {
     const tabId = message.tabId;
@@ -31,6 +31,12 @@ export async function reloadTab(message) {
     if (record) {
         record.status = TAB_STATES.LOADING;
         record.unsuspendedTimestamp = now();
-        broadcastTabSnapshot();
+        record.contentScriptReady = false;
+        record.metadataLoaded = false;
+        record.remainingTimeMayBeStale = true;
+        if (record.videoDetails && record.videoDetails.remainingTime != null) {
+            record.videoDetails.remainingTime = null;
+        }
+        recomputeSorting();
     }
 }
