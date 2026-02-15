@@ -8,6 +8,7 @@ export const backgroundState = {
   readinessMetrics: null,
   trackedWindowId: null,
   lastBroadcastSignature: null,
+  recordsRefreshSeq: 0,
 };
 
 export const now = () => Date.now();

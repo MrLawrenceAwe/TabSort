@@ -28,9 +28,12 @@ export async function handleAreTabsInCurrentWindowKnownToBeSorted(message) {
 }
 
 export async function handleSortTabs(message) {
-    if (isValidWindowId(message.windowId)) {
-        resolveTrackedWindowId(message.windowId, { force: true });
+    const targetWindowId = isValidWindowId(message.windowId)
+        ? message.windowId
+        : backgroundState.trackedWindowId;
+    if (isValidWindowId(targetWindowId)) {
+        resolveTrackedWindowId(targetWindowId, { force: true });
     }
-    await sortTabsInCurrentWindow();
-    await updateYoutubeWatchTabRecords(backgroundState.trackedWindowId);
+    await sortTabsInCurrentWindow(targetWindowId);
+    await updateYoutubeWatchTabRecords(targetWindowId, buildForceOption(targetWindowId));
 }

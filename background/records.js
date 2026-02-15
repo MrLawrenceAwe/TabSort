@@ -1,7 +1,7 @@
 import { TAB_STATES } from '../shared/constants.js';
 import { loadSortOptions } from '../shared/storage.js';
 import { hasFreshRemainingTime } from '../shared/tab-metrics.js';
-import { isFiniteNumber } from '../shared/utils.js';
+import { isFiniteNumber, isValidWindowId } from '../shared/utils.js';
 import { backgroundState, resolveTrackedWindowId } from './state.js';
 import { isWatch } from './helpers.js';
 import { buildNonYoutubeOrder, buildYoutubeTabOrder } from './sort-strategy.js';
@@ -18,22 +18,33 @@ import { recomputeSorting } from './ordering.js';
 export { buildTabSnapshot, broadcastTabSnapshot, recomputeSorting } from './ordering.js';
 
 export async function updateYoutubeWatchTabRecords(windowId, options = {}) {
+  const refreshSeq = (backgroundState.recordsRefreshSeq += 1);
   const { tabs, windowId: targetWindowId } = await getTabsForTrackedWindow(windowId, options);
+  if (refreshSeq !== backgroundState.recordsRefreshSeq) return;
   if (targetWindowId == null && tabs.length === 0) return;
-  const visibleIds = new Set();
+
+  if (
+    isValidWindowId(targetWindowId) &&
+    isValidWindowId(backgroundState.trackedWindowId) &&
+    targetWindowId !== backgroundState.trackedWindowId
+  ) {
+    return;
+  }
+
+  const previousRecords = backgroundState.youtubeWatchTabRecordsOfCurrentWindow;
+  const nextRecords = {};
 
   for (const tab of tabs) {
     if (!isWatch(tab.url)) continue;
-    visibleIds.add(tab.id);
 
-    const prev = backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tab.id] || {};
+    const prev = previousRecords[tab.id] || {};
     const urlChanged = Boolean(prev.url) && Boolean(tab.url) && prev.url !== tab.url;
     const nextStatus = statusFromTab(tab);
     const prevContentReady = Boolean(prev.contentScriptReady);
     const statusChanged = prev.status && prev.status !== nextStatus;
     const isUnsuspended = nextStatus === TAB_STATES.UNSUSPENDED;
 
-    const base = (backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tab.id] = {
+    const base = {
       id: tab.id,
       windowId: tab.windowId,
       url: tab.url,
@@ -49,7 +60,7 @@ export async function updateYoutubeWatchTabRecords(windowId, options = {}) {
       unsuspendedTimestamp: prev.unsuspendedTimestamp || null,
       remainingTimeMayBeStale:
         !isUnsuspended || Boolean(prev.remainingTimeMayBeStale) || statusChanged || urlChanged,
-    });
+    };
 
     setUnsuspendTimestamp(base, prev.status, nextStatus);
 
@@ -60,14 +71,12 @@ export async function updateYoutubeWatchTabRecords(windowId, options = {}) {
     ) {
       base.videoDetails.remainingTime = null;
     }
+
+    nextRecords[tab.id] = base;
   }
 
-  for (const id of Object.keys(backgroundState.youtubeWatchTabRecordsOfCurrentWindow)) {
-    if (!visibleIds.has(Number(id))) {
-      delete backgroundState.youtubeWatchTabRecordsOfCurrentWindow[id];
-    }
-  }
-
+  if (refreshSeq !== backgroundState.recordsRefreshSeq) return;
+  backgroundState.youtubeWatchTabRecordsOfCurrentWindow = nextRecords;
   recomputeSorting();
 }
 
@@ -117,8 +126,15 @@ export async function refreshMetricsForTab(tabId) {
     const cur = Number(resp.currentTime ?? NaN);
     const rate = Number(resp.playbackRate ?? 1);
 
+    if (record.isLiveStream) {
+      record.videoDetails.lengthSeconds = isFiniteNumber(len) ? len : null;
+      record.videoDetails.remainingTime = null;
+      record.remainingTimeMayBeStale = false;
+      recomputeSorting();
+      return;
+    }
+
     if (isFiniteNumber(len)) {
-      record.isLiveStream = false;
       record.videoDetails.lengthSeconds = len;
     } else {
       record.videoDetails.lengthSeconds = null;
@@ -144,7 +160,7 @@ export async function refreshMetricsForTab(tabId) {
   }
 }
 
-export async function sortTabsInCurrentWindow() {
+export async function sortTabsInCurrentWindow(windowId = backgroundState.trackedWindowId) {
   const orderedTabIds = backgroundState.youtubeWatchTabRecordIdsSortedByRemainingTime.slice();
 
   const tabsWithKnownRemainingTime = orderedTabIds.filter((tabId) => {
@@ -155,7 +171,11 @@ export async function sortTabsInCurrentWindow() {
   if (tabsWithKnownRemainingTime.length < 2) return;
 
   const options = await loadSortOptions();
-  const { tabs } = await getTabsForTrackedWindow();
+  const targetWindowId = isValidWindowId(windowId) ? windowId : null;
+  const { tabs } = await getTabsForTrackedWindow(
+    targetWindowId,
+    targetWindowId != null ? { force: true } : undefined,
+  );
   if (!Array.isArray(tabs) || tabs.length === 0) return;
 
   const sortedTabs = tabs.slice().sort((a, b) => a.index - b.index);

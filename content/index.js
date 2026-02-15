@@ -177,16 +177,19 @@
       document.querySelector('meta[itemprop="duration"]')?.getAttribute('content')
     );
 
-    let isLive = false;
+    const isLiveBroadcastMeta = (
+      document.querySelector('meta[itemprop="isLiveBroadcast"]')?.getAttribute('content') || ''
+    ).toLowerCase() === 'true';
+    const isLive =
+      isLiveBroadcastMeta ||
+      yipr?.videoDetails?.isLiveContent === true ||
+      yipr?.videoDetails?.isLive === true ||
+      Boolean(yipr?.playabilityStatus?.liveStreamability) ||
+      Boolean(yipr?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails);
 
     if (lengthSeconds == null) {
       const ls = yipr?.videoDetails?.lengthSeconds;
       if (ls != null) lengthSeconds = Number(ls);
-      if (yipr?.videoDetails?.isLiveContent === true ||
-        yipr?.playabilityStatus?.liveStreamability ||
-        yipr?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails) {
-        isLive = true;
-      }
     }
 
     return { title, lengthSeconds, isLive, url: location.href };
@@ -195,7 +198,7 @@
   function sendLightweightDetails() {
     try {
       const d = getLightweightDetails();
-      if (d.title || d.lengthSeconds != null) {
+      if (d.title || d.lengthSeconds != null || d.isLive) {
         safeSendMessage({ message: 'lightweightDetails', details: d }, 'lightweight details');
       }
     } catch (error) {
