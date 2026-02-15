@@ -21,19 +21,19 @@ function areIdListsEqual(a, b) {
 
 export function buildTabSnapshot() {
   const records = Object.fromEntries(
-    Object.entries(backgroundState.youtubeWatchTabRecordsOfCurrentWindow).map(([id, record]) => [
+    Object.entries(backgroundState.watchTabRecordsById).map(([id, record]) => [
       id,
       cloneRecord(record),
     ]),
   );
 
   return {
-    youtubeWatchTabRecordsOfCurrentWindow: records,
-    youtubeWatchTabRecordIdsSortedByRemainingTime: [
-      ...backgroundState.youtubeWatchTabRecordIdsSortedByRemainingTime,
+    watchTabRecordsById: records,
+    watchTabIdsByRemainingTime: [
+      ...backgroundState.watchTabIdsByRemainingTime,
     ],
-    youtubeWatchTabRecordIdsInCurrentOrder: [
-      ...backgroundState.youtubeWatchTabRecordIdsInCurrentOrder,
+    watchTabIdsInCurrentOrder: [
+      ...backgroundState.watchTabIdsInCurrentOrder,
     ],
     tabsInCurrentWindowAreKnownToBeSorted: backgroundState.tabsInCurrentWindowAreKnownToBeSorted,
     readinessMetrics: {
@@ -187,8 +187,8 @@ function updateBackgroundOrderingState({
   alreadyInExpectedOrder,
   readinessMetrics,
 }) {
-  backgroundState.youtubeWatchTabRecordIdsSortedByRemainingTime = expectedOrder;
-  backgroundState.youtubeWatchTabRecordIdsInCurrentOrder = displayOrder;
+  backgroundState.watchTabIdsByRemainingTime = expectedOrder;
+  backgroundState.watchTabIdsInCurrentOrder = displayOrder;
   backgroundState.tabsInCurrentWindowAreKnownToBeSorted =
     allRemainingTimesKnown && alreadyInExpectedOrder;
   backgroundState.readinessMetrics = readinessMetrics ? { ...readinessMetrics } : null;
@@ -197,7 +197,7 @@ function updateBackgroundOrderingState({
 }
 
 export function recomputeSorting() {
-  const records = Object.values(backgroundState.youtubeWatchTabRecordsOfCurrentWindow);
+  const records = Object.values(backgroundState.watchTabRecordsById);
   const derivedState = computeDerivedOrderingState(records);
   updateBackgroundOrderingState(derivedState);
 }

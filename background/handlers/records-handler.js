@@ -4,7 +4,7 @@ import {
     refreshMetricsForTab,
     sortTabsInCurrentWindow,
     updateYoutubeWatchTabRecords,
-} from '../records.js';
+} from '../tab-orchestration.js';
 import { buildTabSnapshot } from '../ordering.js';
 
 export function buildForceOption(windowId) {
@@ -17,7 +17,7 @@ export async function handleUpdateYoutubeWatchTabRecords(message) {
 
 export async function handleSendTabRecords(message) {
     await updateYoutubeWatchTabRecords(message.windowId, buildForceOption(message.windowId));
-    const ids = Object.keys(backgroundState.youtubeWatchTabRecordsOfCurrentWindow).map(Number);
+    const ids = Object.keys(backgroundState.watchTabRecordsById).map(Number);
     await Promise.all(ids.map(refreshMetricsForTab));
     return buildTabSnapshot();
 }

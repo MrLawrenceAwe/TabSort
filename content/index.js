@@ -55,10 +55,12 @@
 
   const isoToSeconds = (iso) => {
     if (!iso) return null;
-    const m = String(iso).match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?/);
-    if (!m) return null;
-    const h = parseFloat(m[1] || 0), mn = parseFloat(m[2] || 0), s = parseFloat(m[3] || 0);
-    return h * 3600 + mn * 60 + s;
+    const durationMatch = String(iso).match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?/);
+    if (!durationMatch) return null;
+    const hours = parseFloat(durationMatch[1] || 0);
+    const minutes = parseFloat(durationMatch[2] || 0);
+    const seconds = parseFloat(durationMatch[3] || 0);
+    return hours * 3600 + minutes * 60 + seconds;
   };
 
   const getVideoEl = () => {
@@ -181,9 +183,10 @@
     const docTitle = cleanTitle(document.title);
     const ogTitle = cleanTitle(document.querySelector('meta[property="og:title"]')?.content);
     const itempropTitle = cleanTitle(document.querySelector('meta[itemprop="name"]')?.content);
-    const yipr = parseYtInitialPlayerResponse();
+    const playerResponse = parseYtInitialPlayerResponse();
 
-    let title = docTitle || ogTitle || itempropTitle || cleanTitle(yipr?.videoDetails?.title) || null;
+    let title =
+      docTitle || ogTitle || itempropTitle || cleanTitle(playerResponse?.videoDetails?.title) || null;
 
     let lengthSeconds = isoToSeconds(
       document.querySelector('meta[itemprop="duration"]')?.getAttribute('content')
@@ -194,14 +197,14 @@
     ).toLowerCase() === 'true';
     const isLive =
       isLiveBroadcastMeta ||
-      yipr?.videoDetails?.isLiveContent === true ||
-      yipr?.videoDetails?.isLive === true ||
-      Boolean(yipr?.playabilityStatus?.liveStreamability) ||
-      Boolean(yipr?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails);
+      playerResponse?.videoDetails?.isLiveContent === true ||
+      playerResponse?.videoDetails?.isLive === true ||
+      Boolean(playerResponse?.playabilityStatus?.liveStreamability) ||
+      Boolean(playerResponse?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails);
 
     if (lengthSeconds == null) {
-      const ls = yipr?.videoDetails?.lengthSeconds;
-      if (ls != null) lengthSeconds = Number(ls);
+      const responseLengthSeconds = playerResponse?.videoDetails?.lengthSeconds;
+      if (responseLengthSeconds != null) lengthSeconds = Number(responseLengthSeconds);
     }
 
     return { title, lengthSeconds, isLive, url: location.href };
@@ -209,9 +212,9 @@
 
   function sendLightweightDetails() {
     try {
-      const d = getLightweightDetails();
-      if (d.title || d.lengthSeconds != null || d.isLive) {
-        safeSendMessage({ message: 'lightweightDetails', details: d }, 'lightweight details');
+      const details = getLightweightDetails();
+      if (details.title || details.lengthSeconds != null || details.isLive) {
+        safeSendMessage({ message: 'lightweightDetails', details }, 'lightweight details');
       }
     } catch (error) {
       logContentError('Sending lightweight details', error);
@@ -256,8 +259,10 @@
 
   function watchForVideoMount() {
     if (attachVideoReadyListener()) return;
-    const obs = new MutationObserver(() => { if (attachVideoReadyListener()) obs.disconnect(); });
-    obs.observe(document.documentElement, { childList: true, subtree: true });
+    const observer = new MutationObserver(() => {
+      if (attachVideoReadyListener()) observer.disconnect();
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
   }
 
   // ============================================================
@@ -304,8 +309,8 @@
   // Message Handler
   // ============================================================
 
-  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (msg && msg.message === 'getVideoMetrics') {
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message && message.message === 'getVideoMetrics') {
       const video = getVideoEl();
       const light = getLightweightDetails();
       const payload = {
@@ -344,14 +349,14 @@
     watchTitleChanges();
   }
 
-  function initialise() {
+  function initialize() {
     refreshMetadata(true);
   }
 
   loadSharedRuntime();
 
-  if (document.readyState === 'complete' || document.readyState === 'interactive') initialise();
-  else window.addEventListener('DOMContentLoaded', initialise, { once: true });
+  if (document.readyState === 'complete' || document.readyState === 'interactive') initialize();
+  else window.addEventListener('DOMContentLoaded', initialize, { once: true });
 
   window.addEventListener('yt-navigate-finish', () => {
     refreshMetadata();

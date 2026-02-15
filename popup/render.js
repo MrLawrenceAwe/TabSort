@@ -4,7 +4,7 @@ import {
   setActionAndStatusColumnsVisibility,
   updateHeaderFooter,
   addClassToAllRows,
-} from './dom-utils.js';
+} from './popup-layout.js';
 import { insertRowCells } from './rows.js';
 import { EMPTY_READINESS_METRICS } from '../shared/readiness.js';
 import { MESSAGE_TYPES } from '../shared/constants.js';
@@ -16,7 +16,7 @@ const SNAPSHOT_MAX_ATTEMPTS = 2;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const isValidSnapshot = (snapshot) =>
-  snapshot && typeof snapshot === 'object' && 'youtubeWatchTabRecordsOfCurrentWindow' in snapshot;
+  snapshot && typeof snapshot === 'object' && 'watchTabRecordsById' in snapshot;
 
 async function requestSnapshotWithRetry() {
   let lastError = null;
@@ -57,8 +57,8 @@ export async function renderSnapshot(snapshot) {
   if (!table) return;
   const tbody = table.tBodies[0] ?? table.createTBody();
 
-  const tabRecords = snapshot.youtubeWatchTabRecordsOfCurrentWindow || {};
-  const currentOrderIds = snapshot.youtubeWatchTabRecordIdsInCurrentOrder || [];
+  const tabRecords = snapshot.watchTabRecordsById || {};
+  const currentOrderIds = snapshot.watchTabIdsInCurrentOrder || [];
 
   const metrics = { ...EMPTY_READINESS_METRICS, ...(snapshot.readinessMetrics || {}) };
   const backgroundSortedFlag = snapshot.tabsInCurrentWindowAreKnownToBeSorted === true;

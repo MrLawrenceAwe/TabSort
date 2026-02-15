@@ -3,7 +3,7 @@ import { toErrorMessage } from '../shared/utils.js';
 import { setupOptionControls } from './options.js';
 import { requestAndRenderSnapshot, renderSnapshot } from './render.js';
 import { refreshActiveContext, sendMessageWithWindow, logAndSend } from './runtime.js';
-import { initializeDomCache } from './dom-utils.js';
+import { initializeDomCache } from './popup-layout.js';
 
 /**
  * Logs an error from the popup, handling "No active tab" specially.
@@ -38,7 +38,7 @@ async function safeAsync(fn, context) {
 /**
  * Initializes the popup UI, setting up event listeners and rendering initial state.
  */
-export async function initialisePopup() {
+export async function initializePopup() {
   // Initialize DOM cache early for performance
   initializeDomCache();
 
@@ -46,9 +46,9 @@ export async function initialisePopup() {
   await safeAsync(setupOptionControls, 'Failed to set up option controls');
   await safeAsync(requestAndRenderSnapshot, 'Failed to request initial snapshot');
 
-  const messageListener = (msg) => {
-    if (msg?.message === 'tabRecordsUpdated' && msg.payload) {
-      Promise.resolve(renderSnapshot(msg.payload)).catch((error) => {
+  const messageListener = (message) => {
+    if (message?.message === 'tabRecordsUpdated' && message.payload) {
+      Promise.resolve(renderSnapshot(message.payload)).catch((error) => {
         logPopupError('Failed to render incoming snapshot', error);
       });
     }
@@ -66,6 +66,6 @@ export async function initialisePopup() {
   });
 }
 
-initialisePopup().catch((error) => {
-  logAndSend(MESSAGE_TYPES.ERROR, `Failed to initialise popup: ${toErrorMessage(error)}`);
+initializePopup().catch((error) => {
+  logAndSend(MESSAGE_TYPES.ERROR, `Failed to initialize popup: ${toErrorMessage(error)}`);
 });
