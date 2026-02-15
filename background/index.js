@@ -2,24 +2,28 @@
 import { REFRESH_INTERVAL_MINUTES, REFRESH_ALARM_NAME } from '../shared/constants.js';
 import { isValidWindowId } from '../shared/utils.js';
 import {
-  recomputeSorting,
   refreshMetricsForTab,
   updateYoutubeWatchTabRecords,
 } from './records.js';
+import { recomputeSorting } from './ordering.js';
 import { backgroundState, resolveTrackedWindowId } from './state.js';
 import { isWatch } from './helpers.js';
 import { getTab } from './tab-service.js';
 import {
   activateTab,
   reloadTab,
+} from './handlers/tab-actions.js';
+import {
   handleUpdateYoutubeWatchTabRecords,
   handleSendTabRecords,
   handleAreTabsInCurrentWindowKnownToBeSorted,
   handleSortTabs,
+} from './handlers/records-handler.js';
+import {
   handleContentScriptReady,
   handleMetadataLoaded,
   handleLightweightDetails,
-} from './handlers/index.js';
+} from './handlers/content-script.js';
 import { createAsyncResponder } from './async-responder.js';
 
 const logListenerError = (label, error) => {
@@ -53,6 +57,14 @@ const getLastFocusedWindowId = () =>
 
 const shouldHandleWindow = (windowId) =>
   backgroundState.trackedWindowId == null || windowId === backgroundState.trackedWindowId;
+
+const refreshForTabWindowChange = (label, getWindowId) =>
+  withErrorLogging(label, async (...args) => {
+    const windowId = getWindowId(...args);
+    if (!isValidWindowId(windowId)) return;
+    if (!shouldHandleWindow(windowId)) return;
+    await updateYoutubeWatchTabRecords(windowId);
+  });
 
 const MIN_REFRESH_INTERVAL_MINUTES = 1;
 const refreshIntervalMinutes = Math.max(REFRESH_INTERVAL_MINUTES, MIN_REFRESH_INTERVAL_MINUTES);
@@ -110,30 +122,15 @@ chrome.tabs.onUpdated.addListener(
 );
 
 chrome.tabs.onMoved.addListener(
-  withErrorLogging('tabs.onMoved', async (_tabId, moveInfo) => {
-    if (!moveInfo) return;
-    const { windowId } = moveInfo;
-    if (!shouldHandleWindow(windowId)) return;
-    await updateYoutubeWatchTabRecords(windowId);
-  }),
+  refreshForTabWindowChange('tabs.onMoved', (_tabId, moveInfo) => moveInfo?.windowId),
 );
 
 chrome.tabs.onDetached.addListener(
-  withErrorLogging('tabs.onDetached', async (_tabId, detachInfo) => {
-    if (!detachInfo) return;
-    const { oldWindowId } = detachInfo;
-    if (!shouldHandleWindow(oldWindowId)) return;
-    await updateYoutubeWatchTabRecords(oldWindowId);
-  }),
+  refreshForTabWindowChange('tabs.onDetached', (_tabId, detachInfo) => detachInfo?.oldWindowId),
 );
 
 chrome.tabs.onAttached.addListener(
-  withErrorLogging('tabs.onAttached', async (_tabId, attachInfo) => {
-    if (!attachInfo) return;
-    const { newWindowId } = attachInfo;
-    if (!shouldHandleWindow(newWindowId)) return;
-    await updateYoutubeWatchTabRecords(newWindowId);
-  }),
+  refreshForTabWindowChange('tabs.onAttached', (_tabId, attachInfo) => attachInfo?.newWindowId),
 );
 
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {

@@ -51,7 +51,7 @@ function insertInfoCells(row, record, sortedView) {
 
     cell.textContent = popupState.tabsInCurrentWindowAreKnownToBeSorted
       ? value
-      : getFallbackValue(column.key, value);
+      : getFallbackValue(value);
   });
 }
 
@@ -104,9 +104,8 @@ function formatIndex(record) {
   return isFiniteNumber(idx) ? idx + 1 : '';
 }
 
-function getFallbackValue(key, value) {
+function getFallbackValue(value) {
   if (value) return value;
-  if (key === 'contentScriptReady' || key === 'metadataLoaded') return false;
   return USER_ACTIONS.NO_ACTION;
 }
 

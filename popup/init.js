@@ -65,3 +65,7 @@ export async function initialisePopup() {
     chrome.runtime.onMessage.removeListener(messageListener);
   });
 }
+
+initialisePopup().catch((error) => {
+  logAndSend(MESSAGE_TYPES.ERROR, `Failed to initialise popup: ${toErrorMessage(error)}`);
+});
