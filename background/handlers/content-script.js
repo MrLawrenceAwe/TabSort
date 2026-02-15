@@ -1,6 +1,7 @@
 import { isFiniteNumber } from '../../shared/utils.js';
 import { backgroundState, resolveTrackedWindowId } from '../state.js';
-import { broadcastTabSnapshot, recomputeSorting, refreshMetricsForTab } from '../records.js';
+import { refreshMetricsForTab } from '../records.js';
+import { broadcastTabSnapshot, recomputeSorting } from '../ordering.js';
 import { ensureTabRecord } from '../tab-record.js';
 
 /**

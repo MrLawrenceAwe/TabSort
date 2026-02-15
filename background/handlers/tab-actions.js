@@ -1,7 +1,7 @@
 import { TAB_STATES } from '../../shared/constants.js';
 import { isFiniteNumber, isValidWindowId } from '../../shared/utils.js';
 import { backgroundState, now, resolveTrackedWindowId } from '../state.js';
-import { recomputeSorting } from '../records.js';
+import { recomputeSorting } from '../ordering.js';
 
 export async function activateTab(message) {
     const tabId = message.tabId;

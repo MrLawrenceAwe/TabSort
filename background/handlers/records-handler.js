@@ -1,11 +1,11 @@
 import { isValidWindowId } from '../../shared/utils.js';
 import { backgroundState, resolveTrackedWindowId } from '../state.js';
 import {
-    buildTabSnapshot,
     refreshMetricsForTab,
     sortTabsInCurrentWindow,
     updateYoutubeWatchTabRecords,
 } from '../records.js';
+import { buildTabSnapshot } from '../ordering.js';
 
 export function buildForceOption(windowId) {
     return isValidWindowId(windowId) ? { force: true } : undefined;

@@ -3,8 +3,7 @@
  * Unlike the global isFinite(), this doesn't coerce strings.
  * @param {*} value - The value to check.
  * @returns {boolean}
- * @note This function is duplicated in content/index.js as `isFiniteNum` since
- *       content scripts cannot use ES modules. Keep both in sync when modifying.
+ * Content scripts load this utility at runtime and fall back to a local default when needed.
  */
 export function isFiniteNumber(value) {
     return typeof value === 'number' && Number.isFinite(value);

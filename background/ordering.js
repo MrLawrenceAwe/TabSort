@@ -1,5 +1,6 @@
 import { createEmptyReadinessMetrics } from '../shared/readiness.js';
 import { hasFreshRemainingTime } from '../shared/tab-metrics.js';
+import { isFiniteNumber } from '../shared/utils.js';
 import { backgroundState } from './state.js';
 
 function cloneRecord(record) {
@@ -42,9 +43,14 @@ export function buildTabSnapshot() {
 }
 
 function deriveCurrentOrder(records) {
+  const resolveIndex = (record) => (isFiniteNumber(record?.index) ? record.index : Number.MAX_SAFE_INTEGER);
   return records
     .slice()
-    .sort((a, b) => a.index - b.index)
+    .sort((a, b) => {
+      const indexDelta = resolveIndex(a) - resolveIndex(b);
+      if (indexDelta !== 0) return indexDelta;
+      return a.id - b.id;
+    })
     .map((record) => record.id);
 }
 

@@ -1,21 +1,10 @@
 (function () {
-  // Content script uses inline copies of shared constants/utilities (no ES modules here).
-  // Keep MEDIA_READY_STATE_THRESHOLD and isFiniteNum in sync with shared/.
+  const sharedRuntime = {
+    mediaReadyStateThreshold: 2,
+    isFiniteNumber: (value) => typeof value === 'number' && Number.isFinite(value),
+  };
 
-  /**
-   * HTMLMediaElement.readyState threshold for considering video ready (HAVE_CURRENT_DATA).
-   * @see shared/constants.js - MEDIA_READY_STATE_THRESHOLD
-   */
-  const MEDIA_READY_STATE_THRESHOLD = 2;
-
-  /**
-   * Safely checks if a value is a finite number.
-   * Unlike the global isFinite(), this doesn't coerce strings.
-   * @param {*} value - The value to check.
-   * @returns {boolean}
-   * @see shared/utils.js - isFiniteNumber (source of truth)
-   */
-  const isFiniteNum = (value) => typeof value === 'number' && Number.isFinite(value);
+  let sharedRuntimeReady = false;
 
   /**
    * Logs an error from the content script with context.
@@ -29,6 +18,29 @@
   };
 
   const hasRuntime = () => Boolean(chrome?.runtime?.id);
+
+  async function loadSharedRuntime() {
+    if (sharedRuntimeReady) return;
+    sharedRuntimeReady = true;
+
+    if (!hasRuntime()) return;
+
+    try {
+      const [constantsModule, utilsModule] = await Promise.all([
+        import(chrome.runtime.getURL('shared/constants.js')),
+        import(chrome.runtime.getURL('shared/utils.js')),
+      ]);
+
+      if (typeof constantsModule?.MEDIA_READY_STATE_THRESHOLD === 'number') {
+        sharedRuntime.mediaReadyStateThreshold = constantsModule.MEDIA_READY_STATE_THRESHOLD;
+      }
+      if (typeof utilsModule?.isFiniteNumber === 'function') {
+        sharedRuntime.isFiniteNumber = utilsModule.isFiniteNumber;
+      }
+    } catch (error) {
+      logContentError('Loading shared runtime', error);
+    }
+  }
 
   const safeSendMessage = (payload, context) => {
     if (!hasRuntime()) return false;
@@ -231,7 +243,10 @@
     };
     const onAny = () => send();
 
-    if (video.readyState >= MEDIA_READY_STATE_THRESHOLD && isFiniteNum(video.duration)) {
+    if (
+      video.readyState >= sharedRuntime.mediaReadyStateThreshold &&
+      sharedRuntime.isFiniteNumber(video.duration)
+    ) {
       send();
     } else {
       events.forEach(evt => video.addEventListener(evt, onAny, { once: true }));
@@ -296,11 +311,18 @@
       const payload = {
         title: light.title || null,
         url: light.url,
-        lengthSeconds: isFiniteNum(light.lengthSeconds) ? light.lengthSeconds : null,
+        lengthSeconds: sharedRuntime.isFiniteNumber(light.lengthSeconds) ? light.lengthSeconds : null,
         isLive: Boolean(light.isLive),
-        duration: (video && isFiniteNum(video.duration)) ? video.duration : null,
-        currentTime: (video && isFiniteNum(video.currentTime)) ? video.currentTime : null,
-        playbackRate: (video && isFiniteNum(video.playbackRate) && video.playbackRate > 0) ? video.playbackRate : 1,
+        duration:
+          video && sharedRuntime.isFiniteNumber(video.duration) ? video.duration : null,
+        currentTime:
+          video && sharedRuntime.isFiniteNumber(video.currentTime) ? video.currentTime : null,
+        playbackRate:
+          video &&
+          sharedRuntime.isFiniteNumber(video.playbackRate) &&
+          video.playbackRate > 0
+            ? video.playbackRate
+            : 1,
         paused: video ? video.paused : null,
       };
       sendResponse(payload);
@@ -325,6 +347,8 @@
   function initialise() {
     refreshMetadata(true);
   }
+
+  loadSharedRuntime();
 
   if (document.readyState === 'complete' || document.readyState === 'interactive') initialise();
   else window.addEventListener('DOMContentLoaded', initialise, { once: true });

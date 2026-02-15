@@ -15,8 +15,6 @@ import {
 } from './tab-service.js';
 import { recomputeSorting } from './ordering.js';
 
-export { buildTabSnapshot, broadcastTabSnapshot, recomputeSorting } from './ordering.js';
-
 export async function updateYoutubeWatchTabRecords(windowId, options = {}) {
   const refreshSeq = (backgroundState.recordsRefreshSeq += 1);
   const { tabs, windowId: targetWindowId } = await getTabsForTrackedWindow(windowId, options);
