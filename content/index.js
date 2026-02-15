@@ -2,6 +2,48 @@
   const sharedRuntime = {
     mediaReadyStateThreshold: 2,
     isFiniteNumber: (value) => typeof value === 'number' && Number.isFinite(value),
+    inferIsLiveNow: ({
+      metaIsLiveBroadcast,
+      metaEndDate,
+      videoDetails,
+      playabilityStatus,
+      liveBroadcastDetails,
+      lengthSeconds,
+    } = {}) => {
+      const toBooleanFlag = (value) => {
+        if (value === true) return true;
+        if (value === false || value == null) return false;
+        if (typeof value === 'string') {
+          const normalized = value.trim().toLowerCase();
+          return normalized === 'true' || normalized === '1';
+        }
+        if (typeof value === 'number') return value === 1;
+        return false;
+      };
+
+      const hasNonEmptyString = (value) => typeof value === 'string' && value.trim().length > 0;
+
+      if (toBooleanFlag(videoDetails?.isLive)) return true;
+      if (toBooleanFlag(liveBroadcastDetails?.isLiveNow)) return true;
+
+      const hasEndedSignal =
+        hasNonEmptyString(metaEndDate) || hasNonEmptyString(liveBroadcastDetails?.endTimestamp);
+      if (hasEndedSignal) return false;
+
+      if (toBooleanFlag(metaIsLiveBroadcast)) return true;
+
+      const hasLiveStreamability = Boolean(playabilityStatus?.liveStreamability);
+      const isLiveContent = toBooleanFlag(videoDetails?.isLiveContent);
+      const numericLength =
+        typeof lengthSeconds === 'string' && lengthSeconds.trim() === ''
+          ? NaN
+          : Number(lengthSeconds);
+      const hasFiniteLength = Number.isFinite(numericLength) && numericLength > 0;
+
+      if ((hasLiveStreamability || isLiveContent) && !hasFiniteLength) return true;
+
+      return false;
+    },
   };
 
   let sharedRuntimeReady = false;
@@ -26,9 +68,10 @@
     if (!hasRuntime()) return;
 
     try {
-      const [constantsModule, utilsModule] = await Promise.all([
+      const [constantsModule, utilsModule, liveDetectionModule] = await Promise.all([
         import(chrome.runtime.getURL('shared/constants.js')),
         import(chrome.runtime.getURL('shared/utils.js')),
+        import(chrome.runtime.getURL('shared/live-detection.js')),
       ]);
 
       if (typeof constantsModule?.MEDIA_READY_STATE_THRESHOLD === 'number') {
@@ -36,6 +79,9 @@
       }
       if (typeof utilsModule?.isFiniteNumber === 'function') {
         sharedRuntime.isFiniteNumber = utilsModule.isFiniteNumber;
+      }
+      if (typeof liveDetectionModule?.inferIsLiveNow === 'function') {
+        sharedRuntime.inferIsLiveNow = liveDetectionModule.inferIsLiveNow;
       }
     } catch (error) {
       logContentError('Loading shared runtime', error);
@@ -192,20 +238,24 @@
       document.querySelector('meta[itemprop="duration"]')?.getAttribute('content')
     );
 
-    const isLiveBroadcastMeta = (
-      document.querySelector('meta[itemprop="isLiveBroadcast"]')?.getAttribute('content') || ''
-    ).toLowerCase() === 'true';
-    const isLive =
-      isLiveBroadcastMeta ||
-      playerResponse?.videoDetails?.isLiveContent === true ||
-      playerResponse?.videoDetails?.isLive === true ||
-      Boolean(playerResponse?.playabilityStatus?.liveStreamability) ||
-      Boolean(playerResponse?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails);
-
     if (lengthSeconds == null) {
       const responseLengthSeconds = playerResponse?.videoDetails?.lengthSeconds;
       if (responseLengthSeconds != null) lengthSeconds = Number(responseLengthSeconds);
     }
+
+    const isLiveBroadcastMeta = document
+      .querySelector('meta[itemprop="isLiveBroadcast"]')
+      ?.getAttribute('content');
+    const endDateMeta = document.querySelector('meta[itemprop="endDate"]')?.getAttribute('content');
+    const liveBroadcastDetails = playerResponse?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails;
+    const isLive = sharedRuntime.inferIsLiveNow({
+      metaIsLiveBroadcast: isLiveBroadcastMeta,
+      metaEndDate: endDateMeta,
+      videoDetails: playerResponse?.videoDetails,
+      playabilityStatus: playerResponse?.playabilityStatus,
+      liveBroadcastDetails,
+      lengthSeconds,
+    });
 
     return { title, lengthSeconds, isLive, url: location.href };
   }
