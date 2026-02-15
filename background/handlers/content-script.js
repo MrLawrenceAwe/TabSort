@@ -67,13 +67,17 @@ export async function handleLightweightDetails(message, sender) {
     if (details.url) record.url = details.url;
     record.videoDetails = record.videoDetails || {};
     if (details.title) record.videoDetails.title = details.title;
+    if (typeof details.isLive === 'boolean') record.isLiveStream = details.isLive;
     if (isFiniteNumber(details.lengthSeconds)) {
         record.videoDetails.lengthSeconds = details.lengthSeconds;
-        if (record.videoDetails.remainingTime == null) {
+        if (!record.isLiveStream && record.videoDetails.remainingTime == null) {
             record.videoDetails.remainingTime = details.lengthSeconds;
             record.remainingTimeMayBeStale = true;
         }
     }
-    if (typeof details.isLive === 'boolean') record.isLiveStream = details.isLive;
+    if (record.isLiveStream) {
+        record.videoDetails.remainingTime = null;
+        record.remainingTimeMayBeStale = false;
+    }
     recomputeSorting();
 }
