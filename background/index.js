@@ -4,10 +4,10 @@ import { isValidWindowId } from '../shared/utils.js';
 import {
   refreshMetricsForTab,
   updateYoutubeWatchTabRecords,
-} from './records.js';
+} from './tab-orchestration.js';
 import { recomputeSorting } from './ordering.js';
 import { backgroundState, resolveTrackedWindowId } from './state.js';
-import { isWatch } from './helpers.js';
+import { isWatch } from './youtube-url-utils.js';
 import { getTab } from './tab-service.js';
 import {
   activateTab,
@@ -71,7 +71,7 @@ const refreshIntervalMinutes = Math.max(REFRESH_INTERVAL_MINUTES, MIN_REFRESH_IN
 
 function resetTrackedWindow() {
   resolveTrackedWindowId(null, { force: true });
-  backgroundState.youtubeWatchTabRecordsOfCurrentWindow = {};
+  backgroundState.watchTabRecordsById = {};
   backgroundState.lastBroadcastSignature = null;
   recomputeSorting();
 }
@@ -135,7 +135,7 @@ chrome.tabs.onAttached.addListener(
 
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
   if (!shouldHandleWindow(removeInfo?.windowId)) return;
-  delete backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId];
+  delete backgroundState.watchTabRecordsById[tabId];
   if (removeInfo?.isWindowClosing && removeInfo.windowId === backgroundState.trackedWindowId) {
     resetTrackedWindow();
     return;
@@ -176,7 +176,7 @@ async function rehydrateTrackedWindowState() {
   const lastFocusedWindowId = await getLastFocusedWindowId();
   const targetWindowId = isValidWindowId(lastFocusedWindowId) ? lastFocusedWindowId : null;
   await updateYoutubeWatchTabRecords(targetWindowId, { force: true });
-  const ids = Object.keys(backgroundState.youtubeWatchTabRecordsOfCurrentWindow).map(Number);
+  const ids = Object.keys(backgroundState.watchTabRecordsById).map(Number);
   if (ids.length) {
     await Promise.all(ids.map(refreshMetricsForTab));
   }
@@ -212,7 +212,7 @@ chrome.alarms.onAlarm.addListener(
   withErrorLogging('alarms.onAlarm', async (alarm) => {
     if (alarm.name !== REFRESH_ALARM_NAME) return;
     await updateYoutubeWatchTabRecords(backgroundState.trackedWindowId, { force: true });
-    const ids = Object.keys(backgroundState.youtubeWatchTabRecordsOfCurrentWindow).map(Number);
+    const ids = Object.keys(backgroundState.watchTabRecordsById).map(Number);
     await Promise.all(ids.map(refreshMetricsForTab));
   }),
 );

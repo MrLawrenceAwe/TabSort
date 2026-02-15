@@ -5,7 +5,7 @@ export const YT_DOMAIN_REGEX = /(^|\.)youtube\.com$/i;
 export const isWatch = (url) =>
   typeof url === 'string' && (YT_WATCH_REGEX.test(url) || YT_SHORTS_REGEX.test(url));
 
-export function domainKey(url) {
+export function hostnameKey(url) {
   if (typeof url !== 'string' || !url) return '';
   try {
     const parsed = new URL(url);
@@ -16,7 +16,7 @@ export function domainKey(url) {
 }
 
 export function isYoutubeDomain(url) {
-  const host = domainKey(url);
+  const host = hostnameKey(url);
   if (!host) return false;
   return YT_DOMAIN_REGEX.test(host.toLowerCase());
 }

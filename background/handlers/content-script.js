@@ -1,6 +1,6 @@
 import { isFiniteNumber } from '../../shared/utils.js';
 import { backgroundState, resolveTrackedWindowId } from '../state.js';
-import { refreshMetricsForTab } from '../records.js';
+import { refreshMetricsForTab } from '../tab-orchestration.js';
 import { broadcastTabSnapshot, recomputeSorting } from '../ordering.js';
 import { ensureTabRecord } from '../tab-record.js';
 
@@ -44,7 +44,7 @@ export async function handleMetadataLoaded(_message, sender) {
     if (!canUseSenderWindow(senderWindowId)) return;
     resolveTrackedWindowId(senderWindowId);
     if (!isFiniteNumber(tabId)) return;
-    const record = backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId];
+    const record = backgroundState.watchTabRecordsById[tabId];
     if (record) record.metadataLoaded = true;
     broadcastTabSnapshot();
     await refreshMetricsForTab(tabId);

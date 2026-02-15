@@ -17,9 +17,9 @@ globalThis.chrome.runtime.sendMessage = (_message, callback) => {
 };
 
 function resetBackgroundState() {
-  backgroundState.youtubeWatchTabRecordsOfCurrentWindow = {};
-  backgroundState.youtubeWatchTabRecordIdsSortedByRemainingTime = [];
-  backgroundState.youtubeWatchTabRecordIdsInCurrentOrder = [];
+  backgroundState.watchTabRecordsById = {};
+  backgroundState.watchTabIdsByRemainingTime = [];
+  backgroundState.watchTabIdsInCurrentOrder = [];
   backgroundState.tabsInCurrentWindowAreKnownToBeSorted = false;
   backgroundState.readinessMetrics = null;
   backgroundState.trackedWindowId = null;
@@ -48,7 +48,7 @@ function makeRecord(id, overrides = {}) {
 
 test('orders known remaining-time tabs before unknown tabs', () => {
   resetBackgroundState();
-  backgroundState.youtubeWatchTabRecordsOfCurrentWindow = {
+  backgroundState.watchTabRecordsById = {
     1: makeRecord(1, { index: 0, videoDetails: { remainingTime: 50 }, remainingTimeMayBeStale: false }),
     2: makeRecord(2, { index: 1, videoDetails: { remainingTime: null }, remainingTimeMayBeStale: true }),
     3: makeRecord(3, { index: 2, videoDetails: { remainingTime: 10 }, remainingTimeMayBeStale: false }),
@@ -56,14 +56,14 @@ test('orders known remaining-time tabs before unknown tabs', () => {
 
   recomputeSorting();
 
-  assert.deepEqual(backgroundState.youtubeWatchTabRecordIdsSortedByRemainingTime, [3, 1, 2]);
-  assert.deepEqual(backgroundState.youtubeWatchTabRecordIdsInCurrentOrder, [1, 2, 3]);
+  assert.deepEqual(backgroundState.watchTabIdsByRemainingTime, [3, 1, 2]);
+  assert.deepEqual(backgroundState.watchTabIdsInCurrentOrder, [1, 2, 3]);
   assert.equal(backgroundState.tabsInCurrentWindowAreKnownToBeSorted, false);
 });
 
 test('marks window as sorted only when all actionable tabs are known and ordered', () => {
   resetBackgroundState();
-  backgroundState.youtubeWatchTabRecordsOfCurrentWindow = {
+  backgroundState.watchTabRecordsById = {
     1: makeRecord(1, { index: 0, videoDetails: { remainingTime: 5 }, remainingTimeMayBeStale: false }),
     2: makeRecord(2, { index: 1, videoDetails: { remainingTime: 20 }, remainingTimeMayBeStale: false }),
   };
@@ -78,7 +78,7 @@ test('marks window as sorted only when all actionable tabs are known and ordered
 
 test('derives readiness metrics for non-contiguous and out-of-order ready subsets', () => {
   resetBackgroundState();
-  backgroundState.youtubeWatchTabRecordsOfCurrentWindow = {
+  backgroundState.watchTabRecordsById = {
     1: makeRecord(1, { index: 0, remainingTimeMayBeStale: true, isActiveTab: false, isHidden: true }),
     2: makeRecord(2, { index: 1, videoDetails: { remainingTime: 20 }, remainingTimeMayBeStale: false }),
     3: makeRecord(3, { index: 2, remainingTimeMayBeStale: true }),
@@ -96,7 +96,7 @@ test('derives readiness metrics for non-contiguous and out-of-order ready subset
 
 test('handles records without a finite index deterministically', () => {
   resetBackgroundState();
-  backgroundState.youtubeWatchTabRecordsOfCurrentWindow = {
+  backgroundState.watchTabRecordsById = {
     1: makeRecord(1, { index: 0, videoDetails: { remainingTime: 8 }, remainingTimeMayBeStale: false }),
     2: makeRecord(2, { index: undefined, videoDetails: { remainingTime: 4 }, remainingTimeMayBeStale: false }),
     3: makeRecord(3, { index: undefined, videoDetails: { remainingTime: 2 }, remainingTimeMayBeStale: false }),
@@ -104,6 +104,6 @@ test('handles records without a finite index deterministically', () => {
 
   recomputeSorting();
 
-  assert.deepEqual(backgroundState.youtubeWatchTabRecordIdsInCurrentOrder, [1, 2, 3]);
-  assert.deepEqual(backgroundState.youtubeWatchTabRecordIdsSortedByRemainingTime, [3, 2, 1]);
+  assert.deepEqual(backgroundState.watchTabIdsInCurrentOrder, [1, 2, 3]);
+  assert.deepEqual(backgroundState.watchTabIdsByRemainingTime, [3, 2, 1]);
 });

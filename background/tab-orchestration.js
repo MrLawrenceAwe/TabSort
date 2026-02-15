@@ -3,7 +3,7 @@ import { loadSortOptions } from '../shared/storage.js';
 import { hasFreshRemainingTime } from '../shared/tab-metrics.js';
 import { isFiniteNumber, isValidWindowId } from '../shared/utils.js';
 import { backgroundState, resolveTrackedWindowId } from './state.js';
-import { isWatch } from './helpers.js';
+import { isWatch } from './youtube-url-utils.js';
 import { buildNonYoutubeOrder, buildYoutubeTabOrder } from './sort-strategy.js';
 import {
   getTab,
@@ -29,7 +29,7 @@ export async function updateYoutubeWatchTabRecords(windowId, options = {}) {
     return;
   }
 
-  const previousRecords = backgroundState.youtubeWatchTabRecordsOfCurrentWindow;
+  const previousRecords = backgroundState.watchTabRecordsById;
   const nextRecords = {};
 
   for (const tab of tabs) {
@@ -74,14 +74,14 @@ export async function updateYoutubeWatchTabRecords(windowId, options = {}) {
   }
 
   if (refreshSeq !== backgroundState.recordsRefreshSeq) return;
-  backgroundState.youtubeWatchTabRecordsOfCurrentWindow = nextRecords;
+  backgroundState.watchTabRecordsById = nextRecords;
   recomputeSorting();
 }
 
 
 export async function refreshMetricsForTab(tabId) {
   try {
-    const record = backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId];
+    const record = backgroundState.watchTabRecordsById[tabId];
     if (!record) return;
 
     if (record.status !== TAB_STATES.UNSUSPENDED) return;
@@ -120,20 +120,20 @@ export async function refreshMetricsForTab(tabId) {
     if (resp.isLive === true) record.isLiveStream = true;
     if (resp.isLive === false) record.isLiveStream = false;
 
-    const len = Number(resp.lengthSeconds ?? resp.duration ?? NaN);
-    const cur = Number(resp.currentTime ?? NaN);
+    const videoLengthSeconds = Number(resp.lengthSeconds ?? resp.duration ?? NaN);
+    const currentTimeSeconds = Number(resp.currentTime ?? NaN);
     const rate = Number(resp.playbackRate ?? 1);
 
     if (record.isLiveStream) {
-      record.videoDetails.lengthSeconds = isFiniteNumber(len) ? len : null;
+      record.videoDetails.lengthSeconds = isFiniteNumber(videoLengthSeconds) ? videoLengthSeconds : null;
       record.videoDetails.remainingTime = null;
       record.remainingTimeMayBeStale = false;
       recomputeSorting();
       return;
     }
 
-    if (isFiniteNumber(len)) {
-      record.videoDetails.lengthSeconds = len;
+    if (isFiniteNumber(videoLengthSeconds)) {
+      record.videoDetails.lengthSeconds = videoLengthSeconds;
     } else {
       record.videoDetails.lengthSeconds = null;
       record.videoDetails.remainingTime = null;
@@ -142,13 +142,16 @@ export async function refreshMetricsForTab(tabId) {
       return;
     }
 
-    if (isFiniteNumber(cur)) {
-      const rem = Math.max(0, (len - cur) / (isFiniteNumber(rate) && rate > 0 ? rate : 1));
-      record.videoDetails.remainingTime = rem;
+    if (isFiniteNumber(currentTimeSeconds)) {
+      const remainingSeconds = Math.max(
+        0,
+        (videoLengthSeconds - currentTimeSeconds) / (isFiniteNumber(rate) && rate > 0 ? rate : 1),
+      );
+      record.videoDetails.remainingTime = remainingSeconds;
       record.remainingTimeMayBeStale = false;
     } else {
-      // cur is not finite but len is (we returned early if len wasn't finite)
-      record.videoDetails.remainingTime = len;
+      // current time is unknown while length is known.
+      record.videoDetails.remainingTime = videoLengthSeconds;
       record.remainingTimeMayBeStale = true;
     }
 
@@ -159,10 +162,10 @@ export async function refreshMetricsForTab(tabId) {
 }
 
 export async function sortTabsInCurrentWindow(windowId = backgroundState.trackedWindowId) {
-  const orderedTabIds = backgroundState.youtubeWatchTabRecordIdsSortedByRemainingTime.slice();
+  const orderedTabIds = backgroundState.watchTabIdsByRemainingTime.slice();
 
   const tabsWithKnownRemainingTime = orderedTabIds.filter((tabId) => {
-    const record = backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId];
+    const record = backgroundState.watchTabRecordsById[tabId];
     return hasFreshRemainingTime(record);
   });
 

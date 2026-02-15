@@ -6,7 +6,7 @@ import { sendMessageWithWindow } from './runtime.js';
 const USER_ACTIONS = {
   RELOAD_TAB: 'Reload tab',
   INTERACT_WITH_TAB: 'Interact with tab',
-  FACILITATE_LOAD: 'Facilitate load',
+  WAIT_FOR_LOAD: 'Wait for tab to load',
   INTERACT_WITH_TAB_THEN_RELOAD: 'Interact with tab/Reload tab',
   VIEW_TAB_TO_REFRESH_TIME: 'View tab to refresh time',
   NO_ACTION: '',
@@ -138,7 +138,7 @@ function determineUserAction(tabRecord) {
       case TAB_STATES.SUSPENDED:
         return USER_ACTIONS.INTERACT_WITH_TAB;
       case TAB_STATES.LOADING:
-        return USER_ACTIONS.FACILITATE_LOAD;
+        return USER_ACTIONS.WAIT_FOR_LOAD;
       default:
         return USER_ACTIONS.NO_ACTION;
     }

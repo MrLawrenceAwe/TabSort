@@ -27,7 +27,7 @@ export async function reloadTab(message) {
     } catch (_) {
         // ignore reload failure
     }
-    const record = backgroundState.youtubeWatchTabRecordsOfCurrentWindow[tabId];
+    const record = backgroundState.watchTabRecordsById[tabId];
     if (record) {
         record.status = TAB_STATES.LOADING;
         record.unsuspendedTimestamp = now();

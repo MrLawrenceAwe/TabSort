@@ -1,9 +1,9 @@
 import { isValidWindowId } from '../shared/utils.js';
 
 export const backgroundState = {
-  youtubeWatchTabRecordsOfCurrentWindow: {}, // { [tabId]: TabRecord }
-  youtubeWatchTabRecordIdsSortedByRemainingTime: [],
-  youtubeWatchTabRecordIdsInCurrentOrder: [],
+  watchTabRecordsById: {}, // { [tabId]: TabRecord }
+  watchTabIdsByRemainingTime: [],
+  watchTabIdsInCurrentOrder: [],
   tabsInCurrentWindowAreKnownToBeSorted: false,
   readinessMetrics: null,
   trackedWindowId: null,

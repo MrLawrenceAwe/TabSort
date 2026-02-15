@@ -1,4 +1,4 @@
-import { domainKey, isWatch, isYoutubeDomain } from './helpers.js';
+import { hostnameKey, isWatch, isYoutubeDomain } from './youtube-url-utils.js';
 
 export function buildYoutubeTabOrder(unpinnedTabs, orderedWatchIds) {
   const youtubeTabs = unpinnedTabs
@@ -36,7 +36,7 @@ export function buildNonYoutubeOrder(unpinnedTabs, groupByDomain) {
   const domainToTabIds = new Map();
 
   for (const tab of nonYoutubeTabs) {
-    const key = domainKey(tab.url);
+    const key = hostnameKey(tab.url);
     if (!domainToTabIds.has(key)) {
       domainToTabIds.set(key, []);
       domainOrder.push(key);
