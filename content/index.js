@@ -47,6 +47,7 @@
   };
 
   let sharedRuntimeReady = false;
+  let videoMountObserver = null;
 
   /**
    * Logs an error from the content script with context.
@@ -308,11 +309,21 @@
   }
 
   function watchForVideoMount() {
-    if (attachVideoReadyListener()) return;
-    const observer = new MutationObserver(() => {
-      if (attachVideoReadyListener()) observer.disconnect();
+    if (attachVideoReadyListener()) {
+      if (videoMountObserver) {
+        videoMountObserver.disconnect();
+        videoMountObserver = null;
+      }
+      return;
+    }
+    if (videoMountObserver) return;
+    videoMountObserver = new MutationObserver(() => {
+      if (attachVideoReadyListener()) {
+        videoMountObserver.disconnect();
+        videoMountObserver = null;
+      }
     });
-    observer.observe(document.documentElement, { childList: true, subtree: true });
+    videoMountObserver.observe(document.documentElement, { childList: true, subtree: true });
   }
 
   // ============================================================
@@ -420,6 +431,10 @@
 
   // Cleanup observers on page unload to prevent memory leaks
   window.addEventListener('pagehide', () => {
+    if (videoMountObserver) {
+      videoMountObserver.disconnect();
+      videoMountObserver = null;
+    }
     if (titleElementObserver) {
       titleElementObserver.disconnect();
       titleElementObserver = null;

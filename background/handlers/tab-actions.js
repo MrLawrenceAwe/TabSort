@@ -22,11 +22,14 @@ export async function reloadTab(message) {
     if (isValidWindowId(message.windowId)) {
         resolveTrackedWindowId(message.windowId, { force: true });
     }
+    let reloadSucceeded = false;
     try {
         await chrome.tabs.reload(tabId);
+        reloadSucceeded = true;
     } catch (_) {
         // ignore reload failure
     }
+    if (!reloadSucceeded) return;
     const record = backgroundState.watchTabRecordsById[tabId];
     if (record) {
         record.status = TAB_STATES.LOADING;
