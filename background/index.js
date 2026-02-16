@@ -1,6 +1,6 @@
 
 import { REFRESH_INTERVAL_MINUTES, REFRESH_ALARM_NAME } from '../shared/constants.js';
-import { isValidWindowId } from '../shared/utils.js';
+import { isFiniteNumber, isValidWindowId } from '../shared/utils.js';
 import {
   refreshMetricsForTab,
   updateYoutubeWatchTabRecords,
@@ -123,6 +123,18 @@ chrome.tabs.onUpdated.addListener(
 
 chrome.tabs.onMoved.addListener(
   refreshForTabWindowChange('tabs.onMoved', (_tabId, moveInfo) => moveInfo?.windowId),
+);
+
+chrome.tabs.onActivated.addListener(
+  withErrorLogging('tabs.onActivated', async (activeInfo) => {
+    if (!isValidWindowId(activeInfo?.windowId)) return;
+    if (!shouldHandleWindow(activeInfo.windowId)) return;
+    await updateYoutubeWatchTabRecords(activeInfo.windowId);
+    if (!isFiniteNumber(activeInfo.tabId)) return;
+    const tab = await getTab(activeInfo.tabId);
+    if (!isWatch(tab?.url)) return;
+    await refreshMetricsForTab(activeInfo.tabId);
+  }),
 );
 
 chrome.tabs.onDetached.addListener(

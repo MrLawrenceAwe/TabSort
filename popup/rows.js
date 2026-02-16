@@ -35,19 +35,19 @@ export function insertRowCells(row, tabRecord, isSortedView) {
   const userAction = determineUserAction(tabRecord);
   if (!isSortedView) insertUserActionCell(row, tabRecord, userAction);
 
-  insertInfoCells(row, tabRecord, isSortedView);
+  insertInfoCells(row, tabRecord, isSortedView, userAction);
 
   const remaining = tabRecord?.videoDetails?.remainingTime;
   const hasRemainingTime = isFiniteNumber(remaining) && !tabRecord.remainingTimeMayBeStale;
   if (hasRemainingTime && !isSortedView) row.classList.add('ready-row');
 }
 
-function insertInfoCells(row, record, sortedView) {
+function insertInfoCells(row, record, sortedView, userAction) {
   const columns = sortedView ? COLUMN_CONFIG.sorted : COLUMN_CONFIG.unsorted;
 
   columns.forEach((column) => {
     const cell = row.insertCell(row.cells.length);
-    const value = column.getter(record);
+    const value = column.getter(record, userAction);
 
     cell.textContent = popupState.tabsInCurrentWindowAreKnownToBeSorted
       ? value
@@ -91,12 +91,19 @@ function createLink(text, messageAction, tabId) {
   return a;
 }
 
-function formatVideoDetails(record) {
+export function formatVideoDetails(record, userAction = determineUserAction(record)) {
   if (record.isLiveStream) return 'Live Stream';
-  if (record.remainingTimeMayBeStale) return 'View tab to refresh time';
 
   const remaining = record?.videoDetails?.remainingTime;
-  return isFiniteNumber(remaining) ? formatRemaining(remaining) : 'unavailable';
+  const hasRemainingTime = isFiniteNumber(remaining);
+
+  if (record.remainingTimeMayBeStale) {
+    return userAction === USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME
+      ? USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME
+      : 'unavailable';
+  }
+
+  return hasRemainingTime ? formatRemaining(remaining) : 'unavailable';
 }
 
 function formatIndex(record) {
@@ -118,7 +125,22 @@ function formatRemaining(seconds) {
   return h < 1 ? `${m}m ${s}s` : `${h}h ${m}m ${s}s`;
 }
 
-function determineUserAction(tabRecord) {
+function determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended) {
+  switch (tabRecord.status) {
+    case TAB_STATES.UNSUSPENDED:
+      if (recentlyUnsuspended) return USER_ACTIONS.NO_ACTION;
+      if (tabRecord.isActiveTab || !tabRecord.contentScriptReady) return USER_ACTIONS.RELOAD_TAB;
+      return USER_ACTIONS.INTERACT_WITH_TAB_THEN_RELOAD;
+    case TAB_STATES.SUSPENDED:
+      return USER_ACTIONS.INTERACT_WITH_TAB;
+    case TAB_STATES.LOADING:
+      return USER_ACTIONS.WAIT_FOR_LOAD;
+    default:
+      return USER_ACTIONS.NO_ACTION;
+  }
+}
+
+export function determineUserAction(tabRecord) {
   if (tabRecord?.isLiveStream) {
     return USER_ACTIONS.NO_ACTION;
   }
@@ -130,21 +152,13 @@ function determineUserAction(tabRecord) {
     tabRecord.unsuspendedTimestamp && Date.now() - tabRecord.unsuspendedTimestamp < RECENTLY_UNSUSPENDED_MS;
 
   if (!hasRemainingTime) {
-    switch (tabRecord.status) {
-      case TAB_STATES.UNSUSPENDED:
-        if (recentlyUnsuspended) return USER_ACTIONS.NO_ACTION;
-        if (tabRecord.isActiveTab || !tabRecord.contentScriptReady) return USER_ACTIONS.RELOAD_TAB;
-        return USER_ACTIONS.INTERACT_WITH_TAB_THEN_RELOAD;
-      case TAB_STATES.SUSPENDED:
-        return USER_ACTIONS.INTERACT_WITH_TAB;
-      case TAB_STATES.LOADING:
-        return USER_ACTIONS.WAIT_FOR_LOAD;
-      default:
-        return USER_ACTIONS.NO_ACTION;
-    }
+    return determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended);
   }
 
   if (tabRecord?.remainingTimeMayBeStale) {
+    if (!tabRecord.contentScriptReady || tabRecord.isActiveTab) {
+      return determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended);
+    }
     return USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME;
   }
 
