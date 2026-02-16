@@ -76,6 +76,10 @@ function buildExpectedOrder(knownEntries, unknownEntries, currentOrder) {
   return [...knownDurationSortedIds, ...unknownIdsInCurrentOrder];
 }
 
+function isRecordSortableByRemainingTime(record) {
+  return !record?.isLiveStream;
+}
+
 function buildReadinessMetrics(records, currentOrder) {
   if (!Array.isArray(records) || records.length === 0) {
     return createEmptyReadinessMetrics();
@@ -156,8 +160,9 @@ function buildReadinessMetrics(records, currentOrder) {
 function computeDerivedOrderingState(records) {
   const displayOrder = deriveCurrentOrder(records);
   const actionableRecords = records.filter((record) => !record.pinned);
-  const currentOrder = deriveCurrentOrder(actionableRecords);
-  const enriched = buildRemainingTimeEntries(actionableRecords);
+  const sortableRecords = actionableRecords.filter(isRecordSortableByRemainingTime);
+  const currentOrder = deriveCurrentOrder(sortableRecords);
+  const enriched = buildRemainingTimeEntries(sortableRecords);
 
   const knownDurationEntries = enriched.filter((entry) => entry.remainingTime !== null);
   const unknownDurationEntries = enriched.filter((entry) => entry.remainingTime === null);
@@ -176,7 +181,7 @@ function computeDerivedOrderingState(records) {
     expectedOrder,
     allRemainingTimesKnown,
     alreadyInExpectedOrder,
-    readinessMetrics: buildReadinessMetrics(actionableRecords, currentOrder),
+    readinessMetrics: buildReadinessMetrics(sortableRecords, currentOrder),
   };
 }
 

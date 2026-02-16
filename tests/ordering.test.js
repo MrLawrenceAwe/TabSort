@@ -107,3 +107,26 @@ test('handles records without a finite index deterministically', () => {
   assert.deepEqual(backgroundState.watchTabIdsInCurrentOrder, [1, 2, 3]);
   assert.deepEqual(backgroundState.watchTabIdsByRemainingTime, [3, 2, 1]);
 });
+
+test('live tabs do not block sorted readiness for VOD tabs with known remaining times', () => {
+  resetBackgroundState();
+  backgroundState.watchTabRecordsById = {
+    1: makeRecord(1, { index: 0, videoDetails: { remainingTime: 5 }, remainingTimeMayBeStale: false }),
+    2: makeRecord(2, { index: 1, videoDetails: { remainingTime: 15 }, remainingTimeMayBeStale: false }),
+    3: makeRecord(3, {
+      index: 2,
+      isLiveStream: true,
+      videoDetails: { remainingTime: null },
+      remainingTimeMayBeStale: false,
+    }),
+  };
+
+  recomputeSorting();
+
+  assert.equal(backgroundState.tabsInCurrentWindowAreKnownToBeSorted, true);
+  assert.equal(backgroundState.readinessMetrics.totalWatchTabsInWindow, 2);
+  assert.equal(backgroundState.readinessMetrics.watchTabsReadyCount, 2);
+  assert.equal(backgroundState.readinessMetrics.allKnown, true);
+  assert.equal(backgroundState.readinessMetrics.computedAllSorted, true);
+  assert.deepEqual(backgroundState.watchTabIdsByRemainingTime, [1, 2]);
+});
