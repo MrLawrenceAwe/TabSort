@@ -13,21 +13,12 @@ export const DEFAULT_SORT_OPTIONS = Object.freeze({
   groupNonYoutubeTabsByDomain: false,
 });
 
-/** Time window (ms) to consider a tab as "recently unsuspended" */
 export const RECENTLY_UNSUSPENDED_MS = 5000;
 
-/** Interval in minutes for the refresh alarm (Chrome enforces a minimum of 1 minute) */
 export const REFRESH_INTERVAL_MINUTES = 1;
 
-/** 
- * HTMLMediaElement.readyState threshold for considering video ready.
- * Value of 2 corresponds to HAVE_CURRENT_DATA.
- * Content scripts load this module at runtime and fall back to the default when needed.
- */
 export const MEDIA_READY_STATE_THRESHOLD = 2;
 
-/** URL pattern for matching YouTube watch pages */
 export const YOUTUBE_WATCH_URL_PATTERN = /youtube\.com\/watch/;
 
-/** Name of the alarm used for periodic metric refresh */
 export const REFRESH_ALARM_NAME = 'refreshRemaining';

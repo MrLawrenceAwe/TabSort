@@ -1,7 +1,7 @@
 import { isValidWindowId } from '../shared/utils.js';
 
 export const backgroundState = {
-  watchTabRecordsById: {}, // { [tabId]: TabRecord }
+  watchTabRecordsById: {},
   watchTabIdsByRemainingTime: [],
   watchTabIdsInCurrentOrder: [],
   tabsInCurrentWindowAreKnownToBeSorted: false,

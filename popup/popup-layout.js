@@ -1,6 +1,5 @@
 import { popupState } from './state.js';
 
-/** Cached DOM element references */
 const domCache = {
   statusElement: null,
   sortButton: null,
@@ -12,10 +11,6 @@ const domCache = {
   initialized: false,
 };
 
-/**
- * Initializes the DOM cache with element references.
- * Should be called once when the popup loads.
- */
 export function initializeDomCache() {
   if (domCache.initialized) return;
 
@@ -29,11 +24,6 @@ export function initializeDomCache() {
   domCache.initialized = true;
 }
 
-/**
- * Gets a cached DOM element, initializing cache if needed.
- * @param {string} key - The cache key.
- * @returns {HTMLElement|null}
- */
 function getCachedElement(key) {
   if (!domCache.initialized) initializeDomCache();
   return domCache[key];

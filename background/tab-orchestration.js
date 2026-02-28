@@ -150,15 +150,12 @@ export async function refreshMetricsForTab(tabId) {
       record.videoDetails.remainingTime = remainingSeconds;
       record.remainingTimeMayBeStale = false;
     } else {
-      // current time is unknown while length is known.
       record.videoDetails.remainingTime = videoLengthSeconds;
       record.remainingTimeMayBeStale = true;
     }
 
     recomputeSorting();
-  } catch (_) {
-    // ignore; will retry later
-  }
+  } catch (_) {}
 }
 
 export async function sortTabsInCurrentWindow(windowId = backgroundState.trackedWindowId) {

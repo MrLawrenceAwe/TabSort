@@ -220,7 +220,5 @@ export function broadcastTabSnapshot({ force = false } = {}) {
         console.debug(`[TabSort] broadcast warning: ${err.message}`);
       }
     });
-  } catch (_) {
-    // no-op: can occur if service worker is shutting down or there is no listener
-  }
+  } catch (_) {}
 }

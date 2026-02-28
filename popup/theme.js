@@ -84,7 +84,5 @@ export function startThemeSync() {
       },
       { once: true },
     );
-  } catch {
-    // no-op if matchMedia throws
-  }
+  } catch {}
 }
