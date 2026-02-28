@@ -11,9 +11,7 @@ export async function activateTab(message) {
     }
     try {
         await chrome.tabs.update(tabId, { active: true });
-    } catch (_) {
-        // ignore activation failure
-    }
+    } catch (_) {}
 }
 
 export async function reloadTab(message) {
@@ -26,9 +24,7 @@ export async function reloadTab(message) {
     try {
         await chrome.tabs.reload(tabId);
         reloadSucceeded = true;
-    } catch (_) {
-        // ignore reload failure
-    }
+    } catch (_) {}
     if (!reloadSucceeded) return;
     const record = backgroundState.watchTabRecordsById[tabId];
     if (record) {

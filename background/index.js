@@ -212,9 +212,7 @@ function ensureRefreshAlarm() {
         console.debug(`[TabSort] alarm create failed: ${error.message}`);
       }
     });
-  } catch (_) {
-    // ignore; will retry on next wake
-  }
+  } catch (_) {}
 }
 
 ensureRefreshAlarm();

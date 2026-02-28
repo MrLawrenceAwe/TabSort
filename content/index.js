@@ -49,12 +49,6 @@
   let sharedRuntimeReady = false;
   let videoMountObserver = null;
 
-  /**
-   * Logs an error from the content script with context.
-   * @param {string} context - Description of the operation that failed.
-   * @param {Error|unknown} error - The error that occurred.
-   * @see shared/utils.js - toErrorMessage (similar pattern)
-   */
   const logContentError = (context, error) => {
     const message = error instanceof Error ? error.message : String(error);
     console.warn(`[TabSort] ${context}: ${message}`);
@@ -147,10 +141,6 @@
     return trimmed.endsWith(suffix) ? trimmed.slice(0, -suffix.length) : trimmed;
   };
 
-  // ============================================================
-  // YouTube Player Response Parsing
-  // ============================================================
-
   function extractYtInitialPlayerResponseFromScript(source) {
     if (typeof source !== 'string') return null;
     const identifier = 'ytInitialPlayerResponse';
@@ -222,10 +212,6 @@
     return obj || {};
   }
 
-  // ============================================================
-  // Video Details Extraction
-  // ============================================================
-
   function getLightweightDetails() {
     const docTitle = cleanTitle(document.title);
     const ogTitle = cleanTitle(document.querySelector('meta[property="og:title"]')?.content);
@@ -272,19 +258,11 @@
     }
   }
 
-  // ============================================================
-  // Content Script Lifecycle
-  // ============================================================
-
   function sendContentReadyOnce() {
     if (sendContentReadyOnce._sent) return;
     sendContentReadyOnce._sent = true;
     safeSendMessage({ message: 'contentScriptReady' }, 'content script ready');
   }
-
-  // ============================================================
-  // Video Element Observation
-  // ============================================================
 
   function attachVideoReadyListener() {
     const video = getVideoEl();
@@ -326,10 +304,6 @@
     videoMountObserver.observe(document.documentElement, { childList: true, subtree: true });
   }
 
-  // ============================================================
-  // Title Observation
-  // ============================================================
-
   let titleElementObserver = null;
   let titleTextObserver = null;
   let observedTitleElement = null;
@@ -366,10 +340,6 @@
     titleElementObserver.observe(target, { childList: true, subtree: true });
   }
 
-  // ============================================================
-  // Message Handler
-  // ============================================================
-
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message && message.message === 'getVideoMetrics') {
       const video = getVideoEl();
@@ -396,10 +366,6 @@
     }
     return false;
   });
-
-  // ============================================================
-  // Initialization
-  // ============================================================
 
   function refreshMetadata(includeReadySignal = false) {
     if (includeReadySignal) {
@@ -429,7 +395,6 @@
     }
   });
 
-  // Cleanup observers on page unload to prevent memory leaks
   window.addEventListener('pagehide', () => {
     if (videoMountObserver) {
       videoMountObserver.disconnect();

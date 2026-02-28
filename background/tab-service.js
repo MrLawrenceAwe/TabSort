@@ -8,9 +8,7 @@ export async function moveTabsSequentially(tabIds, startingIndex = 0) {
     try {
       await chrome.tabs.move(tabId, { index: targetIndex });
       targetIndex += 1;
-    } catch (_) {
-      // ignore move failure and retry same index for next tab
-    }
+    } catch (_) {}
   }
 }
 
