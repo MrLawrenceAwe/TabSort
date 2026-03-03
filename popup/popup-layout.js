@@ -47,12 +47,6 @@ function updateTabsSorted(tabsSortedElement) {
 
 function updateHiddenWarning(hiddenWarningElement) {
   if (!hiddenWarningElement) return;
-  if (popupState.hiddenTabsMayHaveStaleRemaining) {
-    hiddenWarningElement.textContent =
-      'Remaining time may stay at the full length until you view paused background tabs.';
-    hiddenWarningElement.style.display = 'block';
-    return;
-  }
   hiddenWarningElement.style.display = 'none';
 }
 
