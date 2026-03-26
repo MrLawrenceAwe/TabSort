@@ -2,27 +2,26 @@
 import { REFRESH_INTERVAL_MINUTES, REFRESH_ALARM_NAME } from '../shared/constants.js';
 import { isFiniteNumber, isValidWindowId } from '../shared/utils.js';
 import {
-  refreshMetricsForTab,
-  updateYoutubeWatchTabRecords,
-} from './tab-orchestration.js';
+  refreshTabMetrics,
+  syncTrackedTabs,
+} from './tracked-tabs.js';
 import { recomputeSorting } from './ordering.js';
 import { backgroundState, resolveTrackedWindowId } from './state.js';
-import { isWatch } from './youtube-url-utils.js';
+import { isWatchOrShortsPage } from './youtube-url-utils.js';
 import { getTab } from './tab-service.js';
 import {
   activateTab,
   reloadTab,
 } from './handlers/tab-actions.js';
 import {
-  handleUpdateYoutubeWatchTabRecords,
-  handleSendTabRecords,
-  handleAreTabsInCurrentWindowKnownToBeSorted,
-  handleSortTabs,
-} from './handlers/records-handler.js';
+  handleGetTabSnapshot,
+  handleSortTrackedTabs,
+  handleSyncTrackedTabs,
+} from './handlers/popup-command-handlers.js';
 import {
   handleContentScriptReady,
   handleMetadataLoaded,
-  handleLightweightDetails,
+  handleTabDetailsHint,
 } from './handlers/content-script.js';
 import { createAsyncResponder } from './async-responder.js';
 
@@ -63,7 +62,7 @@ const refreshForTabWindowChange = (label, getWindowId) =>
     const windowId = getWindowId(...args);
     if (!isValidWindowId(windowId)) return;
     if (!shouldHandleWindow(windowId)) return;
-    await updateYoutubeWatchTabRecords(windowId);
+    await syncTrackedTabs(windowId);
   });
 
 const MIN_REFRESH_INTERVAL_MINUTES = 1;
@@ -71,7 +70,7 @@ const refreshIntervalMinutes = Math.max(REFRESH_INTERVAL_MINUTES, MIN_REFRESH_IN
 
 function resetTrackedWindow() {
   resolveTrackedWindowId(null, { force: true });
-  backgroundState.watchTabRecordsById = {};
+  backgroundState.watchTabsById = {};
   backgroundState.lastBroadcastSignature = null;
   recomputeSorting();
 }
@@ -81,10 +80,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const respondAsync = createAsyncResponder(sendResponse);
 
   const handlers = {
-    updateYoutubeWatchTabRecords: () => handleUpdateYoutubeWatchTabRecords(message),
-    sendTabRecords: () => handleSendTabRecords(message),
-    areTabsInCurrentWindowKnownToBeSorted: () => handleAreTabsInCurrentWindowKnownToBeSorted(message),
-    sortTabs: () => handleSortTabs(message),
+    syncTrackedTabs: () => handleSyncTrackedTabs(message),
+    getTabSnapshot: () => handleGetTabSnapshot(message),
+    sortTrackedTabs: () => handleSortTrackedTabs(message),
     ping: async () => ({ ok: true }),
     activateTab: () => activateTab(message),
     reloadTab: () => reloadTab(message),
@@ -94,7 +92,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     },
     contentScriptReady: () => handleContentScriptReady(message, sender),
     metadataLoaded: () => handleMetadataLoaded(message, sender),
-    lightweightDetails: () => handleLightweightDetails(message, sender),
+    tabDetailsHint: () => handleTabDetailsHint(message, sender),
   };
 
   if (handlers[type]) {
@@ -113,9 +111,9 @@ chrome.tabs.onUpdated.addListener(
       changeInfo.status === 'loading' ||
       changeInfo.url
     ) {
-      await updateYoutubeWatchTabRecords(tab.windowId);
-      if (isWatch(tab.url)) {
-        await refreshMetricsForTab(tabId);
+      await syncTrackedTabs(tab.windowId);
+      if (isWatchOrShortsPage(tab.url)) {
+        await refreshTabMetrics(tabId);
       }
     }
   }),
@@ -129,11 +127,11 @@ chrome.tabs.onActivated.addListener(
   withErrorLogging('tabs.onActivated', async (activeInfo) => {
     if (!isValidWindowId(activeInfo?.windowId)) return;
     if (!shouldHandleWindow(activeInfo.windowId)) return;
-    await updateYoutubeWatchTabRecords(activeInfo.windowId);
+    await syncTrackedTabs(activeInfo.windowId);
     if (!isFiniteNumber(activeInfo.tabId)) return;
     const tab = await getTab(activeInfo.tabId);
-    if (!isWatch(tab?.url)) return;
-    await refreshMetricsForTab(activeInfo.tabId);
+    if (!isWatchOrShortsPage(tab?.url)) return;
+    await refreshTabMetrics(activeInfo.tabId);
   }),
 );
 
@@ -147,7 +145,7 @@ chrome.tabs.onAttached.addListener(
 
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
   if (!shouldHandleWindow(removeInfo?.windowId)) return;
-  delete backgroundState.watchTabRecordsById[tabId];
+  delete backgroundState.watchTabsById[tabId];
   if (removeInfo?.isWindowClosing && removeInfo.windowId === backgroundState.trackedWindowId) {
     resetTrackedWindow();
     return;
@@ -159,7 +157,7 @@ if (chrome.webNavigation?.onHistoryStateUpdated) {
   chrome.webNavigation.onHistoryStateUpdated.addListener(
     withErrorLogging('webNavigation.onHistoryStateUpdated', async (details) => {
       if (details.frameId !== 0) return;
-      if (!isWatch(details.url)) return;
+      if (!isWatchOrShortsPage(details.url)) return;
 
       let windowIdForUpdate = null;
       if (typeof details.tabId === 'number') {
@@ -173,8 +171,8 @@ if (chrome.webNavigation?.onHistoryStateUpdated) {
       } else if (backgroundState.trackedWindowId != null) {
         windowIdForUpdate = backgroundState.trackedWindowId;
       }
-      await updateYoutubeWatchTabRecords(windowIdForUpdate);
-      await refreshMetricsForTab(details.tabId);
+      await syncTrackedTabs(windowIdForUpdate);
+      await refreshTabMetrics(details.tabId);
     }),
     { url: [{ hostContains: 'youtube.com' }] },
   );
@@ -187,10 +185,10 @@ if (chrome.webNavigation?.onHistoryStateUpdated) {
 async function rehydrateTrackedWindowState() {
   const lastFocusedWindowId = await getLastFocusedWindowId();
   const targetWindowId = isValidWindowId(lastFocusedWindowId) ? lastFocusedWindowId : null;
-  await updateYoutubeWatchTabRecords(targetWindowId, { force: true });
-  const ids = Object.keys(backgroundState.watchTabRecordsById).map(Number);
+  await syncTrackedTabs(targetWindowId, { force: true });
+  const ids = Object.keys(backgroundState.watchTabsById).map(Number);
   if (ids.length) {
-    await Promise.all(ids.map(refreshMetricsForTab));
+    await Promise.all(ids.map(refreshTabMetrics));
   }
 }
 
@@ -221,9 +219,9 @@ rehydrateTrackedWindowState().catch((error) => logListenerError('rehydration', e
 chrome.alarms.onAlarm.addListener(
   withErrorLogging('alarms.onAlarm', async (alarm) => {
     if (alarm.name !== REFRESH_ALARM_NAME) return;
-    await updateYoutubeWatchTabRecords(backgroundState.trackedWindowId, { force: true });
-    const ids = Object.keys(backgroundState.watchTabRecordsById).map(Number);
-    await Promise.all(ids.map(refreshMetricsForTab));
+    await syncTrackedTabs(backgroundState.trackedWindowId, { force: true });
+    const ids = Object.keys(backgroundState.watchTabsById).map(Number);
+    await Promise.all(ids.map(refreshTabMetrics));
   }),
 );
 
@@ -240,7 +238,7 @@ chrome.windows.onFocusChanged.addListener(
     if (!isValidWindowId(windowId)) return;
     if (windowId === backgroundState.trackedWindowId) return;
     resolveTrackedWindowId(windowId, { force: true });
-    await updateYoutubeWatchTabRecords(windowId, { force: true });
+    await syncTrackedTabs(windowId, { force: true });
   }),
 );
 

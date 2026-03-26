@@ -31,7 +31,7 @@ export async function initializePopup() {
   await safeAsync(requestAndRenderSnapshot, 'Failed to request initial snapshot');
 
   const messageListener = (message) => {
-    if (message?.message === 'tabRecordsUpdated' && message.payload) {
+    if (message?.message === 'tabSnapshotUpdated' && message.payload) {
       Promise.resolve(renderSnapshot(message.payload)).catch((error) => {
         logPopupError('Failed to render incoming snapshot', error);
       });
@@ -42,7 +42,7 @@ export async function initializePopup() {
 
   const sortButton = document.getElementById('sortButton');
   if (sortButton) {
-    sortButton.addEventListener('click', () => sendMessageWithWindow('sortTabs'));
+    sortButton.addEventListener('click', () => sendMessageWithWindow('sortTrackedTabs'));
   }
 
   window.addEventListener('unload', () => {

@@ -1,49 +1,20 @@
 (function () {
+  const fallbackInferIsLiveNow = ({
+    videoDetails,
+    liveBroadcastDetails,
+    metaIsLiveBroadcast,
+  } = {}) =>
+    Boolean(
+      videoDetails?.isLive ||
+      liveBroadcastDetails?.isLiveNow ||
+      metaIsLiveBroadcast === true ||
+      String(metaIsLiveBroadcast || '').toLowerCase() === 'true',
+    );
+
   const sharedRuntime = {
     mediaReadyStateThreshold: 2,
     isFiniteNumber: (value) => typeof value === 'number' && Number.isFinite(value),
-    inferIsLiveNow: ({
-      metaIsLiveBroadcast,
-      metaEndDate,
-      videoDetails,
-      playabilityStatus,
-      liveBroadcastDetails,
-      lengthSeconds,
-    } = {}) => {
-      const toBooleanFlag = (value) => {
-        if (value === true) return true;
-        if (value === false || value == null) return false;
-        if (typeof value === 'string') {
-          const normalized = value.trim().toLowerCase();
-          return normalized === 'true' || normalized === '1';
-        }
-        if (typeof value === 'number') return value === 1;
-        return false;
-      };
-
-      const hasNonEmptyString = (value) => typeof value === 'string' && value.trim().length > 0;
-
-      if (toBooleanFlag(videoDetails?.isLive)) return true;
-      if (toBooleanFlag(liveBroadcastDetails?.isLiveNow)) return true;
-
-      const hasEndedSignal =
-        hasNonEmptyString(metaEndDate) || hasNonEmptyString(liveBroadcastDetails?.endTimestamp);
-      if (hasEndedSignal) return false;
-
-      if (toBooleanFlag(metaIsLiveBroadcast)) return true;
-
-      const hasLiveStreamability = Boolean(playabilityStatus?.liveStreamability);
-      const isLiveContent = toBooleanFlag(videoDetails?.isLiveContent);
-      const numericLength =
-        typeof lengthSeconds === 'string' && lengthSeconds.trim() === ''
-          ? NaN
-          : Number(lengthSeconds);
-      const hasFiniteLength = Number.isFinite(numericLength) && numericLength > 0;
-
-      if ((hasLiveStreamability || isLiveContent) && !hasFiniteLength) return true;
-
-      return false;
-    },
+    inferIsLiveNow: fallbackInferIsLiveNow,
   };
 
   let sharedRuntimeReady = false;
@@ -194,25 +165,25 @@
   }
 
   function parseYtInitialPlayerResponse() {
-    let obj = null;
+    let playerResponse = null;
     try {
-      if (window.ytInitialPlayerResponse) obj = window.ytInitialPlayerResponse;
+      if (window.ytInitialPlayerResponse) playerResponse = window.ytInitialPlayerResponse;
     } catch (error) {
       logContentError('Reading window.ytInitialPlayerResponse', error);
     }
-    if (!obj) {
+    if (!playerResponse) {
       const script = Array.from(document.scripts || []).find((s) =>
         s?.textContent?.includes('ytInitialPlayerResponse'),
       );
       if (script?.textContent) {
         const parsed = extractYtInitialPlayerResponseFromScript(script.textContent);
-        if (parsed) obj = parsed;
+        if (parsed) playerResponse = parsed;
       }
     }
-    return obj || {};
+    return playerResponse || {};
   }
 
-  function getLightweightDetails() {
+  function getTabDetailsHint() {
     const docTitle = cleanTitle(document.title);
     const ogTitle = cleanTitle(document.querySelector('meta[property="og:title"]')?.content);
     const itempropTitle = cleanTitle(document.querySelector('meta[itemprop="name"]')?.content);
@@ -247,14 +218,14 @@
     return { title, lengthSeconds, isLive, url: location.href };
   }
 
-  function sendLightweightDetails() {
+  function sendTabDetailsHint() {
     try {
-      const details = getLightweightDetails();
+      const details = getTabDetailsHint();
       if (details.title || details.lengthSeconds != null || details.isLive) {
-        safeSendMessage({ message: 'lightweightDetails', details }, 'lightweight details');
+        safeSendMessage({ message: 'tabDetailsHint', details }, 'tab details hint');
       }
     } catch (error) {
-      logContentError('Sending lightweight details', error);
+      logContentError('Sending tab details hint', error);
     }
   }
 
@@ -320,12 +291,12 @@
       const nextTitle = titleEl.textContent;
       if (nextTitle === lastKnownTitleText) return;
       lastKnownTitleText = nextTitle;
-      sendLightweightDetails();
+      sendTabDetailsHint();
     });
     titleTextObserver.observe(titleEl, { childList: true, characterData: true, subtree: true });
 
     if (shouldSendUpdate) {
-      sendLightweightDetails();
+      sendTabDetailsHint();
     }
   }
 
@@ -343,7 +314,7 @@
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message && message.message === 'getVideoMetrics') {
       const video = getVideoEl();
-      const light = getLightweightDetails();
+      const light = getTabDetailsHint();
       const payload = {
         title: light.title || null,
         url: light.url,
@@ -371,7 +342,7 @@
     if (includeReadySignal) {
       sendContentReadyOnce();
     }
-    sendLightweightDetails();
+    sendTabDetailsHint();
     watchForVideoMount();
     watchTitleChanges();
   }

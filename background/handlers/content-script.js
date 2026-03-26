@@ -1,6 +1,6 @@
 import { isFiniteNumber } from '../../shared/utils.js';
 import { backgroundState, resolveTrackedWindowId } from '../state.js';
-import { refreshMetricsForTab } from '../tab-orchestration.js';
+import { refreshTabMetrics } from '../tracked-tabs.js';
 import { broadcastTabSnapshot, recomputeSorting } from '../ordering.js';
 import { ensureTabRecord } from '../tab-record.js';
 
@@ -18,7 +18,7 @@ export async function handleContentScriptReady(_message, sender) {
     const record = ensureTabRecord(tabId, senderWindowId);
     record.contentScriptReady = true;
     broadcastTabSnapshot();
-    await refreshMetricsForTab(tabId);
+    await refreshTabMetrics(tabId);
     return { message: 'contentScriptAck' };
 }
 
@@ -28,13 +28,13 @@ export async function handleMetadataLoaded(_message, sender) {
     if (!canUseSenderWindow(senderWindowId)) return;
     resolveTrackedWindowId(senderWindowId);
     if (!isFiniteNumber(tabId)) return;
-    const record = backgroundState.watchTabRecordsById[tabId];
+    const record = backgroundState.watchTabsById[tabId];
     if (record) record.metadataLoaded = true;
     broadcastTabSnapshot();
-    await refreshMetricsForTab(tabId);
+    await refreshTabMetrics(tabId);
 }
 
-export async function handleLightweightDetails(message, sender) {
+export async function handleTabDetailsHint(message, sender) {
     const tabId = sender?.tab?.id;
     const details = message.details || {};
     const senderWindowId = sender?.tab?.windowId;
@@ -52,12 +52,12 @@ export async function handleLightweightDetails(message, sender) {
         record.videoDetails.lengthSeconds = details.lengthSeconds;
         if (!record.isLiveStream && record.videoDetails.remainingTime == null) {
             record.videoDetails.remainingTime = details.lengthSeconds;
-            record.remainingTimeMayBeStale = true;
+            record.isRemainingTimeStale = true;
         }
     }
     if (record.isLiveStream) {
         record.videoDetails.remainingTime = null;
-        record.remainingTimeMayBeStale = false;
+        record.isRemainingTimeStale = false;
     }
     recomputeSorting();
 }

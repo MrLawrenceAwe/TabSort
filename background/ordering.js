@@ -21,21 +21,21 @@ function areIdListsEqual(a, b) {
 
 export function buildTabSnapshot() {
   const records = Object.fromEntries(
-    Object.entries(backgroundState.watchTabRecordsById).map(([id, record]) => [
+    Object.entries(backgroundState.watchTabsById).map(([id, record]) => [
       id,
       cloneRecord(record),
     ]),
   );
 
   return {
-    watchTabRecordsById: records,
-    watchTabIdsByRemainingTime: [
-      ...backgroundState.watchTabIdsByRemainingTime,
+    watchTabsById: records,
+    watchTabIdsByRemaining: [
+      ...backgroundState.watchTabIdsByRemaining,
     ],
-    watchTabIdsInCurrentOrder: [
-      ...backgroundState.watchTabIdsInCurrentOrder,
+    watchTabIdsByIndex: [
+      ...backgroundState.watchTabIdsByIndex,
     ],
-    tabsInCurrentWindowAreKnownToBeSorted: backgroundState.tabsInCurrentWindowAreKnownToBeSorted,
+    isWindowSorted: backgroundState.isWindowSorted,
     readinessMetrics: {
       ...(backgroundState.readinessMetrics || createEmptyReadinessMetrics()),
     },
@@ -86,13 +86,13 @@ function buildReadinessMetrics(records, currentOrder) {
   }
 
   const recordMap = new Map(records.map((record) => [record.id, record]));
-  const totalWatchTabsInWindow = records.length;
+  const trackedTabCount = records.length;
 
-  let hiddenTabsMayHaveStaleRemaining = false;
-  let watchTabsReadyCount = 0;
-  let readyTabsAreContiguous = true;
-  let readyTabsAreAtFront = true;
-  let knownWatchTabsOutOfOrder = false;
+  let hasHiddenTabsWithStaleRemaining = false;
+  let readyTabCount = 0;
+  let areReadyTabsContiguous = true;
+  let areReadyTabsAtFront = true;
+  let areReadyTabsOutOfOrder = false;
 
   const readyIdsInCurrentOrder = [];
   const readyEntries = [];
@@ -107,17 +107,17 @@ function buildReadinessMetrics(records, currentOrder) {
     if (!record) continue;
     orderedIdsWithRecords.push(tabId);
 
-    if (record.remainingTimeMayBeStale && (!record.isActiveTab || record.isHidden)) {
-      hiddenTabsMayHaveStaleRemaining = true;
+    if (record.isRemainingTimeStale && (!record.isActiveTab || record.isHidden)) {
+      hasHiddenTabsWithStaleRemaining = true;
     }
 
     const isReady = hasFreshRemainingTime(record);
     if (isReady) {
-      watchTabsReadyCount += 1;
+      readyTabCount += 1;
       readyIdsInCurrentOrder.push(record.id);
       readyEntries.push({ id: record.id, remaining: record.videoDetails?.remainingTime || 0 });
       encounteredReady = true;
-      if (gapAfterReady) readyTabsAreContiguous = false;
+      if (gapAfterReady) areReadyTabsContiguous = false;
       continue;
     }
 
@@ -129,7 +129,7 @@ function buildReadinessMetrics(records, currentOrder) {
   }
 
   if (encounteredReady && encounteredNonReadyBeforeReady) {
-    readyTabsAreAtFront = false;
+    areReadyTabsAtFront = false;
   }
 
   const readyIdsByRemaining = readyEntries
@@ -138,22 +138,22 @@ function buildReadinessMetrics(records, currentOrder) {
     .map((entry) => entry.id);
 
   if (readyIdsInCurrentOrder.length >= 2) {
-    knownWatchTabsOutOfOrder = !areIdListsEqual(readyIdsInCurrentOrder, readyIdsByRemaining);
+    areReadyTabsOutOfOrder = !areIdListsEqual(readyIdsInCurrentOrder, readyIdsByRemaining);
   }
 
-  const allKnown = totalWatchTabsInWindow > 1 && watchTabsReadyCount === totalWatchTabsInWindow;
-  const computedAllSorted =
-    allKnown && areIdListsEqual(orderedIdsWithRecords, readyIdsByRemaining);
+  const areAllTimesKnown = trackedTabCount > 1 && readyTabCount === trackedTabCount;
+  const areAllSorted =
+    areAllTimesKnown && areIdListsEqual(orderedIdsWithRecords, readyIdsByRemaining);
 
   return {
-    totalWatchTabsInWindow,
-    watchTabsReadyCount,
-    hiddenTabsMayHaveStaleRemaining,
-    readyTabsAreContiguous,
-    readyTabsAreAtFront,
-    knownWatchTabsOutOfOrder,
-    allKnown,
-    computedAllSorted,
+    trackedTabCount,
+    readyTabCount,
+    hasHiddenTabsWithStaleRemaining,
+    areReadyTabsContiguous,
+    areReadyTabsAtFront,
+    areReadyTabsOutOfOrder,
+    areAllTimesKnown,
+    areAllSorted,
   };
 }
 
@@ -192,9 +192,9 @@ function updateBackgroundOrderingState({
   alreadyInExpectedOrder,
   readinessMetrics,
 }) {
-  backgroundState.watchTabIdsByRemainingTime = expectedOrder;
-  backgroundState.watchTabIdsInCurrentOrder = displayOrder;
-  backgroundState.tabsInCurrentWindowAreKnownToBeSorted =
+  backgroundState.watchTabIdsByRemaining = expectedOrder;
+  backgroundState.watchTabIdsByIndex = displayOrder;
+  backgroundState.isWindowSorted =
     allRemainingTimesKnown && alreadyInExpectedOrder;
   backgroundState.readinessMetrics = readinessMetrics ? { ...readinessMetrics } : null;
 
@@ -202,7 +202,7 @@ function updateBackgroundOrderingState({
 }
 
 export function recomputeSorting() {
-  const records = Object.values(backgroundState.watchTabRecordsById);
+  const records = Object.values(backgroundState.watchTabsById);
   const derivedState = computeDerivedOrderingState(records);
   updateBackgroundOrderingState(derivedState);
 }
@@ -214,7 +214,7 @@ export function broadcastTabSnapshot({ force = false } = {}) {
     if (!force && signature === backgroundState.lastBroadcastSignature) return;
     backgroundState.lastBroadcastSignature = signature;
 
-    chrome.runtime.sendMessage({ message: 'tabRecordsUpdated', payload: snapshot }, () => {
+    chrome.runtime.sendMessage({ message: 'tabSnapshotUpdated', payload: snapshot }, () => {
       const err = chrome.runtime.lastError;
       if (err?.message && !/Receiving end/i.test(err.message)) {
         console.debug(`[TabSort] broadcast warning: ${err.message}`);

@@ -19,6 +19,4 @@ export const REFRESH_INTERVAL_MINUTES = 1;
 
 export const MEDIA_READY_STATE_THRESHOLD = 2;
 
-export const YOUTUBE_WATCH_URL_PATTERN = /youtube\.com\/watch/;
-
 export const REFRESH_ALARM_NAME = 'refreshRemaining';

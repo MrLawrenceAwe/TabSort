@@ -35,16 +35,16 @@ function makeRecord(overrides = {}) {
     isHidden: false,
     videoDetails: { remainingTime: 100 },
     unsuspendedTimestamp: null,
-    remainingTimeMayBeStale: false,
+    isRemainingTimeStale: false,
     ...overrides,
   };
 }
 
 function resetBackgroundState() {
-  backgroundState.watchTabRecordsById = {};
-  backgroundState.watchTabIdsByRemainingTime = [];
-  backgroundState.watchTabIdsInCurrentOrder = [];
-  backgroundState.tabsInCurrentWindowAreKnownToBeSorted = false;
+  backgroundState.watchTabsById = {};
+  backgroundState.watchTabIdsByRemaining = [];
+  backgroundState.watchTabIdsByIndex = [];
+  backgroundState.isWindowSorted = false;
   backgroundState.readinessMetrics = null;
   backgroundState.trackedWindowId = null;
   backgroundState.lastBroadcastSignature = null;
@@ -52,10 +52,10 @@ function resetBackgroundState() {
 
 test('reloadTab does not mutate record state when chrome.tabs.reload fails', { concurrency: false }, async () => {
   resetBackgroundState();
-  backgroundState.watchTabRecordsById = {
+  backgroundState.watchTabsById = {
     1: makeRecord(),
   };
-  const before = JSON.parse(JSON.stringify(backgroundState.watchTabRecordsById[1]));
+  const before = JSON.parse(JSON.stringify(backgroundState.watchTabsById[1]));
 
   globalThis.chrome.tabs.reload = async () => {
     throw new Error('reload failed');
@@ -63,12 +63,12 @@ test('reloadTab does not mutate record state when chrome.tabs.reload fails', { c
 
   await reloadTab({ tabId: 1, windowId: 1 });
 
-  assert.deepEqual(backgroundState.watchTabRecordsById[1], before);
+  assert.deepEqual(backgroundState.watchTabsById[1], before);
 });
 
 test('reloadTab marks record loading only after successful reload call', { concurrency: false }, async () => {
   resetBackgroundState();
-  backgroundState.watchTabRecordsById = {
+  backgroundState.watchTabsById = {
     1: makeRecord(),
   };
 
@@ -76,11 +76,11 @@ test('reloadTab marks record loading only after successful reload call', { concu
 
   await reloadTab({ tabId: 1, windowId: 1 });
 
-  const record = backgroundState.watchTabRecordsById[1];
+  const record = backgroundState.watchTabsById[1];
   assert.equal(record.status, TAB_STATES.LOADING);
   assert.equal(record.contentScriptReady, false);
   assert.equal(record.metadataLoaded, false);
-  assert.equal(record.remainingTimeMayBeStale, true);
+  assert.equal(record.isRemainingTimeStale, true);
   assert.equal(record.videoDetails.remainingTime, null);
   assert.equal(typeof record.unsuspendedTimestamp, 'number');
 });

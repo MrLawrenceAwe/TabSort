@@ -12,7 +12,7 @@ function makeRecord(overrides = {}) {
     isActiveTab: false,
     isHidden: false,
     contentScriptReady: true,
-    remainingTimeMayBeStale: false,
+    isRemainingTimeStale: false,
     unsuspendedTimestamp: null,
     videoDetails: { remainingTime: null },
     ...overrides,
@@ -21,7 +21,7 @@ function makeRecord(overrides = {}) {
 
 test('stale rows without remaining time do not suggest viewing the tab', () => {
   const record = makeRecord({
-    remainingTimeMayBeStale: true,
+    isRemainingTimeStale: true,
     contentScriptReady: false,
     unsuspendedTimestamp: Date.now() - (RECENTLY_UNSUSPENDED_MS + 1000),
   });
@@ -32,7 +32,7 @@ test('stale rows without remaining time do not suggest viewing the tab', () => {
 
 test('recently unsuspended rows avoid contradictory stale guidance', () => {
   const record = makeRecord({
-    remainingTimeMayBeStale: true,
+    isRemainingTimeStale: true,
     contentScriptReady: false,
     unsuspendedTimestamp: Date.now(),
   });
@@ -43,7 +43,7 @@ test('recently unsuspended rows avoid contradictory stale guidance', () => {
 
 test('stale rows with remaining time can still request view interaction when appropriate', () => {
   const record = makeRecord({
-    remainingTimeMayBeStale: true,
+    isRemainingTimeStale: true,
     videoDetails: { remainingTime: 320 },
     contentScriptReady: true,
     isActiveTab: false,

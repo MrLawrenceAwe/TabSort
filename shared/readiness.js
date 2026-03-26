@@ -1,13 +1,13 @@
 export function createEmptyReadinessMetrics() {
   return {
-    totalWatchTabsInWindow: 0,
-    watchTabsReadyCount: 0,
-    hiddenTabsMayHaveStaleRemaining: false,
-    readyTabsAreContiguous: true,
-    readyTabsAreAtFront: true,
-    knownWatchTabsOutOfOrder: false,
-    allKnown: false,
-    computedAllSorted: false,
+    trackedTabCount: 0,
+    readyTabCount: 0,
+    hasHiddenTabsWithStaleRemaining: false,
+    areReadyTabsContiguous: true,
+    areReadyTabsAtFront: true,
+    areReadyTabsOutOfOrder: false,
+    areAllTimesKnown: false,
+    areAllSorted: false,
   };
 }
 

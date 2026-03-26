@@ -20,8 +20,8 @@ function createTabRecord(tabId, senderWindowId, defaults = {}) {
     isHidden: Boolean(defaults.isHidden),
     videoDetails: defaults.videoDetails ?? null,
     unsuspendedTimestamp: defaults.unsuspendedTimestamp ?? null,
-    remainingTimeMayBeStale:
-      defaults.remainingTimeMayBeStale == null ? true : Boolean(defaults.remainingTimeMayBeStale),
+    isRemainingTimeStale:
+      defaults.isRemainingTimeStale == null ? true : Boolean(defaults.isRemainingTimeStale),
   };
 }
 
@@ -30,7 +30,7 @@ export function ensureTabRecord(tabId, senderWindowId, defaults = {}) {
     return undefined;
   }
 
-  const records = backgroundState.watchTabRecordsById;
+  const records = backgroundState.watchTabsById;
   let record = records[tabId];
 
   if (!record) {

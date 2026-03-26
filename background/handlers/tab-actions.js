@@ -26,13 +26,13 @@ export async function reloadTab(message) {
         reloadSucceeded = true;
     } catch (_) {}
     if (!reloadSucceeded) return;
-    const record = backgroundState.watchTabRecordsById[tabId];
+    const record = backgroundState.watchTabsById[tabId];
     if (record) {
         record.status = TAB_STATES.LOADING;
         record.unsuspendedTimestamp = now();
         record.contentScriptReady = false;
         record.metadataLoaded = false;
-        record.remainingTimeMayBeStale = true;
+        record.isRemainingTimeStale = true;
         if (record.videoDetails && record.videoDetails.remainingTime != null) {
             record.videoDetails.remainingTime = null;
         }
