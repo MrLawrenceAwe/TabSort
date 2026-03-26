@@ -45,9 +45,16 @@ function updateTabsSorted(tabsSortedElement) {
   tabsSortedElement.style.display = popupState.tabsInCurrentWindowAreKnownToBeSorted ? 'block' : 'none';
 }
 
+export function getHiddenWarningMessage() {
+  if (!popupState.hiddenTabsMayHaveStaleRemaining) return '';
+  return 'Some background tabs may have stale remaining time. Open each tab once to refresh.';
+}
+
 function updateHiddenWarning(hiddenWarningElement) {
   if (!hiddenWarningElement) return;
-  hiddenWarningElement.style.display = 'none';
+  const message = getHiddenWarningMessage();
+  hiddenWarningElement.textContent = message;
+  hiddenWarningElement.style.display = message ? 'block' : 'none';
 }
 
 function updateSortButton(sortButton, shouldShowSort) {
