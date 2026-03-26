@@ -2,7 +2,7 @@ import { EMPTY_READINESS_METRICS } from '../shared/readiness.js';
 
 export const popupState = {
   ...EMPTY_READINESS_METRICS,
-  tabsInCurrentWindowAreKnownToBeSorted: false,
+  isWindowSorted: false,
   activeWindowId: null,
 };
 

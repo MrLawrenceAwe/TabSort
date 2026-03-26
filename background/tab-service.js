@@ -71,14 +71,14 @@ export function getTab(tabId) {
 
 export function sendMessageToTab(tabId, payload) {
   return new Promise((resolve) => {
-    chrome.tabs.sendMessage(tabId, payload, (resp) => {
+    chrome.tabs.sendMessage(tabId, payload, (responsePayload) => {
       const err = chrome.runtime.lastError;
       if (err) {
         console.debug(`[TabSort] skipped message to tab ${tabId}: ${err.message}`);
         resolve({ ok: false, error: err });
         return;
       }
-      resolve({ ok: true, data: resp });
+      resolve({ ok: true, data: responsePayload });
     });
   });
 }

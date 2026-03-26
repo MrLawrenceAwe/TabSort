@@ -16,7 +16,7 @@ const SNAPSHOT_MAX_ATTEMPTS = 2;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const isValidSnapshot = (snapshot) =>
-  snapshot && typeof snapshot === 'object' && 'watchTabRecordsById' in snapshot;
+  snapshot && typeof snapshot === 'object' && 'watchTabsById' in snapshot;
 
 async function requestSnapshotWithRetry() {
   let lastError = null;
@@ -28,7 +28,7 @@ async function requestSnapshotWithRetry() {
         await sendMessageWithWindowAsync('ping').catch(() => {});
         await sleep(SNAPSHOT_RETRY_DELAY_MS);
       }
-      const response = await sendMessageWithWindowAsync('sendTabRecords', {});
+      const response = await sendMessageWithWindowAsync('getTabSnapshot', {});
       if (isValidSnapshot(response)) {
         return response;
       }
@@ -57,23 +57,23 @@ export async function renderSnapshot(snapshot) {
   if (!table) return;
   const tbody = table.tBodies[0] ?? table.createTBody();
 
-  const tabRecords = snapshot.watchTabRecordsById || {};
-  const currentOrderIds = snapshot.watchTabIdsInCurrentOrder || [];
+  const tabRecords = snapshot.watchTabsById || {};
+  const currentOrderIds = snapshot.watchTabIdsByIndex || [];
 
   const metrics = { ...EMPTY_READINESS_METRICS, ...(snapshot.readinessMetrics || {}) };
-  const backgroundSortedFlag = snapshot.tabsInCurrentWindowAreKnownToBeSorted === true;
+  const backgroundSortedFlag = snapshot.isWindowSorted === true;
   const shouldShowSorted =
-    metrics.computedAllSorted ||
-    (backgroundSortedFlag && metrics.allKnown && !metrics.knownWatchTabsOutOfOrder);
+    metrics.areAllSorted ||
+    (backgroundSortedFlag && metrics.areAllTimesKnown && !metrics.areReadyTabsOutOfOrder);
 
   updateSortingState({
-    tabsInCurrentWindowAreKnownToBeSorted: shouldShowSorted,
-    totalWatchTabsInWindow: metrics.totalWatchTabsInWindow,
-    watchTabsReadyCount: metrics.watchTabsReadyCount,
-    knownWatchTabsOutOfOrder: metrics.knownWatchTabsOutOfOrder,
-    hiddenTabsMayHaveStaleRemaining: metrics.hiddenTabsMayHaveStaleRemaining,
-    readyTabsAreContiguous: metrics.readyTabsAreContiguous,
-    readyTabsAreAtFront: metrics.readyTabsAreAtFront,
+    isWindowSorted: shouldShowSorted,
+    trackedTabCount: metrics.trackedTabCount,
+    readyTabCount: metrics.readyTabCount,
+    areReadyTabsOutOfOrder: metrics.areReadyTabsOutOfOrder,
+    hasHiddenTabsWithStaleRemaining: metrics.hasHiddenTabsWithStaleRemaining,
+    areReadyTabsContiguous: metrics.areReadyTabsContiguous,
+    areReadyTabsAtFront: metrics.areReadyTabsAtFront,
   });
 
   setActionAndStatusColumnsVisibility(!shouldShowSorted);
@@ -83,14 +83,14 @@ export async function renderSnapshot(snapshot) {
     const row = document.createElement('tr');
     const tabRecord = tabRecords[tabId];
     if (!tabRecord) continue;
-    tabRecord.remainingTimeMayBeStale = Boolean(tabRecord.remainingTimeMayBeStale);
-    if (tabRecord.remainingTimeMayBeStale) row.classList.add('stale-remaining-row');
+    tabRecord.isRemainingTimeStale = Boolean(tabRecord.isRemainingTimeStale);
+    if (tabRecord.isRemainingTimeStale) row.classList.add('stale-remaining-row');
     insertRowCells(row, tabRecord, shouldShowSorted);
     frag.appendChild(row);
   }
   tbody.replaceChildren(frag);
 
-  if (metrics.allKnown && !shouldShowSorted) {
+  if (metrics.areAllTimesKnown && !shouldShowSorted) {
     addClassToAllRows(table, 'all-ready-row');
   }
 

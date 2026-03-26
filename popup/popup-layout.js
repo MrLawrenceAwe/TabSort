@@ -31,9 +31,9 @@ function getCachedElement(key) {
 
 function updateStatus(statusElement) {
   if (!statusElement) return;
-  if (!popupState.tabsInCurrentWindowAreKnownToBeSorted) {
-    statusElement.style.display = popupState.totalWatchTabsInWindow <= 1 ? 'none' : 'block';
-    statusElement.textContent = `${popupState.watchTabsReadyCount}/${popupState.totalWatchTabsInWindow} ready for sort.`;
+  if (!popupState.isWindowSorted) {
+    statusElement.style.display = popupState.trackedTabCount <= 1 ? 'none' : 'block';
+    statusElement.textContent = `${popupState.readyTabCount}/${popupState.trackedTabCount} ready for sort.`;
     statusElement.style.color = 'var(--status-text-color)';
     return;
   }
@@ -42,11 +42,11 @@ function updateStatus(statusElement) {
 
 function updateTabsSorted(tabsSortedElement) {
   if (!tabsSortedElement) return;
-  tabsSortedElement.style.display = popupState.tabsInCurrentWindowAreKnownToBeSorted ? 'block' : 'none';
+  tabsSortedElement.style.display = popupState.isWindowSorted ? 'block' : 'none';
 }
 
 export function getHiddenWarningMessage() {
-  if (!popupState.hiddenTabsMayHaveStaleRemaining) return '';
+  if (!popupState.hasHiddenTabsWithStaleRemaining) return '';
   return 'Some background tabs may have stale remaining time. Open each tab once to refresh.';
 }
 
@@ -61,7 +61,7 @@ function updateSortButton(sortButton, shouldShowSort) {
   if (!sortButton) return;
   if (shouldShowSort) {
     sortButton.style.setProperty('display', 'block', 'important');
-    const allTabsReady = popupState.watchTabsReadyCount === popupState.totalWatchTabsInWindow;
+    const allTabsReady = popupState.readyTabCount === popupState.trackedTabCount;
     const readyBackground = 'var(--all-ready-row-background)';
     const readyText = 'var(--all-ready-row-text)';
     sortButton.style.backgroundColor = allTabsReady ? readyBackground : 'var(--action-button-background)';
@@ -103,14 +103,14 @@ export function updateHeaderFooter() {
   const hiddenWarningElement = getCachedElement('hiddenWarningElement');
 
   const readySubsetExists =
-    popupState.watchTabsReadyCount >= 2 &&
-    popupState.watchTabsReadyCount < popupState.totalWatchTabsInWindow;
+    popupState.readyTabCount >= 2 &&
+    popupState.readyTabCount < popupState.trackedTabCount;
   const readySubsetNeedsSorting =
-    readySubsetExists && (!popupState.readyTabsAreContiguous || !popupState.readyTabsAreAtFront);
+    readySubsetExists && (!popupState.areReadyTabsContiguous || !popupState.areReadyTabsAtFront);
   const shouldShowSort =
-    popupState.watchTabsReadyCount >= 2 &&
-    !popupState.tabsInCurrentWindowAreKnownToBeSorted &&
-    (popupState.knownWatchTabsOutOfOrder || readySubsetNeedsSorting);
+    popupState.readyTabCount >= 2 &&
+    !popupState.isWindowSorted &&
+    (popupState.areReadyTabsOutOfOrder || readySubsetNeedsSorting);
 
   setOptionToggleVisibility(shouldShowSort);
 
@@ -119,7 +119,7 @@ export function updateHeaderFooter() {
   updateHiddenWarning(hiddenWarningElement);
   updateSortButton(sortButton, shouldShowSort);
 
-  if (popupState.tabsInCurrentWindowAreKnownToBeSorted && table) {
+  if (popupState.isWindowSorted && table) {
     clearReadyRows(table);
   }
 }

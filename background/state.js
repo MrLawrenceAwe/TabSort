@@ -1,14 +1,14 @@
 import { isValidWindowId } from '../shared/utils.js';
 
 export const backgroundState = {
-  watchTabRecordsById: {},
-  watchTabIdsByRemainingTime: [],
-  watchTabIdsInCurrentOrder: [],
-  tabsInCurrentWindowAreKnownToBeSorted: false,
+  watchTabsById: {},
+  watchTabIdsByRemaining: [],
+  watchTabIdsByIndex: [],
+  isWindowSorted: false,
   readinessMetrics: null,
   trackedWindowId: null,
   lastBroadcastSignature: null,
-  recordsRefreshSeq: 0,
+  refreshToken: 0,
 };
 
 export const now = () => Date.now();

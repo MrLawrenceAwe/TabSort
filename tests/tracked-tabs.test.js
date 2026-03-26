@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES } from '../shared/constants.js';
-import { refreshMetricsForTab } from '../background/tab-orchestration.js';
+import { refreshTabMetrics } from '../background/tracked-tabs.js';
 import { backgroundState } from '../background/state.js';
 
 if (!globalThis.chrome) {
@@ -21,10 +21,10 @@ globalThis.chrome.runtime.sendMessage = (_message, callback) => {
 };
 
 function resetBackgroundState() {
-  backgroundState.watchTabRecordsById = {};
-  backgroundState.watchTabIdsByRemainingTime = [];
-  backgroundState.watchTabIdsInCurrentOrder = [];
-  backgroundState.tabsInCurrentWindowAreKnownToBeSorted = false;
+  backgroundState.watchTabsById = {};
+  backgroundState.watchTabIdsByRemaining = [];
+  backgroundState.watchTabIdsByIndex = [];
+  backgroundState.isWindowSorted = false;
   backgroundState.readinessMetrics = null;
   backgroundState.trackedWindowId = null;
   backgroundState.lastBroadcastSignature = null;
@@ -45,18 +45,18 @@ function makeRecord(overrides = {}) {
     isHidden: false,
     videoDetails: { remainingTime: null, lengthSeconds: null },
     unsuspendedTimestamp: null,
-    remainingTimeMayBeStale: true,
+    isRemainingTimeStale: true,
     ...overrides,
   };
 }
 
 test(
-  'refreshMetricsForTab applies updates to the latest record object after async boundaries',
+  'refreshTabMetrics applies updates to the latest record object after async boundaries',
   { concurrency: false },
   async () => {
     resetBackgroundState();
     const initialRecord = makeRecord();
-    backgroundState.watchTabRecordsById = { 1: initialRecord };
+    backgroundState.watchTabsById = { 1: initialRecord };
 
     globalThis.chrome.tabs.get = (_tabId, callback) => {
       setTimeout(() => {
@@ -84,17 +84,17 @@ test(
       }, 0);
     };
 
-    const refreshPromise = refreshMetricsForTab(1);
+    const refreshPromise = refreshTabMetrics(1);
 
     const replacementRecord = makeRecord();
-    backgroundState.watchTabRecordsById = { 1: replacementRecord };
+    backgroundState.watchTabsById = { 1: replacementRecord };
 
     await refreshPromise;
 
-    assert.equal(backgroundState.watchTabRecordsById[1], replacementRecord);
+    assert.equal(backgroundState.watchTabsById[1], replacementRecord);
     assert.equal(replacementRecord.contentScriptReady, true);
     assert.equal(replacementRecord.videoDetails.lengthSeconds, 120);
     assert.equal(replacementRecord.videoDetails.remainingTime, 100);
-    assert.equal(replacementRecord.remainingTimeMayBeStale, false);
+    assert.equal(replacementRecord.isRemainingTimeStale, false);
   },
 );

@@ -38,7 +38,7 @@ export function insertRowCells(row, tabRecord, isSortedView) {
   insertInfoCells(row, tabRecord, isSortedView, userAction);
 
   const remaining = tabRecord?.videoDetails?.remainingTime;
-  const hasRemainingTime = isFiniteNumber(remaining) && !tabRecord.remainingTimeMayBeStale;
+  const hasRemainingTime = isFiniteNumber(remaining) && !tabRecord.isRemainingTimeStale;
   if (hasRemainingTime && !isSortedView) row.classList.add('ready-row');
 }
 
@@ -49,7 +49,7 @@ function insertInfoCells(row, record, sortedView, userAction) {
     const cell = row.insertCell(row.cells.length);
     const value = column.getter(record, userAction);
 
-    cell.textContent = popupState.tabsInCurrentWindowAreKnownToBeSorted
+    cell.textContent = popupState.isWindowSorted
       ? value
       : getFallbackValue(value);
   });
@@ -97,7 +97,7 @@ export function formatVideoDetails(record, userAction = determineUserAction(reco
   const remaining = record?.videoDetails?.remainingTime;
   const hasRemainingTime = isFiniteNumber(remaining);
 
-  if (record.remainingTimeMayBeStale) {
+  if (record.isRemainingTimeStale) {
     return userAction === USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME
       ? USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME
       : 'unavailable';
@@ -107,8 +107,8 @@ export function formatVideoDetails(record, userAction = determineUserAction(reco
 }
 
 function formatIndex(record) {
-  const idx = record.index;
-  return isFiniteNumber(idx) ? idx + 1 : '';
+  const tabIndex = record.index;
+  return isFiniteNumber(tabIndex) ? tabIndex + 1 : '';
 }
 
 function getFallbackValue(value) {
@@ -119,10 +119,12 @@ function getFallbackValue(value) {
 function formatRemaining(seconds) {
   if (!isFiniteNumber(seconds)) return '—';
   const totalMinutes = Math.floor(seconds / 60);
-  const h = Math.floor(totalMinutes / 60);
-  const m = totalMinutes % 60;
-  const s = Math.floor(seconds % 60);
-  return h < 1 ? `${m}m ${s}s` : `${h}h ${m}m ${s}s`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const wholeSeconds = Math.floor(seconds % 60);
+  return hours < 1
+    ? `${minutes}m ${wholeSeconds}s`
+    : `${hours}h ${minutes}m ${wholeSeconds}s`;
 }
 
 function determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended) {
@@ -155,7 +157,7 @@ export function determineUserAction(tabRecord) {
     return determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended);
   }
 
-  if (tabRecord?.remainingTimeMayBeStale) {
+  if (tabRecord?.isRemainingTimeStale) {
     if (!tabRecord.contentScriptReady || tabRecord.isActiveTab) {
       return determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended);
     }
