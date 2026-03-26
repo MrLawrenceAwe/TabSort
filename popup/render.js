@@ -83,9 +83,12 @@ export async function renderSnapshot(snapshot) {
     const row = document.createElement('tr');
     const tabRecord = tabRecords[tabId];
     if (!tabRecord) continue;
-    tabRecord.isRemainingTimeStale = Boolean(tabRecord.isRemainingTimeStale);
-    if (tabRecord.isRemainingTimeStale) row.classList.add('stale-remaining-row');
-    insertRowCells(row, tabRecord, shouldShowSorted);
+    const normalizedRecord = {
+      ...tabRecord,
+      isRemainingTimeStale: Boolean(tabRecord.isRemainingTimeStale),
+    };
+    if (normalizedRecord.isRemainingTimeStale) row.classList.add('stale-remaining-row');
+    insertRowCells(row, normalizedRecord, shouldShowSorted);
     frag.appendChild(row);
   }
   tbody.replaceChildren(frag);

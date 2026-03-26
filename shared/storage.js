@@ -1,8 +1,12 @@
 import { DEFAULT_SORT_OPTIONS } from './constants.js';
 
+const getChromeApi = () => globalThis.chrome ?? null;
+const getRuntimeLastError = () => getChromeApi()?.runtime?.lastError ?? null;
+
 export function getStorageArea() {
-  if (chrome?.storage?.sync) return chrome.storage.sync;
-  if (chrome?.storage?.local) return chrome.storage.local;
+  const chromeApi = getChromeApi();
+  if (chromeApi?.storage?.sync) return chromeApi.storage.sync;
+  if (chromeApi?.storage?.local) return chromeApi.storage.local;
   return null;
 }
 
@@ -15,7 +19,7 @@ export function loadSortOptions() {
     }
     try {
       storage.get(DEFAULT_SORT_OPTIONS, (items) => {
-        const err = chrome.runtime.lastError;
+        const err = getRuntimeLastError();
         if (err) {
           console.warn(`[TabSort] storage get failed: ${err.message}`);
           resolve({ ...DEFAULT_SORT_OPTIONS });
@@ -39,7 +43,7 @@ export function persistSortOptions(update) {
     }
     try {
       storage.set(update, () => {
-        const err = chrome.runtime.lastError;
+        const err = getRuntimeLastError();
         if (err) {
           console.warn(`[TabSort] storage set failed: ${err.message}`);
         }
