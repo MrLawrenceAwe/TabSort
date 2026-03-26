@@ -7,8 +7,8 @@ export function buildYoutubeTabOrder(unpinnedTabs, orderedTrackedVideoIds) {
   if (!youtubeTabs.length) return [];
 
   const youtubeTrackedVideoTabs = youtubeTabs.filter((tab) => isWatchOrShortsPage(tab.url));
-  const trackedVideoIdsInWindow = youtubeTrackedVideoTabs.map((tab) => tab.id);
-  const orderedFromRecords = orderedTrackedVideoIds.filter((id) => trackedVideoIdsInWindow.includes(id));
+  const trackedVideoIdsInWindow = new Set(youtubeTrackedVideoTabs.map((tab) => tab.id));
+  const orderedFromRecords = orderedTrackedVideoIds.filter((id) => trackedVideoIdsInWindow.has(id));
   const seenWatch = new Set(orderedFromRecords);
   const residualWatch = youtubeTrackedVideoTabs
     .map((tab) => tab.id)

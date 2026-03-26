@@ -69,9 +69,8 @@ function buildExpectedOrder(knownEntries, unknownEntries, currentOrder) {
     .sort((a, b) => a.remainingTime - b.remainingTime)
     .map((entry) => entry.id);
 
-  const unknownIdsInCurrentOrder = currentOrder.filter((id) =>
-    unknownEntries.some((entry) => entry.id === id),
-  );
+  const unknownIds = new Set(unknownEntries.map((entry) => entry.id));
+  const unknownIdsInCurrentOrder = currentOrder.filter((id) => unknownIds.has(id));
 
   return [...knownDurationSortedIds, ...unknownIdsInCurrentOrder];
 }
