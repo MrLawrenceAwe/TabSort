@@ -81,12 +81,12 @@ export async function updateYoutubeWatchTabRecords(windowId, options = {}) {
 
 export async function refreshMetricsForTab(tabId) {
   try {
-    const record = backgroundState.watchTabRecordsById[tabId];
-    if (!record) return;
-
-    if (record.status !== TAB_STATES.UNSUSPENDED) return;
+    let record = backgroundState.watchTabRecordsById[tabId];
+    if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
 
     const tab = await getTab(tabId);
+    record = backgroundState.watchTabRecordsById[tabId];
+    if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
     if (backgroundState.trackedWindowId != null && tab.windowId !== backgroundState.trackedWindowId) return;
     if (tab.windowId != null) {
       record.windowId = tab.windowId;
@@ -97,6 +97,8 @@ export async function refreshMetricsForTab(tabId) {
     if (!isWatch(tab.url)) return;
 
     const result = await sendMessageToTab(tabId, { message: 'getVideoMetrics' });
+    record = backgroundState.watchTabRecordsById[tabId];
+    if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
     if (!result || result.ok !== true) {
       record.contentScriptReady = false;
       if (record.videoDetails && record.videoDetails.remainingTime != null) {
