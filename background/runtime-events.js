@@ -9,7 +9,7 @@ import {
   handleGetTabSnapshot,
   handleSortTrackedTabs,
   handleSyncTrackedTabs,
-} from './handlers/popup-command-handlers.js';
+} from './handlers/popup-handlers.js';
 
 export function registerRuntimeMessageListener() {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

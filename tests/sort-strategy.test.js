@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { buildNonYoutubeOrder, buildYoutubeTabOrder } from '../background/sort-strategy.js';
 
-test('buildYoutubeTabOrder keeps watch tabs in requested order then appends other YouTube tabs', () => {
+test('buildYoutubeTabOrder keeps tracked video tabs in requested order then appends other YouTube tabs', () => {
   const unpinnedTabs = [
     { id: 1, index: 0, url: 'https://www.youtube.com/watch?v=1' },
     { id: 2, index: 1, url: 'https://www.youtube.com/watch?v=2' },
@@ -11,8 +11,8 @@ test('buildYoutubeTabOrder keeps watch tabs in requested order then appends othe
     { id: 4, index: 3, url: 'https://example.com/a' },
   ];
 
-  const orderedWatchIds = [2, 1, 99];
-  assert.deepEqual(buildYoutubeTabOrder(unpinnedTabs, orderedWatchIds), [2, 1, 3]);
+  const orderedTrackedTabIds = [2, 1, 99];
+  assert.deepEqual(buildYoutubeTabOrder(unpinnedTabs, orderedTrackedTabIds), [2, 1, 3]);
 });
 
 test('buildNonYoutubeOrder returns current order when grouping is disabled', () => {

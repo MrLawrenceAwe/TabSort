@@ -17,10 +17,10 @@ globalThis.chrome.runtime.sendMessage = (_message, callback) => {
 };
 
 function resetBackgroundState() {
-  backgroundState.watchTabsById = {};
-  backgroundState.watchTabIdsByRemaining = [];
-  backgroundState.watchTabIdsByIndex = [];
-  backgroundState.isWindowSorted = false;
+  backgroundState.trackedVideoTabsById = {};
+  backgroundState.trackedVideoTabIdsByRemaining = [];
+  backgroundState.trackedVideoTabIdsByIndex = [];
+  backgroundState.areTrackedTabsSorted = false;
   backgroundState.readinessMetrics = null;
   backgroundState.trackedWindowId = null;
   backgroundState.lastBroadcastSignature = null;
@@ -48,7 +48,7 @@ function makeRecord(id, overrides = {}) {
 
 test('orders known remaining-time tabs before unknown tabs', () => {
   resetBackgroundState();
-  backgroundState.watchTabsById = {
+  backgroundState.trackedVideoTabsById = {
     1: makeRecord(1, { index: 0, videoDetails: { remainingTime: 50 }, isRemainingTimeStale: false }),
     2: makeRecord(2, { index: 1, videoDetails: { remainingTime: null }, isRemainingTimeStale: true }),
     3: makeRecord(3, { index: 2, videoDetails: { remainingTime: 10 }, isRemainingTimeStale: false }),
@@ -56,21 +56,21 @@ test('orders known remaining-time tabs before unknown tabs', () => {
 
   recomputeSorting();
 
-  assert.deepEqual(backgroundState.watchTabIdsByRemaining, [3, 1, 2]);
-  assert.deepEqual(backgroundState.watchTabIdsByIndex, [1, 2, 3]);
-  assert.equal(backgroundState.isWindowSorted, false);
+  assert.deepEqual(backgroundState.trackedVideoTabIdsByRemaining, [3, 1, 2]);
+  assert.deepEqual(backgroundState.trackedVideoTabIdsByIndex, [1, 2, 3]);
+  assert.equal(backgroundState.areTrackedTabsSorted, false);
 });
 
 test('marks window as sorted only when all actionable tabs are known and ordered', () => {
   resetBackgroundState();
-  backgroundState.watchTabsById = {
+  backgroundState.trackedVideoTabsById = {
     1: makeRecord(1, { index: 0, videoDetails: { remainingTime: 5 }, isRemainingTimeStale: false }),
     2: makeRecord(2, { index: 1, videoDetails: { remainingTime: 20 }, isRemainingTimeStale: false }),
   };
 
   recomputeSorting();
 
-  assert.equal(backgroundState.isWindowSorted, true);
+  assert.equal(backgroundState.areTrackedTabsSorted, true);
   assert.equal(backgroundState.readinessMetrics.areAllTimesKnown, true);
   assert.equal(backgroundState.readinessMetrics.areAllSorted, true);
   assert.equal(backgroundState.readinessMetrics.areReadyTabsOutOfOrder, false);
@@ -78,7 +78,7 @@ test('marks window as sorted only when all actionable tabs are known and ordered
 
 test('derives readiness metrics for non-contiguous and out-of-order ready subsets', () => {
   resetBackgroundState();
-  backgroundState.watchTabsById = {
+  backgroundState.trackedVideoTabsById = {
     1: makeRecord(1, { index: 0, isRemainingTimeStale: true, isActiveTab: false, isHidden: true }),
     2: makeRecord(2, { index: 1, videoDetails: { remainingTime: 20 }, isRemainingTimeStale: false }),
     3: makeRecord(3, { index: 2, isRemainingTimeStale: true }),
@@ -91,12 +91,12 @@ test('derives readiness metrics for non-contiguous and out-of-order ready subset
   assert.equal(backgroundState.readinessMetrics.areReadyTabsAtFront, false);
   assert.equal(backgroundState.readinessMetrics.areReadyTabsContiguous, false);
   assert.equal(backgroundState.readinessMetrics.areReadyTabsOutOfOrder, true);
-  assert.equal(backgroundState.readinessMetrics.hasHiddenTabsWithStaleRemaining, true);
+  assert.equal(backgroundState.readinessMetrics.hasBackgroundTabsWithStaleRemaining, true);
 });
 
 test('handles records without a finite index deterministically', () => {
   resetBackgroundState();
-  backgroundState.watchTabsById = {
+  backgroundState.trackedVideoTabsById = {
     1: makeRecord(1, { index: 0, videoDetails: { remainingTime: 8 }, isRemainingTimeStale: false }),
     2: makeRecord(2, { index: undefined, videoDetails: { remainingTime: 4 }, isRemainingTimeStale: false }),
     3: makeRecord(3, { index: undefined, videoDetails: { remainingTime: 2 }, isRemainingTimeStale: false }),
@@ -104,13 +104,13 @@ test('handles records without a finite index deterministically', () => {
 
   recomputeSorting();
 
-  assert.deepEqual(backgroundState.watchTabIdsByIndex, [1, 2, 3]);
-  assert.deepEqual(backgroundState.watchTabIdsByRemaining, [3, 2, 1]);
+  assert.deepEqual(backgroundState.trackedVideoTabIdsByIndex, [1, 2, 3]);
+  assert.deepEqual(backgroundState.trackedVideoTabIdsByRemaining, [3, 2, 1]);
 });
 
 test('live tabs do not block sorted readiness for VOD tabs with known remaining times', () => {
   resetBackgroundState();
-  backgroundState.watchTabsById = {
+  backgroundState.trackedVideoTabsById = {
     1: makeRecord(1, { index: 0, videoDetails: { remainingTime: 5 }, isRemainingTimeStale: false }),
     2: makeRecord(2, { index: 1, videoDetails: { remainingTime: 15 }, isRemainingTimeStale: false }),
     3: makeRecord(3, {
@@ -123,10 +123,10 @@ test('live tabs do not block sorted readiness for VOD tabs with known remaining 
 
   recomputeSorting();
 
-  assert.equal(backgroundState.isWindowSorted, true);
+  assert.equal(backgroundState.areTrackedTabsSorted, true);
   assert.equal(backgroundState.readinessMetrics.trackedTabCount, 2);
   assert.equal(backgroundState.readinessMetrics.readyTabCount, 2);
   assert.equal(backgroundState.readinessMetrics.areAllTimesKnown, true);
   assert.equal(backgroundState.readinessMetrics.areAllSorted, true);
-  assert.deepEqual(backgroundState.watchTabIdsByRemaining, [1, 2]);
+  assert.deepEqual(backgroundState.trackedVideoTabIdsByRemaining, [1, 2]);
 });

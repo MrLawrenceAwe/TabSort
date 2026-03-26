@@ -3,7 +3,7 @@ import { inferIsLiveNow } from '../shared/live-detection.js';
 import { isFiniteNumber } from '../shared/utils.js';
 import { getTabDetailsHint, getVideoEl } from './youtube-page-details.js';
 
-const sharedRuntime = {
+const contentDeps = {
   mediaReadyStateThreshold: MEDIA_READY_STATE_THRESHOLD,
   isFiniteNumber,
   inferIsLiveNow,
@@ -35,16 +35,16 @@ function safeSendMessage(payload, context) {
   }
 }
 
-function getDetailsHint() {
+function collectTabDetails() {
   return getTabDetailsHint({
-    inferIsLiveNow: sharedRuntime.inferIsLiveNow,
+    inferIsLiveNow: contentDeps.inferIsLiveNow,
     logContentError,
   });
 }
 
 function sendTabDetailsHint() {
   try {
-    const details = getDetailsHint();
+    const details = collectTabDetails();
     if (details.title || details.lengthSeconds != null || details.isLive) {
       safeSendMessage({ message: 'tabDetailsHint', details }, 'tab details hint');
     }
@@ -74,8 +74,8 @@ function attachVideoReadyListener() {
   const onAny = () => send();
 
   if (
-    video.readyState >= sharedRuntime.mediaReadyStateThreshold &&
-    sharedRuntime.isFiniteNumber(video.duration)
+    video.readyState >= contentDeps.mediaReadyStateThreshold &&
+    contentDeps.isFiniteNumber(video.duration)
   ) {
     send();
   } else {
@@ -137,16 +137,16 @@ function handleGetVideoMetrics(message, sendResponse) {
   if (!message || message.message !== 'getVideoMetrics') return false;
 
   const video = getVideoEl();
-  const details = getDetailsHint();
+  const details = collectTabDetails();
   const payload = {
     title: details.title || null,
     url: details.url,
-    lengthSeconds: sharedRuntime.isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
+    lengthSeconds: contentDeps.isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
     isLive: Boolean(details.isLive),
-    duration: video && sharedRuntime.isFiniteNumber(video.duration) ? video.duration : null,
-    currentTime: video && sharedRuntime.isFiniteNumber(video.currentTime) ? video.currentTime : null,
+    duration: video && contentDeps.isFiniteNumber(video.duration) ? video.duration : null,
+    currentTime: video && contentDeps.isFiniteNumber(video.currentTime) ? video.currentTime : null,
     playbackRate:
-      video && sharedRuntime.isFiniteNumber(video.playbackRate) && video.playbackRate > 0
+      video && contentDeps.isFiniteNumber(video.playbackRate) && video.playbackRate > 0
         ? video.playbackRate
         : 1,
     paused: video ? video.paused : null,

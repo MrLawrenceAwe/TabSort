@@ -2,7 +2,7 @@ export function createEmptyReadinessMetrics() {
   return {
     trackedTabCount: 0,
     readyTabCount: 0,
-    hasHiddenTabsWithStaleRemaining: false,
+    hasBackgroundTabsWithStaleRemaining: false,
     areReadyTabsContiguous: true,
     areReadyTabsAtFront: true,
     areReadyTabsOutOfOrder: false,

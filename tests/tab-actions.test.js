@@ -41,10 +41,10 @@ function makeRecord(overrides = {}) {
 }
 
 function resetBackgroundState() {
-  backgroundState.watchTabsById = {};
-  backgroundState.watchTabIdsByRemaining = [];
-  backgroundState.watchTabIdsByIndex = [];
-  backgroundState.isWindowSorted = false;
+  backgroundState.trackedVideoTabsById = {};
+  backgroundState.trackedVideoTabIdsByRemaining = [];
+  backgroundState.trackedVideoTabIdsByIndex = [];
+  backgroundState.areTrackedTabsSorted = false;
   backgroundState.readinessMetrics = null;
   backgroundState.trackedWindowId = null;
   backgroundState.lastBroadcastSignature = null;
@@ -52,10 +52,10 @@ function resetBackgroundState() {
 
 test('reloadTab does not mutate record state when chrome.tabs.reload fails', { concurrency: false }, async () => {
   resetBackgroundState();
-  backgroundState.watchTabsById = {
+  backgroundState.trackedVideoTabsById = {
     1: makeRecord(),
   };
-  const before = JSON.parse(JSON.stringify(backgroundState.watchTabsById[1]));
+  const before = JSON.parse(JSON.stringify(backgroundState.trackedVideoTabsById[1]));
 
   globalThis.chrome.tabs.reload = async () => {
     throw new Error('reload failed');
@@ -63,12 +63,12 @@ test('reloadTab does not mutate record state when chrome.tabs.reload fails', { c
 
   await reloadTab({ tabId: 1, windowId: 1 });
 
-  assert.deepEqual(backgroundState.watchTabsById[1], before);
+  assert.deepEqual(backgroundState.trackedVideoTabsById[1], before);
 });
 
 test('reloadTab marks record loading only after successful reload call', { concurrency: false }, async () => {
   resetBackgroundState();
-  backgroundState.watchTabsById = {
+  backgroundState.trackedVideoTabsById = {
     1: makeRecord(),
   };
 
@@ -76,7 +76,7 @@ test('reloadTab marks record loading only after successful reload call', { concu
 
   await reloadTab({ tabId: 1, windowId: 1 });
 
-  const record = backgroundState.watchTabsById[1];
+  const record = backgroundState.trackedVideoTabsById[1];
   assert.equal(record.status, TAB_STATES.LOADING);
   assert.equal(record.contentScriptReady, false);
   assert.equal(record.metadataLoaded, false);

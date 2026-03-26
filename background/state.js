@@ -1,10 +1,10 @@
 import { isValidWindowId } from '../shared/utils.js';
 
 export const backgroundState = {
-  watchTabsById: {},
-  watchTabIdsByRemaining: [],
-  watchTabIdsByIndex: [],
-  isWindowSorted: false,
+  trackedVideoTabsById: {},
+  trackedVideoTabIdsByRemaining: [],
+  trackedVideoTabIdsByIndex: [],
+  areTrackedTabsSorted: false,
   readinessMetrics: null,
   trackedWindowId: null,
   lastBroadcastSignature: null,
@@ -13,7 +13,7 @@ export const backgroundState = {
 
 export const now = () => Date.now();
 
-export function resolveTrackedWindowId(windowId, { force = false } = {}) {
+export function setTrackedWindowIdIfNeeded(windowId, { force = false } = {}) {
   if (isValidWindowId(windowId)) {
     if (force || !isValidWindowId(backgroundState.trackedWindowId)) {
       backgroundState.trackedWindowId = windowId;

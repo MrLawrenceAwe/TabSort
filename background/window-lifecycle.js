@@ -1,7 +1,7 @@
 import { REFRESH_ALARM_NAME, REFRESH_INTERVAL_MINUTES } from '../shared/constants.js';
 import { isValidWindowId } from '../shared/utils.js';
 import { recomputeSorting } from './ordering.js';
-import { backgroundState, resolveTrackedWindowId } from './state.js';
+import { backgroundState, setTrackedWindowIdIfNeeded } from './state.js';
 import { refreshTabMetrics, syncTrackedTabs } from './tracked-tabs.js';
 import { logListenerError, withErrorLogging } from './listener-helpers.js';
 
@@ -25,8 +25,8 @@ const getLastFocusedWindowId = () =>
   });
 
 export function resetTrackedWindow() {
-  resolveTrackedWindowId(null, { force: true });
-  backgroundState.watchTabsById = {};
+  setTrackedWindowIdIfNeeded(null, { force: true });
+  backgroundState.trackedVideoTabsById = {};
   backgroundState.lastBroadcastSignature = null;
   recomputeSorting();
 }
@@ -36,7 +36,7 @@ async function rehydrateTrackedWindowState() {
   const targetWindowId = isValidWindowId(lastFocusedWindowId) ? lastFocusedWindowId : null;
   await syncTrackedTabs(targetWindowId, { force: true });
 
-  const ids = Object.keys(backgroundState.watchTabsById).map(Number);
+  const ids = Object.keys(backgroundState.trackedVideoTabsById).map(Number);
   if (ids.length) {
     await Promise.all(ids.map(refreshTabMetrics));
   }
@@ -73,7 +73,7 @@ export function initializeWindowLifecycle() {
     withErrorLogging('alarms.onAlarm', async (alarm) => {
       if (alarm.name !== REFRESH_ALARM_NAME) return;
       await syncTrackedTabs(backgroundState.trackedWindowId, { force: true });
-      const ids = Object.keys(backgroundState.watchTabsById).map(Number);
+      const ids = Object.keys(backgroundState.trackedVideoTabsById).map(Number);
       await Promise.all(ids.map(refreshTabMetrics));
     }),
   );
@@ -90,7 +90,7 @@ export function initializeWindowLifecycle() {
     withErrorLogging('windows.onFocusChanged', async (windowId) => {
       if (!isValidWindowId(windowId)) return;
       if (windowId === backgroundState.trackedWindowId) return;
-      resolveTrackedWindowId(windowId, { force: true });
+      setTrackedWindowIdIfNeeded(windowId, { force: true });
       await syncTrackedTabs(windowId, { force: true });
     }),
   );

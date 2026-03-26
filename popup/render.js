@@ -16,7 +16,7 @@ const SNAPSHOT_MAX_ATTEMPTS = 2;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const isValidSnapshot = (snapshot) =>
-  snapshot && typeof snapshot === 'object' && 'watchTabsById' in snapshot;
+  snapshot && typeof snapshot === 'object' && 'trackedVideoTabsById' in snapshot;
 
 async function requestSnapshotWithRetry() {
   let lastError = null;
@@ -57,21 +57,21 @@ export async function renderSnapshot(snapshot) {
   if (!table) return;
   const tbody = table.tBodies[0] ?? table.createTBody();
 
-  const tabRecords = snapshot.watchTabsById || {};
-  const currentOrderIds = snapshot.watchTabIdsByIndex || [];
+  const tabRecords = snapshot.trackedVideoTabsById || {};
+  const currentOrderIds = snapshot.trackedVideoTabIdsByIndex || [];
 
   const metrics = { ...EMPTY_READINESS_METRICS, ...(snapshot.readinessMetrics || {}) };
-  const backgroundSortedFlag = snapshot.isWindowSorted === true;
+  const backgroundSortedFlag = snapshot.areTrackedTabsSorted === true;
   const shouldShowSorted =
     metrics.areAllSorted ||
     (backgroundSortedFlag && metrics.areAllTimesKnown && !metrics.areReadyTabsOutOfOrder);
 
   updateSortingState({
-    isWindowSorted: shouldShowSorted,
+    areTrackedTabsSorted: shouldShowSorted,
     trackedTabCount: metrics.trackedTabCount,
     readyTabCount: metrics.readyTabCount,
     areReadyTabsOutOfOrder: metrics.areReadyTabsOutOfOrder,
-    hasHiddenTabsWithStaleRemaining: metrics.hasHiddenTabsWithStaleRemaining,
+    hasBackgroundTabsWithStaleRemaining: metrics.hasBackgroundTabsWithStaleRemaining,
     areReadyTabsContiguous: metrics.areReadyTabsContiguous,
     areReadyTabsAtFront: metrics.areReadyTabsAtFront,
   });

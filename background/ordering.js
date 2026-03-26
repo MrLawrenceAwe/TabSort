@@ -21,21 +21,21 @@ function areIdListsEqual(a, b) {
 
 export function buildTabSnapshot() {
   const records = Object.fromEntries(
-    Object.entries(backgroundState.watchTabsById).map(([id, record]) => [
+    Object.entries(backgroundState.trackedVideoTabsById).map(([id, record]) => [
       id,
       cloneRecord(record),
     ]),
   );
 
   return {
-    watchTabsById: records,
-    watchTabIdsByRemaining: [
-      ...backgroundState.watchTabIdsByRemaining,
+    trackedVideoTabsById: records,
+    trackedVideoTabIdsByRemaining: [
+      ...backgroundState.trackedVideoTabIdsByRemaining,
     ],
-    watchTabIdsByIndex: [
-      ...backgroundState.watchTabIdsByIndex,
+    trackedVideoTabIdsByIndex: [
+      ...backgroundState.trackedVideoTabIdsByIndex,
     ],
-    isWindowSorted: backgroundState.isWindowSorted,
+    areTrackedTabsSorted: backgroundState.areTrackedTabsSorted,
     readinessMetrics: {
       ...(backgroundState.readinessMetrics || createEmptyReadinessMetrics()),
     },
@@ -87,7 +87,7 @@ function buildReadinessMetrics(records, currentOrder) {
   const recordMap = new Map(records.map((record) => [record.id, record]));
   const trackedTabCount = records.length;
 
-  let hasHiddenTabsWithStaleRemaining = false;
+  let hasBackgroundTabsWithStaleRemaining = false;
   let readyTabCount = 0;
   let areReadyTabsContiguous = true;
   let areReadyTabsAtFront = true;
@@ -107,7 +107,7 @@ function buildReadinessMetrics(records, currentOrder) {
     orderedIdsWithRecords.push(tabId);
 
     if (record.isRemainingTimeStale && (!record.isActiveTab || record.isHidden)) {
-      hasHiddenTabsWithStaleRemaining = true;
+      hasBackgroundTabsWithStaleRemaining = true;
     }
 
     const isReady = hasFreshRemainingTime(record);
@@ -147,7 +147,7 @@ function buildReadinessMetrics(records, currentOrder) {
   return {
     trackedTabCount,
     readyTabCount,
-    hasHiddenTabsWithStaleRemaining,
+    hasBackgroundTabsWithStaleRemaining,
     areReadyTabsContiguous,
     areReadyTabsAtFront,
     areReadyTabsOutOfOrder,
@@ -191,9 +191,9 @@ function updateBackgroundOrderingState({
   alreadyInExpectedOrder,
   readinessMetrics,
 }) {
-  backgroundState.watchTabIdsByRemaining = expectedOrder;
-  backgroundState.watchTabIdsByIndex = displayOrder;
-  backgroundState.isWindowSorted =
+  backgroundState.trackedVideoTabIdsByRemaining = expectedOrder;
+  backgroundState.trackedVideoTabIdsByIndex = displayOrder;
+  backgroundState.areTrackedTabsSorted =
     allRemainingTimesKnown && alreadyInExpectedOrder;
   backgroundState.readinessMetrics = readinessMetrics ? { ...readinessMetrics } : null;
 
@@ -201,7 +201,7 @@ function updateBackgroundOrderingState({
 }
 
 export function recomputeSorting() {
-  const records = Object.values(backgroundState.watchTabsById);
+  const records = Object.values(backgroundState.trackedVideoTabsById);
   const derivedState = computeDerivedOrderingState(records);
   updateBackgroundOrderingState(derivedState);
 }
