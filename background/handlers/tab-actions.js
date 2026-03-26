@@ -1,13 +1,13 @@
 import { TAB_STATES } from '../../shared/constants.js';
 import { isFiniteNumber, isValidWindowId } from '../../shared/utils.js';
-import { backgroundState, now, resolveTrackedWindowId } from '../state.js';
+import { backgroundState, now, setTrackedWindowIdIfNeeded } from '../state.js';
 import { recomputeSorting } from '../ordering.js';
 
 export async function activateTab(message) {
     const tabId = message.tabId;
     if (!isFiniteNumber(tabId)) return;
     if (isValidWindowId(message.windowId)) {
-        resolveTrackedWindowId(message.windowId, { force: true });
+        setTrackedWindowIdIfNeeded(message.windowId, { force: true });
     }
     try {
         await chrome.tabs.update(tabId, { active: true });
@@ -18,7 +18,7 @@ export async function reloadTab(message) {
     const tabId = message.tabId;
     if (!isFiniteNumber(tabId)) return;
     if (isValidWindowId(message.windowId)) {
-        resolveTrackedWindowId(message.windowId, { force: true });
+        setTrackedWindowIdIfNeeded(message.windowId, { force: true });
     }
     let reloadSucceeded = false;
     try {
@@ -26,7 +26,7 @@ export async function reloadTab(message) {
         reloadSucceeded = true;
     } catch (_) {}
     if (!reloadSucceeded) return;
-    const record = backgroundState.watchTabsById[tabId];
+    const record = backgroundState.trackedVideoTabsById[tabId];
     if (record) {
         record.status = TAB_STATES.LOADING;
         record.unsuspendedTimestamp = now();

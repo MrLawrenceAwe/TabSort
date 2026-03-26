@@ -1,5 +1,5 @@
 import { TAB_STATES } from '../shared/constants.js';
-import { now, resolveTrackedWindowId } from './state.js';
+import { now, setTrackedWindowIdIfNeeded } from './state.js';
 
 export async function moveTabsSequentially(tabIds, startingIndex = 0) {
   let targetIndex = startingIndex;
@@ -36,7 +36,7 @@ export function queryTabs(query) {
 }
 
 export async function getTabsForTrackedWindow(windowId, options = {}) {
-  const targetWindowId = resolveTrackedWindowId(windowId, options);
+  const targetWindowId = setTrackedWindowIdIfNeeded(windowId, options);
   const baseQuery =
     targetWindowId != null ? { windowId: targetWindowId } : { currentWindow: true };
 

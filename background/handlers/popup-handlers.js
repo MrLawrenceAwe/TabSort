@@ -1,5 +1,5 @@
 import { isValidWindowId } from '../../shared/utils.js';
-import { backgroundState, resolveTrackedWindowId } from '../state.js';
+import { backgroundState, setTrackedWindowIdIfNeeded } from '../state.js';
 import {
     refreshTabMetrics,
     sortTrackedTabsInWindow,
@@ -7,17 +7,17 @@ import {
 } from '../tracked-tabs.js';
 import { buildTabSnapshot } from '../ordering.js';
 
-export function toForceRefreshOption(windowId) {
+export function buildForceSyncOptions(windowId) {
     return isValidWindowId(windowId) ? { force: true } : undefined;
 }
 
 export async function handleSyncTrackedTabs(message) {
-    await syncTrackedTabs(message.windowId, toForceRefreshOption(message.windowId));
+    await syncTrackedTabs(message.windowId, buildForceSyncOptions(message.windowId));
 }
 
 export async function handleGetTabSnapshot(message) {
-    await syncTrackedTabs(message.windowId, toForceRefreshOption(message.windowId));
-    const ids = Object.keys(backgroundState.watchTabsById).map(Number);
+    await syncTrackedTabs(message.windowId, buildForceSyncOptions(message.windowId));
+    const ids = Object.keys(backgroundState.trackedVideoTabsById).map(Number);
     await Promise.all(ids.map(refreshTabMetrics));
     return buildTabSnapshot();
 }
@@ -27,8 +27,8 @@ export async function handleSortTrackedTabs(message) {
         ? message.windowId
         : backgroundState.trackedWindowId;
     if (isValidWindowId(targetWindowId)) {
-        resolveTrackedWindowId(targetWindowId, { force: true });
+        setTrackedWindowIdIfNeeded(targetWindowId, { force: true });
     }
     await sortTrackedTabsInWindow(targetWindowId);
-    await syncTrackedTabs(targetWindowId, toForceRefreshOption(targetWindowId));
+    await syncTrackedTabs(targetWindowId, buildForceSyncOptions(targetWindowId));
 }

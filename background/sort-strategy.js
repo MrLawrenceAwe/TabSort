@@ -1,25 +1,25 @@
 import { getHostnameKey, isWatchOrShortsPage, isYoutubeDomain } from './youtube-url-utils.js';
 
-export function buildYoutubeTabOrder(unpinnedTabs, orderedTrackedVideoIds) {
+export function buildYoutubeTabOrder(unpinnedTabs, orderedTrackedTabIds) {
   const youtubeTabs = unpinnedTabs
     .filter((tab) => tab && isYoutubeDomain(tab.url))
     .sort((a, b) => a.index - b.index);
   if (!youtubeTabs.length) return [];
 
-  const youtubeTrackedVideoTabs = youtubeTabs.filter((tab) => isWatchOrShortsPage(tab.url));
-  const trackedVideoIdsInWindow = new Set(youtubeTrackedVideoTabs.map((tab) => tab.id));
-  const orderedFromRecords = orderedTrackedVideoIds.filter((id) => trackedVideoIdsInWindow.has(id));
-  const seenWatch = new Set(orderedFromRecords);
-  const residualWatch = youtubeTrackedVideoTabs
+  const youtubeTrackedTabs = youtubeTabs.filter((tab) => isWatchOrShortsPage(tab.url));
+  const trackedTabIdsInWindow = new Set(youtubeTrackedTabs.map((tab) => tab.id));
+  const orderedFromRecords = orderedTrackedTabIds.filter((id) => trackedTabIdsInWindow.has(id));
+  const seenTrackedTabIds = new Set(orderedFromRecords);
+  const remainingTrackedTabIds = youtubeTrackedTabs
     .map((tab) => tab.id)
-    .filter((id) => !seenWatch.has(id));
-  residualWatch.forEach((id) => seenWatch.add(id));
+    .filter((id) => !seenTrackedTabIds.has(id));
+  remainingTrackedTabIds.forEach((id) => seenTrackedTabIds.add(id));
 
   const otherYoutube = youtubeTabs
-    .filter((tab) => !seenWatch.has(tab.id))
+    .filter((tab) => !seenTrackedTabIds.has(tab.id))
     .map((tab) => tab.id);
 
-  return [...orderedFromRecords, ...residualWatch, ...otherYoutube];
+  return [...orderedFromRecords, ...remainingTrackedTabIds, ...otherYoutube];
 }
 
 export function buildNonYoutubeOrder(unpinnedTabs, groupByDomain) {

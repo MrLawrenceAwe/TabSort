@@ -49,7 +49,7 @@ function insertInfoCells(row, record, sortedView, userAction) {
     const cell = row.insertCell(row.cells.length);
     const value = column.getter(record, userAction);
 
-    cell.textContent = popupState.isWindowSorted
+    cell.textContent = popupState.areTrackedTabsSorted
       ? value
       : getFallbackValue(value);
   });

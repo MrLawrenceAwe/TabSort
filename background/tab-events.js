@@ -60,7 +60,7 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
 
   chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     if (!shouldHandleWindow(removeInfo?.windowId)) return;
-    delete backgroundState.watchTabsById[tabId];
+    delete backgroundState.trackedVideoTabsById[tabId];
     if (removeInfo?.isWindowClosing && removeInfo.windowId === backgroundState.trackedWindowId) {
       if (typeof onTrackedWindowClosed === 'function') {
         onTrackedWindowClosed();

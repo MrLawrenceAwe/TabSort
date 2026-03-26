@@ -30,7 +30,7 @@ export function ensureTabRecord(tabId, senderWindowId, defaults = {}) {
     return undefined;
   }
 
-  const records = backgroundState.watchTabsById;
+  const records = backgroundState.trackedVideoTabsById;
   let record = records[tabId];
 
   if (!record) {

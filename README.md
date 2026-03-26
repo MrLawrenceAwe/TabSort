@@ -1,6 +1,6 @@
 # TabSort for YouTube
 
-Chrome extension that keeps YouTube watch and shorts tabs organised by the time you still have left in each video. It tracks every watch tab in the current window, gathers the remaining playback times and lets you sort the ready tabs with one click.
+Chrome extension that keeps YouTube video tabs organised by the time you still have left in each video. It tracks watch and shorts tabs in the current window, gathers the remaining playback times and lets you sort the ready tabs with one click.
 
 ## Install (unpacked)
 
@@ -10,11 +10,11 @@ Chrome extension that keeps YouTube watch and shorts tabs organised by the time 
 
 ## Using the popup
 
-- Open some YouTube watch pages in the same Chrome window, then click the TabSort extension.
-- The popup lists each watch tab, shows whether its remaining time is known, and highlights tabs that are ready.
+- Open some YouTube watch or shorts pages in the same Chrome window, then click the TabSort extension.
+- The popup lists each tracked video tab, shows whether its remaining time is known, and highlights tabs that are ready.
 - Follow the suggested action links (reload/interact) if a tab is missing metadata.
 - When at least two tabs have known remaining time and are out of order, the **Sort** button appears; click it to reorder the ready tabs.
-- When you sort, all YouTube tabs (watch, home, shorts, etc.) move to the front with watch pages first; tick the popup option if you also want the remaining non-YouTube tabs grouped by domain.
+- When you sort, all YouTube tabs (watch, home, shorts, etc.) move to the front with tracked video pages first; tick the popup option if you also want the remaining non-YouTube tabs grouped by domain.
 - If the popup warns that a background tab needs viewing, open that tab once so Chrome exposes the accurate remaining time.
 
 ## Development

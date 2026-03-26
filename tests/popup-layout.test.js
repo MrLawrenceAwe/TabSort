@@ -8,18 +8,18 @@ test(
   'getHiddenWarningMessage reflects hidden stale-remaining state',
   { concurrency: false },
   () => {
-    const original = popupState.hasHiddenTabsWithStaleRemaining;
+    const original = popupState.hasBackgroundTabsWithStaleRemaining;
     try {
-      popupState.hasHiddenTabsWithStaleRemaining = false;
+      popupState.hasBackgroundTabsWithStaleRemaining = false;
       assert.equal(getHiddenWarningMessage(), '');
 
-      popupState.hasHiddenTabsWithStaleRemaining = true;
+      popupState.hasBackgroundTabsWithStaleRemaining = true;
       assert.equal(
         getHiddenWarningMessage(),
         'Some background tabs may have stale remaining time. Open each tab once to refresh.',
       );
     } finally {
-      popupState.hasHiddenTabsWithStaleRemaining = original;
+      popupState.hasBackgroundTabsWithStaleRemaining = original;
     }
   },
 );

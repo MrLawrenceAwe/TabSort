@@ -14,7 +14,7 @@ const domCache = {
 export function initializeDomCache() {
   if (domCache.initialized) return;
 
-  domCache.statusElement = document.getElementById('youtubeWatchTabsReadyStatus');
+  domCache.statusElement = document.getElementById('videoTabsReadyStatus');
   domCache.sortButton = document.getElementById('sortButton');
   domCache.tabsSortedElement = document.getElementById('tabsSorted');
   domCache.table = document.getElementById('infoTable');
@@ -31,7 +31,7 @@ function getCachedElement(key) {
 
 function updateStatus(statusElement) {
   if (!statusElement) return;
-  if (!popupState.isWindowSorted) {
+  if (!popupState.areTrackedTabsSorted) {
     statusElement.style.display = popupState.trackedTabCount <= 1 ? 'none' : 'block';
     statusElement.textContent = `${popupState.readyTabCount}/${popupState.trackedTabCount} ready for sort.`;
     statusElement.style.color = 'var(--status-text-color)';
@@ -42,11 +42,11 @@ function updateStatus(statusElement) {
 
 function updateTabsSorted(tabsSortedElement) {
   if (!tabsSortedElement) return;
-  tabsSortedElement.style.display = popupState.isWindowSorted ? 'block' : 'none';
+  tabsSortedElement.style.display = popupState.areTrackedTabsSorted ? 'block' : 'none';
 }
 
 export function getHiddenWarningMessage() {
-  if (!popupState.hasHiddenTabsWithStaleRemaining) return '';
+  if (!popupState.hasBackgroundTabsWithStaleRemaining) return '';
   return 'Some background tabs may have stale remaining time. Open each tab once to refresh.';
 }
 
@@ -109,7 +109,7 @@ export function updateHeaderFooter() {
     readySubsetExists && (!popupState.areReadyTabsContiguous || !popupState.areReadyTabsAtFront);
   const shouldShowSort =
     popupState.readyTabCount >= 2 &&
-    !popupState.isWindowSorted &&
+    !popupState.areTrackedTabsSorted &&
     (popupState.areReadyTabsOutOfOrder || readySubsetNeedsSorting);
 
   setOptionToggleVisibility(shouldShowSort);
@@ -119,7 +119,7 @@ export function updateHeaderFooter() {
   updateHiddenWarning(hiddenWarningElement);
   updateSortButton(sortButton, shouldShowSort);
 
-  if (popupState.isWindowSorted && table) {
+  if (popupState.areTrackedTabsSorted && table) {
     clearReadyRows(table);
   }
 }

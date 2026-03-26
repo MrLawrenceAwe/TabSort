@@ -1,5 +1,5 @@
 import { isFiniteNumber } from '../../shared/utils.js';
-import { backgroundState, resolveTrackedWindowId } from '../state.js';
+import { backgroundState, setTrackedWindowIdIfNeeded } from '../state.js';
 import { refreshTabMetrics } from '../tracked-tabs.js';
 import { broadcastTabSnapshot, recomputeSorting } from '../ordering.js';
 import { ensureTabRecord } from '../tab-record.js';
@@ -13,7 +13,7 @@ export async function handleContentScriptReady(_message, sender) {
     const tabId = sender?.tab?.id;
     const senderWindowId = sender?.tab?.windowId;
     if (!canUseSenderWindow(senderWindowId)) return;
-    resolveTrackedWindowId(senderWindowId);
+    setTrackedWindowIdIfNeeded(senderWindowId);
     if (!isFiniteNumber(tabId)) return;
     const record = ensureTabRecord(tabId, senderWindowId);
     record.contentScriptReady = true;
@@ -26,9 +26,9 @@ export async function handleMetadataLoaded(_message, sender) {
     const tabId = sender?.tab?.id;
     const senderWindowId = sender?.tab?.windowId;
     if (!canUseSenderWindow(senderWindowId)) return;
-    resolveTrackedWindowId(senderWindowId);
+    setTrackedWindowIdIfNeeded(senderWindowId);
     if (!isFiniteNumber(tabId)) return;
-    const record = backgroundState.watchTabsById[tabId];
+    const record = backgroundState.trackedVideoTabsById[tabId];
     if (record) record.metadataLoaded = true;
     broadcastTabSnapshot();
     await refreshTabMetrics(tabId);
@@ -39,7 +39,7 @@ export async function handleTabDetailsHint(message, sender) {
     const details = message.details || {};
     const senderWindowId = sender?.tab?.windowId;
     if (!canUseSenderWindow(senderWindowId)) return;
-    resolveTrackedWindowId(senderWindowId);
+    setTrackedWindowIdIfNeeded(senderWindowId);
     if (!isFiniteNumber(tabId)) return;
     const record = ensureTabRecord(tabId, senderWindowId, {
         url: details.url || sender?.tab?.url,

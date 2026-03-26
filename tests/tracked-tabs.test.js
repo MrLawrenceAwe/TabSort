@@ -21,10 +21,10 @@ globalThis.chrome.runtime.sendMessage = (_message, callback) => {
 };
 
 function resetBackgroundState() {
-  backgroundState.watchTabsById = {};
-  backgroundState.watchTabIdsByRemaining = [];
-  backgroundState.watchTabIdsByIndex = [];
-  backgroundState.isWindowSorted = false;
+  backgroundState.trackedVideoTabsById = {};
+  backgroundState.trackedVideoTabIdsByRemaining = [];
+  backgroundState.trackedVideoTabIdsByIndex = [];
+  backgroundState.areTrackedTabsSorted = false;
   backgroundState.readinessMetrics = null;
   backgroundState.trackedWindowId = null;
   backgroundState.lastBroadcastSignature = null;
@@ -56,7 +56,7 @@ test(
   async () => {
     resetBackgroundState();
     const initialRecord = makeRecord();
-    backgroundState.watchTabsById = { 1: initialRecord };
+    backgroundState.trackedVideoTabsById = { 1: initialRecord };
 
     globalThis.chrome.tabs.get = (_tabId, callback) => {
       setTimeout(() => {
@@ -87,11 +87,11 @@ test(
     const refreshPromise = refreshTabMetrics(1);
 
     const replacementRecord = makeRecord();
-    backgroundState.watchTabsById = { 1: replacementRecord };
+    backgroundState.trackedVideoTabsById = { 1: replacementRecord };
 
     await refreshPromise;
 
-    assert.equal(backgroundState.watchTabsById[1], replacementRecord);
+    assert.equal(backgroundState.trackedVideoTabsById[1], replacementRecord);
     assert.equal(replacementRecord.contentScriptReady, true);
     assert.equal(replacementRecord.videoDetails.lengthSeconds, 120);
     assert.equal(replacementRecord.videoDetails.remainingTime, 100);
