@@ -27,5 +27,17 @@
         "js": ["content/youtube-content-script.js"],
         "run_at": "document_end"
       }
+    ],
+    "web_accessible_resources": [
+      {
+        "resources": [
+          "content/youtube-content-main.js",
+          "content/youtube-page-details.js",
+          "shared/constants.js",
+          "shared/live-detection.js",
+          "shared/utils.js"
+        ],
+        "matches": ["*://*.youtube.com/*"]
+      }
     ]
   }

@@ -95,10 +95,6 @@ export function setOptionToggleVisibility(visible) {
   });
 }
 
-export function shouldShowSortButton(state = popupState) {
-  return Boolean(state?.canSortWindow);
-}
-
 export function updateHeaderFooter() {
   const statusElement = getCachedElement('statusElement');
   const sortButton = getCachedElement('sortButton');
@@ -106,7 +102,15 @@ export function updateHeaderFooter() {
   const table = getCachedElement('table');
   const hiddenWarningElement = getCachedElement('hiddenWarningElement');
 
-  const shouldShowSort = shouldShowSortButton();
+  const readySubsetExists =
+    popupState.readyTabCount >= 2 &&
+    popupState.readyTabCount < popupState.trackedTabCount;
+  const readySubsetNeedsSorting =
+    readySubsetExists && (!popupState.areReadyTabsContiguous || !popupState.areReadyTabsAtFront);
+  const shouldShowSort =
+    popupState.readyTabCount >= 2 &&
+    !popupState.areTrackedTabsSorted &&
+    (popupState.areReadyTabsOutOfOrder || readySubsetNeedsSorting);
 
   setOptionToggleVisibility(shouldShowSort);
 
