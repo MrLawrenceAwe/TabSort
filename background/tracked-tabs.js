@@ -1,32 +1,32 @@
 import { TAB_STATES } from '../shared/constants.js';
 import { isFiniteNumber, isValidWindowId } from '../shared/guards.js';
-import { backgroundStore, setTrackedWindowIdIfNeeded } from './background-store.js';
+import { backgroundStore, updateTrackedWindowId } from './store.js';
 import { recomputeSortState } from './sort-state.js';
 import {
   getTab,
-  getTabsForTrackedWindow,
+  getTabState,
+  listWindowTabs,
   sendMessageToTab,
-  setLoadingStartTimestamp,
-  setUnsuspendTimestamp,
-  statusFromTab,
-} from './tab-service.js';
+} from './chrome-tabs.js';
+import { updateLoadStart, updateUnsuspendTime } from './tab-state.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 
-export async function syncTrackedTabs(windowId, options = {}) {
-  const refreshGeneration = (backgroundStore.refreshToken += 1);
-  const { tabs, windowId: targetWindowId } = await getTabsForTrackedWindow(windowId, options);
-  if (refreshGeneration !== backgroundStore.refreshToken) return;
-  if (targetWindowId == null && tabs.length === 0) return;
+export async function syncTrackedWindowTabs(windowId, options = {}) {
+  const syncToken = (backgroundStore.syncToken += 1);
+  const resolvedWindowId = updateTrackedWindowId(windowId, options);
+  const tabs = await listWindowTabs(resolvedWindowId);
+  if (syncToken !== backgroundStore.syncToken) return;
+  if (resolvedWindowId == null && tabs.length === 0) return;
 
   if (
-    isValidWindowId(targetWindowId) &&
+    isValidWindowId(resolvedWindowId) &&
     isValidWindowId(backgroundStore.trackedWindowId) &&
-    targetWindowId !== backgroundStore.trackedWindowId
+    resolvedWindowId !== backgroundStore.trackedWindowId
   ) {
     return;
   }
 
-  const previousRecords = backgroundStore.trackedVideoTabsById;
+  const previousRecords = backgroundStore.trackedTabsById;
   const nextRecords = {};
 
   for (const tab of tabs) {
@@ -34,7 +34,7 @@ export async function syncTrackedTabs(windowId, options = {}) {
 
     const previousRecord = previousRecords[tab.id] || {};
     const urlChanged = Boolean(previousRecord.url) && Boolean(tab.url) && previousRecord.url !== tab.url;
-    const nextStatus = statusFromTab(tab);
+    const nextStatus = getTabState(tab);
     const previousPageRuntimeReady = Boolean(previousRecord.pageRuntimeReady);
     const statusChanged = previousRecord.status && previousRecord.status !== nextStatus;
     const isUnsuspended = nextStatus === TAB_STATES.UNSUSPENDED;
@@ -57,8 +57,8 @@ export async function syncTrackedTabs(windowId, options = {}) {
         !isUnsuspended || Boolean(previousRecord.isRemainingTimeStale) || statusChanged || urlChanged,
     };
 
-    setLoadingStartTimestamp(nextRecord, previousRecord.status, nextStatus);
-    setUnsuspendTimestamp(nextRecord, previousRecord.status, nextStatus);
+    updateLoadStart(nextRecord, previousRecord.status, nextStatus);
+    updateUnsuspendTime(nextRecord, previousRecord.status, nextStatus);
 
     if (
       (!isUnsuspended || urlChanged) &&
@@ -71,30 +71,30 @@ export async function syncTrackedTabs(windowId, options = {}) {
     nextRecords[tab.id] = nextRecord;
   }
 
-  if (refreshGeneration !== backgroundStore.refreshToken) return;
-  backgroundStore.trackedVideoTabsById = nextRecords;
+  if (syncToken !== backgroundStore.syncToken) return;
+  backgroundStore.trackedTabsById = nextRecords;
   recomputeSortState();
 }
 
-export async function refreshTabMetrics(tabId) {
+export async function refreshTrackedTab(tabId) {
   try {
-    let record = backgroundStore.trackedVideoTabsById[tabId];
+    let record = backgroundStore.trackedTabsById[tabId];
     if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
 
     const tab = await getTab(tabId);
-    record = backgroundStore.trackedVideoTabsById[tabId];
+    record = backgroundStore.trackedTabsById[tabId];
     if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
     if (backgroundStore.trackedWindowId != null && tab.windowId !== backgroundStore.trackedWindowId) return;
     if (tab.windowId != null) {
       record.windowId = tab.windowId;
-      setTrackedWindowIdIfNeeded(tab.windowId);
+      updateTrackedWindowId(tab.windowId);
     }
     record.isActiveTab = Boolean(tab.active);
     record.isHidden = Boolean(tab.hidden);
     if (!isWatchOrShortsPage(tab.url)) return;
 
     const result = await sendMessageToTab(tabId, { type: 'collectVideoMetrics' });
-    record = backgroundStore.trackedVideoTabsById[tabId];
+    record = backgroundStore.trackedTabsById[tabId];
     if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
     if (!result || result.ok !== true) {
       record.pageRuntimeReady = false;

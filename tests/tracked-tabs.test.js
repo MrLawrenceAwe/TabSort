@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES } from '../shared/constants.js';
-import { backgroundStore } from '../background/background-store.js';
-import { refreshTabMetrics, syncTrackedTabs } from '../background/tab-sync.js';
+import { backgroundStore } from '../background/store.js';
+import { refreshTrackedTab, syncTrackedWindowTabs } from '../background/tracked-tabs.js';
 import {
   ensureChromeApi,
   makeTrackedTabRecord,
@@ -13,12 +13,12 @@ import {
 ensureChromeApi({ tabs: true });
 
 test(
-  'refreshTabMetrics applies updates to the latest record object after async boundaries',
+  'refreshTrackedTab applies updates to the latest record object after async boundaries',
   { concurrency: false },
   async () => {
     resetBackgroundStore();
     const initialRecord = makeTrackedTabRecord(1, { pageRuntimeReady: false });
-    backgroundStore.trackedVideoTabsById = { 1: initialRecord };
+    backgroundStore.trackedTabsById = { 1: initialRecord };
 
     globalThis.chrome.tabs.get = (_tabId, callback) => {
       setTimeout(() => {
@@ -46,14 +46,14 @@ test(
       }, 0);
     };
 
-    const refreshPromise = refreshTabMetrics(1);
+    const refreshPromise = refreshTrackedTab(1);
 
     const replacementRecord = makeTrackedTabRecord(1, { pageRuntimeReady: false });
-    backgroundStore.trackedVideoTabsById = { 1: replacementRecord };
+    backgroundStore.trackedTabsById = { 1: replacementRecord };
 
     await refreshPromise;
 
-    assert.equal(backgroundStore.trackedVideoTabsById[1], replacementRecord);
+    assert.equal(backgroundStore.trackedTabsById[1], replacementRecord);
     assert.equal(replacementRecord.pageRuntimeReady, true);
     assert.equal(replacementRecord.videoDetails.lengthSeconds, 120);
     assert.equal(replacementRecord.videoDetails.remainingTime, 100);
@@ -62,7 +62,7 @@ test(
 );
 
 test(
-  'syncTrackedTabs does not mark already-open unsuspended tabs as recently unsuspended on initial rehydrate',
+  'syncTrackedWindowTabs does not mark already-open unsuspended tabs as recently unsuspended on initial rehydrate',
   { concurrency: false },
   async () => {
     resetBackgroundStore();
@@ -83,20 +83,20 @@ test(
       ]);
     };
 
-    await syncTrackedTabs(1, { force: true });
+    await syncTrackedWindowTabs(1, { force: true });
 
-    const record = backgroundStore.trackedVideoTabsById[1];
+    const record = backgroundStore.trackedTabsById[1];
     assert.equal(record.status, TAB_STATES.UNSUSPENDED);
     assert.equal(record.unsuspendedTimestamp, null);
   },
 );
 
 test(
-  'syncTrackedTabs keeps the recent unsuspend grace for real suspended-to-unsuspended transitions',
+  'syncTrackedWindowTabs keeps the recent unsuspend grace for real suspended-to-unsuspended transitions',
   { concurrency: false },
   async () => {
     resetBackgroundStore();
-    backgroundStore.trackedVideoTabsById = {
+    backgroundStore.trackedTabsById = {
       1: makeTrackedTabRecord(1, {
         status: TAB_STATES.SUSPENDED,
         unsuspendedTimestamp: null,
@@ -119,9 +119,9 @@ test(
       ]);
     };
 
-    await syncTrackedTabs(1, { force: true });
+    await syncTrackedWindowTabs(1, { force: true });
 
-    const record = backgroundStore.trackedVideoTabsById[1];
+    const record = backgroundStore.trackedTabsById[1];
     assert.equal(record.status, TAB_STATES.UNSUSPENDED);
     assert.equal(typeof record.unsuspendedTimestamp, 'number');
   },

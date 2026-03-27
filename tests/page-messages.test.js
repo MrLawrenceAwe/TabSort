@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { backgroundStore } from '../background/background-store.js';
-import { handlePageVideoDetails } from '../background/handlers/content-script.js';
+import { backgroundStore } from '../background/store.js';
+import { handlePageVideoDetailsMessage } from '../background/messages.js';
 import {
   ensureChromeApi,
   makeTrackedTabRecord,
@@ -11,10 +11,10 @@ import {
 
 ensureChromeApi();
 
-test('handlePageVideoDetails does not create records for non-watch YouTube pages', async () => {
+test('handlePageVideoDetailsMessage does not create records for non-watch YouTube pages', async () => {
   resetBackgroundStore(1);
 
-  await handlePageVideoDetails(
+  await handlePageVideoDetailsMessage(
     {
       details: {
         url: 'https://www.youtube.com/',
@@ -30,23 +30,23 @@ test('handlePageVideoDetails does not create records for non-watch YouTube pages
     },
   );
 
-  assert.equal(backgroundStore.trackedVideoTabsById[7], undefined);
-  assert.deepEqual(backgroundStore.visibleTabOrderTabIds, []);
-  assert.deepEqual(backgroundStore.targetSortOrderTabIds, []);
+  assert.equal(backgroundStore.trackedTabsById[7], undefined);
+  assert.deepEqual(backgroundStore.visibleOrder, []);
+  assert.deepEqual(backgroundStore.targetOrder, []);
 });
 
-test('handlePageVideoDetails removes tracked rows when tab leaves watch/shorts', async () => {
+test('handlePageVideoDetailsMessage removes tracked rows when tab leaves watch/shorts', async () => {
   resetBackgroundStore(1);
-  backgroundStore.trackedVideoTabsById = {
+  backgroundStore.trackedTabsById = {
     7: makeTrackedTabRecord(7, {
       videoDetails: { title: 'Video 7', remainingTime: 25, lengthSeconds: 100 },
       isRemainingTimeStale: false,
     }),
   };
-  backgroundStore.visibleTabOrderTabIds = [7];
-  backgroundStore.targetSortOrderTabIds = [7];
+  backgroundStore.visibleOrder = [7];
+  backgroundStore.targetOrder = [7];
 
-  await handlePageVideoDetails(
+  await handlePageVideoDetailsMessage(
     {
       details: {
         url: 'https://www.youtube.com/results?search_query=music',
@@ -62,7 +62,7 @@ test('handlePageVideoDetails removes tracked rows when tab leaves watch/shorts',
     },
   );
 
-  assert.equal(backgroundStore.trackedVideoTabsById[7], undefined);
-  assert.deepEqual(backgroundStore.visibleTabOrderTabIds, []);
-  assert.deepEqual(backgroundStore.targetSortOrderTabIds, []);
+  assert.equal(backgroundStore.trackedTabsById[7], undefined);
+  assert.deepEqual(backgroundStore.visibleOrder, []);
+  assert.deepEqual(backgroundStore.targetOrder, []);
 });

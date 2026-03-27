@@ -1,4 +1,4 @@
-import { popupStore } from './popup-store.js';
+import { popupState } from './state.js';
 
 const domCache = {
   statusElement: null,
@@ -10,7 +10,7 @@ const domCache = {
   initialized: false,
 };
 
-export function initializeDomCache() {
+export function initializeView() {
   if (domCache.initialized) return;
 
   domCache.statusElement = document.getElementById('videoTabsReadyStatus');
@@ -23,15 +23,15 @@ export function initializeDomCache() {
 }
 
 function getCachedElement(key) {
-  if (!domCache.initialized) initializeDomCache();
+  if (!domCache.initialized) initializeView();
   return domCache[key];
 }
 
 function updateStatus(statusElement) {
   if (!statusElement) return;
-  if (!popupStore.areTrackedTabsSorted) {
-    statusElement.style.display = popupStore.trackedTabCount <= 1 ? 'none' : 'block';
-    statusElement.textContent = `${popupStore.readyTabCount}/${popupStore.trackedTabCount} ready for sort.`;
+  if (!popupState.tabsSorted) {
+    statusElement.style.display = popupState.trackedTabCount <= 1 ? 'none' : 'block';
+    statusElement.textContent = `${popupState.readyTabCount}/${popupState.trackedTabCount} ready for sort.`;
     statusElement.style.color = 'var(--status-text-color)';
     return;
   }
@@ -40,14 +40,14 @@ function updateStatus(statusElement) {
 
 function updateTabsSorted(tabsSortedElement) {
   if (!tabsSortedElement) return;
-  tabsSortedElement.style.display = popupStore.areTrackedTabsSorted ? 'block' : 'none';
+  tabsSortedElement.style.display = popupState.tabsSorted ? 'block' : 'none';
 }
 
 function updateSortButton(sortButton, shouldShowSort) {
   if (!sortButton) return;
   if (shouldShowSort) {
     sortButton.style.setProperty('display', 'block', 'important');
-    const allTabsReady = popupStore.readyTabCount === popupStore.trackedTabCount;
+    const allTabsReady = popupState.readyTabCount === popupState.trackedTabCount;
     const readyBackground = 'var(--all-ready-row-background)';
     const readyText = 'var(--all-ready-row-text)';
     sortButton.style.backgroundColor = allTabsReady ? readyBackground : 'var(--action-button-background)';
@@ -65,7 +65,7 @@ function clearReadyRows(table) {
   }
 }
 
-export function setActionAndStatusColumnsVisibility(visible) {
+export function setSecondaryColumnsVisible(visible) {
   const actionRequired = getCachedElement('actionRequiredColumn');
   const tabStatus = getCachedElement('tabStatusColumn');
   const method = visible ? 'remove' : 'add';
@@ -81,21 +81,21 @@ export function setOptionToggleVisibility(visible) {
   });
 }
 
-export function updateHeaderFooter() {
+export function renderHeaderState() {
   const statusElement = getCachedElement('statusElement');
   const sortButton = getCachedElement('sortButton');
   const tabsSortedElement = getCachedElement('tabsSortedElement');
   const table = getCachedElement('table');
 
   const readySubsetExists =
-    popupStore.readyTabCount >= 2 &&
-    popupStore.readyTabCount < popupStore.trackedTabCount;
+    popupState.readyTabCount >= 2 &&
+    popupState.readyTabCount < popupState.trackedTabCount;
   const readySubsetNeedsSorting =
-    readySubsetExists && (!popupStore.areReadyTabsContiguous || !popupStore.areReadyTabsAtFront);
+    readySubsetExists && (!popupState.areReadyTabsContiguous || !popupState.areReadyTabsAtFront);
   const shouldShowSort =
-    popupStore.readyTabCount >= 2 &&
-    !popupStore.areTrackedTabsSorted &&
-    (popupStore.areReadyTabsOutOfOrder || readySubsetNeedsSorting);
+    popupState.readyTabCount >= 2 &&
+    !popupState.tabsSorted &&
+    (popupState.areReadyTabsOutOfOrder || readySubsetNeedsSorting);
 
   setOptionToggleVisibility(shouldShowSort);
 
@@ -103,7 +103,7 @@ export function updateHeaderFooter() {
   updateTabsSorted(tabsSortedElement);
   updateSortButton(sortButton, shouldShowSort);
 
-  if (popupStore.areTrackedTabsSorted && table) {
+  if (popupState.tabsSorted && table) {
     clearReadyRows(table);
   }
 }

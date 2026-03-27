@@ -15,7 +15,7 @@ function cleanTitle(raw) {
   return trimmed.endsWith(suffix) ? trimmed.slice(0, -suffix.length) : trimmed;
 }
 
-function extractYtInitialPlayerResponseFromScript(source, logContentError) {
+function extractInitialPlayerResponse(source, logContentError) {
   if (typeof source !== 'string') return null;
   const identifier = 'ytInitialPlayerResponse';
   const idIndex = source.indexOf(identifier);
@@ -79,7 +79,7 @@ function parseYtInitialPlayerResponse(logContentError) {
       entry?.textContent?.includes('ytInitialPlayerResponse'),
     );
     if (script?.textContent) {
-      const parsed = extractYtInitialPlayerResponseFromScript(script.textContent, logContentError);
+      const parsed = extractInitialPlayerResponse(script.textContent, logContentError);
       if (parsed) playerResponse = parsed;
     }
   }

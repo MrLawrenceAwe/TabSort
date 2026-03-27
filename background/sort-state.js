@@ -1,7 +1,7 @@
 import { isFiniteNumber } from '../shared/guards.js';
 import { createEmptyReadinessMetrics } from '../shared/readiness.js';
 import { hasFreshRemainingTime } from '../shared/tab-metrics.js';
-import { backgroundStore } from './background-store.js';
+import { backgroundStore } from './store.js';
 import { broadcastSnapshotUpdate } from './tab-snapshot.js';
 
 function areIdListsEqual(a, b) {
@@ -33,23 +33,23 @@ function buildRemainingTimeEntries(records) {
   });
 }
 
-function buildTargetSortOrder(knownEntries, unknownEntries, currentOrderTabIds) {
-  const knownRemainingSortedTabIds = knownEntries
+function buildTargetOrder(knownEntries, unknownEntries, currentOrder) {
+  const sortedKnownIds = knownEntries
     .slice()
     .sort((a, b) => a.remainingTime - b.remainingTime)
     .map((entry) => entry.id);
 
   const unknownIds = new Set(unknownEntries.map((entry) => entry.id));
-  const unknownIdsInCurrentOrder = currentOrderTabIds.filter((id) => unknownIds.has(id));
+  const unknownIdsInCurrentOrder = currentOrder.filter((id) => unknownIds.has(id));
 
-  return [...knownRemainingSortedTabIds, ...unknownIdsInCurrentOrder];
+  return [...sortedKnownIds, ...unknownIdsInCurrentOrder];
 }
 
 function isRecordSortableByRemainingTime(record) {
   return !record?.isLiveStream;
 }
 
-function buildReadinessMetrics(records, currentOrderTabIds) {
+function buildReadinessMetrics(records, currentOrder) {
   if (!Array.isArray(records) || records.length === 0) {
     return createEmptyReadinessMetrics();
   }
@@ -71,7 +71,7 @@ function buildReadinessMetrics(records, currentOrderTabIds) {
   let encounteredNonReadyBeforeReady = false;
   let gapAfterReady = false;
 
-  for (const tabId of currentOrderTabIds) {
+  for (const tabId of currentOrder) {
     const record = recordMap.get(tabId);
     if (!record) continue;
     orderedIdsWithRecords.push(tabId);
@@ -127,53 +127,53 @@ function buildReadinessMetrics(records, currentOrderTabIds) {
 }
 
 function deriveSortState(records) {
-  const visibleTabOrderTabIds = deriveTabOrder(records);
+  const visibleOrder = deriveTabOrder(records);
   const actionableRecords = records.filter((record) => !record.pinned);
   const sortableRecords = actionableRecords.filter(isRecordSortableByRemainingTime);
-  const currentSortableOrderTabIds = deriveTabOrder(sortableRecords);
+  const sortableOrder = deriveTabOrder(sortableRecords);
   const remainingTimeEntries = buildRemainingTimeEntries(sortableRecords);
 
   const knownRemainingEntries = remainingTimeEntries.filter((entry) => entry.remainingTime !== null);
   const unknownRemainingEntries = remainingTimeEntries.filter((entry) => entry.remainingTime === null);
 
-  const targetSortOrderTabIds = buildTargetSortOrder(
+  const targetOrder = buildTargetOrder(
     knownRemainingEntries,
     unknownRemainingEntries,
-    currentSortableOrderTabIds,
+    sortableOrder,
   );
-  const areAllRemainingTimesKnown = unknownRemainingEntries.length === 0;
+  const allRemainingTimesKnown = unknownRemainingEntries.length === 0;
 
-  const alreadyInTargetOrder =
-    currentSortableOrderTabIds.length > 0 &&
-    currentSortableOrderTabIds.length === targetSortOrderTabIds.length &&
-    currentSortableOrderTabIds.every((id, index) => id === targetSortOrderTabIds[index]);
+  const alreadySorted =
+    sortableOrder.length > 0 &&
+    sortableOrder.length === targetOrder.length &&
+    sortableOrder.every((id, index) => id === targetOrder[index]);
 
   return {
-    visibleTabOrderTabIds,
-    targetSortOrderTabIds,
-    areAllRemainingTimesKnown,
-    alreadyInTargetOrder,
-    readinessMetrics: buildReadinessMetrics(sortableRecords, currentSortableOrderTabIds),
+    visibleOrder,
+    targetOrder,
+    allRemainingTimesKnown,
+    alreadySorted,
+    readiness: buildReadinessMetrics(sortableRecords, sortableOrder),
   };
 }
 
 function applyDerivedSortState({
-  visibleTabOrderTabIds,
-  targetSortOrderTabIds,
-  areAllRemainingTimesKnown,
-  alreadyInTargetOrder,
-  readinessMetrics,
+  visibleOrder,
+  targetOrder,
+  allRemainingTimesKnown,
+  alreadySorted,
+  readiness,
 }) {
-  backgroundStore.targetSortOrderTabIds = targetSortOrderTabIds;
-  backgroundStore.visibleTabOrderTabIds = visibleTabOrderTabIds;
-  backgroundStore.areTrackedTabsSorted = areAllRemainingTimesKnown && alreadyInTargetOrder;
-  backgroundStore.readinessMetrics = readinessMetrics ? { ...readinessMetrics } : null;
+  backgroundStore.targetOrder = targetOrder;
+  backgroundStore.visibleOrder = visibleOrder;
+  backgroundStore.tabsSorted = allRemainingTimesKnown && alreadySorted;
+  backgroundStore.readiness = readiness ? { ...readiness } : null;
 
   broadcastSnapshotUpdate();
 }
 
 export function recomputeSortState() {
-  const records = Object.values(backgroundStore.trackedVideoTabsById);
+  const records = Object.values(backgroundStore.trackedTabsById);
   const derivedState = deriveSortState(records);
   applyDerivedSortState(derivedState);
 }

@@ -1,5 +1,5 @@
 import { createEmptyReadinessMetrics } from '../shared/readiness.js';
-import { backgroundStore } from './background-store.js';
+import { backgroundStore } from './store.js';
 
 function cloneTrackedTabRecord(record) {
   if (!record || typeof record !== 'object') return record;
@@ -10,20 +10,20 @@ function cloneTrackedTabRecord(record) {
 }
 
 export function buildTabSnapshot() {
-  const trackedVideoTabsById = Object.fromEntries(
-    Object.entries(backgroundStore.trackedVideoTabsById).map(([id, record]) => [
+  const trackedTabsById = Object.fromEntries(
+    Object.entries(backgroundStore.trackedTabsById).map(([id, record]) => [
       id,
       cloneTrackedTabRecord(record),
     ]),
   );
 
   return {
-    trackedVideoTabsById,
-    targetSortOrderTabIds: [...backgroundStore.targetSortOrderTabIds],
-    visibleTabOrderTabIds: [...backgroundStore.visibleTabOrderTabIds],
-    areTrackedTabsSorted: backgroundStore.areTrackedTabsSorted,
-    readinessMetrics: {
-      ...(backgroundStore.readinessMetrics || createEmptyReadinessMetrics()),
+    trackedTabsById,
+    targetOrder: [...backgroundStore.targetOrder],
+    visibleOrder: [...backgroundStore.visibleOrder],
+    tabsSorted: backgroundStore.tabsSorted,
+    readiness: {
+      ...(backgroundStore.readiness || createEmptyReadinessMetrics()),
     },
   };
 }
@@ -32,8 +32,8 @@ export function broadcastSnapshotUpdate({ force = false } = {}) {
   try {
     const snapshot = buildTabSnapshot();
     const signature = JSON.stringify(snapshot);
-    if (!force && signature === backgroundStore.lastSnapshotSignature) return;
-    backgroundStore.lastSnapshotSignature = signature;
+    if (!force && signature === backgroundStore.snapshotSignature) return;
+    backgroundStore.snapshotSignature = signature;
 
     chrome.runtime.sendMessage({ type: 'tabSnapshotUpdated', payload: snapshot }, () => {
       const err = chrome.runtime.lastError;

@@ -1,4 +1,4 @@
-import { backgroundStore } from './background-store.js';
+import { backgroundStore } from './store.js';
 
 export function logListenerError(label, error) {
   const message = error?.message || String(error);

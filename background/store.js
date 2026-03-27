@@ -1,19 +1,19 @@
 import { isValidWindowId } from '../shared/guards.js';
 
 export const backgroundStore = {
-  trackedVideoTabsById: {},
-  targetSortOrderTabIds: [],
-  visibleTabOrderTabIds: [],
-  areTrackedTabsSorted: false,
-  readinessMetrics: null,
+  trackedTabsById: {},
+  targetOrder: [],
+  visibleOrder: [],
+  tabsSorted: false,
+  readiness: null,
   trackedWindowId: null,
-  lastSnapshotSignature: null,
-  refreshToken: 0,
+  snapshotSignature: null,
+  syncToken: 0,
 };
 
 export const now = () => Date.now();
 
-export function setTrackedWindowIdIfNeeded(windowId, { force = false } = {}) {
+export function updateTrackedWindowId(windowId, { force = false } = {}) {
   if (isValidWindowId(windowId)) {
     if (force || !isValidWindowId(backgroundStore.trackedWindowId)) {
       backgroundStore.trackedWindowId = windowId;

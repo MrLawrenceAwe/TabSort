@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES, RECENTLY_UNSUSPENDED_MS, LOADING_GRACE_MS } from '../shared/constants.js';
-import { determineUserAction, formatVideoDetails } from '../popup/rows.js';
+import { determineUserAction, formatRemainingStatus } from '../popup/table.js';
 
 function makeRecord(overrides = {}) {
   return {
@@ -27,7 +27,7 @@ test('stale rows without remaining time do not suggest viewing the tab', () => {
   });
 
   assert.equal(determineUserAction(record), 'Reload tab');
-  assert.equal(formatVideoDetails(record), 'unavailable');
+  assert.equal(formatRemainingStatus(record), 'unavailable');
 });
 
 test('recently unsuspended rows avoid contradictory stale guidance', () => {
@@ -38,7 +38,7 @@ test('recently unsuspended rows avoid contradictory stale guidance', () => {
   });
 
   assert.equal(determineUserAction(record), '');
-  assert.equal(formatVideoDetails(record), 'unavailable');
+  assert.equal(formatRemainingStatus(record), 'unavailable');
 });
 
 test('stale rows with remaining time can still request view interaction when appropriate', () => {
@@ -50,7 +50,7 @@ test('stale rows with remaining time can still request view interaction when app
   });
 
   assert.equal(determineUserAction(record), 'View tab to refresh time');
-  assert.equal(formatVideoDetails(record), 'View tab to refresh time');
+  assert.equal(formatRemainingStatus(record), 'View tab to refresh time');
 });
 
 test('loading rows switch from waiting to interaction after the loading grace period', () => {

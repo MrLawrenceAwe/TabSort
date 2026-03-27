@@ -1,8 +1,7 @@
 import { TAB_STATES } from '../shared/constants.js';
-import { now, setTrackedWindowIdIfNeeded } from './background-store.js';
 
-export async function moveTabsSequentially(tabIds, startingIndex = 0) {
-  let targetIndex = startingIndex;
+export async function moveTabsInOrder(tabIds, startIndex = 0) {
+  let targetIndex = startIndex;
   for (const tabId of tabIds) {
     if (typeof tabId !== 'number') continue;
     try {
@@ -35,10 +34,8 @@ export function queryTabs(query) {
   });
 }
 
-export async function getTabsForTrackedWindow(windowId, options = {}) {
-  const targetWindowId = setTrackedWindowIdIfNeeded(windowId, options);
-  const baseQuery =
-    targetWindowId != null ? { windowId: targetWindowId } : { currentWindow: true };
+export async function listWindowTabs(windowId = null) {
+  const baseQuery = windowId != null ? { windowId } : { currentWindow: true };
 
   const [visibleTabs, hiddenTabs] = await Promise.all([
     queryTabs(baseQuery),
@@ -54,7 +51,7 @@ export async function getTabsForTrackedWindow(windowId, options = {}) {
     deduped.push(tab);
   }
 
-  return { tabs: deduped, windowId: targetWindowId };
+  return deduped;
 }
 
 export function getTab(tabId) {
@@ -83,28 +80,8 @@ export function sendMessageToTab(tabId, payload) {
   });
 }
 
-export function statusFromTab(tab) {
+export function getTabState(tab) {
   if (tab.discarded) return TAB_STATES.SUSPENDED;
   if (tab.status === 'loading') return TAB_STATES.LOADING;
   return TAB_STATES.UNSUSPENDED;
-}
-
-export function setLoadingStartTimestamp(record, prevStatus, nextStatus) {
-  if (nextStatus === TAB_STATES.LOADING) {
-    if (prevStatus !== TAB_STATES.LOADING || typeof record.loadingStartedAt !== 'number') {
-      record.loadingStartedAt = now();
-    }
-    return;
-  }
-
-  record.loadingStartedAt = null;
-}
-
-export function setUnsuspendTimestamp(record, prevStatus, nextStatus) {
-  if (
-    (prevStatus === TAB_STATES.SUSPENDED || prevStatus === TAB_STATES.LOADING) &&
-    nextStatus === TAB_STATES.UNSUSPENDED
-  ) {
-    record.unsuspendedTimestamp = now();
-  }
 }
