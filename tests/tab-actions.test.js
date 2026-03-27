@@ -34,6 +34,7 @@ function makeRecord(overrides = {}) {
     isActiveTab: false,
     isHidden: false,
     videoDetails: { remainingTime: 100 },
+    loadingStartedAt: null,
     unsuspendedTimestamp: null,
     isRemainingTimeStale: false,
     ...overrides,
@@ -82,5 +83,6 @@ test('reloadTab marks record loading only after successful reload call', { concu
   assert.equal(record.metadataLoaded, false);
   assert.equal(record.isRemainingTimeStale, true);
   assert.equal(record.videoDetails.remainingTime, null);
+  assert.equal(typeof record.loadingStartedAt, 'number');
   assert.equal(typeof record.unsuspendedTimestamp, 'number');
 });

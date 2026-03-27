@@ -10,6 +10,7 @@ import {
   getTabsForTrackedWindow,
   moveTabsSequentially,
   sendMessageToTab,
+  setLoadingStartTimestamp,
   setUnsuspendTimestamp,
   statusFromTab,
 } from './tab-service.js';
@@ -55,11 +56,13 @@ export async function syncTrackedTabs(windowId, options = {}) {
       isActiveTab: Boolean(tab.active),
       isHidden: Boolean(tab.hidden),
       videoDetails: urlChanged ? null : previousRecord.videoDetails || null,
+      loadingStartedAt: previousRecord.loadingStartedAt ?? null,
       unsuspendedTimestamp: previousRecord.unsuspendedTimestamp || null,
       isRemainingTimeStale:
         !isUnsuspended || Boolean(previousRecord.isRemainingTimeStale) || statusChanged || urlChanged,
     };
 
+    setLoadingStartTimestamp(nextRecord, previousRecord.status, nextStatus);
     setUnsuspendTimestamp(nextRecord, previousRecord.status, nextStatus);
 
     if (

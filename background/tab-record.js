@@ -19,6 +19,7 @@ function createTabRecord(tabId, senderWindowId, defaults = {}) {
     isActiveTab: Boolean(defaults.isActiveTab),
     isHidden: Boolean(defaults.isHidden),
     videoDetails: defaults.videoDetails ?? null,
+    loadingStartedAt: defaults.loadingStartedAt ?? null,
     unsuspendedTimestamp: defaults.unsuspendedTimestamp ?? null,
     isRemainingTimeStale:
       defaults.isRemainingTimeStale == null ? true : Boolean(defaults.isRemainingTimeStale),
