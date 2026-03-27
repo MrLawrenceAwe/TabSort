@@ -1,6 +1,5 @@
 import { updateSortingState } from './state.js';
 import { logAndSend, refreshActiveContext, sendMessageWithWindowAsync } from './runtime.js';
-import { getCurrentSortOptions } from './options.js';
 import {
   setActionAndStatusColumnsVisibility,
   updateHeaderFooter,
@@ -19,7 +18,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const isValidSnapshot = (snapshot) =>
   snapshot && typeof snapshot === 'object' && 'trackedVideoTabsById' in snapshot;
 
-async function requestSnapshotWithRetry(action = 'getTabSnapshot') {
+async function requestSnapshotWithRetry() {
   let lastError = null;
 
   for (let attempt = 1; attempt <= SNAPSHOT_MAX_ATTEMPTS; attempt += 1) {
@@ -29,9 +28,7 @@ async function requestSnapshotWithRetry(action = 'getTabSnapshot') {
         await sendMessageWithWindowAsync('ping').catch(() => {});
         await sleep(SNAPSHOT_RETRY_DELAY_MS);
       }
-      const response = await sendMessageWithWindowAsync(action, {
-        sortOptions: getCurrentSortOptions(),
-      });
+      const response = await sendMessageWithWindowAsync('getTabSnapshot', {});
       if (isValidSnapshot(response)) {
         return response;
       }
@@ -47,14 +44,10 @@ async function requestSnapshotWithRetry(action = 'getTabSnapshot') {
   return null;
 }
 
-export async function requestAndRenderSnapshot(action = 'getTabSnapshot') {
-  const snapshot = await requestSnapshotWithRetry(action);
+export async function requestAndRenderSnapshot() {
+  const snapshot = await requestSnapshotWithRetry();
   if (!snapshot) return;
   await renderSnapshot(snapshot);
-}
-
-export async function requestAndRenderCurrentSnapshot() {
-  await requestAndRenderSnapshot('getCurrentSnapshot');
 }
 
 export async function renderSnapshot(snapshot) {
@@ -75,7 +68,6 @@ export async function renderSnapshot(snapshot) {
 
   updateSortingState({
     areTrackedTabsSorted: shouldShowSorted,
-    canSortWindow: snapshot.canSortWindow === true,
     trackedTabCount: metrics.trackedTabCount,
     readyTabCount: metrics.readyTabCount,
     areReadyTabsOutOfOrder: metrics.areReadyTabsOutOfOrder,

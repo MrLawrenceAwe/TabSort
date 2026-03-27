@@ -6,7 +6,6 @@ import {
   handleTabDetailsHint,
 } from './handlers/content-script.js';
 import {
-  handleGetCurrentSnapshot,
   handleGetTabSnapshot,
   handleSortTrackedTabs,
   handleSyncTrackedTabs,
@@ -20,7 +19,6 @@ export function registerRuntimeMessageListener() {
     const handlers = {
       syncTrackedTabs: () => handleSyncTrackedTabs(message),
       getTabSnapshot: () => handleGetTabSnapshot(message),
-      getCurrentSnapshot: () => handleGetCurrentSnapshot(message),
       sortTrackedTabs: () => handleSortTrackedTabs(message),
       ping: async () => ({ ok: true }),
       activateTab: () => activateTab(message),

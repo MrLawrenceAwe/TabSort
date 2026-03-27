@@ -1,7 +1,7 @@
 import { MESSAGE_TYPES } from '../shared/constants.js';
 import { toErrorMessage } from '../shared/utils.js';
-import { getCurrentSortOptions, setupOptionControls } from './options.js';
-import { requestAndRenderCurrentSnapshot, requestAndRenderSnapshot } from './render.js';
+import { setupOptionControls } from './options.js';
+import { requestAndRenderSnapshot, renderSnapshot } from './render.js';
 import { refreshActiveContext, sendMessageWithWindow, logAndSend } from './runtime.js';
 import { initializeDomCache } from './popup-layout.js';
 
@@ -27,15 +27,12 @@ export async function initializePopup() {
   initializeDomCache();
 
   await safeAsync(refreshActiveContext, 'Failed to refresh active context');
-  await safeAsync(
-    () => setupOptionControls({ onChange: requestAndRenderCurrentSnapshot }),
-    'Failed to set up option controls',
-  );
+  await safeAsync(setupOptionControls, 'Failed to set up option controls');
   await safeAsync(requestAndRenderSnapshot, 'Failed to request initial snapshot');
 
   const messageListener = (message) => {
     if (message?.message === 'tabSnapshotUpdated' && message.payload) {
-      Promise.resolve(requestAndRenderCurrentSnapshot()).catch((error) => {
+      Promise.resolve(renderSnapshot(message.payload)).catch((error) => {
         logPopupError('Failed to render incoming snapshot', error);
       });
     }
@@ -45,9 +42,7 @@ export async function initializePopup() {
 
   const sortButton = document.getElementById('sortButton');
   if (sortButton) {
-    sortButton.addEventListener('click', () =>
-      sendMessageWithWindow('sortTrackedTabs', { sortOptions: getCurrentSortOptions() }),
-    );
+    sortButton.addEventListener('click', () => sendMessageWithWindow('sortTrackedTabs'));
   }
 
   window.addEventListener('unload', () => {
