@@ -3,6 +3,7 @@ import { backgroundState, setTrackedWindowIdIfNeeded } from '../state.js';
 import { refreshTabMetrics } from '../tracked-tabs.js';
 import { broadcastTabSnapshot, recomputeSorting } from '../ordering.js';
 import { ensureTabRecord } from '../tab-record.js';
+import { isWatchOrShortsPage } from '../youtube-url-utils.js';
 
 export function canUseSenderWindow(windowId) {
     if (backgroundState.trackedWindowId == null) return true;
@@ -41,8 +42,16 @@ export async function handleTabDetailsHint(message, sender) {
     if (!canUseSenderWindow(senderWindowId)) return;
     setTrackedWindowIdIfNeeded(senderWindowId);
     if (!isFiniteNumber(tabId)) return;
+    const hintUrl = details.url || sender?.tab?.url;
+    if (!isWatchOrShortsPage(hintUrl)) {
+        if (backgroundState.trackedVideoTabsById[tabId]) {
+            delete backgroundState.trackedVideoTabsById[tabId];
+            recomputeSorting();
+        }
+        return;
+    }
     const record = ensureTabRecord(tabId, senderWindowId, {
-        url: details.url || sender?.tab?.url,
+        url: hintUrl,
     });
     if (details.url) record.url = details.url;
     record.videoDetails = record.videoDetails || {};
