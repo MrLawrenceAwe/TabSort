@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES } from '../shared/constants.js';
-import { refreshTabMetrics } from '../background/tracked-tabs.js';
+import { refreshTabMetrics, syncTrackedTabs } from '../background/tracked-tabs.js';
 import { backgroundState } from '../background/state.js';
 
 if (!globalThis.chrome) {
@@ -96,5 +96,71 @@ test(
     assert.equal(replacementRecord.videoDetails.lengthSeconds, 120);
     assert.equal(replacementRecord.videoDetails.remainingTime, 100);
     assert.equal(replacementRecord.isRemainingTimeStale, false);
+  },
+);
+
+test(
+  'syncTrackedTabs does not mark already-open unsuspended tabs as recently unsuspended on initial rehydrate',
+  { concurrency: false },
+  async () => {
+    resetBackgroundState();
+
+    globalThis.chrome.tabs.query = (_query, callback) => {
+      callback([
+        {
+          id: 1,
+          windowId: 1,
+          url: 'https://www.youtube.com/watch?v=1',
+          index: 0,
+          pinned: false,
+          status: 'complete',
+          active: false,
+          hidden: false,
+          discarded: false,
+        },
+      ]);
+    };
+
+    await syncTrackedTabs(1, { force: true });
+
+    const record = backgroundState.trackedVideoTabsById[1];
+    assert.equal(record.status, TAB_STATES.UNSUSPENDED);
+    assert.equal(record.unsuspendedTimestamp, null);
+  },
+);
+
+test(
+  'syncTrackedTabs keeps the recent unsuspend grace for real suspended-to-unsuspended transitions',
+  { concurrency: false },
+  async () => {
+    resetBackgroundState();
+    backgroundState.trackedVideoTabsById = {
+      1: makeRecord({
+        status: TAB_STATES.SUSPENDED,
+        unsuspendedTimestamp: null,
+      }),
+    };
+
+    globalThis.chrome.tabs.query = (_query, callback) => {
+      callback([
+        {
+          id: 1,
+          windowId: 1,
+          url: 'https://www.youtube.com/watch?v=1',
+          index: 0,
+          pinned: false,
+          status: 'complete',
+          active: false,
+          hidden: false,
+          discarded: false,
+        },
+      ]);
+    };
+
+    await syncTrackedTabs(1, { force: true });
+
+    const record = backgroundState.trackedVideoTabsById[1];
+    assert.equal(record.status, TAB_STATES.UNSUSPENDED);
+    assert.equal(typeof record.unsuspendedTimestamp, 'number');
   },
 );

@@ -29,6 +29,7 @@ export async function reloadTab(message) {
     const record = backgroundState.trackedVideoTabsById[tabId];
     if (record) {
         record.status = TAB_STATES.LOADING;
+        record.loadingStartedAt = now();
         record.unsuspendedTimestamp = now();
         record.contentScriptReady = false;
         record.metadataLoaded = false;

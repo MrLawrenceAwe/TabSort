@@ -1,4 +1,4 @@
-import { TAB_STATES, RECENTLY_UNSUSPENDED_MS } from '../shared/constants.js';
+import { TAB_STATES, RECENTLY_UNSUSPENDED_MS, LOADING_GRACE_MS } from '../shared/constants.js';
 import { isFiniteNumber } from '../shared/utils.js';
 import { popupState } from './state.js';
 import { sendMessageWithWindow } from './runtime.js';
@@ -136,6 +136,12 @@ function determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended) 
     case TAB_STATES.SUSPENDED:
       return USER_ACTIONS.INTERACT_WITH_TAB;
     case TAB_STATES.LOADING:
+      if (
+        typeof tabRecord.loadingStartedAt === 'number' &&
+        Date.now() - tabRecord.loadingStartedAt >= LOADING_GRACE_MS
+      ) {
+        return USER_ACTIONS.INTERACT_WITH_TAB;
+      }
       return USER_ACTIONS.WAIT_FOR_LOAD;
     default:
       return USER_ACTIONS.NO_ACTION;

@@ -15,6 +15,8 @@ export const DEFAULT_SORT_OPTIONS = Object.freeze({
 
 export const RECENTLY_UNSUSPENDED_MS = 5000;
 
+export const LOADING_GRACE_MS = 5000;
+
 export const REFRESH_INTERVAL_MINUTES = 1;
 
 export const MEDIA_READY_STATE_THRESHOLD = 2;

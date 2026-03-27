@@ -89,10 +89,20 @@ export function statusFromTab(tab) {
   return TAB_STATES.UNSUSPENDED;
 }
 
+export function setLoadingStartTimestamp(record, prevStatus, nextStatus) {
+  if (nextStatus === TAB_STATES.LOADING) {
+    if (prevStatus !== TAB_STATES.LOADING || typeof record.loadingStartedAt !== 'number') {
+      record.loadingStartedAt = now();
+    }
+    return;
+  }
+
+  record.loadingStartedAt = null;
+}
+
 export function setUnsuspendTimestamp(record, prevStatus, nextStatus) {
   if (
-    ((prevStatus === TAB_STATES.SUSPENDED || prevStatus === TAB_STATES.LOADING) ||
-      prevStatus == null) &&
+    (prevStatus === TAB_STATES.SUSPENDED || prevStatus === TAB_STATES.LOADING) &&
     nextStatus === TAB_STATES.UNSUSPENDED
   ) {
     record.unsuspendedTimestamp = now();
