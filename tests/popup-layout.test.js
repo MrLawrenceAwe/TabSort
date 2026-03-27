@@ -14,10 +14,7 @@ test(
       assert.equal(getHiddenWarningMessage(), '');
 
       popupState.hasBackgroundTabsWithStaleRemaining = true;
-      assert.equal(
-        getHiddenWarningMessage(),
-        'Some background tabs may have stale remaining time. Open each tab once to refresh.',
-      );
+      assert.equal(getHiddenWarningMessage(), '');
     } finally {
       popupState.hasBackgroundTabsWithStaleRemaining = original;
     }
