@@ -1,7 +1,6 @@
 import { TAB_STATES, RECENTLY_UNSUSPENDED_MS, LOADING_GRACE_MS } from '../shared/constants.js';
 import { isFiniteNumber } from '../shared/guards.js';
-import { popupStore } from './popup-store.js';
-import { sendRuntimeMessage } from './runtime.js';
+import { popupState } from './state.js';
 
 const USER_ACTIONS = {
   RELOAD_TAB: 'Reload tab',
@@ -19,21 +18,21 @@ const MESSAGE_ACTIONS = Object.freeze({
 
 const COLUMN_CONFIG = Object.freeze({
   sorted: [
-    { key: 'videoDetails', getter: formatVideoDetails },
+    { key: 'remainingStatus', getter: formatRemainingStatus },
     { key: 'index', getter: formatIndex },
   ],
   unsorted: [
-    { key: 'videoDetails', getter: formatVideoDetails },
+    { key: 'remainingStatus', getter: formatRemainingStatus },
     { key: 'index', getter: formatIndex },
     { key: 'status', getter: (record) => record.status },
   ],
 });
 
-export function insertRowCells(row, tabRecord, isSortedView) {
+export function insertRowCells(row, tabRecord, isSortedView, postRuntimeMessage) {
   row.insertCell(0).textContent = tabRecord.videoDetails?.title ?? tabRecord.url;
 
   const userAction = determineUserAction(tabRecord);
-  if (!isSortedView) insertUserActionCell(row, tabRecord, userAction);
+  if (!isSortedView) insertUserActionCell(row, tabRecord, userAction, postRuntimeMessage);
 
   insertInfoCells(row, tabRecord, isSortedView, userAction);
 
@@ -49,13 +48,11 @@ function insertInfoCells(row, record, sortedView, userAction) {
     const cell = row.insertCell(row.cells.length);
     const value = column.getter(record, userAction);
 
-    cell.textContent = popupStore.areTrackedTabsSorted
-      ? value
-      : getFallbackValue(value);
+    cell.textContent = popupState.tabsSorted ? value : toDisplayText(value);
   });
 }
 
-function insertUserActionCell(row, record, action) {
+function insertUserActionCell(row, record, action, postRuntimeMessage) {
   const cell = row.insertCell(1);
   if (!action) {
     cell.textContent = '—';
@@ -63,35 +60,46 @@ function insertUserActionCell(row, record, action) {
   }
 
   if (action === USER_ACTIONS.INTERACT_WITH_TAB_THEN_RELOAD) {
-    const interact = createLink(USER_ACTIONS.INTERACT_WITH_TAB, MESSAGE_ACTIONS.ACTIVATE_TAB, record.id);
-    const reload = createLink(USER_ACTIONS.RELOAD_TAB, MESSAGE_ACTIONS.RELOAD_TAB, record.id);
+    const interact = createActionLink(
+      USER_ACTIONS.INTERACT_WITH_TAB,
+      MESSAGE_ACTIONS.ACTIVATE_TAB,
+      record.id,
+      postRuntimeMessage,
+    );
+    const reload = createActionLink(
+      USER_ACTIONS.RELOAD_TAB,
+      MESSAGE_ACTIONS.RELOAD_TAB,
+      record.id,
+      postRuntimeMessage,
+    );
     cell.appendChild(interact);
     cell.appendChild(document.createTextNode('/'));
     cell.appendChild(reload);
     return;
   }
 
-  const link = createLink(
+  const linkElement = createActionLink(
     action,
     action === USER_ACTIONS.RELOAD_TAB ? MESSAGE_ACTIONS.RELOAD_TAB : MESSAGE_ACTIONS.ACTIVATE_TAB,
     record.id,
+    postRuntimeMessage,
   );
-  cell.appendChild(link);
+  cell.appendChild(linkElement);
 }
 
-function createLink(text, messageAction, tabId) {
-  const a = document.createElement('a');
-  a.href = '#';
-  a.classList.add('user-action-link');
-  a.textContent = text;
-  a.addEventListener('click', (event) => {
+function createActionLink(text, actionType, tabId, postRuntimeMessage) {
+  const linkElement = document.createElement('a');
+  linkElement.href = '#';
+  linkElement.classList.add('user-action-link');
+  linkElement.textContent = text;
+  linkElement.addEventListener('click', (event) => {
     event.preventDefault();
-    sendRuntimeMessage(messageAction, { tabId });
+    postRuntimeMessage(actionType, { tabId });
   });
-  return a;
+  return linkElement;
 }
 
-export function formatVideoDetails(record, userAction = determineUserAction(record)) {
+export function formatRemainingStatus(record, userAction = determineUserAction(record)) {
   if (record.isLiveStream) return 'Live Stream';
 
   const remaining = record?.videoDetails?.remainingTime;
@@ -111,7 +119,7 @@ function formatIndex(record) {
   return isFiniteNumber(tabIndex) ? tabIndex + 1 : '';
 }
 
-function getFallbackValue(value) {
+function toDisplayText(value) {
   if (value) return value;
   return USER_ACTIONS.NO_ACTION;
 }

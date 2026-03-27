@@ -24,15 +24,15 @@
     "content_scripts": [
       {
         "matches": ["*://*.youtube.com/watch*", "*://*.youtube.com/shorts*"],
-        "js": ["content/youtube-content-loader.js"],
+        "js": ["content/youtube/bootstrap.js"],
         "run_at": "document_end"
       }
     ],
     "web_accessible_resources": [
       {
         "resources": [
-          "content/youtube-page-runtime.js",
-          "content/youtube-page-metadata.js",
+          "content/youtube/runtime.js",
+          "content/youtube/metadata.js",
           "shared/constants.js",
           "shared/live-detection.js",
           "shared/guards.js"

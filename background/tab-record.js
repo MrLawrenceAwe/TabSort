@@ -1,10 +1,10 @@
 import { isFiniteNumber } from '../shared/guards.js';
-import { backgroundStore } from './background-store.js';
+import { backgroundStore } from './store.js';
 
 const FALLBACK_TAB_INDEX = Number.MAX_SAFE_INTEGER;
 
-function createTrackedTabRecord(tabId, senderWindowId, defaults = {}) {
-  const initialWindowId = senderWindowId ?? defaults.windowId ?? null;
+function createTrackedTabRecord(tabId, windowId, defaults = {}) {
+  const initialWindowId = windowId ?? defaults.windowId ?? null;
   const initialIndex = isFiniteNumber(defaults.index) ? defaults.index : FALLBACK_TAB_INDEX;
   return {
     id: tabId,
@@ -25,19 +25,19 @@ function createTrackedTabRecord(tabId, senderWindowId, defaults = {}) {
   };
 }
 
-export function ensureTrackedTabRecord(tabId, senderWindowId, defaults = {}) {
+export function ensureTrackedTabRecord(tabId, windowId, defaults = {}) {
   if (!isFiniteNumber(tabId)) {
     return undefined;
   }
 
-  const records = backgroundStore.trackedVideoTabsById;
+  const records = backgroundStore.trackedTabsById;
   let record = records[tabId];
 
   if (!record) {
-    record = createTrackedTabRecord(tabId, senderWindowId, defaults);
+    record = createTrackedTabRecord(tabId, windowId, defaults);
     records[tabId] = record;
-  } else if (senderWindowId != null) {
-    record.windowId = senderWindowId;
+  } else if (windowId != null) {
+    record.windowId = windowId;
   }
 
   if (defaults && typeof defaults === 'object') {
@@ -45,7 +45,7 @@ export function ensureTrackedTabRecord(tabId, senderWindowId, defaults = {}) {
       if (value === undefined) continue;
       if (key === 'id') continue;
       if (key === 'windowId') {
-        if (record.windowId == null && senderWindowId == null) {
+        if (record.windowId == null && windowId == null) {
           record.windowId = value;
         }
         continue;

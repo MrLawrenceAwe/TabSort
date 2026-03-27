@@ -1,9 +1,9 @@
-import { MEDIA_READY_STATE_THRESHOLD } from '../shared/constants.js';
-import { inferIsLiveNow } from '../shared/live-detection.js';
-import { isFiniteNumber } from '../shared/guards.js';
-import { collectPageVideoDetails, getPrimaryVideoElement } from './youtube-page-metadata.js';
+import { MEDIA_READY_STATE_THRESHOLD } from '../../shared/constants.js';
+import { inferIsLiveNow } from '../../shared/live-detection.js';
+import { isFiniteNumber } from '../../shared/guards.js';
+import { collectPageVideoDetails, getPrimaryVideoElement } from './metadata.js';
 
-const contentDeps = {
+const runtimeDeps = {
   mediaReadyStateThreshold: MEDIA_READY_STATE_THRESHOLD,
   isFiniteNumber,
   inferIsLiveNow,
@@ -37,7 +37,7 @@ function trySendRuntimeMessage(payload, context) {
 
 function collectPageDetails() {
   return collectPageVideoDetails({
-    inferIsLiveNow: contentDeps.inferIsLiveNow,
+    inferIsLiveNow: runtimeDeps.inferIsLiveNow,
     logContentError,
   });
 }
@@ -56,7 +56,7 @@ function publishPageVideoDetails() {
 function sendPageRuntimeReadyOnce() {
   if (sendPageRuntimeReadyOnce.sent) return;
   sendPageRuntimeReadyOnce.sent = true;
-  trySendRuntimeMessage({ type: 'pageRuntimeReady' }, 'page runtime ready');
+    trySendRuntimeMessage({ type: 'pageRuntimeReady' }, 'page runtime ready');
 }
 
 function attachVideoReadyListener() {
@@ -74,8 +74,8 @@ function attachVideoReadyListener() {
   const onAny = () => send();
 
   if (
-    video.readyState >= contentDeps.mediaReadyStateThreshold &&
-    contentDeps.isFiniteNumber(video.duration)
+    video.readyState >= runtimeDeps.mediaReadyStateThreshold &&
+    runtimeDeps.isFiniteNumber(video.duration)
   ) {
     send();
   } else {
@@ -102,20 +102,20 @@ function watchForVideoMount() {
   videoMountObserver.observe(document.documentElement, { childList: true, subtree: true });
 }
 
-function observeTitleElement(titleEl) {
-  if (!titleEl || titleEl === observedTitleElement) return;
+function observeTitleElement(titleElement) {
+  if (!titleElement || titleElement === observedTitleElement) return;
   const shouldSendUpdate = observedTitleElement !== null;
-  observedTitleElement = titleEl;
-  lastKnownTitleText = titleEl.textContent;
+  observedTitleElement = titleElement;
+  lastKnownTitleText = titleElement.textContent;
 
   if (titleTextObserver) titleTextObserver.disconnect();
   titleTextObserver = new MutationObserver(() => {
-    const nextTitle = titleEl.textContent;
+    const nextTitle = titleElement.textContent;
     if (nextTitle === lastKnownTitleText) return;
     lastKnownTitleText = nextTitle;
     publishPageVideoDetails();
   });
-  titleTextObserver.observe(titleEl, { childList: true, characterData: true, subtree: true });
+  titleTextObserver.observe(titleElement, { childList: true, characterData: true, subtree: true });
 
   if (shouldSendUpdate) {
     publishPageVideoDetails();
@@ -141,12 +141,12 @@ function handleCollectVideoMetrics(message, sendResponse) {
   const payload = {
     title: details.title || null,
     url: details.url,
-    lengthSeconds: contentDeps.isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
+    lengthSeconds: runtimeDeps.isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
     isLive: Boolean(details.isLive),
-    duration: video && contentDeps.isFiniteNumber(video.duration) ? video.duration : null,
-    currentTime: video && contentDeps.isFiniteNumber(video.currentTime) ? video.currentTime : null,
+    duration: video && runtimeDeps.isFiniteNumber(video.duration) ? video.duration : null,
+    currentTime: video && runtimeDeps.isFiniteNumber(video.currentTime) ? video.currentTime : null,
     playbackRate:
-      video && contentDeps.isFiniteNumber(video.playbackRate) && video.playbackRate > 0
+      video && runtimeDeps.isFiniteNumber(video.playbackRate) && video.playbackRate > 0
         ? video.playbackRate
         : 1,
     paused: video ? video.paused : null,
@@ -181,9 +181,9 @@ function refreshPageState(includeReadySignal = false) {
   watchTitleChanges();
 }
 
-export function bootstrapYoutubePageRuntime() {
-  if (bootstrapYoutubePageRuntime.initialized) return;
-  bootstrapYoutubePageRuntime.initialized = true;
+export function bootstrapRuntime() {
+  if (bootstrapRuntime.initialized) return;
+  bootstrapRuntime.initialized = true;
 
   if (!hasRuntime()) return;
 

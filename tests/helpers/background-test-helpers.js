@@ -1,5 +1,5 @@
 import { TAB_STATES } from '../../shared/constants.js';
-import { backgroundStore } from '../../background/background-store.js';
+import { backgroundStore } from '../../background/store.js';
 
 export function ensureChromeApi({ tabs = false } = {}) {
   if (!globalThis.chrome) {
@@ -19,14 +19,14 @@ export function ensureChromeApi({ tabs = false } = {}) {
 }
 
 export function resetBackgroundStore(trackedWindowId = null) {
-  backgroundStore.trackedVideoTabsById = {};
-  backgroundStore.targetSortOrderTabIds = [];
-  backgroundStore.visibleTabOrderTabIds = [];
-  backgroundStore.areTrackedTabsSorted = false;
-  backgroundStore.readinessMetrics = null;
+  backgroundStore.trackedTabsById = {};
+  backgroundStore.targetOrder = [];
+  backgroundStore.visibleOrder = [];
+  backgroundStore.tabsSorted = false;
+  backgroundStore.readiness = null;
   backgroundStore.trackedWindowId = trackedWindowId;
-  backgroundStore.lastSnapshotSignature = null;
-  backgroundStore.refreshToken = 0;
+  backgroundStore.snapshotSignature = null;
+  backgroundStore.syncToken = 0;
 }
 
 export function makeTrackedTabRecord(id = 1, overrides = {}) {
