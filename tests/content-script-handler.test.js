@@ -1,55 +1,20 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { TAB_STATES } from '../shared/constants.js';
-import { backgroundState } from '../background/state.js';
-import { handleTabDetailsHint } from '../background/handlers/content-script.js';
+import { backgroundStore } from '../background/background-store.js';
+import { handlePageVideoDetails } from '../background/handlers/content-script.js';
+import {
+  ensureChromeApi,
+  makeTrackedTabRecord,
+  resetBackgroundStore,
+} from './helpers/background-test-helpers.js';
 
-if (!globalThis.chrome) {
-  globalThis.chrome = {};
-}
-if (!globalThis.chrome.runtime) {
-  globalThis.chrome.runtime = {};
-}
-globalThis.chrome.runtime.lastError = null;
-globalThis.chrome.runtime.sendMessage = (_message, callback) => {
-  if (typeof callback === 'function') callback();
-};
+ensureChromeApi();
 
-function resetBackgroundState() {
-  backgroundState.trackedVideoTabsById = {};
-  backgroundState.trackedVideoTabIdsByRemaining = [];
-  backgroundState.trackedVideoTabIdsByIndex = [];
-  backgroundState.areTrackedTabsSorted = false;
-  backgroundState.readinessMetrics = null;
-  backgroundState.trackedWindowId = 1;
-  backgroundState.lastBroadcastSignature = null;
-}
+test('handlePageVideoDetails does not create records for non-watch YouTube pages', async () => {
+  resetBackgroundStore(1);
 
-function makeRecord(id, overrides = {}) {
-  return {
-    id,
-    windowId: 1,
-    url: `https://www.youtube.com/watch?v=${id}`,
-    index: 0,
-    pinned: false,
-    status: TAB_STATES.UNSUSPENDED,
-    contentScriptReady: true,
-    metadataLoaded: true,
-    isLiveStream: false,
-    isActiveTab: false,
-    isHidden: false,
-    videoDetails: { title: `Video ${id}`, remainingTime: 25, lengthSeconds: 100 },
-    unsuspendedTimestamp: null,
-    isRemainingTimeStale: false,
-    ...overrides,
-  };
-}
-
-test('handleTabDetailsHint does not create records for non-watch YouTube pages', async () => {
-  resetBackgroundState();
-
-  await handleTabDetailsHint(
+  await handlePageVideoDetails(
     {
       details: {
         url: 'https://www.youtube.com/',
@@ -65,20 +30,23 @@ test('handleTabDetailsHint does not create records for non-watch YouTube pages',
     },
   );
 
-  assert.equal(backgroundState.trackedVideoTabsById[7], undefined);
-  assert.deepEqual(backgroundState.trackedVideoTabIdsByIndex, []);
-  assert.deepEqual(backgroundState.trackedVideoTabIdsByRemaining, []);
+  assert.equal(backgroundStore.trackedVideoTabsById[7], undefined);
+  assert.deepEqual(backgroundStore.visibleTabOrderTabIds, []);
+  assert.deepEqual(backgroundStore.targetSortOrderTabIds, []);
 });
 
-test('handleTabDetailsHint removes tracked rows when tab leaves watch/shorts', async () => {
-  resetBackgroundState();
-  backgroundState.trackedVideoTabsById = {
-    7: makeRecord(7),
+test('handlePageVideoDetails removes tracked rows when tab leaves watch/shorts', async () => {
+  resetBackgroundStore(1);
+  backgroundStore.trackedVideoTabsById = {
+    7: makeTrackedTabRecord(7, {
+      videoDetails: { title: 'Video 7', remainingTime: 25, lengthSeconds: 100 },
+      isRemainingTimeStale: false,
+    }),
   };
-  backgroundState.trackedVideoTabIdsByIndex = [7];
-  backgroundState.trackedVideoTabIdsByRemaining = [7];
+  backgroundStore.visibleTabOrderTabIds = [7];
+  backgroundStore.targetSortOrderTabIds = [7];
 
-  await handleTabDetailsHint(
+  await handlePageVideoDetails(
     {
       details: {
         url: 'https://www.youtube.com/results?search_query=music',
@@ -94,8 +62,7 @@ test('handleTabDetailsHint removes tracked rows when tab leaves watch/shorts', a
     },
   );
 
-  assert.equal(backgroundState.trackedVideoTabsById[7], undefined);
-  assert.deepEqual(backgroundState.trackedVideoTabIdsByIndex, []);
-  assert.deepEqual(backgroundState.trackedVideoTabIdsByRemaining, []);
+  assert.equal(backgroundStore.trackedVideoTabsById[7], undefined);
+  assert.deepEqual(backgroundStore.visibleTabOrderTabIds, []);
+  assert.deepEqual(backgroundStore.targetSortOrderTabIds, []);
 });
-

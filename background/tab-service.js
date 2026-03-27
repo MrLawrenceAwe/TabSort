@@ -1,5 +1,5 @@
 import { TAB_STATES } from '../shared/constants.js';
-import { now, setTrackedWindowIdIfNeeded } from './state.js';
+import { now, setTrackedWindowIdIfNeeded } from './background-store.js';
 
 export async function moveTabsSequentially(tabIds, startingIndex = 0) {
   let targetIndex = startingIndex;

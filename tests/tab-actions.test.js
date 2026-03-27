@@ -2,61 +2,22 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES } from '../shared/constants.js';
+import { backgroundStore } from '../background/background-store.js';
 import { reloadTab } from '../background/handlers/tab-actions.js';
-import { backgroundState } from '../background/state.js';
+import {
+  ensureChromeApi,
+  makeTrackedTabRecord,
+  resetBackgroundStore,
+} from './helpers/background-test-helpers.js';
 
-if (!globalThis.chrome) {
-  globalThis.chrome = {};
-}
-if (!globalThis.chrome.runtime) {
-  globalThis.chrome.runtime = {};
-}
-if (!globalThis.chrome.tabs) {
-  globalThis.chrome.tabs = {};
-}
-
-globalThis.chrome.runtime.lastError = null;
-globalThis.chrome.runtime.sendMessage = (_message, callback) => {
-  if (typeof callback === 'function') callback();
-};
-
-function makeRecord(overrides = {}) {
-  return {
-    id: 1,
-    windowId: 1,
-    url: 'https://www.youtube.com/watch?v=1',
-    index: 0,
-    pinned: false,
-    status: TAB_STATES.UNSUSPENDED,
-    contentScriptReady: true,
-    metadataLoaded: true,
-    isLiveStream: false,
-    isActiveTab: false,
-    isHidden: false,
-    videoDetails: { remainingTime: 100 },
-    loadingStartedAt: null,
-    unsuspendedTimestamp: null,
-    isRemainingTimeStale: false,
-    ...overrides,
-  };
-}
-
-function resetBackgroundState() {
-  backgroundState.trackedVideoTabsById = {};
-  backgroundState.trackedVideoTabIdsByRemaining = [];
-  backgroundState.trackedVideoTabIdsByIndex = [];
-  backgroundState.areTrackedTabsSorted = false;
-  backgroundState.readinessMetrics = null;
-  backgroundState.trackedWindowId = null;
-  backgroundState.lastBroadcastSignature = null;
-}
+ensureChromeApi({ tabs: true });
 
 test('reloadTab does not mutate record state when chrome.tabs.reload fails', { concurrency: false }, async () => {
-  resetBackgroundState();
-  backgroundState.trackedVideoTabsById = {
-    1: makeRecord(),
+  resetBackgroundStore();
+  backgroundStore.trackedVideoTabsById = {
+    1: makeTrackedTabRecord(1, { videoDetails: { remainingTime: 100 }, isRemainingTimeStale: false }),
   };
-  const before = JSON.parse(JSON.stringify(backgroundState.trackedVideoTabsById[1]));
+  const before = JSON.parse(JSON.stringify(backgroundStore.trackedVideoTabsById[1]));
 
   globalThis.chrome.tabs.reload = async () => {
     throw new Error('reload failed');
@@ -64,23 +25,22 @@ test('reloadTab does not mutate record state when chrome.tabs.reload fails', { c
 
   await reloadTab({ tabId: 1, windowId: 1 });
 
-  assert.deepEqual(backgroundState.trackedVideoTabsById[1], before);
+  assert.deepEqual(backgroundStore.trackedVideoTabsById[1], before);
 });
 
 test('reloadTab marks record loading only after successful reload call', { concurrency: false }, async () => {
-  resetBackgroundState();
-  backgroundState.trackedVideoTabsById = {
-    1: makeRecord(),
+  resetBackgroundStore();
+  backgroundStore.trackedVideoTabsById = {
+    1: makeTrackedTabRecord(1, { videoDetails: { remainingTime: 100 }, isRemainingTimeStale: false }),
   };
 
   globalThis.chrome.tabs.reload = async () => {};
 
   await reloadTab({ tabId: 1, windowId: 1 });
 
-  const record = backgroundState.trackedVideoTabsById[1];
+  const record = backgroundStore.trackedVideoTabsById[1];
   assert.equal(record.status, TAB_STATES.LOADING);
-  assert.equal(record.contentScriptReady, false);
-  assert.equal(record.metadataLoaded, false);
+  assert.equal(record.pageRuntimeReady, false);
   assert.equal(record.isRemainingTimeStale, true);
   assert.equal(record.videoDetails.remainingTime, null);
   assert.equal(typeof record.loadingStartedAt, 'number');

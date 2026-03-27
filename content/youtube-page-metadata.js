@@ -86,7 +86,7 @@ function parseYtInitialPlayerResponse(logContentError) {
   return playerResponse || {};
 }
 
-export function getVideoEl() {
+export function getPrimaryVideoElement() {
   const videos = Array.from(document.querySelectorAll('video'));
   if (videos.length === 0) return null;
   if (videos.length === 1) return videos[0];
@@ -117,7 +117,7 @@ export function getVideoEl() {
   return best;
 }
 
-export function getTabDetailsHint({ inferIsLiveNow, logContentError }) {
+export function collectPageVideoDetails({ inferIsLiveNow, logContentError }) {
   const docTitle = cleanTitle(document.title);
   const ogTitle = cleanTitle(document.querySelector('meta[property="og:title"]')?.content);
   const itempropTitle = cleanTitle(document.querySelector('meta[itemprop="name"]')?.content);

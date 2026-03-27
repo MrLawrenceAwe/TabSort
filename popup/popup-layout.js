@@ -1,11 +1,10 @@
-import { popupState } from './state.js';
+import { popupStore } from './popup-store.js';
 
 const domCache = {
   statusElement: null,
   sortButton: null,
   tabsSortedElement: null,
   table: null,
-  hiddenWarningElement: null,
   actionRequiredColumn: null,
   tabStatusColumn: null,
   initialized: false,
@@ -18,7 +17,6 @@ export function initializeDomCache() {
   domCache.sortButton = document.getElementById('sortButton');
   domCache.tabsSortedElement = document.getElementById('tabsSorted');
   domCache.table = document.getElementById('infoTable');
-  domCache.hiddenWarningElement = document.getElementById('hiddenTabWarning');
   domCache.actionRequiredColumn = document.querySelector('.action-required');
   domCache.tabStatusColumn = document.querySelector('.tab-status');
   domCache.initialized = true;
@@ -31,9 +29,9 @@ function getCachedElement(key) {
 
 function updateStatus(statusElement) {
   if (!statusElement) return;
-  if (!popupState.areTrackedTabsSorted) {
-    statusElement.style.display = popupState.trackedTabCount <= 1 ? 'none' : 'block';
-    statusElement.textContent = `${popupState.readyTabCount}/${popupState.trackedTabCount} ready for sort.`;
+  if (!popupStore.areTrackedTabsSorted) {
+    statusElement.style.display = popupStore.trackedTabCount <= 1 ? 'none' : 'block';
+    statusElement.textContent = `${popupStore.readyTabCount}/${popupStore.trackedTabCount} ready for sort.`;
     statusElement.style.color = 'var(--status-text-color)';
     return;
   }
@@ -42,26 +40,14 @@ function updateStatus(statusElement) {
 
 function updateTabsSorted(tabsSortedElement) {
   if (!tabsSortedElement) return;
-  tabsSortedElement.style.display = popupState.areTrackedTabsSorted ? 'block' : 'none';
-}
-
-export function getHiddenWarningMessage() {
-  // This warning was noisy and not actionable enough in practice; keep the UI clean.
-  return '';
-}
-
-function updateHiddenWarning(hiddenWarningElement) {
-  if (!hiddenWarningElement) return;
-  const message = getHiddenWarningMessage();
-  hiddenWarningElement.textContent = message;
-  hiddenWarningElement.style.display = message ? 'block' : 'none';
+  tabsSortedElement.style.display = popupStore.areTrackedTabsSorted ? 'block' : 'none';
 }
 
 function updateSortButton(sortButton, shouldShowSort) {
   if (!sortButton) return;
   if (shouldShowSort) {
     sortButton.style.setProperty('display', 'block', 'important');
-    const allTabsReady = popupState.readyTabCount === popupState.trackedTabCount;
+    const allTabsReady = popupStore.readyTabCount === popupStore.trackedTabCount;
     const readyBackground = 'var(--all-ready-row-background)';
     const readyText = 'var(--all-ready-row-text)';
     sortButton.style.backgroundColor = allTabsReady ? readyBackground : 'var(--action-button-background)';
@@ -100,26 +86,24 @@ export function updateHeaderFooter() {
   const sortButton = getCachedElement('sortButton');
   const tabsSortedElement = getCachedElement('tabsSortedElement');
   const table = getCachedElement('table');
-  const hiddenWarningElement = getCachedElement('hiddenWarningElement');
 
   const readySubsetExists =
-    popupState.readyTabCount >= 2 &&
-    popupState.readyTabCount < popupState.trackedTabCount;
+    popupStore.readyTabCount >= 2 &&
+    popupStore.readyTabCount < popupStore.trackedTabCount;
   const readySubsetNeedsSorting =
-    readySubsetExists && (!popupState.areReadyTabsContiguous || !popupState.areReadyTabsAtFront);
+    readySubsetExists && (!popupStore.areReadyTabsContiguous || !popupStore.areReadyTabsAtFront);
   const shouldShowSort =
-    popupState.readyTabCount >= 2 &&
-    !popupState.areTrackedTabsSorted &&
-    (popupState.areReadyTabsOutOfOrder || readySubsetNeedsSorting);
+    popupStore.readyTabCount >= 2 &&
+    !popupStore.areTrackedTabsSorted &&
+    (popupStore.areReadyTabsOutOfOrder || readySubsetNeedsSorting);
 
   setOptionToggleVisibility(shouldShowSort);
 
   updateStatus(statusElement);
   updateTabsSorted(tabsSortedElement);
-  updateHiddenWarning(hiddenWarningElement);
   updateSortButton(sortButton, shouldShowSort);
 
-  if (popupState.areTrackedTabsSorted && table) {
+  if (popupStore.areTrackedTabsSorted && table) {
     clearReadyRows(table);
   }
 }

@@ -9,9 +9,9 @@
     let lastError = null;
     for (let attempt = 1; attempt <= MAX_BOOTSTRAP_ATTEMPTS; attempt += 1) {
       try {
-        const module = await import(runtime.getURL('content/youtube-content-main.js'));
-        if (typeof module?.bootstrapContentScript === 'function') {
-          module.bootstrapContentScript();
+        const module = await import(runtime.getURL('content/youtube-page-runtime.js'));
+        if (typeof module?.bootstrapYoutubePageRuntime === 'function') {
+          module.bootstrapYoutubePageRuntime();
         }
         return;
       } catch (error) {

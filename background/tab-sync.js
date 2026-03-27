@@ -1,36 +1,32 @@
 import { TAB_STATES } from '../shared/constants.js';
-import { loadSortOptions } from '../shared/storage.js';
-import { hasFreshRemainingTime } from '../shared/tab-metrics.js';
-import { isFiniteNumber, isValidWindowId } from '../shared/utils.js';
-import { backgroundState, setTrackedWindowIdIfNeeded } from './state.js';
-import { isWatchOrShortsPage } from './youtube-url-utils.js';
-import { buildNonYoutubeOrder, buildYoutubeTabOrder } from './sort-strategy.js';
+import { isFiniteNumber, isValidWindowId } from '../shared/guards.js';
+import { backgroundStore, setTrackedWindowIdIfNeeded } from './background-store.js';
+import { recomputeSortState } from './sort-state.js';
 import {
   getTab,
   getTabsForTrackedWindow,
-  moveTabsSequentially,
   sendMessageToTab,
   setLoadingStartTimestamp,
   setUnsuspendTimestamp,
   statusFromTab,
 } from './tab-service.js';
-import { recomputeSorting } from './ordering.js';
+import { isWatchOrShortsPage } from './youtube-url-utils.js';
 
 export async function syncTrackedTabs(windowId, options = {}) {
-  const refreshGeneration = (backgroundState.refreshToken += 1);
+  const refreshGeneration = (backgroundStore.refreshToken += 1);
   const { tabs, windowId: targetWindowId } = await getTabsForTrackedWindow(windowId, options);
-  if (refreshGeneration !== backgroundState.refreshToken) return;
+  if (refreshGeneration !== backgroundStore.refreshToken) return;
   if (targetWindowId == null && tabs.length === 0) return;
 
   if (
     isValidWindowId(targetWindowId) &&
-    isValidWindowId(backgroundState.trackedWindowId) &&
-    targetWindowId !== backgroundState.trackedWindowId
+    isValidWindowId(backgroundStore.trackedWindowId) &&
+    targetWindowId !== backgroundStore.trackedWindowId
   ) {
     return;
   }
 
-  const previousRecords = backgroundState.trackedVideoTabsById;
+  const previousRecords = backgroundStore.trackedVideoTabsById;
   const nextRecords = {};
 
   for (const tab of tabs) {
@@ -39,7 +35,7 @@ export async function syncTrackedTabs(windowId, options = {}) {
     const previousRecord = previousRecords[tab.id] || {};
     const urlChanged = Boolean(previousRecord.url) && Boolean(tab.url) && previousRecord.url !== tab.url;
     const nextStatus = statusFromTab(tab);
-    const previousContentReady = Boolean(previousRecord.contentScriptReady);
+    const previousPageRuntimeReady = Boolean(previousRecord.pageRuntimeReady);
     const statusChanged = previousRecord.status && previousRecord.status !== nextStatus;
     const isUnsuspended = nextStatus === TAB_STATES.UNSUSPENDED;
 
@@ -50,8 +46,7 @@ export async function syncTrackedTabs(windowId, options = {}) {
       index: tab.index,
       pinned: Boolean(tab.pinned),
       status: nextStatus,
-      contentScriptReady: nextStatus === TAB_STATES.UNSUSPENDED ? previousContentReady : false,
-      metadataLoaded: urlChanged ? false : Boolean(previousRecord.metadataLoaded),
+      pageRuntimeReady: nextStatus === TAB_STATES.UNSUSPENDED ? previousPageRuntimeReady : false,
       isLiveStream: urlChanged ? false : Boolean(previousRecord.isLiveStream),
       isActiveTab: Boolean(tab.active),
       isHidden: Boolean(tab.hidden),
@@ -76,21 +71,20 @@ export async function syncTrackedTabs(windowId, options = {}) {
     nextRecords[tab.id] = nextRecord;
   }
 
-  if (refreshGeneration !== backgroundState.refreshToken) return;
-  backgroundState.trackedVideoTabsById = nextRecords;
-  recomputeSorting();
+  if (refreshGeneration !== backgroundStore.refreshToken) return;
+  backgroundStore.trackedVideoTabsById = nextRecords;
+  recomputeSortState();
 }
-
 
 export async function refreshTabMetrics(tabId) {
   try {
-    let record = backgroundState.trackedVideoTabsById[tabId];
+    let record = backgroundStore.trackedVideoTabsById[tabId];
     if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
 
     const tab = await getTab(tabId);
-    record = backgroundState.trackedVideoTabsById[tabId];
+    record = backgroundStore.trackedVideoTabsById[tabId];
     if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
-    if (backgroundState.trackedWindowId != null && tab.windowId !== backgroundState.trackedWindowId) return;
+    if (backgroundStore.trackedWindowId != null && tab.windowId !== backgroundStore.trackedWindowId) return;
     if (tab.windowId != null) {
       record.windowId = tab.windowId;
       setTrackedWindowIdIfNeeded(tab.windowId);
@@ -99,22 +93,22 @@ export async function refreshTabMetrics(tabId) {
     record.isHidden = Boolean(tab.hidden);
     if (!isWatchOrShortsPage(tab.url)) return;
 
-    const result = await sendMessageToTab(tabId, { message: 'getVideoMetrics' });
-    record = backgroundState.trackedVideoTabsById[tabId];
+    const result = await sendMessageToTab(tabId, { type: 'collectVideoMetrics' });
+    record = backgroundStore.trackedVideoTabsById[tabId];
     if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
     if (!result || result.ok !== true) {
-      record.contentScriptReady = false;
+      record.pageRuntimeReady = false;
       if (record.videoDetails && record.videoDetails.remainingTime != null) {
         record.videoDetails.remainingTime = null;
       }
       record.isRemainingTimeStale = true;
-      recomputeSorting();
+      recomputeSortState();
       return;
     }
 
     const metricsPayload = result.data;
     if (!metricsPayload || typeof metricsPayload !== 'object') return;
-    record.contentScriptReady = true;
+    record.pageRuntimeReady = true;
     record.videoDetails = record.videoDetails || {};
 
     if (metricsPayload.title || metricsPayload.url) {
@@ -133,7 +127,7 @@ export async function refreshTabMetrics(tabId) {
       record.videoDetails.lengthSeconds = isFiniteNumber(videoLengthSeconds) ? videoLengthSeconds : null;
       record.videoDetails.remainingTime = null;
       record.isRemainingTimeStale = false;
-      recomputeSorting();
+      recomputeSortState();
       return;
     }
 
@@ -143,7 +137,7 @@ export async function refreshTabMetrics(tabId) {
       record.videoDetails.lengthSeconds = null;
       record.videoDetails.remainingTime = null;
       record.isRemainingTimeStale = false;
-      recomputeSorting();
+      recomputeSortState();
       return;
     }
 
@@ -159,40 +153,6 @@ export async function refreshTabMetrics(tabId) {
       record.isRemainingTimeStale = true;
     }
 
-    recomputeSorting();
+    recomputeSortState();
   } catch (_) {}
-}
-
-export async function sortTrackedTabsInWindow(windowId = backgroundState.trackedWindowId) {
-  const orderedTabIds = backgroundState.trackedVideoTabIdsByRemaining.slice();
-
-  const tabsWithKnownRemainingTime = orderedTabIds.filter((tabId) => {
-    const record = backgroundState.trackedVideoTabsById[tabId];
-    return hasFreshRemainingTime(record);
-  });
-
-  if (tabsWithKnownRemainingTime.length < 2) return;
-
-  const options = await loadSortOptions();
-  const targetWindowId = isValidWindowId(windowId) ? windowId : null;
-  const { tabs } = await getTabsForTrackedWindow(
-    targetWindowId,
-    targetWindowId != null ? { force: true } : undefined,
-  );
-  if (!Array.isArray(tabs) || tabs.length === 0) return;
-
-  const sortedTabs = tabs.slice().sort((a, b) => a.index - b.index);
-  const pinnedCount = sortedTabs.filter((tab) => tab?.pinned).length;
-  const unpinnedTabs = sortedTabs.filter((tab) => tab && !tab.pinned);
-
-  const youtubeOrder = buildYoutubeTabOrder(unpinnedTabs, orderedTabIds);
-  const nonYoutubeOrder = buildNonYoutubeOrder(
-    unpinnedTabs,
-    Boolean(options.groupNonYoutubeTabsByDomain),
-  );
-  const finalOrder = [...youtubeOrder, ...nonYoutubeOrder];
-
-  if (finalOrder.length) {
-    await moveTabsSequentially(finalOrder, pinnedCount);
-  }
 }

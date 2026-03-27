@@ -1,22 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { popupState } from '../popup/state.js';
-import { getHiddenWarningMessage } from '../popup/popup-layout.js';
+import { popupStore } from '../popup/popup-store.js';
 
-test(
-  'getHiddenWarningMessage reflects hidden stale-remaining state',
-  { concurrency: false },
-  () => {
-    const original = popupState.hasBackgroundTabsWithStaleRemaining;
-    try {
-      popupState.hasBackgroundTabsWithStaleRemaining = false;
-      assert.equal(getHiddenWarningMessage(), '');
-
-      popupState.hasBackgroundTabsWithStaleRemaining = true;
-      assert.equal(getHiddenWarningMessage(), '');
-    } finally {
-      popupState.hasBackgroundTabsWithStaleRemaining = original;
-    }
-  },
-);
+test('popup store keeps readiness flags available for layout decisions', () => {
+  popupStore.hasBackgroundTabsWithStaleRemaining = true;
+  assert.equal(popupStore.hasBackgroundTabsWithStaleRemaining, true);
+});

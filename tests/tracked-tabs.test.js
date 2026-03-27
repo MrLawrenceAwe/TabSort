@@ -2,61 +2,23 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES } from '../shared/constants.js';
-import { refreshTabMetrics, syncTrackedTabs } from '../background/tracked-tabs.js';
-import { backgroundState } from '../background/state.js';
+import { backgroundStore } from '../background/background-store.js';
+import { refreshTabMetrics, syncTrackedTabs } from '../background/tab-sync.js';
+import {
+  ensureChromeApi,
+  makeTrackedTabRecord,
+  resetBackgroundStore,
+} from './helpers/background-test-helpers.js';
 
-if (!globalThis.chrome) {
-  globalThis.chrome = {};
-}
-if (!globalThis.chrome.runtime) {
-  globalThis.chrome.runtime = {};
-}
-if (!globalThis.chrome.tabs) {
-  globalThis.chrome.tabs = {};
-}
-
-globalThis.chrome.runtime.lastError = null;
-globalThis.chrome.runtime.sendMessage = (_message, callback) => {
-  if (typeof callback === 'function') callback();
-};
-
-function resetBackgroundState() {
-  backgroundState.trackedVideoTabsById = {};
-  backgroundState.trackedVideoTabIdsByRemaining = [];
-  backgroundState.trackedVideoTabIdsByIndex = [];
-  backgroundState.areTrackedTabsSorted = false;
-  backgroundState.readinessMetrics = null;
-  backgroundState.trackedWindowId = null;
-  backgroundState.lastBroadcastSignature = null;
-}
-
-function makeRecord(overrides = {}) {
-  return {
-    id: 1,
-    windowId: 1,
-    url: 'https://www.youtube.com/watch?v=1',
-    index: 0,
-    pinned: false,
-    status: TAB_STATES.UNSUSPENDED,
-    contentScriptReady: false,
-    metadataLoaded: false,
-    isLiveStream: false,
-    isActiveTab: false,
-    isHidden: false,
-    videoDetails: { remainingTime: null, lengthSeconds: null },
-    unsuspendedTimestamp: null,
-    isRemainingTimeStale: true,
-    ...overrides,
-  };
-}
+ensureChromeApi({ tabs: true });
 
 test(
   'refreshTabMetrics applies updates to the latest record object after async boundaries',
   { concurrency: false },
   async () => {
-    resetBackgroundState();
-    const initialRecord = makeRecord();
-    backgroundState.trackedVideoTabsById = { 1: initialRecord };
+    resetBackgroundStore();
+    const initialRecord = makeTrackedTabRecord(1, { pageRuntimeReady: false });
+    backgroundStore.trackedVideoTabsById = { 1: initialRecord };
 
     globalThis.chrome.tabs.get = (_tabId, callback) => {
       setTimeout(() => {
@@ -86,13 +48,13 @@ test(
 
     const refreshPromise = refreshTabMetrics(1);
 
-    const replacementRecord = makeRecord();
-    backgroundState.trackedVideoTabsById = { 1: replacementRecord };
+    const replacementRecord = makeTrackedTabRecord(1, { pageRuntimeReady: false });
+    backgroundStore.trackedVideoTabsById = { 1: replacementRecord };
 
     await refreshPromise;
 
-    assert.equal(backgroundState.trackedVideoTabsById[1], replacementRecord);
-    assert.equal(replacementRecord.contentScriptReady, true);
+    assert.equal(backgroundStore.trackedVideoTabsById[1], replacementRecord);
+    assert.equal(replacementRecord.pageRuntimeReady, true);
     assert.equal(replacementRecord.videoDetails.lengthSeconds, 120);
     assert.equal(replacementRecord.videoDetails.remainingTime, 100);
     assert.equal(replacementRecord.isRemainingTimeStale, false);
@@ -103,7 +65,7 @@ test(
   'syncTrackedTabs does not mark already-open unsuspended tabs as recently unsuspended on initial rehydrate',
   { concurrency: false },
   async () => {
-    resetBackgroundState();
+    resetBackgroundStore();
 
     globalThis.chrome.tabs.query = (_query, callback) => {
       callback([
@@ -123,7 +85,7 @@ test(
 
     await syncTrackedTabs(1, { force: true });
 
-    const record = backgroundState.trackedVideoTabsById[1];
+    const record = backgroundStore.trackedVideoTabsById[1];
     assert.equal(record.status, TAB_STATES.UNSUSPENDED);
     assert.equal(record.unsuspendedTimestamp, null);
   },
@@ -133,9 +95,9 @@ test(
   'syncTrackedTabs keeps the recent unsuspend grace for real suspended-to-unsuspended transitions',
   { concurrency: false },
   async () => {
-    resetBackgroundState();
-    backgroundState.trackedVideoTabsById = {
-      1: makeRecord({
+    resetBackgroundStore();
+    backgroundStore.trackedVideoTabsById = {
+      1: makeTrackedTabRecord(1, {
         status: TAB_STATES.SUSPENDED,
         unsuspendedTimestamp: null,
       }),
@@ -159,7 +121,7 @@ test(
 
     await syncTrackedTabs(1, { force: true });
 
-    const record = backgroundState.trackedVideoTabsById[1];
+    const record = backgroundStore.trackedVideoTabsById[1];
     assert.equal(record.status, TAB_STATES.UNSUSPENDED);
     assert.equal(typeof record.unsuspendedTimestamp, 'number');
   },
