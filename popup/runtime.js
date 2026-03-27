@@ -1,5 +1,5 @@
 import { MESSAGE_TYPES } from '../shared/constants.js';
-import { popupState, setActiveWindowId } from './state.js';
+import { popupStore, setActiveWindowId } from './popup-store.js';
 
 export function refreshActiveContext() {
   return new Promise((resolve, reject) => {
@@ -13,7 +13,7 @@ export function refreshActiveContext() {
       if (tabs && tabs.length) {
         const tab = tabs[0];
         setActiveWindowId(typeof tab.windowId === 'number' ? tab.windowId : null);
-        resolve({ tabId: tab.id, windowId: popupState.activeWindowId });
+        resolve({ tabId: tab.id, windowId: popupStore.activeWindowId });
         return;
       }
       setActiveWindowId(null);
@@ -22,10 +22,10 @@ export function refreshActiveContext() {
   });
 }
 
-export function sendMessageWithWindow(action, data = {}, callback) {
-  const message = { action, ...data };
-  if (typeof popupState.activeWindowId === 'number' && message.windowId == null) {
-    message.windowId = popupState.activeWindowId;
+export function sendRuntimeMessage(type, data = {}, callback) {
+  const message = { type, ...data };
+  if (typeof popupStore.activeWindowId === 'number' && message.windowId == null) {
+    message.windowId = popupStore.activeWindowId;
   }
   if (typeof callback === 'function') {
     return chrome.runtime.sendMessage(message, callback);
@@ -33,9 +33,9 @@ export function sendMessageWithWindow(action, data = {}, callback) {
   return chrome.runtime.sendMessage(message);
 }
 
-export function sendMessageWithWindowAsync(action, data = {}) {
+export function sendRuntimeMessageAsync(type, data = {}) {
   return new Promise((resolve, reject) => {
-    sendMessageWithWindow(action, data, (response) => {
+    sendRuntimeMessage(type, data, (response) => {
       const err = chrome.runtime.lastError;
       if (err) {
         reject(err);
@@ -49,5 +49,5 @@ export function sendMessageWithWindowAsync(action, data = {}) {
 export function logAndSend(type = MESSAGE_TYPES.ERROR, message = 'Message is undefined') {
   const logger = type === MESSAGE_TYPES.ERROR ? 'error' : 'log';
   console[logger](`[Popup] ${message}`);
-  sendMessageWithWindow('logPopupMessage', { type, info: message });
+  sendRuntimeMessage('logPopupMessage', { level: type, text: message });
 }

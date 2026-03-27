@@ -1,17 +1,17 @@
-import { toErrorMessage } from '../shared/utils.js';
+import { toErrorMessage } from '../shared/errors.js';
 
 export function createAsyncResponder(sendResponse) {
-    return (fn, label) => {
-        Promise.resolve()
-            .then(() => fn())
-            .then((res) => {
-                sendResponse(res !== undefined ? res : { ok: true });
-            })
-            .catch((error) => {
-                const messageText = toErrorMessage(error);
-                console.error(`[TabSort] handler "${label}" failed: ${messageText}`);
-                sendResponse({ ok: false, error: messageText });
-            });
-        return true;
-    };
+  return (fn, label) => {
+    Promise.resolve()
+      .then(() => fn())
+      .then((res) => {
+        sendResponse(res !== undefined ? res : { ok: true });
+      })
+      .catch((error) => {
+        const messageText = toErrorMessage(error);
+        console.error(`[TabSort] handler "${label}" failed: ${messageText}`);
+        sendResponse({ ok: false, error: messageText });
+      });
+    return true;
+  };
 }

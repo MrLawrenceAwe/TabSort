@@ -1,12 +1,12 @@
-import { isFiniteNumber, isValidWindowId } from '../shared/utils.js';
-import { recomputeSorting } from './ordering.js';
-import { backgroundState } from './state.js';
+import { isFiniteNumber, isValidWindowId } from '../shared/guards.js';
+import { backgroundStore } from './background-store.js';
 import { getTab } from './tab-service.js';
-import { refreshTabMetrics, syncTrackedTabs } from './tracked-tabs.js';
+import { recomputeSortState } from './sort-state.js';
+import { refreshTabMetrics, syncTrackedTabs } from './tab-sync.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 import { shouldHandleWindow, withErrorLogging } from './listener-helpers.js';
 
-function refreshForTabWindowChange(label, getWindowId) {
+function syncForTabWindowChange(label, getWindowId) {
   return withErrorLogging(label, async (...args) => {
     const windowId = getWindowId(...args);
     if (!isValidWindowId(windowId)) return;
@@ -35,7 +35,7 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
   );
 
   chrome.tabs.onMoved.addListener(
-    refreshForTabWindowChange('tabs.onMoved', (_tabId, moveInfo) => moveInfo?.windowId),
+    syncForTabWindowChange('tabs.onMoved', (_tabId, moveInfo) => moveInfo?.windowId),
   );
 
   chrome.tabs.onActivated.addListener(
@@ -51,23 +51,23 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
   );
 
   chrome.tabs.onDetached.addListener(
-    refreshForTabWindowChange('tabs.onDetached', (_tabId, detachInfo) => detachInfo?.oldWindowId),
+    syncForTabWindowChange('tabs.onDetached', (_tabId, detachInfo) => detachInfo?.oldWindowId),
   );
 
   chrome.tabs.onAttached.addListener(
-    refreshForTabWindowChange('tabs.onAttached', (_tabId, attachInfo) => attachInfo?.newWindowId),
+    syncForTabWindowChange('tabs.onAttached', (_tabId, attachInfo) => attachInfo?.newWindowId),
   );
 
   chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     if (!shouldHandleWindow(removeInfo?.windowId)) return;
-    delete backgroundState.trackedVideoTabsById[tabId];
-    if (removeInfo?.isWindowClosing && removeInfo.windowId === backgroundState.trackedWindowId) {
+    delete backgroundStore.trackedVideoTabsById[tabId];
+    if (removeInfo?.isWindowClosing && removeInfo.windowId === backgroundStore.trackedWindowId) {
       if (typeof onTrackedWindowClosed === 'function') {
         onTrackedWindowClosed();
       }
       return;
     }
-    recomputeSorting();
+    recomputeSortState();
   });
 
   if (chrome.webNavigation?.onHistoryStateUpdated) {
@@ -81,8 +81,8 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
           try {
             const tab = await getTab(details.tabId);
             if (
-              backgroundState.trackedWindowId != null &&
-              tab.windowId !== backgroundState.trackedWindowId
+              backgroundStore.trackedWindowId != null &&
+              tab.windowId !== backgroundStore.trackedWindowId
             ) {
               return;
             }
@@ -90,8 +90,8 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
           } catch (_) {
             return;
           }
-        } else if (backgroundState.trackedWindowId != null) {
-          windowIdForUpdate = backgroundState.trackedWindowId;
+        } else if (backgroundStore.trackedWindowId != null) {
+          windowIdForUpdate = backgroundStore.trackedWindowId;
         }
 
         await syncTrackedTabs(windowIdForUpdate);

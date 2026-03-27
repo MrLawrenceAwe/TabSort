@@ -1,5 +1,5 @@
 import { TAB_STATES } from './constants.js';
-import { isFiniteNumber } from './utils.js';
+import { isFiniteNumber } from './guards.js';
 
 export function hasFreshRemainingTime(record) {
   if (!record) return false;

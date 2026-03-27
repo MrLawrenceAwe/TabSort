@@ -1,7 +1,7 @@
 import { MEDIA_READY_STATE_THRESHOLD } from '../shared/constants.js';
 import { inferIsLiveNow } from '../shared/live-detection.js';
-import { isFiniteNumber } from '../shared/utils.js';
-import { getTabDetailsHint, getVideoEl } from './youtube-page-details.js';
+import { isFiniteNumber } from '../shared/guards.js';
+import { collectPageVideoDetails, getPrimaryVideoElement } from './youtube-page-metadata.js';
 
 const contentDeps = {
   mediaReadyStateThreshold: MEDIA_READY_STATE_THRESHOLD,
@@ -24,7 +24,7 @@ function hasRuntime() {
   return Boolean(globalThis.chrome?.runtime?.id);
 }
 
-function safeSendMessage(payload, context) {
+function trySendRuntimeMessage(payload, context) {
   if (!hasRuntime()) return false;
   try {
     chrome.runtime.sendMessage(payload);
@@ -35,32 +35,32 @@ function safeSendMessage(payload, context) {
   }
 }
 
-function collectTabDetails() {
-  return getTabDetailsHint({
+function collectPageDetails() {
+  return collectPageVideoDetails({
     inferIsLiveNow: contentDeps.inferIsLiveNow,
     logContentError,
   });
 }
 
-function sendTabDetailsHint() {
+function publishPageVideoDetails() {
   try {
-    const details = collectTabDetails();
+    const details = collectPageDetails();
     if (details.title || details.lengthSeconds != null || details.isLive) {
-      safeSendMessage({ message: 'tabDetailsHint', details }, 'tab details hint');
+      trySendRuntimeMessage({ type: 'pageVideoDetails', details }, 'page video details');
     }
   } catch (error) {
-    logContentError('Sending tab details hint', error);
+    logContentError('Sending page video details', error);
   }
 }
 
-function sendContentReadyOnce() {
-  if (sendContentReadyOnce.sent) return;
-  sendContentReadyOnce.sent = true;
-  safeSendMessage({ message: 'contentScriptReady' }, 'content script ready');
+function sendPageRuntimeReadyOnce() {
+  if (sendPageRuntimeReadyOnce.sent) return;
+  sendPageRuntimeReadyOnce.sent = true;
+  trySendRuntimeMessage({ type: 'pageRuntimeReady' }, 'page runtime ready');
 }
 
 function attachVideoReadyListener() {
-  const video = getVideoEl();
+  const video = getPrimaryVideoElement();
   if (!video) return false;
 
   const events = ['loadedmetadata', 'loadeddata', 'durationchange', 'canplay'];
@@ -68,7 +68,7 @@ function attachVideoReadyListener() {
     events.forEach((eventName) => video.removeEventListener(eventName, onAny));
   };
   const send = () => {
-    safeSendMessage({ message: 'metadataLoaded' }, 'metadata loaded');
+    trySendRuntimeMessage({ type: 'pageMediaReady' }, 'page media ready');
     cleanup();
   };
   const onAny = () => send();
@@ -113,12 +113,12 @@ function observeTitleElement(titleEl) {
     const nextTitle = titleEl.textContent;
     if (nextTitle === lastKnownTitleText) return;
     lastKnownTitleText = nextTitle;
-    sendTabDetailsHint();
+    publishPageVideoDetails();
   });
   titleTextObserver.observe(titleEl, { childList: true, characterData: true, subtree: true });
 
   if (shouldSendUpdate) {
-    sendTabDetailsHint();
+    publishPageVideoDetails();
   }
 }
 
@@ -133,11 +133,11 @@ function watchTitleChanges() {
   titleElementObserver.observe(target, { childList: true, subtree: true });
 }
 
-function handleGetVideoMetrics(message, sendResponse) {
-  if (!message || message.message !== 'getVideoMetrics') return false;
+function handleCollectVideoMetrics(message, sendResponse) {
+  if (!message || message.type !== 'collectVideoMetrics') return false;
 
-  const video = getVideoEl();
-  const details = collectTabDetails();
+  const video = getPrimaryVideoElement();
+  const details = collectPageDetails();
   const payload = {
     title: details.title || null,
     url: details.url,
@@ -172,38 +172,38 @@ function disposeObservers() {
   lastKnownTitleText = null;
 }
 
-function refreshMetadata(includeReadySignal = false) {
+function refreshPageState(includeReadySignal = false) {
   if (includeReadySignal) {
-    sendContentReadyOnce();
+    sendPageRuntimeReadyOnce();
   }
-  sendTabDetailsHint();
+  publishPageVideoDetails();
   watchForVideoMount();
   watchTitleChanges();
 }
 
-export function bootstrapContentScript() {
-  if (bootstrapContentScript.initialized) return;
-  bootstrapContentScript.initialized = true;
+export function bootstrapYoutubePageRuntime() {
+  if (bootstrapYoutubePageRuntime.initialized) return;
+  bootstrapYoutubePageRuntime.initialized = true;
 
   if (!hasRuntime()) return;
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) =>
-    handleGetVideoMetrics(message, sendResponse),
+    handleCollectVideoMetrics(message, sendResponse),
   );
 
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    refreshMetadata(true);
+    refreshPageState(true);
   } else {
-    window.addEventListener('DOMContentLoaded', () => refreshMetadata(true), { once: true });
+    window.addEventListener('DOMContentLoaded', () => refreshPageState(true), { once: true });
   }
 
   window.addEventListener('yt-navigate-finish', () => {
-    refreshMetadata();
+    refreshPageState();
   });
 
   window.addEventListener('pageshow', (event) => {
     if (event.persisted) {
-      refreshMetadata(true);
+      refreshPageState(true);
     }
   });
 

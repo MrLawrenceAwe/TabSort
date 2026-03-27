@@ -1,14 +1,14 @@
-import { updateSortingState } from './state.js';
-import { logAndSend, refreshActiveContext, sendMessageWithWindowAsync } from './runtime.js';
+import { MESSAGE_TYPES } from '../shared/constants.js';
+import { toErrorMessage } from '../shared/errors.js';
+import { EMPTY_READINESS_METRICS } from '../shared/readiness.js';
+import { updateSortingState } from './popup-store.js';
+import { logAndSend, refreshActiveContext, sendRuntimeMessageAsync } from './runtime.js';
 import {
   setActionAndStatusColumnsVisibility,
   updateHeaderFooter,
   addClassToAllRows,
 } from './popup-layout.js';
 import { insertRowCells } from './rows.js';
-import { EMPTY_READINESS_METRICS } from '../shared/readiness.js';
-import { MESSAGE_TYPES } from '../shared/constants.js';
-import { toErrorMessage } from '../shared/utils.js';
 
 const SNAPSHOT_RETRY_DELAY_MS = 150;
 const SNAPSHOT_MAX_ATTEMPTS = 2;
@@ -25,10 +25,10 @@ async function requestSnapshotWithRetry() {
     try {
       if (attempt > 1) {
         await refreshActiveContext().catch(() => {});
-        await sendMessageWithWindowAsync('ping').catch(() => {});
+        await sendRuntimeMessageAsync('ping').catch(() => {});
         await sleep(SNAPSHOT_RETRY_DELAY_MS);
       }
-      const response = await sendMessageWithWindowAsync('getTabSnapshot', {});
+      const response = await sendRuntimeMessageAsync('getTabSnapshot', {});
       if (isValidSnapshot(response)) {
         return response;
       }
@@ -58,7 +58,7 @@ export async function renderSnapshot(snapshot) {
   const tbody = table.tBodies[0] ?? table.createTBody();
 
   const tabRecords = snapshot.trackedVideoTabsById || {};
-  const currentOrderIds = snapshot.trackedVideoTabIdsByIndex || [];
+  const currentOrderIds = snapshot.visibleTabOrderTabIds || [];
 
   const metrics = { ...EMPTY_READINESS_METRICS, ...(snapshot.readinessMetrics || {}) };
   const backgroundSortedFlag = snapshot.areTrackedTabsSorted === true;

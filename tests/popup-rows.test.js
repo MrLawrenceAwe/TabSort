@@ -11,7 +11,7 @@ function makeRecord(overrides = {}) {
     isLiveStream: false,
     isActiveTab: false,
     isHidden: false,
-    contentScriptReady: true,
+    pageRuntimeReady: true,
     isRemainingTimeStale: false,
     unsuspendedTimestamp: null,
     videoDetails: { remainingTime: null },
@@ -22,7 +22,7 @@ function makeRecord(overrides = {}) {
 test('stale rows without remaining time do not suggest viewing the tab', () => {
   const record = makeRecord({
     isRemainingTimeStale: true,
-    contentScriptReady: false,
+    pageRuntimeReady: false,
     unsuspendedTimestamp: Date.now() - (RECENTLY_UNSUSPENDED_MS + 1000),
   });
 
@@ -33,7 +33,7 @@ test('stale rows without remaining time do not suggest viewing the tab', () => {
 test('recently unsuspended rows avoid contradictory stale guidance', () => {
   const record = makeRecord({
     isRemainingTimeStale: true,
-    contentScriptReady: false,
+    pageRuntimeReady: false,
     unsuspendedTimestamp: Date.now(),
   });
 
@@ -45,7 +45,7 @@ test('stale rows with remaining time can still request view interaction when app
   const record = makeRecord({
     isRemainingTimeStale: true,
     videoDetails: { remainingTime: 320 },
-    contentScriptReady: true,
+    pageRuntimeReady: true,
     isActiveTab: false,
   });
 
@@ -56,13 +56,13 @@ test('stale rows with remaining time can still request view interaction when app
 test('loading rows switch from waiting to interaction after the loading grace period', () => {
   const recentLoadingRecord = makeRecord({
     status: TAB_STATES.LOADING,
-    contentScriptReady: false,
+    pageRuntimeReady: false,
     loadingStartedAt: Date.now() - (LOADING_GRACE_MS - 1000),
   });
 
   const stalledLoadingRecord = makeRecord({
     status: TAB_STATES.LOADING,
-    contentScriptReady: false,
+    pageRuntimeReady: false,
     loadingStartedAt: Date.now() - (LOADING_GRACE_MS + 1000),
   });
 

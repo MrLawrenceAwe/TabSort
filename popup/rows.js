@@ -1,7 +1,7 @@
 import { TAB_STATES, RECENTLY_UNSUSPENDED_MS, LOADING_GRACE_MS } from '../shared/constants.js';
-import { isFiniteNumber } from '../shared/utils.js';
-import { popupState } from './state.js';
-import { sendMessageWithWindow } from './runtime.js';
+import { isFiniteNumber } from '../shared/guards.js';
+import { popupStore } from './popup-store.js';
+import { sendRuntimeMessage } from './runtime.js';
 
 const USER_ACTIONS = {
   RELOAD_TAB: 'Reload tab',
@@ -49,7 +49,7 @@ function insertInfoCells(row, record, sortedView, userAction) {
     const cell = row.insertCell(row.cells.length);
     const value = column.getter(record, userAction);
 
-    cell.textContent = popupState.areTrackedTabsSorted
+    cell.textContent = popupStore.areTrackedTabsSorted
       ? value
       : getFallbackValue(value);
   });
@@ -86,7 +86,7 @@ function createLink(text, messageAction, tabId) {
   a.textContent = text;
   a.addEventListener('click', (event) => {
     event.preventDefault();
-    sendMessageWithWindow(messageAction, { tabId });
+    sendRuntimeMessage(messageAction, { tabId });
   });
   return a;
 }
@@ -131,7 +131,7 @@ function determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended) 
   switch (tabRecord.status) {
     case TAB_STATES.UNSUSPENDED:
       if (recentlyUnsuspended) return USER_ACTIONS.NO_ACTION;
-      if (tabRecord.isActiveTab || !tabRecord.contentScriptReady) return USER_ACTIONS.RELOAD_TAB;
+      if (tabRecord.isActiveTab || !tabRecord.pageRuntimeReady) return USER_ACTIONS.RELOAD_TAB;
       return USER_ACTIONS.INTERACT_WITH_TAB_THEN_RELOAD;
     case TAB_STATES.SUSPENDED:
       return USER_ACTIONS.INTERACT_WITH_TAB;
@@ -164,7 +164,7 @@ export function determineUserAction(tabRecord) {
   }
 
   if (tabRecord?.isRemainingTimeStale) {
-    if (!tabRecord.contentScriptReady || tabRecord.isActiveTab) {
+    if (!tabRecord.pageRuntimeReady || tabRecord.isActiveTab) {
       return determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended);
     }
     return USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME;

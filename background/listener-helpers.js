@@ -1,4 +1,4 @@
-import { backgroundState } from './state.js';
+import { backgroundStore } from './background-store.js';
 
 export function logListenerError(label, error) {
   const message = error?.message || String(error);
@@ -16,5 +16,5 @@ export function withErrorLogging(label, fn) {
 }
 
 export function shouldHandleWindow(windowId) {
-  return backgroundState.trackedWindowId == null || windowId === backgroundState.trackedWindowId;
+  return backgroundStore.trackedWindowId == null || windowId === backgroundStore.trackedWindowId;
 }
