@@ -46,8 +46,8 @@ function updateTabsSorted(tabsSortedElement) {
 }
 
 export function getHiddenWarningMessage() {
-  if (!popupState.hasBackgroundTabsWithStaleRemaining) return '';
-  return 'Some background tabs may have stale remaining time. Open each tab once to refresh.';
+  // This warning was noisy and not actionable enough in practice; keep the UI clean.
+  return '';
 }
 
 function updateHiddenWarning(hiddenWarningElement) {
