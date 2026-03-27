@@ -3,6 +3,7 @@ import { EMPTY_READINESS_METRICS } from '../shared/readiness.js';
 export const popupState = {
   ...EMPTY_READINESS_METRICS,
   areTrackedTabsSorted: false,
+  canSortWindow: false,
   activeWindowId: null,
 };
 
@@ -13,4 +14,3 @@ export function setActiveWindowId(windowId) {
 export function updateSortingState(updates = {}) {
   Object.assign(popupState, updates);
 }
-

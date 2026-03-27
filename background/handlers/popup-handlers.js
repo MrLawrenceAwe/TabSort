@@ -1,6 +1,7 @@
 import { isValidWindowId } from '../../shared/utils.js';
 import { backgroundState, setTrackedWindowIdIfNeeded } from '../state.js';
 import {
+    getWindowSortState,
     refreshTabMetrics,
     sortTrackedTabsInWindow,
     syncTrackedTabs,
@@ -19,7 +20,13 @@ export async function handleGetTabSnapshot(message) {
     await syncTrackedTabs(message.windowId, buildForceSyncOptions(message.windowId));
     const ids = Object.keys(backgroundState.trackedVideoTabsById).map(Number);
     await Promise.all(ids.map(refreshTabMetrics));
-    return buildTabSnapshot();
+    const { canSortWindow } = await getWindowSortState(message.windowId, message.sortOptions);
+    return buildTabSnapshot({ canSortWindow });
+}
+
+export async function handleGetCurrentSnapshot(message) {
+    const { canSortWindow } = await getWindowSortState(message.windowId, message.sortOptions);
+    return buildTabSnapshot({ canSortWindow });
 }
 
 export async function handleSortTrackedTabs(message) {
@@ -29,6 +36,6 @@ export async function handleSortTrackedTabs(message) {
     if (isValidWindowId(targetWindowId)) {
         setTrackedWindowIdIfNeeded(targetWindowId, { force: true });
     }
-    await sortTrackedTabsInWindow(targetWindowId);
+    await sortTrackedTabsInWindow(targetWindowId, message.sortOptions);
     await syncTrackedTabs(targetWindowId, buildForceSyncOptions(targetWindowId));
 }

@@ -1,6 +1,5 @@
 import { TAB_STATES } from '../shared/constants.js';
 import { loadSortOptions } from '../shared/storage.js';
-import { hasFreshRemainingTime } from '../shared/tab-metrics.js';
 import { isFiniteNumber, isValidWindowId } from '../shared/utils.js';
 import { backgroundState, setTrackedWindowIdIfNeeded } from './state.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
@@ -96,9 +95,11 @@ export async function refreshTabMetrics(tabId) {
     record.isHidden = Boolean(tab.hidden);
     if (!isWatchOrShortsPage(tab.url)) return;
 
+    const requestUrl = typeof tab.url === 'string' ? tab.url : record.url;
     const result = await sendMessageToTab(tabId, { message: 'getVideoMetrics' });
     record = backgroundState.trackedVideoTabsById[tabId];
     if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
+    if (requestUrl && record.url && record.url !== requestUrl) return;
     if (!result || result.ok !== true) {
       record.contentScriptReady = false;
       if (record.videoDetails && record.videoDetails.remainingTime != null) {
@@ -111,6 +112,14 @@ export async function refreshTabMetrics(tabId) {
 
     const metricsPayload = result.data;
     if (!metricsPayload || typeof metricsPayload !== 'object') return;
+    if (
+      requestUrl &&
+      typeof metricsPayload.url === 'string' &&
+      metricsPayload.url &&
+      metricsPayload.url !== requestUrl
+    ) {
+      return;
+    }
     record.contentScriptReady = true;
     record.videoDetails = record.videoDetails || {};
 
@@ -160,36 +169,62 @@ export async function refreshTabMetrics(tabId) {
   } catch (_) {}
 }
 
-export async function sortTrackedTabsInWindow(windowId = backgroundState.trackedWindowId) {
-  const orderedTabIds = backgroundState.trackedVideoTabIdsByRemaining.slice();
+async function resolveSortOptions(sortOptions) {
+  const persistedOptions = await loadSortOptions();
+  if (!sortOptions || typeof sortOptions !== 'object') {
+    return persistedOptions;
+  }
+  return { ...persistedOptions, ...sortOptions };
+}
 
-  const tabsWithKnownRemainingTime = orderedTabIds.filter((tabId) => {
-    const record = backgroundState.trackedVideoTabsById[tabId];
-    return hasFreshRemainingTime(record);
-  });
-
-  if (tabsWithKnownRemainingTime.length < 2) return;
-
-  const options = await loadSortOptions();
+export async function getWindowSortState(
+  windowId = backgroundState.trackedWindowId,
+  sortOptions,
+) {
+  const options = await resolveSortOptions(sortOptions);
   const targetWindowId = isValidWindowId(windowId) ? windowId : null;
   const { tabs } = await getTabsForTrackedWindow(
     targetWindowId,
     targetWindowId != null ? { force: true } : undefined,
   );
-  if (!Array.isArray(tabs) || tabs.length === 0) return;
 
+  if (!Array.isArray(tabs) || tabs.length === 0) {
+    return {
+      currentOrder: [],
+      finalOrder: [],
+      pinnedCount: 0,
+      canSortWindow: false,
+    };
+  }
+
+  const orderedTabIds = backgroundState.trackedVideoTabIdsByRemaining.slice();
   const sortedTabs = tabs.slice().sort((a, b) => a.index - b.index);
   const pinnedCount = sortedTabs.filter((tab) => tab?.pinned).length;
   const unpinnedTabs = sortedTabs.filter((tab) => tab && !tab.pinned);
 
+  const currentOrder = unpinnedTabs.map((tab) => tab.id);
   const youtubeOrder = buildYoutubeTabOrder(unpinnedTabs, orderedTabIds);
   const nonYoutubeOrder = buildNonYoutubeOrder(
     unpinnedTabs,
     Boolean(options.groupNonYoutubeTabsByDomain),
   );
   const finalOrder = [...youtubeOrder, ...nonYoutubeOrder];
+  const canSortWindow =
+    finalOrder.length === currentOrder.length &&
+    finalOrder.some((tabId, index) => tabId !== currentOrder[index]);
 
-  if (finalOrder.length) {
+  return {
+    currentOrder,
+    finalOrder,
+    pinnedCount,
+    canSortWindow,
+  };
+}
+
+export async function sortTrackedTabsInWindow(windowId = backgroundState.trackedWindowId, sortOptions) {
+  const { finalOrder, pinnedCount, canSortWindow } = await getWindowSortState(windowId, sortOptions);
+
+  if (canSortWindow && finalOrder.length) {
     await moveTabsSequentially(finalOrder, pinnedCount);
   }
 }
