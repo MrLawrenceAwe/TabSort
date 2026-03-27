@@ -19,7 +19,7 @@ function areIdListsEqual(a, b) {
   return true;
 }
 
-export function buildTabSnapshot() {
+export function buildTabSnapshot(extras = {}) {
   const records = Object.fromEntries(
     Object.entries(backgroundState.trackedVideoTabsById).map(([id, record]) => [
       id,
@@ -39,6 +39,7 @@ export function buildTabSnapshot() {
     readinessMetrics: {
       ...(backgroundState.readinessMetrics || createEmptyReadinessMetrics()),
     },
+    ...extras,
   };
 }
 
