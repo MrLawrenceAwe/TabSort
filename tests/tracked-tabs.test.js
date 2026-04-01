@@ -126,3 +126,44 @@ test(
     assert.equal(typeof record.unsuspendedTimestamp, 'number');
   },
 );
+
+test(
+  'syncTrackedWindowTabs resets runtime readiness when a tracked tab navigates to a new video URL',
+  { concurrency: false },
+  async () => {
+    resetBackgroundStore();
+    backgroundStore.trackedTabsById = {
+      1: makeTrackedTabRecord(1, {
+        url: 'https://www.youtube.com/watch?v=old',
+        pageRuntimeReady: true,
+        videoDetails: { title: 'Old Video', remainingTime: 45, lengthSeconds: 120 },
+        isRemainingTimeStale: false,
+      }),
+    };
+
+    globalThis.chrome.tabs.query = (_query, callback) => {
+      callback([
+        {
+          id: 1,
+          windowId: 1,
+          url: 'https://www.youtube.com/watch?v=new',
+          index: 0,
+          pinned: false,
+          status: 'complete',
+          active: false,
+          hidden: false,
+          discarded: false,
+        },
+      ]);
+    };
+
+    await syncTrackedWindowTabs(1, { force: true });
+
+    const record = backgroundStore.trackedTabsById[1];
+    assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
+    assert.equal(record.pageRuntimeReady, false);
+    assert.equal(record.videoDetails, null);
+    assert.equal(record.isLiveStream, false);
+    assert.equal(record.isRemainingTimeStale, true);
+  },
+);

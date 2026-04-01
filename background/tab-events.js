@@ -5,6 +5,7 @@ import { recomputeSortState } from './sort-state.js';
 import { refreshTrackedTab, syncTrackedWindowTabs } from './tracked-tabs.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 import { shouldHandleWindow, withErrorLogging } from './listener-helpers.js';
+import { logDebug, logWarn } from '../shared/log.js';
 
 function syncForWindowChange(label, resolveWindowId) {
   return withErrorLogging(label, async (...args) => {
@@ -87,7 +88,8 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
               return;
             }
             windowIdForUpdate = tab.windowId;
-          } catch (_) {
+          } catch (error) {
+            logDebug(`getTab failed for history update ${details.tabId}`, error);
             return;
           }
         } else if (backgroundStore.trackedWindowId != null) {
@@ -100,8 +102,8 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
       { url: [{ hostContains: 'youtube.com' }] },
     );
   } else {
-    console.warn(
-      '[TabSort] webNavigation API unavailable (missing permission?); falling back to tabs.onUpdated only.',
+    logWarn(
+      'webNavigation API unavailable (missing permission?); falling back to tabs.onUpdated only.',
     );
   }
 }

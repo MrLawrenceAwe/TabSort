@@ -10,6 +10,7 @@ import {
 } from './chrome-tabs.js';
 import { updateLoadStart, updateUnsuspendTime } from './tab-state.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
+import { logDebug } from '../shared/log.js';
 
 export async function syncTrackedWindowTabs(windowId, options = {}) {
   const syncToken = (backgroundStore.syncToken += 1);
@@ -46,7 +47,8 @@ export async function syncTrackedWindowTabs(windowId, options = {}) {
       index: tab.index,
       pinned: Boolean(tab.pinned),
       status: nextStatus,
-      pageRuntimeReady: nextStatus === TAB_STATES.UNSUSPENDED ? previousPageRuntimeReady : false,
+      pageRuntimeReady:
+        nextStatus === TAB_STATES.UNSUSPENDED && !urlChanged ? previousPageRuntimeReady : false,
       isLiveStream: urlChanged ? false : Boolean(previousRecord.isLiveStream),
       isActiveTab: Boolean(tab.active),
       isHidden: Boolean(tab.hidden),
@@ -154,5 +156,7 @@ export async function refreshTrackedTab(tabId) {
     }
 
     recomputeSortState();
-  } catch (_) {}
+  } catch (error) {
+    logDebug(`refreshTrackedTab failed for ${tabId}`, error);
+  }
 }
