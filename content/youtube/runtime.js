@@ -14,6 +14,8 @@ let titleElementObserver = null;
 let titleTextObserver = null;
 let observedTitleElement = null;
 let lastKnownTitleText = null;
+let observedPageUrl = null;
+let runtimeReadyUrl = null;
 
 function logContentError(context, error) {
   const message = error instanceof Error ? error.message : String(error);
@@ -35,6 +37,14 @@ function trySendRuntimeMessage(payload, context) {
   }
 }
 
+function getCurrentPageUrl() {
+  return globalThis.location?.href || '';
+}
+
+export function shouldSendPageRuntimeReady(currentUrl, lastReadyUrl, { force = false } = {}) {
+  return Boolean(currentUrl) && (force || currentUrl !== lastReadyUrl);
+}
+
 function collectPageDetails() {
   return collectPageVideoDetails({
     inferIsLiveNow: runtimeDeps.inferIsLiveNow,
@@ -53,10 +63,11 @@ function publishPageVideoDetails() {
   }
 }
 
-function sendPageRuntimeReadyOnce() {
-  if (sendPageRuntimeReadyOnce.sent) return;
-  sendPageRuntimeReadyOnce.sent = true;
-    trySendRuntimeMessage({ type: 'pageRuntimeReady' }, 'page runtime ready');
+function sendPageRuntimeReady({ force = false } = {}) {
+  const currentUrl = getCurrentPageUrl();
+  if (!shouldSendPageRuntimeReady(currentUrl, runtimeReadyUrl, { force })) return;
+  runtimeReadyUrl = currentUrl;
+  trySendRuntimeMessage({ type: 'pageRuntimeReady' }, 'page runtime ready');
 }
 
 function attachVideoReadyListener() {
@@ -172,13 +183,32 @@ function disposeObservers() {
   lastKnownTitleText = null;
 }
 
-function refreshPageState(includeReadySignal = false) {
+function syncPageSession() {
+  const currentUrl = getCurrentPageUrl();
+  if (currentUrl && currentUrl !== observedPageUrl) {
+    disposeObservers();
+    observedPageUrl = currentUrl;
+    runtimeReadyUrl = null;
+  } else if (!observedPageUrl && currentUrl) {
+    observedPageUrl = currentUrl;
+  }
+}
+
+function refreshPageState({ includeReadySignal = false, forceReadySignal = false } = {}) {
+  syncPageSession();
   if (includeReadySignal) {
-    sendPageRuntimeReadyOnce();
+    sendPageRuntimeReady({ force: forceReadySignal });
   }
   publishPageVideoDetails();
   watchForVideoMount();
   watchTitleChanges();
+}
+
+export function resetRuntimeStateForTests() {
+  disposeObservers();
+  observedPageUrl = null;
+  runtimeReadyUrl = null;
+  bootstrapRuntime.initialized = false;
 }
 
 export function bootstrapRuntime() {
@@ -192,22 +222,27 @@ export function bootstrapRuntime() {
   );
 
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    refreshPageState(true);
+    refreshPageState({ includeReadySignal: true });
   } else {
-    window.addEventListener('DOMContentLoaded', () => refreshPageState(true), { once: true });
+    window.addEventListener(
+      'DOMContentLoaded',
+      () => refreshPageState({ includeReadySignal: true }),
+      { once: true },
+    );
   }
 
   window.addEventListener('yt-navigate-finish', () => {
-    refreshPageState();
+    refreshPageState({ includeReadySignal: true });
   });
 
   window.addEventListener('pageshow', (event) => {
     if (event.persisted) {
-      refreshPageState(true);
+      refreshPageState({ includeReadySignal: true, forceReadySignal: true });
     }
   });
 
   window.addEventListener('pagehide', () => {
     disposeObservers();
+    runtimeReadyUrl = null;
   });
 }

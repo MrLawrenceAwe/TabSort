@@ -1,4 +1,5 @@
 import { TAB_STATES } from '../shared/constants.js';
+import { logDebug, logWarn } from '../shared/log.js';
 
 export async function moveTabsInOrder(tabIds, startIndex = 0) {
   let targetIndex = startIndex;
@@ -7,7 +8,9 @@ export async function moveTabsInOrder(tabIds, startIndex = 0) {
     try {
       await chrome.tabs.move(tabId, { index: targetIndex });
       targetIndex += 1;
-    } catch (_) {}
+    } catch (error) {
+      logDebug(`tabs.move failed for ${tabId}`, error);
+    }
   }
 }
 
@@ -17,18 +20,14 @@ export function queryTabs(query) {
       chrome.tabs.query(query, (tabs) => {
         const err = chrome.runtime.lastError;
         if (err) {
-          console.warn(
-            `[TabSort] tabs.query failed for ${JSON.stringify(query)}: ${err.message}`,
-          );
+          logWarn(`tabs.query failed for ${JSON.stringify(query)}`, err);
           resolve([]);
           return;
         }
         resolve(Array.isArray(tabs) ? tabs : []);
       });
     } catch (error) {
-      console.warn(
-        `[TabSort] tabs.query threw for ${JSON.stringify(query)}: ${error.message}`,
-      );
+      logWarn(`tabs.query threw for ${JSON.stringify(query)}`, error);
       resolve([]);
     }
   });

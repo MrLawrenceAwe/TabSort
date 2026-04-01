@@ -4,6 +4,7 @@ import { backgroundStore, updateTrackedWindowId } from './store.js';
 import { logListenerError, withErrorLogging } from './listener-helpers.js';
 import { recomputeSortState } from './sort-state.js';
 import { refreshTrackedTab, syncTrackedWindowTabs } from './tracked-tabs.js';
+import { logDebug } from '../shared/log.js';
 
 const MIN_REFRESH_INTERVAL_MINUTES = 1;
 const refreshIntervalMinutes = Math.max(REFRESH_INTERVAL_MINUTES, MIN_REFRESH_INTERVAL_MINUTES);
@@ -14,12 +15,14 @@ const getLastFocusedWindowId = () =>
       chrome.windows.getLastFocused({ populate: false }, (win) => {
         const err = chrome.runtime.lastError;
         if (err) {
+          logDebug('windows.getLastFocused failed', err);
           resolve(null);
           return;
         }
         resolve(typeof win?.id === 'number' ? win.id : null);
       });
-    } catch (_) {
+    } catch (error) {
+      logDebug('windows.getLastFocused threw', error);
       resolve(null);
     }
   });
@@ -62,7 +65,9 @@ export function ensureRefreshAlarm() {
         console.debug(`[TabSort] alarm create failed: ${error.message}`);
       }
     });
-  } catch (_) {}
+  } catch (error) {
+    logDebug('ensureRefreshAlarm failed', error);
+  }
 }
 
 export function initializeWindowLifecycle() {

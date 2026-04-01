@@ -1,5 +1,6 @@
 import { createEmptyReadinessMetrics } from '../shared/readiness.js';
 import { backgroundStore } from './store.js';
+import { logDebug } from '../shared/log.js';
 
 function cloneTrackedTabRecord(record) {
   if (!record || typeof record !== 'object') return record;
@@ -41,5 +42,7 @@ export function broadcastSnapshotUpdate({ force = false } = {}) {
         console.debug(`[TabSort] broadcast warning: ${err.message}`);
       }
     });
-  } catch (_) {}
+  } catch (error) {
+    logDebug('broadcastSnapshotUpdate failed', error);
+  }
 }

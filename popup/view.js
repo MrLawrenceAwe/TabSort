@@ -1,6 +1,8 @@
 import { popupState } from './state.js';
 
 const domCache = {
+  errorElement: null,
+  emptyStateElement: null,
   statusElement: null,
   sortButton: null,
   tabsSortedElement: null,
@@ -13,6 +15,8 @@ const domCache = {
 export function initializeView() {
   if (domCache.initialized) return;
 
+  domCache.errorElement = document.getElementById('popupError');
+  domCache.emptyStateElement = document.getElementById('emptyState');
   domCache.statusElement = document.getElementById('videoTabsReadyStatus');
   domCache.sortButton = document.getElementById('sortButton');
   domCache.tabsSortedElement = document.getElementById('tabsSorted');
@@ -41,6 +45,31 @@ function updateStatus(statusElement) {
 function updateTabsSorted(tabsSortedElement) {
   if (!tabsSortedElement) return;
   tabsSortedElement.style.display = popupState.tabsSorted ? 'block' : 'none';
+}
+
+export function getEmptyStateMessage(trackedTabCount) {
+  if (trackedTabCount <= 0) {
+    return 'Open YouTube watch or shorts tabs in this window to sort them.';
+  }
+  if (trackedTabCount === 1) {
+    return 'Open at least one more YouTube video tab in this window to sort them.';
+  }
+  return '';
+}
+
+function updateEmptyState(emptyStateElement) {
+  if (!emptyStateElement) return;
+  const message = getEmptyStateMessage(popupState.trackedTabCount);
+  emptyStateElement.textContent = message;
+  emptyStateElement.classList.toggle('hide', !message);
+}
+
+export function setErrorMessage(message = '') {
+  const errorElement = getCachedElement('errorElement');
+  if (!errorElement) return;
+  const nextMessage = typeof message === 'string' ? message.trim() : '';
+  errorElement.textContent = nextMessage;
+  errorElement.classList.toggle('hide', !nextMessage);
 }
 
 function updateSortButton(sortButton, shouldShowSort) {
@@ -82,6 +111,7 @@ export function setOptionToggleVisibility(visible) {
 }
 
 export function renderHeaderState() {
+  const emptyStateElement = getCachedElement('emptyStateElement');
   const statusElement = getCachedElement('statusElement');
   const sortButton = getCachedElement('sortButton');
   const tabsSortedElement = getCachedElement('tabsSortedElement');
@@ -102,6 +132,7 @@ export function renderHeaderState() {
   updateStatus(statusElement);
   updateTabsSorted(tabsSortedElement);
   updateSortButton(sortButton, shouldShowSort);
+  updateEmptyState(emptyStateElement);
 
   if (popupState.tabsSorted && table) {
     clearReadyRows(table);

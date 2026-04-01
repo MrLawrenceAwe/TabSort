@@ -8,6 +8,7 @@ import { ensureTrackedTabRecord } from './tab-record.js';
 import { refreshTrackedTab, syncTrackedWindowTabs } from './tracked-tabs.js';
 import { sortWindowTabs } from './window-sort.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
+import { logDebug } from '../shared/log.js';
 
 function canTrackSenderWindow(windowId) {
   if (backgroundStore.trackedWindowId == null) return true;
@@ -26,7 +27,9 @@ export async function activateTabMessage(message) {
   }
   try {
     await chrome.tabs.update(tabId, { active: true });
-  } catch (_) {}
+  } catch (error) {
+    logDebug(`tabs.update failed for ${tabId}`, error);
+  }
 }
 
 export async function reloadTabMessage(message) {
@@ -39,7 +42,9 @@ export async function reloadTabMessage(message) {
   try {
     await chrome.tabs.reload(tabId);
     didReload = true;
-  } catch (_) {}
+  } catch (error) {
+    logDebug(`tabs.reload failed for ${tabId}`, error);
+  }
   if (!didReload) return;
   const record = backgroundStore.trackedTabsById[tabId];
   if (!record) return;

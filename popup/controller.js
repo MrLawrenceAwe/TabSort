@@ -9,6 +9,7 @@ import {
   addClassToAllRows,
   initializeView,
   renderHeaderState,
+  setErrorMessage,
   setSecondaryColumnsVisible,
 } from './view.js';
 
@@ -101,7 +102,10 @@ async function loadSnapshot() {
         await sleep(SNAPSHOT_RETRY_DELAY_MS);
       }
       const response = await requestRuntimeMessage('getTabSnapshot', {});
-      if (isValidSnapshot(response)) return response;
+      if (isValidSnapshot(response)) {
+        setErrorMessage('');
+        return response;
+      }
       lastError = new Error('Invalid snapshot response');
     } catch (error) {
       lastError = error;
@@ -109,6 +113,7 @@ async function loadSnapshot() {
   }
 
   if (lastError) {
+    setErrorMessage('Could not load tab data. Try reopening the popup.');
     logPopupMessage(MESSAGE_TYPES.ERROR, `Failed to load tab records: ${toErrorMessage(lastError)}`);
   }
   return null;
@@ -116,6 +121,7 @@ async function loadSnapshot() {
 
 function renderSnapshot(snapshot) {
   if (!snapshot) return;
+  setErrorMessage('');
 
   const table = document.getElementById('infoTable');
   if (!table) return;
@@ -178,6 +184,8 @@ async function initializeControls() {
 
 export async function initializePopupController() {
   initializeView();
+  renderHeaderState();
+  setErrorMessage('');
 
   await runSafely(syncActiveWindow, 'Failed to refresh active context');
   await runSafely(initializeControls, 'Failed to set up option controls');
