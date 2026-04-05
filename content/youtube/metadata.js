@@ -18,53 +18,68 @@ function cleanTitle(raw) {
 function extractInitialPlayerResponse(source, logContentError) {
   if (typeof source !== 'string') return null;
   const identifier = 'ytInitialPlayerResponse';
-  const idIndex = source.indexOf(identifier);
-  if (idIndex === -1) return null;
-  const equalsIndex = source.indexOf('=', idIndex);
-  if (equalsIndex === -1) return null;
-  const start = source.indexOf('{', equalsIndex);
-  if (start === -1) return null;
+  let searchIndex = 0;
 
-  let depth = 0;
-  let inString = false;
-  let escape = false;
+  while (true) {
+    const idIndex = source.indexOf(identifier, searchIndex);
+    if (idIndex === -1) return null;
+    searchIndex = idIndex + identifier.length;
 
-  for (let i = start; i < source.length; i += 1) {
-    const char = source[i];
+    const equalsIndex = source.indexOf('=', idIndex);
+    if (equalsIndex === -1) continue;
 
-    if (inString) {
-      if (escape) {
-        escape = false;
-      } else if (char === '\\') {
-        escape = true;
-      } else if (char === '"') {
-        inString = false;
+    const start = source.indexOf('{', equalsIndex);
+    if (start === -1) continue;
+
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    let quoteChar = '';
+    let parsedSuccessfully = false;
+    let parsedResult = null;
+
+    for (let i = start; i < source.length; i += 1) {
+      const char = source[i];
+
+      if (inString) {
+        if (escape) {
+          escape = false;
+        } else if (char === '\\') {
+          escape = true;
+        } else if (char === quoteChar) {
+          inString = false;
+        }
+        continue;
       }
-      continue;
-    }
 
-    if (char === '"') {
-      inString = true;
-      continue;
-    }
+      if (char === '"' || char === "'" || char === '`') {
+        inString = true;
+        quoteChar = char;
+        continue;
+      }
 
-    if (char === '{') {
-      depth += 1;
-    } else if (char === '}') {
-      depth -= 1;
-      if (depth === 0) {
-        const jsonText = source.slice(start, i + 1);
-        try {
-          return JSON.parse(jsonText);
-        } catch (error) {
-          logContentError('Parsing inline ytInitialPlayerResponse', error);
-          return null;
+      if (char === '{') {
+        depth += 1;
+      } else if (char === '}') {
+        depth -= 1;
+        if (depth === 0) {
+          const jsonText = source.slice(start, i + 1);
+          try {
+            parsedResult = JSON.parse(jsonText);
+            parsedSuccessfully = true;
+          } catch (error) {
+            // Ignore parse errors from partial or invalid matches 
+            // and continue to the next potential occurrence.
+          }
+          break;
         }
       }
     }
-  }
 
-  return null;
+    if (parsedSuccessfully) {
+      return parsedResult;
+    }
+  }
 }
 
 function parseYtInitialPlayerResponse(logContentError) {
@@ -75,12 +90,15 @@ function parseYtInitialPlayerResponse(logContentError) {
     logContentError('Reading window.ytInitialPlayerResponse', error);
   }
   if (!playerResponse) {
-    const script = Array.from(document.scripts || []).find((entry) =>
-      entry?.textContent?.includes('ytInitialPlayerResponse'),
-    );
-    if (script?.textContent) {
-      const parsed = extractInitialPlayerResponse(script.textContent, logContentError);
-      if (parsed) playerResponse = parsed;
+    const scripts = Array.from(document.scripts || []);
+    for (const script of scripts) {
+      if (script?.textContent?.includes('ytInitialPlayerResponse')) {
+        const parsed = extractInitialPlayerResponse(script.textContent, logContentError);
+        if (parsed) {
+          playerResponse = parsed;
+          break;
+        }
+      }
     }
   }
   return playerResponse || {};
