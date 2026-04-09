@@ -334,3 +334,57 @@ test(
     assert.equal(record.isRemainingTimeStale, true);
   },
 );
+
+test(
+  'refreshTrackedTab keeps remaining time stale when page metadata and video duration disagree',
+  { concurrency: false },
+  async () => {
+    resetBackgroundStore();
+    backgroundStore.trackedTabsById = {
+      1: makeTrackedTabRecord(1, {
+        url: 'https://www.youtube.com/watch?v=previous',
+        pageRuntimeReady: true,
+        pageMediaReady: true,
+        videoDetails: {
+          title: 'OpenAI vs. Anthropic\'s Direct Faceoff + Future of Agents - With Aaron Levie',
+          remainingTime: 3364,
+          lengthSeconds: 3364,
+        },
+        isRemainingTimeStale: false,
+      }),
+    };
+
+    globalThis.chrome.tabs.get = (_tabId, callback) => {
+      callback({
+        id: 1,
+        windowId: 1,
+        url: 'https://www.youtube.com/watch?v=previous',
+        active: false,
+        hidden: false,
+      });
+    };
+
+    globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
+      callback({
+        title: 'OpenAI vs. Anthropic\'s Direct Faceoff + Future of Agents - With Aaron Levie',
+        url: 'https://www.youtube.com/watch?v=previous',
+        pageMediaReady: true,
+        lengthSeconds: null,
+        duration: 72,
+        currentTime: 72,
+        playbackRate: 1,
+        paused: false,
+        isLive: false,
+      });
+    };
+
+    await refreshTrackedTab(1);
+
+    const record = backgroundStore.trackedTabsById[1];
+    assert.equal(record.pageRuntimeReady, true);
+    assert.equal(record.pageMediaReady, false);
+    assert.equal(record.videoDetails.lengthSeconds, 3364);
+    assert.equal(record.videoDetails.remainingTime, 3364);
+    assert.equal(record.isRemainingTimeStale, true);
+  },
+);

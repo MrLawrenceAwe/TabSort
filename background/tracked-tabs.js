@@ -12,6 +12,45 @@ import { updateLoadStart, updateUnsuspendTime } from './tab-state.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 import { logDebug } from '../shared/log.js';
 
+const MEDIA_DURATION_SYNC_TOLERANCE_SECONDS = 2;
+
+function resolveVideoLengthSeconds(metricsPayload, record) {
+  const pageLengthSeconds = Number(metricsPayload.lengthSeconds ?? NaN);
+  if (isFiniteNumber(pageLengthSeconds)) {
+    return pageLengthSeconds;
+  }
+
+  const recordedLengthSeconds = Number(record?.videoDetails?.lengthSeconds ?? NaN);
+  if (isFiniteNumber(recordedLengthSeconds)) {
+    return recordedLengthSeconds;
+  }
+
+  const videoDurationSeconds = Number(metricsPayload.duration ?? NaN);
+  return videoDurationSeconds;
+}
+
+function hasMediaDurationMismatch(metricsPayload, record, resolvedLengthSeconds) {
+  const videoDurationSeconds = Number(metricsPayload.duration ?? NaN);
+  if (!isFiniteNumber(videoDurationSeconds) || !isFiniteNumber(resolvedLengthSeconds)) {
+    return false;
+  }
+
+  const pageLengthSeconds = Number(metricsPayload.lengthSeconds ?? NaN);
+  const recordedLengthSeconds = Number(record?.videoDetails?.lengthSeconds ?? NaN);
+  const authoritativeLengthSeconds = isFiniteNumber(pageLengthSeconds)
+    ? pageLengthSeconds
+    : recordedLengthSeconds;
+
+  if (!isFiniteNumber(authoritativeLengthSeconds)) {
+    return false;
+  }
+
+  return (
+    Math.abs(videoDurationSeconds - authoritativeLengthSeconds) >
+    MEDIA_DURATION_SYNC_TOLERANCE_SECONDS
+  );
+}
+
 export async function syncTrackedWindowTabs(windowId, options = {}) {
   const syncToken = (backgroundStore.syncToken += 1);
   const resolvedWindowId = updateTrackedWindowId(windowId, options);
@@ -151,7 +190,7 @@ export async function refreshTrackedTab(tabId) {
     if (metricsPayload.isLive === true) record.isLiveStream = true;
     if (metricsPayload.isLive === false) record.isLiveStream = false;
 
-    const videoLengthSeconds = Number(metricsPayload.lengthSeconds ?? metricsPayload.duration ?? NaN);
+    const videoLengthSeconds = resolveVideoLengthSeconds(metricsPayload, record);
     const currentTimeSeconds = Number(metricsPayload.currentTime ?? NaN);
     const rate = Number(metricsPayload.playbackRate ?? 1);
 
@@ -169,6 +208,14 @@ export async function refreshTrackedTab(tabId) {
       record.videoDetails.lengthSeconds = null;
       record.videoDetails.remainingTime = null;
       record.isRemainingTimeStale = !record.pageMediaReady;
+      recomputeSortState();
+      return;
+    }
+
+    if (hasMediaDurationMismatch(metricsPayload, record, videoLengthSeconds)) {
+      record.pageMediaReady = false;
+      record.videoDetails.remainingTime = videoLengthSeconds;
+      record.isRemainingTimeStale = true;
       recomputeSortState();
       return;
     }
