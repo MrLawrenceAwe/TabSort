@@ -56,6 +56,7 @@ export async function syncTrackedWindowTabs(windowId, options = {}) {
   const resolvedWindowId = updateTrackedWindowId(windowId, options);
   const tabs = await listWindowTabs(resolvedWindowId);
   if (syncToken !== backgroundStore.syncToken) return;
+  if (!Array.isArray(tabs)) return;
   if (resolvedWindowId == null && tabs.length === 0) return;
 
   if (

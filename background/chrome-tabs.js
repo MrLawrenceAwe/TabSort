@@ -21,14 +21,14 @@ export function queryTabs(query) {
         const err = chrome.runtime.lastError;
         if (err) {
           logWarn(`tabs.query failed for ${JSON.stringify(query)}`, err);
-          resolve([]);
+          resolve(null);
           return;
         }
         resolve(Array.isArray(tabs) ? tabs : []);
       });
     } catch (error) {
       logWarn(`tabs.query threw for ${JSON.stringify(query)}`, error);
-      resolve([]);
+      resolve(null);
     }
   });
 }
@@ -40,6 +40,10 @@ export async function listWindowTabs(windowId = null) {
     queryTabs(baseQuery),
     queryTabs({ ...baseQuery, hidden: true }),
   ]);
+
+  if (!Array.isArray(visibleTabs) || !Array.isArray(hiddenTabs)) {
+    return null;
+  }
 
   const deduped = [];
   const seen = new Set();

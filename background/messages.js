@@ -3,7 +3,7 @@ import { TAB_STATES } from '../shared/constants.js';
 import { isFiniteNumber, isValidWindowId } from '../shared/guards.js';
 import { backgroundStore, now, updateTrackedWindowId } from './store.js';
 import { recomputeSortState } from './sort-state.js';
-import { buildTabSnapshot, broadcastSnapshotUpdate } from './tab-snapshot.js';
+import { buildTabSnapshot } from './tab-snapshot.js';
 import { ensureTrackedTabRecord } from './tab-record.js';
 import { refreshTrackedTab, syncTrackedWindowTabs } from './tracked-tabs.js';
 import { sortWindowTabs } from './window-sort.js';
@@ -97,10 +97,16 @@ export async function handlePageRuntimeReadyMessage(_message, sender) {
   }
   updateTrackedWindowId(windowId);
 
-  const record = ensureTrackedTabRecord(tabId, windowId);
+  const record = ensureTrackedTabRecord(tabId, windowId, {
+    url: sender?.tab?.url ?? null,
+    index: sender?.tab?.index,
+    pinned: sender?.tab?.pinned,
+    isActiveTab: sender?.tab?.active,
+    isHidden: sender?.tab?.hidden,
+  });
   record.pageRuntimeReady = true;
   record.pageMediaReady = false;
-  broadcastSnapshotUpdate({ force: true });
+  recomputeSortState();
   return { type: 'pageRuntimeAck' };
 }
 

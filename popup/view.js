@@ -72,6 +72,10 @@ export function setErrorMessage(message = '') {
   errorElement.classList.toggle('hide', !nextMessage);
 }
 
+export function getSortButtonText(readyTabCount, trackedTabCount) {
+  return readyTabCount === trackedTabCount ? 'Sort All Tabs' : 'Move Ready Tabs First';
+}
+
 function updateSortButton(sortButton, shouldShowSort) {
   if (!sortButton) return;
   if (shouldShowSort) {
@@ -82,7 +86,10 @@ function updateSortButton(sortButton, shouldShowSort) {
     sortButton.style.backgroundColor = allTabsReady ? readyBackground : 'var(--action-button-background)';
     sortButton.style.color = allTabsReady ? readyText : 'var(--action-button-color)';
     sortButton.style.borderColor = allTabsReady ? readyBackground : 'var(--action-button-border-color)';
-    sortButton.textContent = allTabsReady ? 'Sort All Tabs' : 'Sort Ready Tabs';
+    sortButton.textContent = getSortButtonText(
+      popupState.readyTabCount,
+      popupState.trackedTabCount,
+    );
     return;
   }
   sortButton.style.setProperty('display', 'none', 'important');

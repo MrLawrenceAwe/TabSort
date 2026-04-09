@@ -172,6 +172,36 @@ test(
 );
 
 test(
+  'syncTrackedWindowTabs preserves tracked state when tab queries fail',
+  { concurrency: false },
+  async () => {
+    resetBackgroundStore(1);
+    backgroundStore.trackedTabsById = {
+      1: makeTrackedTabRecord(1, {
+        videoDetails: { title: 'Video 1', remainingTime: 90, lengthSeconds: 120 },
+        isRemainingTimeStale: false,
+      }),
+    };
+    backgroundStore.visibleOrder = [1];
+    backgroundStore.targetOrder = [1];
+
+    globalThis.chrome.tabs.query = (query, callback) => {
+      globalThis.chrome.runtime.lastError =
+        query.hidden === true ? new Error('query failed') : null;
+      callback([]);
+      globalThis.chrome.runtime.lastError = null;
+    };
+
+    await syncTrackedWindowTabs(1, { force: true });
+
+    assert.deepEqual(Object.keys(backgroundStore.trackedTabsById), ['1']);
+    assert.deepEqual(backgroundStore.visibleOrder, [1]);
+    assert.deepEqual(backgroundStore.targetOrder, [1]);
+    assert.equal(backgroundStore.trackedTabsById[1].videoDetails.remainingTime, 90);
+  },
+);
+
+test(
   'refreshTrackedTab updates the stored URL when collected metrics come from a new watch page',
   { concurrency: false },
   async () => {

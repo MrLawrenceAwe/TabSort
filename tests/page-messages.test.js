@@ -120,7 +120,9 @@ test('handlePageRuntimeReadyMessage marks the runtime ready without collecting m
   );
 
   const record = backgroundStore.trackedTabsById[7];
-  assert.equal(record.url, null);
+  assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
+  assert.deepEqual(backgroundStore.visibleOrder, [7]);
+  assert.deepEqual(backgroundStore.targetOrder, [7]);
   assert.equal(record.pageRuntimeReady, true);
   assert.equal(record.pageMediaReady, false);
   assert.equal(record.isRemainingTimeStale, true);
