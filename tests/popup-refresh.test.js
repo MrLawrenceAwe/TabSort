@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { shouldRetrySnapshotPoll } from '../popup/popup-runtime.js';
 import { LOADING_GRACE_MS, RECENTLY_UNSUSPENDED_MS, TAB_STATES } from '../shared/constants.js';
 import { shouldAutoRefreshRecord, shouldAutoRefreshSnapshot } from '../popup/snapshot-refresh.js';
 
@@ -71,4 +72,11 @@ test('shouldAutoRefreshSnapshot polls only when at least one tracked tab can sel
     shouldAutoRefreshSnapshot({ trackedTabsById: { 2: snapshot.trackedTabsById[2] } }),
     false,
   );
+});
+
+test('shouldRetrySnapshotPoll keeps polling after a failed snapshot load while popup is active', () => {
+  assert.equal(shouldRetrySnapshotPoll(null, true), true);
+  assert.equal(shouldRetrySnapshotPoll(undefined, true), true);
+  assert.equal(shouldRetrySnapshotPoll({}, true), false);
+  assert.equal(shouldRetrySnapshotPoll(null, false), false);
 });
