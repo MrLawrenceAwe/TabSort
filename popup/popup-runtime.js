@@ -2,6 +2,7 @@ import { MESSAGE_TYPES } from '../shared/constants.js';
 import { toErrorMessage } from '../shared/errors.js';
 import { EMPTY_SORT_SUMMARY } from '../shared/sort-summary.js';
 import { loadSortOptions, persistSortOptions } from '../shared/storage.js';
+import { shouldAutoRefreshSnapshot } from './snapshot-refresh.js';
 import { popupViewModel, setActiveWindowId, updatePopupViewModel } from './view-model.js';
 import { insertRowCells } from './tab-row.js';
 import { startThemeSync } from './theme.js';
@@ -15,8 +16,34 @@ import {
 
 const SNAPSHOT_RETRY_DELAY_MS = 150;
 const SNAPSHOT_MAX_ATTEMPTS = 2;
+const SNAPSHOT_POLL_DELAY_MS = 1000;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+let snapshotPollTimeoutId = null;
+let snapshotPollInFlight = false;
+
+function clearSnapshotPollTimeout() {
+  if (snapshotPollTimeoutId == null) return;
+  clearTimeout(snapshotPollTimeoutId);
+  snapshotPollTimeoutId = null;
+}
+
+function scheduleSnapshotPoll() {
+  if (snapshotPollTimeoutId != null || snapshotPollInFlight) return;
+  snapshotPollTimeoutId = setTimeout(async () => {
+    snapshotPollTimeoutId = null;
+    snapshotPollInFlight = true;
+    try {
+      const snapshot = await loadSnapshot();
+      if (snapshot) renderSnapshot(snapshot);
+    } catch (error) {
+      logPopupError('Failed to refresh pending tab snapshot', error);
+    } finally {
+      snapshotPollInFlight = false;
+    }
+  }, SNAPSHOT_POLL_DELAY_MS);
+}
 
 function logPopupMessage(type = MESSAGE_TYPES.ERROR, message = 'Message is undefined') {
   const logger = type === MESSAGE_TYPES.ERROR ? 'error' : 'log';
@@ -187,6 +214,11 @@ function renderSnapshot(snapshot) {
   }
 
   renderHeaderView();
+
+  clearSnapshotPollTimeout();
+  if (shouldAutoRefreshSnapshot(snapshot)) {
+    scheduleSnapshotPoll();
+  }
 }
 
 async function initializeControls() {
@@ -230,6 +262,7 @@ export async function initializePopupRuntime() {
   }
 
   window.addEventListener('unload', () => {
+    clearSnapshotPollTimeout();
     chrome.runtime.onMessage.removeListener(messageListener);
   });
 }
