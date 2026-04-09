@@ -41,13 +41,15 @@ export async function listWindowTabs(windowId = null) {
     queryTabs({ ...baseQuery, hidden: true }),
   ]);
 
-  if (!Array.isArray(visibleTabs) || !Array.isArray(hiddenTabs)) {
+  if (!Array.isArray(visibleTabs)) {
     return null;
   }
 
+  const extraTabs = Array.isArray(hiddenTabs) ? hiddenTabs : [];
+
   const deduped = [];
   const seen = new Set();
-  for (const tab of [...visibleTabs, ...hiddenTabs]) {
+  for (const tab of [...visibleTabs, ...extraTabs]) {
     if (!tab || typeof tab.id !== 'number') continue;
     if (seen.has(tab.id)) continue;
     seen.add(tab.id);

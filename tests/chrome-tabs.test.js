@@ -41,7 +41,7 @@ test('listWindowTabs keeps explicit window ids when one is provided', async () =
 test('listWindowTabs returns null when a Chrome query fails', async () => {
   globalThis.chrome.tabs.query = (query, callback) => {
     globalThis.chrome.runtime.lastError =
-      query.hidden === true ? new Error('hidden query failed') : null;
+      query.hidden === true ? null : new Error('visible query failed');
     callback([]);
     globalThis.chrome.runtime.lastError = null;
   };
@@ -49,4 +49,27 @@ test('listWindowTabs returns null when a Chrome query fails', async () => {
   const tabs = await listWindowTabs(9);
 
   assert.equal(tabs, null);
+});
+
+test('listWindowTabs falls back to visible tabs when the hidden-tab query fails', async () => {
+  globalThis.chrome.tabs.query = (query, callback) => {
+    globalThis.chrome.runtime.lastError =
+      query.hidden === true ? new Error('hidden query failed') : null;
+    callback(
+      query.hidden === true
+        ? []
+        : [
+            { id: 1, windowId: 9, url: 'https://www.youtube.com/watch?v=1' },
+            { id: 2, windowId: 9, url: 'https://www.youtube.com/watch?v=2' },
+          ],
+    );
+    globalThis.chrome.runtime.lastError = null;
+  };
+
+  const tabs = await listWindowTabs(9);
+
+  assert.deepEqual(tabs, [
+    { id: 1, windowId: 9, url: 'https://www.youtube.com/watch?v=1' },
+    { id: 2, windowId: 9, url: 'https://www.youtube.com/watch?v=2' },
+  ]);
 });

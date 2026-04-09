@@ -172,7 +172,7 @@ test(
 );
 
 test(
-  'syncTrackedWindowTabs preserves tracked state when tab queries fail',
+  'syncTrackedWindowTabs preserves tracked state when the primary tab query fails',
   { concurrency: false },
   async () => {
     resetBackgroundStore(1);
@@ -187,7 +187,7 @@ test(
 
     globalThis.chrome.tabs.query = (query, callback) => {
       globalThis.chrome.runtime.lastError =
-        query.hidden === true ? new Error('query failed') : null;
+        query.hidden === true ? null : new Error('query failed');
       callback([]);
       globalThis.chrome.runtime.lastError = null;
     };
