@@ -34,7 +34,7 @@ export function queryTabs(query) {
 }
 
 export async function listWindowTabs(windowId = null) {
-  const baseQuery = windowId != null ? { windowId } : { currentWindow: true };
+  const baseQuery = windowId != null ? { windowId } : { lastFocusedWindow: true };
 
   const [visibleTabs, hiddenTabs] = await Promise.all([
     queryTabs(baseQuery),

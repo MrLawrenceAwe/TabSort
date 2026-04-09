@@ -86,8 +86,15 @@ export async function handlePageRuntimeReadyMessage(_message, sender) {
   const tabId = sender?.tab?.id;
   const windowId = sender?.tab?.windowId;
   if (!canTrackSenderWindow(windowId)) return;
-  updateTrackedWindowId(windowId);
   if (!isFiniteNumber(tabId)) return;
+  if (!isWatchOrShortsPage(sender?.tab?.url)) {
+    if (backgroundStore.trackedTabsById[tabId]) {
+      delete backgroundStore.trackedTabsById[tabId];
+      recomputeSortState();
+    }
+    return;
+  }
+  updateTrackedWindowId(windowId);
 
   const record = ensureTrackedTabRecord(tabId, windowId);
   record.pageRuntimeReady = true;
