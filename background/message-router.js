@@ -1,29 +1,45 @@
-import { createAsyncResponder } from './async-responder.js';
 import { TAB_STATES } from '../shared/constants.js';
 import { isFiniteNumber, isValidWindowId } from '../shared/guards.js';
-import { backgroundStore, now, updateTrackedWindowId } from './store.js';
-import { recomputeSortState } from './sort-state.js';
+import { logDebug } from '../shared/log.js';
 import { buildTabSnapshot } from './tab-snapshot.js';
 import { ensureTrackedTabRecord } from './tab-record.js';
-import { refreshTrackedTab, syncTrackedWindowTabs } from './tracked-tabs.js';
+import { recomputeSortState } from './sort-state.js';
+import { backgroundStore, now, setTrackedWindowId } from './store.js';
+import { refreshTrackedTabMetrics } from './tracked-tab-metrics.js';
+import { rebuildTrackedTabsForWindow } from './tracked-tab-registry.js';
 import { sortWindowTabs } from './window-sort.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
-import { logDebug } from '../shared/log.js';
 
-function canTrackSenderWindow(windowId) {
+function createAsyncResponder(sendResponse) {
+  return (fn, label) => {
+    Promise.resolve()
+      .then(() => fn())
+      .then((result) => {
+        sendResponse(result !== undefined ? result : { ok: true });
+      })
+      .catch((error) => {
+        const messageText = error?.message || String(error);
+        console.error(`[TabSort] handler "${label}" failed: ${messageText}`);
+        sendResponse({ ok: false, error: messageText });
+      });
+    return true;
+  };
+}
+
+function isSenderInTrackedWindow(windowId) {
   if (backgroundStore.trackedWindowId == null) return true;
   return typeof windowId === 'number' && windowId === backgroundStore.trackedWindowId;
 }
 
-function toForcedWindowOptions(windowId) {
+function getForcedTrackingOptions(windowId) {
   return isValidWindowId(windowId) ? { force: true } : undefined;
 }
 
-export async function activateTabMessage(message) {
+export async function activateTab(message) {
   const tabId = message.tabId;
   if (!isFiniteNumber(tabId)) return;
   if (isValidWindowId(message.windowId)) {
-    updateTrackedWindowId(message.windowId, { force: true });
+    setTrackedWindowId(message.windowId, { force: true });
   }
   try {
     await chrome.tabs.update(tabId, { active: true });
@@ -32,11 +48,11 @@ export async function activateTabMessage(message) {
   }
 }
 
-export async function reloadTabMessage(message) {
+export async function reloadTab(message) {
   const tabId = message.tabId;
   if (!isFiniteNumber(tabId)) return;
   if (isValidWindowId(message.windowId)) {
-    updateTrackedWindowId(message.windowId, { force: true });
+    setTrackedWindowId(message.windowId, { force: true });
   }
   let didReload = false;
   try {
@@ -61,14 +77,14 @@ export async function reloadTabMessage(message) {
   recomputeSortState();
 }
 
-export async function handleSyncMessage(message) {
-  await syncTrackedWindowTabs(message.windowId, toForcedWindowOptions(message.windowId));
+export async function syncTrackedTabs(message) {
+  await rebuildTrackedTabsForWindow(message.windowId, getForcedTrackingOptions(message.windowId));
 }
 
-export async function handleSnapshotRequest(message) {
-  await syncTrackedWindowTabs(message.windowId, toForcedWindowOptions(message.windowId));
+export async function getTabSnapshot(message) {
+  await rebuildTrackedTabsForWindow(message.windowId, getForcedTrackingOptions(message.windowId));
   const ids = Object.keys(backgroundStore.trackedTabsById).map(Number);
-  await Promise.all(ids.map(refreshTrackedTab));
+  await Promise.all(ids.map(refreshTrackedTabMetrics));
   return buildTabSnapshot();
 }
 
@@ -77,16 +93,16 @@ export async function handleSortRequest(message) {
     ? message.windowId
     : backgroundStore.trackedWindowId;
   if (isValidWindowId(targetWindowId)) {
-    updateTrackedWindowId(targetWindowId, { force: true });
+    setTrackedWindowId(targetWindowId, { force: true });
   }
   await sortWindowTabs(targetWindowId);
-  await syncTrackedWindowTabs(targetWindowId, toForcedWindowOptions(targetWindowId));
+  await rebuildTrackedTabsForWindow(targetWindowId, getForcedTrackingOptions(targetWindowId));
 }
 
 export async function handlePageRuntimeReadyMessage(_message, sender) {
   const tabId = sender?.tab?.id;
   const windowId = sender?.tab?.windowId;
-  if (!canTrackSenderWindow(windowId)) return;
+  if (!isSenderInTrackedWindow(windowId)) return;
   if (!isFiniteNumber(tabId)) return;
   if (!isWatchOrShortsPage(sender?.tab?.url)) {
     if (backgroundStore.trackedTabsById[tabId]) {
@@ -95,7 +111,7 @@ export async function handlePageRuntimeReadyMessage(_message, sender) {
     }
     return;
   }
-  updateTrackedWindowId(windowId);
+  setTrackedWindowId(windowId);
 
   const record = ensureTrackedTabRecord(tabId, windowId, {
     url: sender?.tab?.url ?? null,
@@ -113,20 +129,20 @@ export async function handlePageRuntimeReadyMessage(_message, sender) {
 export async function handlePageMediaReadyMessage(_message, sender) {
   const tabId = sender?.tab?.id;
   const windowId = sender?.tab?.windowId;
-  if (!canTrackSenderWindow(windowId)) return;
-  updateTrackedWindowId(windowId);
+  if (!isSenderInTrackedWindow(windowId)) return;
+  setTrackedWindowId(windowId);
   if (!isFiniteNumber(tabId)) return;
   const record = ensureTrackedTabRecord(tabId, windowId);
   record.pageMediaReady = true;
-  await refreshTrackedTab(tabId);
+  await refreshTrackedTabMetrics(tabId);
 }
 
 export async function handlePageVideoDetailsMessage(message, sender) {
   const tabId = sender?.tab?.id;
   const windowId = sender?.tab?.windowId;
   const details = message.details || {};
-  if (!canTrackSenderWindow(windowId)) return;
-  updateTrackedWindowId(windowId);
+  if (!isSenderInTrackedWindow(windowId)) return;
+  setTrackedWindowId(windowId);
   if (!isFiniteNumber(tabId)) return;
 
   const detailUrl = details.url || sender?.tab?.url;
@@ -172,18 +188,18 @@ export async function handlePageVideoDetailsMessage(message, sender) {
   recomputeSortState();
 }
 
-export function registerMessageHandlers() {
+export function registerMessageRouter() {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const type = message?.type;
     const respondAsync = createAsyncResponder(sendResponse);
 
     const handlers = {
-      syncTrackedTabs: () => handleSyncMessage(message),
-      getTabSnapshot: () => handleSnapshotRequest(message),
+      syncTrackedTabs: () => syncTrackedTabs(message),
+      getTabSnapshot: () => getTabSnapshot(message),
       sortWindowTabs: () => handleSortRequest(message),
       ping: async () => ({ ok: true }),
-      activateTab: () => activateTabMessage(message),
-      reloadTab: () => reloadTabMessage(message),
+      activateTab: () => activateTab(message),
+      reloadTab: () => reloadTab(message),
       logPopupMessage: async () => {
         const level = message.level === 'error' ? 'error' : 'log';
         console[level](`[Popup] ${message.text}`);

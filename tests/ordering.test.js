@@ -23,7 +23,7 @@ test('orders known remaining-time tabs before unknown tabs', () => {
 
   assert.deepEqual(backgroundStore.targetOrder, [3, 1, 2]);
   assert.deepEqual(backgroundStore.visibleOrder, [1, 2, 3]);
-  assert.equal(backgroundStore.tabsSorted, false);
+  assert.equal(backgroundStore.allSortableTabsSorted, false);
 });
 
 test('marks window as sorted only when all actionable tabs are known and ordered', () => {
@@ -35,13 +35,13 @@ test('marks window as sorted only when all actionable tabs are known and ordered
 
   recomputeSortState();
 
-  assert.equal(backgroundStore.tabsSorted, true);
-  assert.equal(backgroundStore.readiness.areAllTimesKnown, true);
-  assert.equal(backgroundStore.readiness.areAllSorted, true);
-  assert.equal(backgroundStore.readiness.areReadyTabsOutOfOrder, false);
+  assert.equal(backgroundStore.allSortableTabsSorted, true);
+  assert.equal(backgroundStore.sortSummary.order.allRemainingTimesKnown, true);
+  assert.equal(backgroundStore.sortSummary.order.allSorted, true);
+  assert.equal(backgroundStore.sortSummary.readyTabs.outOfOrder, false);
 });
 
-test('derives readiness metrics for non-contiguous and out-of-order ready subsets', () => {
+test('derives sort summary metrics for non-contiguous and out-of-order ready subsets', () => {
   resetBackgroundStore();
   backgroundStore.trackedTabsById = {
     1: makeTrackedTabRecord(1, { index: 0, isRemainingTimeStale: true, isActiveTab: false, isHidden: true }),
@@ -52,11 +52,11 @@ test('derives readiness metrics for non-contiguous and out-of-order ready subset
 
   recomputeSortState();
 
-  assert.equal(backgroundStore.readiness.readyTabCount, 2);
-  assert.equal(backgroundStore.readiness.areReadyTabsAtFront, false);
-  assert.equal(backgroundStore.readiness.areReadyTabsContiguous, false);
-  assert.equal(backgroundStore.readiness.areReadyTabsOutOfOrder, true);
-  assert.equal(backgroundStore.readiness.hasBackgroundTabsWithStaleRemaining, true);
+  assert.equal(backgroundStore.sortSummary.counts.ready, 2);
+  assert.equal(backgroundStore.sortSummary.readyTabs.atFront, false);
+  assert.equal(backgroundStore.sortSummary.readyTabs.contiguous, false);
+  assert.equal(backgroundStore.sortSummary.readyTabs.outOfOrder, true);
+  assert.equal(backgroundStore.sortSummary.backgroundTabs.haveStaleRemainingTime, true);
 });
 
 test('handles records without a finite index deterministically', () => {
@@ -88,15 +88,15 @@ test('live tabs do not block sorted readiness for VOD tabs with known remaining 
 
   recomputeSortState();
 
-  assert.equal(backgroundStore.tabsSorted, true);
-  assert.equal(backgroundStore.readiness.trackedTabCount, 3);
-  assert.equal(backgroundStore.readiness.readyTabCount, 2);
-  assert.equal(backgroundStore.readiness.areAllTimesKnown, true);
-  assert.equal(backgroundStore.readiness.areAllSorted, true);
+  assert.equal(backgroundStore.allSortableTabsSorted, true);
+  assert.equal(backgroundStore.sortSummary.counts.tracked, 3);
+  assert.equal(backgroundStore.sortSummary.counts.ready, 2);
+  assert.equal(backgroundStore.sortSummary.order.allRemainingTimesKnown, true);
+  assert.equal(backgroundStore.sortSummary.order.allSorted, true);
   assert.deepEqual(backgroundStore.targetOrder, [1, 2]);
 });
 
-test('pinned tracked tabs count toward popup totals without affecting sort readiness', () => {
+test('pinned tracked tabs count toward popup totals without affecting sort summary', () => {
   resetBackgroundStore();
   backgroundStore.trackedTabsById = {
     1: makeTrackedTabRecord(1, {
@@ -119,10 +119,10 @@ test('pinned tracked tabs count toward popup totals without affecting sort readi
 
   recomputeSortState();
 
-  assert.equal(backgroundStore.tabsSorted, true);
-  assert.equal(backgroundStore.readiness.trackedTabCount, 3);
-  assert.equal(backgroundStore.readiness.readyTabCount, 2);
-  assert.equal(backgroundStore.readiness.areAllTimesKnown, true);
-  assert.equal(backgroundStore.readiness.areAllSorted, true);
+  assert.equal(backgroundStore.allSortableTabsSorted, true);
+  assert.equal(backgroundStore.sortSummary.counts.tracked, 3);
+  assert.equal(backgroundStore.sortSummary.counts.ready, 2);
+  assert.equal(backgroundStore.sortSummary.order.allRemainingTimesKnown, true);
+  assert.equal(backgroundStore.sortSummary.order.allSorted, true);
   assert.deepEqual(backgroundStore.targetOrder, [2, 3]);
 });

@@ -1,6 +1,6 @@
-function isoToSeconds(iso) {
-  if (!iso) return null;
-  const durationMatch = String(iso).match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?/);
+function parseIsoDurationSeconds(isoDuration) {
+  if (!isoDuration) return null;
+  const durationMatch = String(isoDuration).match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?/);
   if (!durationMatch) return null;
   const hours = parseFloat(durationMatch[1] || 0);
   const minutes = parseFloat(durationMatch[2] || 0);
@@ -15,7 +15,7 @@ function cleanTitle(raw) {
   return trimmed.endsWith(suffix) ? trimmed.slice(0, -suffix.length) : trimmed;
 }
 
-function extractInitialPlayerResponse(source, logContentError) {
+function extractInitialPlayerResponse(source) {
   if (typeof source !== 'string') return null;
   const identifier = 'ytInitialPlayerResponse';
   let searchIndex = 0;
@@ -82,7 +82,7 @@ function extractInitialPlayerResponse(source, logContentError) {
   }
 }
 
-function parseYtInitialPlayerResponse(logContentError) {
+function parseYouTubeInitialPlayerResponse(logContentError) {
   let playerResponse = null;
   try {
     if (window.ytInitialPlayerResponse) playerResponse = window.ytInitialPlayerResponse;
@@ -93,7 +93,7 @@ function parseYtInitialPlayerResponse(logContentError) {
     const scripts = Array.from(document.scripts || []);
     for (const script of scripts) {
       if (script?.textContent?.includes('ytInitialPlayerResponse')) {
-        const parsed = extractInitialPlayerResponse(script.textContent, logContentError);
+        const parsed = extractInitialPlayerResponse(script.textContent);
         if (parsed) {
           playerResponse = parsed;
           break;
@@ -139,12 +139,12 @@ export function collectPageVideoDetails({ inferIsLiveNow, logContentError }) {
   const docTitle = cleanTitle(document.title);
   const ogTitle = cleanTitle(document.querySelector('meta[property="og:title"]')?.content);
   const itempropTitle = cleanTitle(document.querySelector('meta[itemprop="name"]')?.content);
-  const playerResponse = parseYtInitialPlayerResponse(logContentError);
+  const playerResponse = parseYouTubeInitialPlayerResponse(logContentError);
 
   const title =
     docTitle || ogTitle || itempropTitle || cleanTitle(playerResponse?.videoDetails?.title) || null;
 
-  let lengthSeconds = isoToSeconds(
+  let lengthSeconds = parseIsoDurationSeconds(
     document.querySelector('meta[itemprop="duration"]')?.getAttribute('content'),
   );
 

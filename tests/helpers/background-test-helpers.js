@@ -1,4 +1,5 @@
 import { TAB_STATES } from '../../shared/constants.js';
+import { createEmptySortSummary } from '../../shared/sort-summary.js';
 import { backgroundStore } from '../../background/store.js';
 
 export function ensureChromeApi({ tabs = false } = {}) {
@@ -22,8 +23,8 @@ export function resetBackgroundStore(trackedWindowId = null) {
   backgroundStore.trackedTabsById = {};
   backgroundStore.targetOrder = [];
   backgroundStore.visibleOrder = [];
-  backgroundStore.tabsSorted = false;
-  backgroundStore.readiness = null;
+  backgroundStore.allSortableTabsSorted = false;
+  backgroundStore.sortSummary = createEmptySortSummary();
   backgroundStore.trackedWindowId = trackedWindowId;
   backgroundStore.snapshotSignature = null;
   backgroundStore.syncToken = 0;

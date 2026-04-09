@@ -1,17 +1,17 @@
 import { MESSAGE_TYPES } from '../shared/constants.js';
 import { toErrorMessage } from '../shared/errors.js';
-import { EMPTY_READINESS_METRICS } from '../shared/readiness.js';
+import { EMPTY_SORT_SUMMARY } from '../shared/sort-summary.js';
 import { loadSortOptions, persistSortOptions } from '../shared/storage.js';
-import { popupState, setActiveWindowId, updatePopupState } from './state.js';
-import { insertRowCells } from './table.js';
+import { popupViewModel, setActiveWindowId, updatePopupViewModel } from './view-model.js';
+import { insertRowCells } from './tab-row.js';
 import { startThemeSync } from './theme.js';
 import {
   addClassToAllRows,
   initializeView,
-  renderHeaderState,
+  renderHeaderView,
   setErrorMessage,
   setSecondaryColumnsVisible,
-} from './view.js';
+} from './header-view.js';
 
 const SNAPSHOT_RETRY_DELAY_MS = 150;
 const SNAPSHOT_MAX_ATTEMPTS = 2;
@@ -65,8 +65,8 @@ function syncActiveWindow() {
 
 function postRuntimeMessage(type, data = {}, callback) {
   const message = { type, ...data };
-  if (typeof popupState.activeWindowId === 'number' && message.windowId == null) {
-    message.windowId = popupState.activeWindowId;
+  if (typeof popupViewModel.activeWindowId === 'number' && message.windowId == null) {
+    message.windowId = popupViewModel.activeWindowId;
   }
   if (typeof callback === 'function') {
     return chrome.runtime.sendMessage(message, callback);
@@ -89,6 +89,29 @@ function requestRuntimeMessage(type, data = {}) {
 
 function isValidSnapshot(snapshot) {
   return snapshot && typeof snapshot === 'object' && 'trackedTabsById' in snapshot;
+}
+
+function normalizeSortSummary(sortSummary) {
+  return {
+    ...EMPTY_SORT_SUMMARY,
+    ...(sortSummary || {}),
+    counts: {
+      ...EMPTY_SORT_SUMMARY.counts,
+      ...(sortSummary?.counts || {}),
+    },
+    readyTabs: {
+      ...EMPTY_SORT_SUMMARY.readyTabs,
+      ...(sortSummary?.readyTabs || {}),
+    },
+    backgroundTabs: {
+      ...EMPTY_SORT_SUMMARY.backgroundTabs,
+      ...(sortSummary?.backgroundTabs || {}),
+    },
+    order: {
+      ...EMPTY_SORT_SUMMARY.order,
+      ...(sortSummary?.order || {}),
+    },
+  };
 }
 
 async function loadSnapshot() {
@@ -129,20 +152,17 @@ function renderSnapshot(snapshot) {
 
   const tabRecords = snapshot.trackedTabsById || {};
   const visibleOrder = snapshot.visibleOrder || [];
-  const readiness = { ...EMPTY_READINESS_METRICS, ...(snapshot.readiness || {}) };
-  const backgroundSortedFlag = snapshot.tabsSorted === true;
+  const sortSummary = normalizeSortSummary(snapshot.sortSummary);
+  const backgroundSortedFlag = snapshot.allSortableTabsSorted === true;
   const shouldUseSortedView =
-    readiness.areAllSorted ||
-    (backgroundSortedFlag && readiness.areAllTimesKnown && !readiness.areReadyTabsOutOfOrder);
+    sortSummary.order.allSorted ||
+    (backgroundSortedFlag &&
+      sortSummary.order.allRemainingTimesKnown &&
+      !sortSummary.readyTabs.outOfOrder);
 
-  updatePopupState({
-    tabsSorted: shouldUseSortedView,
-    trackedTabCount: readiness.trackedTabCount,
-    readyTabCount: readiness.readyTabCount,
-    areReadyTabsOutOfOrder: readiness.areReadyTabsOutOfOrder,
-    hasBackgroundTabsWithStaleRemaining: readiness.hasBackgroundTabsWithStaleRemaining,
-    areReadyTabsContiguous: readiness.areReadyTabsContiguous,
-    areReadyTabsAtFront: readiness.areReadyTabsAtFront,
+  updatePopupViewModel({
+    allSortableTabsSorted: shouldUseSortedView,
+    sortSummary,
   });
 
   setSecondaryColumnsVisible(!shouldUseSortedView);
@@ -162,11 +182,11 @@ function renderSnapshot(snapshot) {
   }
   tbody.replaceChildren(rowFragment);
 
-  if (readiness.areAllTimesKnown && !shouldUseSortedView) {
+  if (sortSummary.order.allRemainingTimesKnown && !shouldUseSortedView) {
     addClassToAllRows(table, 'all-ready-row');
   }
 
-  renderHeaderState();
+  renderHeaderView();
 }
 
 async function initializeControls() {
@@ -182,9 +202,9 @@ async function initializeControls() {
   }
 }
 
-export async function initializePopupController() {
+export async function initializePopupRuntime() {
   initializeView();
-  renderHeaderState();
+  renderHeaderView();
   setErrorMessage('');
 
   await runSafely(syncActiveWindow, 'Failed to refresh active context');
@@ -214,6 +234,6 @@ export async function initializePopupController() {
   });
 }
 
-initializePopupController().catch((error) => {
+initializePopupRuntime().catch((error) => {
   logPopupMessage(MESSAGE_TYPES.ERROR, `Failed to initialize popup: ${toErrorMessage(error)}`);
 });

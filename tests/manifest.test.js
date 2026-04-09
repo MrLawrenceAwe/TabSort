@@ -22,8 +22,8 @@ test('manifest exposes dynamically imported content modules to YouTube pages', (
   assert.deepEqual(youtubeEntry.resources, [
     'content/youtube/runtime.js',
     'content/youtube/metadata.js',
+    'content/youtube/live-status.js',
     'shared/constants.js',
-    'shared/live-detection.js',
     'shared/guards.js',
   ]);
   assert.deepEqual(youtubeEntry.matches, ['*://*.youtube.com/*']);

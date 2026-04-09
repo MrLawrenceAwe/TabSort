@@ -1,9 +1,9 @@
 import { MEDIA_READY_STATE_THRESHOLD } from '../../shared/constants.js';
-import { inferIsLiveNow } from '../../shared/live-detection.js';
+import { inferIsLiveNow } from './live-status.js';
 import { isFiniteNumber } from '../../shared/guards.js';
 import { collectPageVideoDetails, getPrimaryVideoElement } from './metadata.js';
 
-const runtimeDeps = {
+const runtimeConfig = {
   mediaReadyStateThreshold: MEDIA_READY_STATE_THRESHOLD,
   isFiniteNumber,
   inferIsLiveNow,
@@ -65,7 +65,7 @@ function getVideoFingerprint(video) {
     (typeof video.currentSrc === 'string' && video.currentSrc) ||
     (typeof video.src === 'string' && video.src) ||
     '';
-  const duration = runtimeDeps.isFiniteNumber(video.duration)
+  const duration = runtimeConfig.isFiniteNumber(video.duration)
     ? String(Math.round(video.duration * 1000))
     : '';
   return `${source}|${duration}`;
@@ -80,11 +80,11 @@ function hasFreshMediaEvidence(video, observedFreshMediaEvent) {
 }
 
 function doesVideoDurationMatchPage(video) {
-  if (!video || !runtimeDeps.isFiniteNumber(video.duration)) {
+  if (!video || !runtimeConfig.isFiniteNumber(video.duration)) {
     return false;
   }
   const details = collectPageDetails();
-  if (!runtimeDeps.isFiniteNumber(details.lengthSeconds)) {
+  if (!runtimeConfig.isFiniteNumber(details.lengthSeconds)) {
     return true;
   }
   return Math.abs(video.duration - details.lengthSeconds) <= 2;
@@ -96,7 +96,7 @@ export function shouldSendPageRuntimeReady(currentUrl, lastReadyUrl, { force = f
 
 function collectPageDetails() {
   return collectPageVideoDetails({
-    inferIsLiveNow: runtimeDeps.inferIsLiveNow,
+    inferIsLiveNow: runtimeConfig.inferIsLiveNow,
     logContentError,
   });
 }
@@ -145,8 +145,8 @@ function attachVideoReadyListener() {
   };
   const maybeSend = () => {
     if (
-      video.readyState >= runtimeDeps.mediaReadyStateThreshold &&
-      runtimeDeps.isFiniteNumber(video.duration) &&
+      video.readyState >= runtimeConfig.mediaReadyStateThreshold &&
+      runtimeConfig.isFiniteNumber(video.duration) &&
       hasFreshMediaEvidence(video, observedFreshMediaEvent) &&
       doesVideoDurationMatchPage(video)
     ) {
@@ -235,12 +235,12 @@ function handleCollectVideoMetrics(message, sendResponse) {
     title: details.title || null,
     url: details.url,
     pageMediaReady: isCurrentPageMediaReady(),
-    lengthSeconds: runtimeDeps.isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
+    lengthSeconds: runtimeConfig.isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
     isLive: Boolean(details.isLive),
-    duration: video && runtimeDeps.isFiniteNumber(video.duration) ? video.duration : null,
-    currentTime: video && runtimeDeps.isFiniteNumber(video.currentTime) ? video.currentTime : null,
+    duration: video && runtimeConfig.isFiniteNumber(video.duration) ? video.duration : null,
+    currentTime: video && runtimeConfig.isFiniteNumber(video.currentTime) ? video.currentTime : null,
     playbackRate:
-      video && runtimeDeps.isFiniteNumber(video.playbackRate) && video.playbackRate > 0
+      video && runtimeConfig.isFiniteNumber(video.playbackRate) && video.playbackRate > 0
         ? video.playbackRate
         : 1,
     paused: video ? video.paused : null,

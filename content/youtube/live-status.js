@@ -37,7 +37,7 @@ export function inferIsLiveNow({
 
   if (toBooleanFlag(metaIsLiveBroadcast)) return true;
 
-  const hasLiveStreamability = Boolean(playabilityStatus?.liveStreamability);
+  const hasLiveStreamabilitySignal = Boolean(playabilityStatus?.liveStreamability);
   const isLiveContent = toBooleanFlag(videoDetails?.isLiveContent);
   const numericLength =
     typeof lengthSeconds === 'string' && lengthSeconds.trim() === ''
@@ -45,7 +45,7 @@ export function inferIsLiveNow({
       : Number(lengthSeconds);
   const hasFiniteLength = Number.isFinite(numericLength) && numericLength > 0;
 
-  if ((hasLiveStreamability || isLiveContent) && !hasFiniteLength) return true;
+  if ((hasLiveStreamabilitySignal || isLiveContent) && !hasFiniteLength) return true;
 
   return false;
 }

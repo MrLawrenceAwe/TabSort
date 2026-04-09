@@ -1,4 +1,4 @@
-import { createEmptyReadinessMetrics } from '../shared/readiness.js';
+import { createEmptySortSummary } from '../shared/sort-summary.js';
 import { backgroundStore } from './store.js';
 import { logDebug } from '../shared/log.js';
 
@@ -7,6 +7,16 @@ function cloneTrackedTabRecord(record) {
   return {
     ...record,
     videoDetails: record.videoDetails ? { ...record.videoDetails } : null,
+  };
+}
+
+function cloneSortSummary(summary) {
+  const resolvedSummary = summary || createEmptySortSummary();
+  return {
+    counts: { ...resolvedSummary.counts },
+    readyTabs: { ...resolvedSummary.readyTabs },
+    backgroundTabs: { ...resolvedSummary.backgroundTabs },
+    order: { ...resolvedSummary.order },
   };
 }
 
@@ -22,10 +32,8 @@ export function buildTabSnapshot() {
     trackedTabsById,
     targetOrder: [...backgroundStore.targetOrder],
     visibleOrder: [...backgroundStore.visibleOrder],
-    tabsSorted: backgroundStore.tabsSorted,
-    readiness: {
-      ...(backgroundStore.readiness || createEmptyReadinessMetrics()),
-    },
+    allSortableTabsSorted: backgroundStore.allSortableTabsSorted,
+    sortSummary: cloneSortSummary(backgroundStore.sortSummary),
   };
 }
 

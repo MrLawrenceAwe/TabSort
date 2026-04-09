@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES, RECENTLY_UNSUSPENDED_MS, LOADING_GRACE_MS } from '../shared/constants.js';
-import { determineUserAction, formatRemainingStatus } from '../popup/table.js';
+import { determineUserAction, formatRemainingStatus } from '../popup/tab-row.js';
 
 function makeRecord(overrides = {}) {
   return {

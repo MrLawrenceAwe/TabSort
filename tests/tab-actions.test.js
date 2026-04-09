@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { TAB_STATES } from '../shared/constants.js';
 import { backgroundStore } from '../background/store.js';
-import { reloadTabMessage } from '../background/messages.js';
+import { reloadTab } from '../background/message-router.js';
 import {
   ensureChromeApi,
   makeTrackedTabRecord,
@@ -12,7 +12,7 @@ import {
 
 ensureChromeApi({ tabs: true });
 
-test('reloadTabMessage does not mutate record state when chrome.tabs.reload fails', { concurrency: false }, async () => {
+test('reloadTab does not mutate record state when chrome.tabs.reload fails', { concurrency: false }, async () => {
   resetBackgroundStore();
   backgroundStore.trackedTabsById = {
     1: makeTrackedTabRecord(1, { videoDetails: { remainingTime: 100 }, isRemainingTimeStale: false }),
@@ -23,12 +23,12 @@ test('reloadTabMessage does not mutate record state when chrome.tabs.reload fail
     throw new Error('reload failed');
   };
 
-  await reloadTabMessage({ tabId: 1, windowId: 1 });
+  await reloadTab({ tabId: 1, windowId: 1 });
 
   assert.deepEqual(backgroundStore.trackedTabsById[1], before);
 });
 
-test('reloadTabMessage marks record loading only after successful reload call', { concurrency: false }, async () => {
+test('reloadTab marks record loading only after successful reload call', { concurrency: false }, async () => {
   resetBackgroundStore();
   backgroundStore.trackedTabsById = {
     1: makeTrackedTabRecord(1, { videoDetails: { remainingTime: 100 }, isRemainingTimeStale: false }),
@@ -36,7 +36,7 @@ test('reloadTabMessage marks record loading only after successful reload call', 
 
   globalThis.chrome.tabs.reload = async () => {};
 
-  await reloadTabMessage({ tabId: 1, windowId: 1 });
+  await reloadTab({ tabId: 1, windowId: 1 });
 
   const record = backgroundStore.trackedTabsById[1];
   assert.equal(record.status, TAB_STATES.LOADING);

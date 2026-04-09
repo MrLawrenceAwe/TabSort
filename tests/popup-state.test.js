@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { popupState } from '../popup/state.js';
+import { popupViewModel } from '../popup/view-model.js';
 
-test('popup state keeps readiness flags available for view decisions', () => {
-  popupState.hasBackgroundTabsWithStaleRemaining = true;
-  assert.equal(popupState.hasBackgroundTabsWithStaleRemaining, true);
+test('popup view model keeps sort summary flags available for view decisions', () => {
+  popupViewModel.sortSummary.backgroundTabs.haveStaleRemainingTime = true;
+  assert.equal(popupViewModel.sortSummary.backgroundTabs.haveStaleRemainingTime, true);
 });

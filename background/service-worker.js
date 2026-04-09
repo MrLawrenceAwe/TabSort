@@ -1,7 +1,7 @@
-import { registerMessageHandlers } from './messages.js';
+import { registerMessageRouter } from './message-router.js';
 import { registerTabAndNavigationListeners } from './tab-events.js';
 import { initializeWindowLifecycle, resetTrackedWindow } from './window-lifecycle.js';
 
-registerMessageHandlers();
+registerMessageRouter();
 registerTabAndNavigationListeners({ onTrackedWindowClosed: resetTrackedWindow });
 initializeWindowLifecycle();

@@ -1,8 +1,8 @@
+import { TAB_STATES } from '../shared/constants.js';
 import { isFiniteNumber } from '../shared/guards.js';
-import { createEmptyReadinessMetrics } from '../shared/readiness.js';
-import { hasFreshRemainingTime } from '../shared/tab-metrics.js';
-import { backgroundStore } from './store.js';
+import { createEmptySortSummary } from '../shared/sort-summary.js';
 import { broadcastSnapshotUpdate } from './tab-snapshot.js';
+import { backgroundStore } from './store.js';
 
 function areIdListsEqual(a, b) {
   if (a.length !== b.length) return false;
@@ -13,7 +13,8 @@ function areIdListsEqual(a, b) {
 }
 
 function deriveTabOrder(records) {
-  const resolveIndex = (record) => (isFiniteNumber(record?.index) ? record.index : Number.MAX_SAFE_INTEGER);
+  const resolveIndex = (record) =>
+    (isFiniteNumber(record?.index) ? record.index : Number.MAX_SAFE_INTEGER);
   return records
     .slice()
     .sort((a, b) => {
@@ -24,13 +25,21 @@ function deriveTabOrder(records) {
     .map((record) => record.id);
 }
 
+export function hasReadyRemainingTime(record) {
+  if (!record) return false;
+  if (record.status !== TAB_STATES.UNSUSPENDED) return false;
+  if (record.isRemainingTimeStale) return false;
+  const remainingTime = record?.videoDetails?.remainingTime;
+  return isFiniteNumber(remainingTime);
+}
+
 function buildRemainingTimeEntries(records) {
-  return records.map((record) => {
-    const value = hasFreshRemainingTime(record)
+  return records.map((record) => ({
+    id: record.id,
+    remainingTime: hasReadyRemainingTime(record)
       ? record.videoDetails?.remainingTime ?? null
-      : null;
-    return { id: record.id, remainingTime: value };
-  });
+      : null,
+  }));
 }
 
 function buildTargetOrder(knownEntries, unknownEntries, currentOrder) {
@@ -49,19 +58,19 @@ function isRecordSortableByRemainingTime(record) {
   return !record?.isLiveStream;
 }
 
-function buildReadinessMetrics(records, currentOrder) {
+function buildSortSummary(records, currentOrder) {
   if (!Array.isArray(records) || records.length === 0) {
-    return createEmptyReadinessMetrics();
+    return createEmptySortSummary();
   }
 
   const recordMap = new Map(records.map((record) => [record.id, record]));
   const trackedTabCount = records.length;
 
-  let hasBackgroundTabsWithStaleRemaining = false;
+  let backgroundTabsHaveStaleRemainingTime = false;
   let readyTabCount = 0;
-  let areReadyTabsContiguous = true;
-  let areReadyTabsAtFront = true;
-  let areReadyTabsOutOfOrder = false;
+  let readyTabsAreContiguous = true;
+  let readyTabsAreAtFront = true;
+  let readyTabsAreOutOfOrder = false;
 
   const readyIdsInCurrentOrder = [];
   const readyEntries = [];
@@ -77,16 +86,16 @@ function buildReadinessMetrics(records, currentOrder) {
     orderedIdsWithRecords.push(tabId);
 
     if (record.isRemainingTimeStale && (!record.isActiveTab || record.isHidden)) {
-      hasBackgroundTabsWithStaleRemaining = true;
+      backgroundTabsHaveStaleRemainingTime = true;
     }
 
-    const isReady = hasFreshRemainingTime(record);
+    const isReady = hasReadyRemainingTime(record);
     if (isReady) {
       readyTabCount += 1;
       readyIdsInCurrentOrder.push(record.id);
-      readyEntries.push({ id: record.id, remaining: record.videoDetails?.remainingTime || 0 });
+      readyEntries.push({ id: record.id, remainingTime: record.videoDetails?.remainingTime || 0 });
       encounteredReady = true;
-      if (gapAfterReady) areReadyTabsContiguous = false;
+      if (gapAfterReady) readyTabsAreContiguous = false;
       continue;
     }
 
@@ -98,31 +107,39 @@ function buildReadinessMetrics(records, currentOrder) {
   }
 
   if (encounteredReady && encounteredNonReadyBeforeReady) {
-    areReadyTabsAtFront = false;
+    readyTabsAreAtFront = false;
   }
 
   const readyIdsByRemaining = readyEntries
     .slice()
-    .sort((a, b) => a.remaining - b.remaining)
+    .sort((a, b) => a.remainingTime - b.remainingTime)
     .map((entry) => entry.id);
 
   if (readyIdsInCurrentOrder.length >= 2) {
-    areReadyTabsOutOfOrder = !areIdListsEqual(readyIdsInCurrentOrder, readyIdsByRemaining);
+    readyTabsAreOutOfOrder = !areIdListsEqual(readyIdsInCurrentOrder, readyIdsByRemaining);
   }
 
-  const areAllTimesKnown = trackedTabCount > 1 && readyTabCount === trackedTabCount;
-  const areAllSorted =
-    areAllTimesKnown && areIdListsEqual(orderedIdsWithRecords, readyIdsByRemaining);
+  const allRemainingTimesKnown = trackedTabCount > 1 && readyTabCount === trackedTabCount;
+  const allSorted =
+    allRemainingTimesKnown && areIdListsEqual(orderedIdsWithRecords, readyIdsByRemaining);
 
   return {
-    trackedTabCount,
-    readyTabCount,
-    hasBackgroundTabsWithStaleRemaining,
-    areReadyTabsContiguous,
-    areReadyTabsAtFront,
-    areReadyTabsOutOfOrder,
-    areAllTimesKnown,
-    areAllSorted,
+    counts: {
+      tracked: trackedTabCount,
+      ready: readyTabCount,
+    },
+    readyTabs: {
+      contiguous: readyTabsAreContiguous,
+      atFront: readyTabsAreAtFront,
+      outOfOrder: readyTabsAreOutOfOrder,
+    },
+    backgroundTabs: {
+      haveStaleRemainingTime: backgroundTabsHaveStaleRemainingTime,
+    },
+    order: {
+      allRemainingTimesKnown,
+      allSorted,
+    },
   };
 }
 
@@ -148,15 +165,15 @@ function deriveSortState(records) {
     sortableOrder.length === targetOrder.length &&
     sortableOrder.every((id, index) => id === targetOrder[index]);
 
-  const readiness = buildReadinessMetrics(sortableRecords, sortableOrder);
-  readiness.trackedTabCount = records.length;
+  const sortSummary = buildSortSummary(sortableRecords, sortableOrder);
+  sortSummary.counts.tracked = records.length;
 
   return {
     visibleOrder,
     targetOrder,
     allRemainingTimesKnown,
     alreadySorted,
-    readiness,
+    sortSummary,
   };
 }
 
@@ -165,12 +182,19 @@ function applyDerivedSortState({
   targetOrder,
   allRemainingTimesKnown,
   alreadySorted,
-  readiness,
+  sortSummary,
 }) {
   backgroundStore.targetOrder = targetOrder;
   backgroundStore.visibleOrder = visibleOrder;
-  backgroundStore.tabsSorted = allRemainingTimesKnown && alreadySorted;
-  backgroundStore.readiness = readiness ? { ...readiness } : null;
+  backgroundStore.allSortableTabsSorted = allRemainingTimesKnown && alreadySorted;
+  backgroundStore.sortSummary = sortSummary
+    ? {
+        counts: { ...sortSummary.counts },
+        readyTabs: { ...sortSummary.readyTabs },
+        backgroundTabs: { ...sortSummary.backgroundTabs },
+        order: { ...sortSummary.order },
+      }
+    : null;
 
   broadcastSnapshotUpdate();
 }
