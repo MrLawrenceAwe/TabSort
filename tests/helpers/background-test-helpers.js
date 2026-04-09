@@ -38,6 +38,7 @@ export function makeTrackedTabRecord(id = 1, overrides = {}) {
     pinned: false,
     status: TAB_STATES.UNSUSPENDED,
     pageRuntimeReady: true,
+    pageMediaReady: true,
     isLiveStream: false,
     isActiveTab: false,
     isHidden: false,

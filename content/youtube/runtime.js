@@ -16,6 +16,7 @@ let observedTitleElement = null;
 let lastKnownTitleText = null;
 let observedPageUrl = null;
 let runtimeReadyUrl = null;
+let mediaReadyUrl = null;
 
 function logContentError(context, error) {
   const message = error instanceof Error ? error.message : String(error);
@@ -39,6 +40,11 @@ function trySendRuntimeMessage(payload, context) {
 
 function getCurrentPageUrl() {
   return globalThis.location?.href || '';
+}
+
+function isCurrentPageMediaReady() {
+  const currentUrl = getCurrentPageUrl();
+  return Boolean(currentUrl) && currentUrl === mediaReadyUrl;
 }
 
 export function shouldSendPageRuntimeReady(currentUrl, lastReadyUrl, { force = false } = {}) {
@@ -79,6 +85,7 @@ function attachVideoReadyListener() {
     events.forEach((eventName) => video.removeEventListener(eventName, onAny));
   };
   const send = () => {
+    mediaReadyUrl = getCurrentPageUrl();
     trySendRuntimeMessage({ type: 'pageMediaReady' }, 'page media ready');
     cleanup();
   };
@@ -152,6 +159,7 @@ function handleCollectVideoMetrics(message, sendResponse) {
   const payload = {
     title: details.title || null,
     url: details.url,
+    pageMediaReady: isCurrentPageMediaReady(),
     lengthSeconds: runtimeDeps.isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
     isLive: Boolean(details.isLive),
     duration: video && runtimeDeps.isFiniteNumber(video.duration) ? video.duration : null,
@@ -189,6 +197,7 @@ function syncPageSession() {
     disposeObservers();
     observedPageUrl = currentUrl;
     runtimeReadyUrl = null;
+    mediaReadyUrl = null;
   } else if (!observedPageUrl && currentUrl) {
     observedPageUrl = currentUrl;
   }
@@ -208,6 +217,7 @@ export function resetRuntimeStateForTests() {
   disposeObservers();
   observedPageUrl = null;
   runtimeReadyUrl = null;
+  mediaReadyUrl = null;
   bootstrapRuntime.initialized = false;
 }
 
@@ -244,5 +254,6 @@ export function bootstrapRuntime() {
   window.addEventListener('pagehide', () => {
     disposeObservers();
     runtimeReadyUrl = null;
+    mediaReadyUrl = null;
   });
 }

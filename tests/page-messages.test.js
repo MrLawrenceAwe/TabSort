@@ -97,6 +97,35 @@ test('handlePageRuntimeReadyMessage removes tracked rows when a SPA tab leaves w
   assert.deepEqual(backgroundStore.targetOrder, []);
 });
 
+test('handlePageRuntimeReadyMessage marks the runtime ready without collecting metrics', async () => {
+  resetBackgroundStore(1);
+  globalThis.chrome.tabs = {
+    get() {
+      throw new Error('tabs.get should not be called on pageRuntimeReady');
+    },
+    sendMessage() {
+      throw new Error('tabs.sendMessage should not be called on pageRuntimeReady');
+    },
+  };
+
+  await handlePageRuntimeReadyMessage(
+    {},
+    {
+      tab: {
+        id: 7,
+        windowId: 1,
+        url: 'https://www.youtube.com/watch?v=new',
+      },
+    },
+  );
+
+  const record = backgroundStore.trackedTabsById[7];
+  assert.equal(record.url, null);
+  assert.equal(record.pageRuntimeReady, true);
+  assert.equal(record.pageMediaReady, false);
+  assert.equal(record.isRemainingTimeStale, true);
+});
+
 test('handlePageVideoDetailsMessage resets carried remaining time on watch-to-watch SPA navigation', async () => {
   resetBackgroundStore(1);
   backgroundStore.trackedTabsById = {

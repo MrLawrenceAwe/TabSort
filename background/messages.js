@@ -53,6 +53,7 @@ export async function reloadTabMessage(message) {
   record.loadingStartedAt = now();
   record.unsuspendedTimestamp = now();
   record.pageRuntimeReady = false;
+  record.pageMediaReady = false;
   record.isRemainingTimeStale = true;
   if (record.videoDetails && record.videoDetails.remainingTime != null) {
     record.videoDetails.remainingTime = null;
@@ -98,8 +99,8 @@ export async function handlePageRuntimeReadyMessage(_message, sender) {
 
   const record = ensureTrackedTabRecord(tabId, windowId);
   record.pageRuntimeReady = true;
+  record.pageMediaReady = false;
   broadcastSnapshotUpdate({ force: true });
-  await refreshTrackedTab(tabId);
   return { type: 'pageRuntimeAck' };
 }
 
@@ -109,6 +110,8 @@ export async function handlePageMediaReadyMessage(_message, sender) {
   if (!canTrackSenderWindow(windowId)) return;
   updateTrackedWindowId(windowId);
   if (!isFiniteNumber(tabId)) return;
+  const record = ensureTrackedTabRecord(tabId, windowId);
+  record.pageMediaReady = true;
   await refreshTrackedTab(tabId);
 }
 
@@ -133,6 +136,7 @@ export async function handlePageVideoDetailsMessage(message, sender) {
   const urlChanged = Boolean(record.url) && Boolean(detailUrl) && record.url !== detailUrl;
   if (urlChanged) {
     record.isLiveStream = false;
+    record.pageMediaReady = false;
     record.videoDetails = null;
     record.isRemainingTimeStale = true;
   }

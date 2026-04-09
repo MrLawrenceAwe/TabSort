@@ -14,6 +14,7 @@ function createTrackedTabRecord(tabId, windowId, defaults = {}) {
     pinned: Boolean(defaults.pinned),
     status: defaults.status ?? null,
     pageRuntimeReady: Boolean(defaults.pageRuntimeReady),
+    pageMediaReady: Boolean(defaults.pageMediaReady),
     isLiveStream: Boolean(defaults.isLiveStream),
     isActiveTab: Boolean(defaults.isActiveTab),
     isHidden: Boolean(defaults.isHidden),
