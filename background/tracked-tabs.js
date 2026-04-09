@@ -49,6 +49,10 @@ export async function syncTrackedWindowTabs(windowId, options = {}) {
       status: nextStatus,
       pageRuntimeReady:
         nextStatus === TAB_STATES.UNSUSPENDED && !urlChanged ? previousPageRuntimeReady : false,
+      pageMediaReady:
+        nextStatus === TAB_STATES.UNSUSPENDED && !urlChanged
+          ? Boolean(previousRecord.pageMediaReady)
+          : false,
       isLiveStream: urlChanged ? false : Boolean(previousRecord.isLiveStream),
       isActiveTab: Boolean(tab.active),
       isHidden: Boolean(tab.hidden),
@@ -83,7 +87,7 @@ export async function refreshTrackedTab(tabId) {
     let record = backgroundStore.trackedTabsById[tabId];
     if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
 
-    const tab = await getTab(tabId);
+    let tab = await getTab(tabId);
     record = backgroundStore.trackedTabsById[tabId];
     if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
     if (backgroundStore.trackedWindowId != null && tab.windowId !== backgroundStore.trackedWindowId) return;
@@ -95,11 +99,26 @@ export async function refreshTrackedTab(tabId) {
     record.isHidden = Boolean(tab.hidden);
     if (!isWatchOrShortsPage(tab.url)) return;
 
+    const requestedUrl = tab.url || record.url || null;
     const result = await sendMessageToTab(tabId, { type: 'collectVideoMetrics' });
     record = backgroundStore.trackedTabsById[tabId];
     if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
+
+    tab = await getTab(tabId);
+    record = backgroundStore.trackedTabsById[tabId];
+    if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
+    if (backgroundStore.trackedWindowId != null && tab.windowId !== backgroundStore.trackedWindowId) return;
+    if (tab.windowId != null) {
+      record.windowId = tab.windowId;
+      updateTrackedWindowId(tab.windowId);
+    }
+    record.isActiveTab = Boolean(tab.active);
+    record.isHidden = Boolean(tab.hidden);
+    if (!isWatchOrShortsPage(tab.url)) return;
+
     if (!result || result.ok !== true) {
       record.pageRuntimeReady = false;
+      record.pageMediaReady = false;
       if (record.videoDetails && record.videoDetails.remainingTime != null) {
         record.videoDetails.remainingTime = null;
       }
@@ -110,12 +129,23 @@ export async function refreshTrackedTab(tabId) {
 
     const metricsPayload = result.data;
     if (!metricsPayload || typeof metricsPayload !== 'object') return;
+    const currentTabUrl = tab.url || record.url || null;
+    const payloadUrl =
+      typeof metricsPayload.url === 'string' && metricsPayload.url ? metricsPayload.url : null;
+    if (payloadUrl && currentTabUrl && payloadUrl !== currentTabUrl) {
+      return;
+    }
+    if (!payloadUrl && requestedUrl && currentTabUrl && requestedUrl !== currentTabUrl) {
+      return;
+    }
+
     record.pageRuntimeReady = true;
+    record.pageMediaReady = metricsPayload.pageMediaReady === true;
     record.videoDetails = record.videoDetails || {};
 
-    if (metricsPayload.title || metricsPayload.url) {
+    if (metricsPayload.title || payloadUrl || currentTabUrl) {
       if (metricsPayload.title) record.videoDetails.title = metricsPayload.title;
-      if (metricsPayload.url) record.url = metricsPayload.url;
+      record.url = payloadUrl || currentTabUrl;
     }
 
     if (metricsPayload.isLive === true) record.isLiveStream = true;
@@ -138,7 +168,14 @@ export async function refreshTrackedTab(tabId) {
     } else {
       record.videoDetails.lengthSeconds = null;
       record.videoDetails.remainingTime = null;
-      record.isRemainingTimeStale = false;
+      record.isRemainingTimeStale = !record.pageMediaReady;
+      recomputeSortState();
+      return;
+    }
+
+    if (!record.pageMediaReady) {
+      record.videoDetails.remainingTime = videoLengthSeconds;
+      record.isRemainingTimeStale = true;
       recomputeSortState();
       return;
     }
