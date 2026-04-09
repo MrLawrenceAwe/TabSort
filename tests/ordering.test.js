@@ -89,9 +89,40 @@ test('live tabs do not block sorted readiness for VOD tabs with known remaining 
   recomputeSortState();
 
   assert.equal(backgroundStore.tabsSorted, true);
-  assert.equal(backgroundStore.readiness.trackedTabCount, 2);
+  assert.equal(backgroundStore.readiness.trackedTabCount, 3);
   assert.equal(backgroundStore.readiness.readyTabCount, 2);
   assert.equal(backgroundStore.readiness.areAllTimesKnown, true);
   assert.equal(backgroundStore.readiness.areAllSorted, true);
   assert.deepEqual(backgroundStore.targetOrder, [1, 2]);
+});
+
+test('pinned tracked tabs count toward popup totals without affecting sort readiness', () => {
+  resetBackgroundStore();
+  backgroundStore.trackedTabsById = {
+    1: makeTrackedTabRecord(1, {
+      index: 0,
+      pinned: true,
+      videoDetails: { remainingTime: 30 },
+      isRemainingTimeStale: false,
+    }),
+    2: makeTrackedTabRecord(2, {
+      index: 1,
+      videoDetails: { remainingTime: 5 },
+      isRemainingTimeStale: false,
+    }),
+    3: makeTrackedTabRecord(3, {
+      index: 2,
+      videoDetails: { remainingTime: 15 },
+      isRemainingTimeStale: false,
+    }),
+  };
+
+  recomputeSortState();
+
+  assert.equal(backgroundStore.tabsSorted, true);
+  assert.equal(backgroundStore.readiness.trackedTabCount, 3);
+  assert.equal(backgroundStore.readiness.readyTabCount, 2);
+  assert.equal(backgroundStore.readiness.areAllTimesKnown, true);
+  assert.equal(backgroundStore.readiness.areAllSorted, true);
+  assert.deepEqual(backgroundStore.targetOrder, [2, 3]);
 });

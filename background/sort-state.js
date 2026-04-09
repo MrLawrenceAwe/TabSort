@@ -148,12 +148,15 @@ function deriveSortState(records) {
     sortableOrder.length === targetOrder.length &&
     sortableOrder.every((id, index) => id === targetOrder[index]);
 
+  const readiness = buildReadinessMetrics(sortableRecords, sortableOrder);
+  readiness.trackedTabCount = records.length;
+
   return {
     visibleOrder,
     targetOrder,
     allRemainingTimesKnown,
     alreadySorted,
-    readiness: buildReadinessMetrics(sortableRecords, sortableOrder),
+    readiness,
   };
 }
 
