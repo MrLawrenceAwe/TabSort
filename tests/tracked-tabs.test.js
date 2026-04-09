@@ -173,6 +173,52 @@ test(
 );
 
 test(
+  'rebuildTrackedTabsForWindow preserves readiness when only watch URL parameters change',
+  { concurrency: false },
+  async () => {
+    resetBackgroundStore();
+    backgroundStore.trackedTabsById = {
+      1: makeTrackedTabRecord(1, {
+        url: 'https://www.youtube.com/watch?v=same',
+        pageMediaReady: true,
+        pageRuntimeReady: true,
+        videoDetails: { title: 'Same Video', remainingTime: 45, lengthSeconds: 120 },
+        isRemainingTimeStale: false,
+      }),
+    };
+
+    globalThis.chrome.tabs.query = (_query, callback) => {
+      callback([
+        {
+          id: 1,
+          windowId: 1,
+          url: 'https://www.youtube.com/watch?v=same&list=abc123&index=10',
+          index: 0,
+          pinned: false,
+          status: 'complete',
+          active: false,
+          hidden: false,
+          discarded: false,
+        },
+      ]);
+    };
+
+    await rebuildTrackedTabsForWindow(1, { force: true });
+
+    const record = backgroundStore.trackedTabsById[1];
+    assert.equal(record.url, 'https://www.youtube.com/watch?v=same&list=abc123&index=10');
+    assert.equal(record.pageRuntimeReady, true);
+    assert.equal(record.pageMediaReady, true);
+    assert.deepEqual(record.videoDetails, {
+      title: 'Same Video',
+      remainingTime: 45,
+      lengthSeconds: 120,
+    });
+    assert.equal(record.isRemainingTimeStale, false);
+  },
+);
+
+test(
   'rebuildTrackedTabsForWindow preserves tracked state when the primary tab query fails',
   { concurrency: false },
   async () => {

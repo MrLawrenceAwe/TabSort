@@ -4,9 +4,20 @@ import { logDebug } from '../shared/log.js';
 import { getTab, sendMessageToTab } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
 import { backgroundStore, setTrackedWindowId } from './store.js';
-import { isWatchOrShortsPage } from './youtube-url-utils.js';
+import { getYoutubeVideoIdentity, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 const MEDIA_DURATION_SYNC_TOLERANCE_SECONDS = 2;
+
+function areEquivalentVideoUrls(leftUrl, rightUrl) {
+  const leftIdentity = getYoutubeVideoIdentity(leftUrl);
+  const rightIdentity = getYoutubeVideoIdentity(rightUrl);
+
+  if (leftIdentity && rightIdentity) {
+    return leftIdentity === rightIdentity;
+  }
+
+  return Boolean(leftUrl) && Boolean(rightUrl) && leftUrl === rightUrl;
+}
 
 function resolveVideoLengthSeconds(metricsPayload, record) {
   const pageLengthSeconds = Number(metricsPayload.lengthSeconds ?? NaN);
@@ -95,10 +106,15 @@ export async function refreshTrackedTabMetrics(tabId) {
     const currentTabUrl = tab.url || record.url || null;
     const payloadUrl =
       typeof metricsPayload.url === 'string' && metricsPayload.url ? metricsPayload.url : null;
-    if (payloadUrl && currentTabUrl && payloadUrl !== currentTabUrl) {
+    if (payloadUrl && currentTabUrl && !areEquivalentVideoUrls(payloadUrl, currentTabUrl)) {
       return;
     }
-    if (!payloadUrl && requestedUrl && currentTabUrl && requestedUrl !== currentTabUrl) {
+    if (
+      !payloadUrl &&
+      requestedUrl &&
+      currentTabUrl &&
+      !areEquivalentVideoUrls(requestedUrl, currentTabUrl)
+    ) {
       return;
     }
 

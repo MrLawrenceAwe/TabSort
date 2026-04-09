@@ -3,7 +3,7 @@ import { isValidWindowId } from '../shared/guards.js';
 import { getTabState, listWindowTabs } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
 import { backgroundStore, now, setTrackedWindowId } from './store.js';
-import { isWatchOrShortsPage } from './youtube-url-utils.js';
+import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function markLoadingStartedAt(record, previousStatus, nextStatus) {
   if (nextStatus === TAB_STATES.LOADING) {
@@ -48,7 +48,7 @@ export async function rebuildTrackedTabsForWindow(windowId, options = {}) {
     if (!isWatchOrShortsPage(tab.url)) continue;
 
     const previousRecord = previousRecords[tab.id] || {};
-    const urlChanged = Boolean(previousRecord.url) && Boolean(tab.url) && previousRecord.url !== tab.url;
+    const urlChanged = hasYoutubeVideoIdentityChanged(previousRecord.url, tab.url);
     const nextStatus = getTabState(tab);
     const previousPageRuntimeReady = Boolean(previousRecord.pageRuntimeReady);
     const statusChanged = previousRecord.status && previousRecord.status !== nextStatus;

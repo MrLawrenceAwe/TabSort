@@ -164,7 +164,7 @@ test('handlePageVideoDetailsMessage resets carried remaining time on watch-to-wa
   assert.equal(record.isRemainingTimeStale, true);
 });
 
-test('handlePageVideoDetailsMessage resets carried remaining time when the title changes for the same watch URL', async () => {
+test('handlePageVideoDetailsMessage preserves ready state when the title changes for the same watch URL', async () => {
   resetBackgroundStore(1);
   backgroundStore.trackedTabsById = {
     7: makeTrackedTabRecord(7, {
@@ -180,7 +180,7 @@ test('handlePageVideoDetailsMessage resets carried remaining time when the title
       details: {
         url: 'https://www.youtube.com/watch?v=new',
         title: 'Cyberpunk 2077 - PS5 Pro Update Trailer',
-        lengthSeconds: 72,
+        lengthSeconds: 3365,
         isLive: false,
       },
     },
@@ -195,9 +195,45 @@ test('handlePageVideoDetailsMessage resets carried remaining time when the title
 
   const record = backgroundStore.trackedTabsById[7];
   assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
-  assert.equal(record.pageMediaReady, false);
+  assert.equal(record.pageMediaReady, true);
   assert.equal(record.videoDetails.title, 'Cyberpunk 2077 - PS5 Pro Update Trailer');
-  assert.equal(record.videoDetails.lengthSeconds, 72);
-  assert.equal(record.videoDetails.remainingTime, 72);
-  assert.equal(record.isRemainingTimeStale, true);
+  assert.equal(record.videoDetails.lengthSeconds, 3365);
+  assert.equal(record.videoDetails.remainingTime, 3365);
+  assert.equal(record.isRemainingTimeStale, false);
+});
+
+test('handlePageVideoDetailsMessage preserves ready state when only watch URL parameters change', async () => {
+  resetBackgroundStore(1);
+  backgroundStore.trackedTabsById = {
+    7: makeTrackedTabRecord(7, {
+      url: 'https://www.youtube.com/watch?v=new',
+      pageMediaReady: true,
+      videoDetails: { title: 'Video', remainingTime: 120, lengthSeconds: 300 },
+      isRemainingTimeStale: false,
+    }),
+  };
+
+  await handlePageVideoDetailsMessage(
+    {
+      details: {
+        url: 'https://www.youtube.com/watch?v=new&list=abc123&index=10',
+        title: 'Video',
+        lengthSeconds: 300,
+        isLive: false,
+      },
+    },
+    {
+      tab: {
+        id: 7,
+        windowId: 1,
+        url: 'https://www.youtube.com/watch?v=new&list=abc123&index=10',
+      },
+    },
+  );
+
+  const record = backgroundStore.trackedTabsById[7];
+  assert.equal(record.url, 'https://www.youtube.com/watch?v=new&list=abc123&index=10');
+  assert.equal(record.pageMediaReady, true);
+  assert.equal(record.videoDetails.remainingTime, 120);
+  assert.equal(record.isRemainingTimeStale, false);
 });
