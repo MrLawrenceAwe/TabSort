@@ -167,3 +167,50 @@ test(
     assert.equal(record.isRemainingTimeStale, true);
   },
 );
+
+test(
+  'refreshTrackedTab updates the stored URL when collected metrics come from a new watch page',
+  { concurrency: false },
+  async () => {
+    resetBackgroundStore();
+    backgroundStore.trackedTabsById = {
+      1: makeTrackedTabRecord(1, {
+        url: 'https://www.youtube.com/watch?v=old',
+        videoDetails: { title: 'Old Video', remainingTime: 45, lengthSeconds: 120 },
+        isRemainingTimeStale: false,
+        pageRuntimeReady: false,
+      }),
+    };
+
+    globalThis.chrome.tabs.get = (_tabId, callback) => {
+      callback({
+        id: 1,
+        windowId: 1,
+        url: 'https://www.youtube.com/watch?v=new',
+        active: false,
+        hidden: false,
+      });
+    };
+
+    globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
+      callback({
+        title: 'New Video',
+        url: 'https://www.youtube.com/watch?v=new',
+        lengthSeconds: 400,
+        currentTime: 10,
+        playbackRate: 1,
+        paused: false,
+        isLive: false,
+      });
+    };
+
+    await refreshTrackedTab(1);
+
+    const record = backgroundStore.trackedTabsById[1];
+    assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
+    assert.equal(record.videoDetails.title, 'New Video');
+    assert.equal(record.videoDetails.lengthSeconds, 400);
+    assert.equal(record.videoDetails.remainingTime, 390);
+    assert.equal(record.isRemainingTimeStale, false);
+  },
+);
