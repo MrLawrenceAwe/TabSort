@@ -96,3 +96,39 @@ test('handlePageRuntimeReadyMessage removes tracked rows when a SPA tab leaves w
   assert.deepEqual(backgroundStore.visibleOrder, []);
   assert.deepEqual(backgroundStore.targetOrder, []);
 });
+
+test('handlePageVideoDetailsMessage resets carried remaining time on watch-to-watch SPA navigation', async () => {
+  resetBackgroundStore(1);
+  backgroundStore.trackedTabsById = {
+    7: makeTrackedTabRecord(7, {
+      url: 'https://www.youtube.com/watch?v=old',
+      videoDetails: { title: 'Old Video', remainingTime: 25, lengthSeconds: 100 },
+      isRemainingTimeStale: false,
+    }),
+  };
+
+  await handlePageVideoDetailsMessage(
+    {
+      details: {
+        url: 'https://www.youtube.com/watch?v=new',
+        title: 'New Video',
+        lengthSeconds: 400,
+        isLive: false,
+      },
+    },
+    {
+      tab: {
+        id: 7,
+        windowId: 1,
+        url: 'https://www.youtube.com/watch?v=new',
+      },
+    },
+  );
+
+  const record = backgroundStore.trackedTabsById[7];
+  assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
+  assert.equal(record.videoDetails.title, 'New Video');
+  assert.equal(record.videoDetails.lengthSeconds, 400);
+  assert.equal(record.videoDetails.remainingTime, 400);
+  assert.equal(record.isRemainingTimeStale, true);
+});

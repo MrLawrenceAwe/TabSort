@@ -115,7 +115,7 @@ export async function refreshTrackedTab(tabId) {
 
     if (metricsPayload.title || metricsPayload.url) {
       if (metricsPayload.title) record.videoDetails.title = metricsPayload.title;
-      if (!record.url && metricsPayload.url) record.url = metricsPayload.url;
+      if (metricsPayload.url) record.url = metricsPayload.url;
     }
 
     if (metricsPayload.isLive === true) record.isLiveStream = true;

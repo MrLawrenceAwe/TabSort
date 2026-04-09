@@ -130,6 +130,12 @@ export async function handlePageVideoDetailsMessage(message, sender) {
   }
 
   const record = ensureTrackedTabRecord(tabId, windowId, { url: detailUrl });
+  const urlChanged = Boolean(record.url) && Boolean(detailUrl) && record.url !== detailUrl;
+  if (urlChanged) {
+    record.isLiveStream = false;
+    record.videoDetails = null;
+    record.isRemainingTimeStale = true;
+  }
   if (details.url) record.url = details.url;
   record.videoDetails = record.videoDetails || {};
   if (details.title) record.videoDetails.title = details.title;
