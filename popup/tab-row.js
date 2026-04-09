@@ -1,7 +1,7 @@
 import { TAB_STATES, RECENTLY_UNSUSPENDED_MS, LOADING_GRACE_MS } from '../shared/constants.js';
 import { isFiniteNumber } from '../shared/guards.js';
 
-const USER_ACTIONS = {
+export const USER_ACTIONS = {
   RELOAD_TAB: 'Reload tab',
   INTERACT_WITH_TAB: 'Interact with tab',
   WAIT_FOR_LOAD: 'Wait for tab to load',
