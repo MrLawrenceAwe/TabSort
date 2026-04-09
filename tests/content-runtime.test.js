@@ -34,12 +34,38 @@ function createEventTarget() {
   };
 }
 
+function createFakeVideo({
+  readyState = 0,
+  duration = NaN,
+  currentSrc = '',
+  src = '',
+  paused = false,
+  currentTime = 0,
+} = {}) {
+  const eventTarget = createEventTarget();
+  return {
+    ...eventTarget,
+    readyState,
+    duration,
+    currentSrc,
+    src,
+    paused,
+    currentTime,
+  };
+}
+
 function installRuntimeTestDom() {
   const windowTarget = createEventTarget();
   const titleElement = { textContent: 'Video One - YouTube' };
   const headElement = {};
   const documentElement = {};
   let durationContent = 'PT2M0S';
+  const video = createFakeVideo({
+    readyState: 3,
+    duration: 120,
+    currentSrc: 'blob:video-one',
+  });
+  let videos = [video];
 
   globalThis.MutationObserver = FakeMutationObserver;
   globalThis.location = { href: 'https://www.youtube.com/watch?v=one' };
@@ -63,7 +89,7 @@ function installRuntimeTestDom() {
       return null;
     },
     querySelectorAll() {
-      return [];
+      return videos;
     },
   };
   globalThis.chrome = {
@@ -87,6 +113,10 @@ function installRuntimeTestDom() {
       globalThis.document.title = title;
       titleElement.textContent = title;
       durationContent = duration;
+    },
+    video,
+    replaceVideos(nextVideos) {
+      videos = nextVideos;
     },
   };
 }
@@ -164,6 +194,49 @@ test(
         (message) => message?.type === 'pageVideoDetails',
       );
       assert.equal(detailSignals.at(-1)?.details?.url, 'https://www.youtube.com/watch?v=two');
+    } finally {
+      resetRuntimeStateForTests();
+      resetGlobals();
+    }
+  },
+);
+
+test(
+  'bootstrapRuntime waits for fresh media evidence before re-sending pageMediaReady on SPA navigation',
+  { concurrency: false },
+  () => {
+    resetRuntimeStateForTests();
+    try {
+      const { windowTarget, updatePage, video } = installRuntimeTestDom();
+
+      bootstrapRuntime();
+
+      const initialMediaReadySignals = installRuntimeTestDom.messages.filter(
+        (message) => message?.type === 'pageMediaReady',
+      );
+      assert.equal(initialMediaReadySignals.length, 1);
+
+      updatePage({
+        href: 'https://www.youtube.com/watch?v=two',
+        title: 'Video Two - YouTube',
+        duration: 'PT1M12S',
+      });
+      windowTarget.dispatch('yt-navigate-finish');
+
+      const mediaReadyAfterNavigation = installRuntimeTestDom.messages.filter(
+        (message) => message?.type === 'pageMediaReady',
+      );
+      assert.equal(mediaReadyAfterNavigation.length, 1);
+
+      video.currentSrc = 'blob:video-two';
+      video.duration = 72;
+      video.readyState = 3;
+      video.dispatch('loadedmetadata');
+
+      const mediaReadyAfterFreshVideo = installRuntimeTestDom.messages.filter(
+        (message) => message?.type === 'pageMediaReady',
+      );
+      assert.equal(mediaReadyAfterFreshVideo.length, 2);
     } finally {
       resetRuntimeStateForTests();
       resetGlobals();

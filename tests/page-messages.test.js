@@ -161,3 +161,41 @@ test('handlePageVideoDetailsMessage resets carried remaining time on watch-to-wa
   assert.equal(record.videoDetails.remainingTime, 400);
   assert.equal(record.isRemainingTimeStale, true);
 });
+
+test('handlePageVideoDetailsMessage resets carried remaining time when the title changes for the same watch URL', async () => {
+  resetBackgroundStore(1);
+  backgroundStore.trackedTabsById = {
+    7: makeTrackedTabRecord(7, {
+      url: 'https://www.youtube.com/watch?v=new',
+      pageMediaReady: true,
+      videoDetails: { title: 'Old Video', remainingTime: 3365, lengthSeconds: 3365 },
+      isRemainingTimeStale: false,
+    }),
+  };
+
+  await handlePageVideoDetailsMessage(
+    {
+      details: {
+        url: 'https://www.youtube.com/watch?v=new',
+        title: 'Cyberpunk 2077 - PS5 Pro Update Trailer',
+        lengthSeconds: 72,
+        isLive: false,
+      },
+    },
+    {
+      tab: {
+        id: 7,
+        windowId: 1,
+        url: 'https://www.youtube.com/watch?v=new',
+      },
+    },
+  );
+
+  const record = backgroundStore.trackedTabsById[7];
+  assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
+  assert.equal(record.pageMediaReady, false);
+  assert.equal(record.videoDetails.title, 'Cyberpunk 2077 - PS5 Pro Update Trailer');
+  assert.equal(record.videoDetails.lengthSeconds, 72);
+  assert.equal(record.videoDetails.remainingTime, 72);
+  assert.equal(record.isRemainingTimeStale, true);
+});
