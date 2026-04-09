@@ -3,7 +3,7 @@ const THEMES = Object.freeze({
   DARK: 'dark',
 });
 
-let syncing = false;
+let isThemeSyncActive = false;
 let activeMediaQuery = null;
 
 function normalizeTheme(theme) {
@@ -56,11 +56,11 @@ function handleMediaChange(event) {
 export function startThemeSync() {
   applyTheme(getPreferredTheme());
 
-  if (syncing) {
+  if (isThemeSyncActive) {
     return;
   }
 
-  syncing = true;
+  isThemeSyncActive = true;
 
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
     return;
@@ -80,7 +80,7 @@ export function startThemeSync() {
       'unload',
       () => {
         detachMediaQueryListener();
-        syncing = false;
+        isThemeSyncActive = false;
       },
       { once: true },
     );

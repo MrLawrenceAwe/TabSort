@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { inferIsLiveNow } from '../shared/live-detection.js';
+import { inferIsLiveNow } from '../content/youtube/live-status.js';
 
 test('does not mark non-live videos as live when liveBroadcastDetails exists without isLiveNow', () => {
   const isLive = inferIsLiveNow({

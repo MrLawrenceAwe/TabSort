@@ -16,3 +16,17 @@ export function logWarn(context, detail) {
 export function logError(context, detail) {
   log('error', context, detail);
 }
+
+export function logListenerError(label, error) {
+  logDebug(`${label} failed`, error);
+}
+
+export function withErrorLogging(label, fn) {
+  return async (...args) => {
+    try {
+      await fn(...args);
+    } catch (error) {
+      logListenerError(label, error);
+    }
+  };
+}

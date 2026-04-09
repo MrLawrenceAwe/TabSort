@@ -5,7 +5,7 @@ import { backgroundStore } from '../background/store.js';
 import {
   handlePageRuntimeReadyMessage,
   handlePageVideoDetailsMessage,
-} from '../background/messages.js';
+} from '../background/message-router.js';
 import {
   ensureChromeApi,
   makeTrackedTabRecord,

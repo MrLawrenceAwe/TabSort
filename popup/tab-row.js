@@ -1,6 +1,5 @@
 import { TAB_STATES, RECENTLY_UNSUSPENDED_MS, LOADING_GRACE_MS } from '../shared/constants.js';
 import { isFiniteNumber } from '../shared/guards.js';
-import { popupState } from './state.js';
 
 const USER_ACTIONS = {
   RELOAD_TAB: 'Reload tab',
@@ -48,7 +47,7 @@ function insertInfoCells(row, record, sortedView, userAction) {
     const cell = row.insertCell(row.cells.length);
     const value = column.getter(record, userAction);
 
-    cell.textContent = popupState.tabsSorted ? value : toDisplayText(value);
+    cell.textContent = sortedView ? value : toDisplayText(value);
   });
 }
 

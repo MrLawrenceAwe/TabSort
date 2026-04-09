@@ -1,11 +1,11 @@
-import { popupState } from './state.js';
+import { popupViewModel } from './view-model.js';
 
 const domCache = {
   errorElement: null,
   emptyStateElement: null,
   statusElement: null,
   sortButton: null,
-  tabsSortedElement: null,
+  sortedBadgeElement: null,
   table: null,
   actionRequiredColumn: null,
   tabStatusColumn: null,
@@ -19,7 +19,7 @@ export function initializeView() {
   domCache.emptyStateElement = document.getElementById('emptyState');
   domCache.statusElement = document.getElementById('videoTabsReadyStatus');
   domCache.sortButton = document.getElementById('sortButton');
-  domCache.tabsSortedElement = document.getElementById('tabsSorted');
+  domCache.sortedBadgeElement = document.getElementById('tabsSorted');
   domCache.table = document.getElementById('infoTable');
   domCache.actionRequiredColumn = document.querySelector('.action-required');
   domCache.tabStatusColumn = document.querySelector('.tab-status');
@@ -33,18 +33,20 @@ function getCachedElement(key) {
 
 function updateStatus(statusElement) {
   if (!statusElement) return;
-  if (!popupState.tabsSorted) {
-    statusElement.style.display = popupState.trackedTabCount <= 1 ? 'none' : 'block';
-    statusElement.textContent = `${popupState.readyTabCount}/${popupState.trackedTabCount} ready for sort.`;
+  const trackedTabCount = popupViewModel.sortSummary.counts.tracked;
+  const readyTabCount = popupViewModel.sortSummary.counts.ready;
+  if (!popupViewModel.allSortableTabsSorted) {
+    statusElement.style.display = trackedTabCount <= 1 ? 'none' : 'block';
+    statusElement.textContent = `${readyTabCount}/${trackedTabCount} ready for sort.`;
     statusElement.style.color = 'var(--status-text-color)';
     return;
   }
   statusElement.style.display = 'none';
 }
 
-function updateTabsSorted(tabsSortedElement) {
-  if (!tabsSortedElement) return;
-  tabsSortedElement.style.display = popupState.tabsSorted ? 'block' : 'none';
+function updateSortedBadge(sortedBadgeElement) {
+  if (!sortedBadgeElement) return;
+  sortedBadgeElement.style.display = popupViewModel.allSortableTabsSorted ? 'block' : 'none';
 }
 
 export function getEmptyStateMessage(trackedTabCount) {
@@ -59,7 +61,7 @@ export function getEmptyStateMessage(trackedTabCount) {
 
 function updateEmptyState(emptyStateElement) {
   if (!emptyStateElement) return;
-  const message = getEmptyStateMessage(popupState.trackedTabCount);
+  const message = getEmptyStateMessage(popupViewModel.sortSummary.counts.tracked);
   emptyStateElement.textContent = message;
   emptyStateElement.classList.toggle('hide', !message);
 }
@@ -80,15 +82,16 @@ function updateSortButton(sortButton, shouldShowSort) {
   if (!sortButton) return;
   if (shouldShowSort) {
     sortButton.style.setProperty('display', 'block', 'important');
-    const allTabsReady = popupState.readyTabCount === popupState.trackedTabCount;
+    const { ready, tracked } = popupViewModel.sortSummary.counts;
+    const allTabsReady = ready === tracked;
     const readyBackground = 'var(--all-ready-row-background)';
     const readyText = 'var(--all-ready-row-text)';
     sortButton.style.backgroundColor = allTabsReady ? readyBackground : 'var(--action-button-background)';
     sortButton.style.color = allTabsReady ? readyText : 'var(--action-button-color)';
     sortButton.style.borderColor = allTabsReady ? readyBackground : 'var(--action-button-border-color)';
     sortButton.textContent = getSortButtonText(
-      popupState.readyTabCount,
-      popupState.trackedTabCount,
+      ready,
+      tracked,
     );
     return;
   }
@@ -117,31 +120,32 @@ export function setOptionToggleVisibility(visible) {
   });
 }
 
-export function renderHeaderState() {
+export function renderHeaderView() {
   const emptyStateElement = getCachedElement('emptyStateElement');
   const statusElement = getCachedElement('statusElement');
   const sortButton = getCachedElement('sortButton');
-  const tabsSortedElement = getCachedElement('tabsSortedElement');
+  const sortedBadgeElement = getCachedElement('sortedBadgeElement');
   const table = getCachedElement('table');
+  const { counts, readyTabs } = popupViewModel.sortSummary;
 
   const readySubsetExists =
-    popupState.readyTabCount >= 2 &&
-    popupState.readyTabCount < popupState.trackedTabCount;
+    counts.ready >= 2 &&
+    counts.ready < counts.tracked;
   const readySubsetNeedsSorting =
-    readySubsetExists && (!popupState.areReadyTabsContiguous || !popupState.areReadyTabsAtFront);
+    readySubsetExists && (!readyTabs.contiguous || !readyTabs.atFront);
   const shouldShowSort =
-    popupState.readyTabCount >= 2 &&
-    !popupState.tabsSorted &&
-    (popupState.areReadyTabsOutOfOrder || readySubsetNeedsSorting);
+    counts.ready >= 2 &&
+    !popupViewModel.allSortableTabsSorted &&
+    (readyTabs.outOfOrder || readySubsetNeedsSorting);
 
   setOptionToggleVisibility(shouldShowSort);
 
   updateStatus(statusElement);
-  updateTabsSorted(tabsSortedElement);
+  updateSortedBadge(sortedBadgeElement);
   updateSortButton(sortButton, shouldShowSort);
   updateEmptyState(emptyStateElement);
 
-  if (popupState.tabsSorted && table) {
+  if (popupViewModel.allSortableTabsSorted && table) {
     clearReadyRows(table);
   }
 }

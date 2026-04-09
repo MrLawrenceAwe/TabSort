@@ -3,7 +3,8 @@ import test from 'node:test';
 
 import { TAB_STATES } from '../shared/constants.js';
 import { backgroundStore } from '../background/store.js';
-import { refreshTrackedTab, syncTrackedWindowTabs } from '../background/tracked-tabs.js';
+import { refreshTrackedTabMetrics } from '../background/tracked-tab-metrics.js';
+import { rebuildTrackedTabsForWindow } from '../background/tracked-tab-registry.js';
 import {
   ensureChromeApi,
   makeTrackedTabRecord,
@@ -13,7 +14,7 @@ import {
 ensureChromeApi({ tabs: true });
 
 test(
-  'refreshTrackedTab applies updates to the latest record object after async boundaries',
+  'refreshTrackedTabMetrics applies updates to the latest record object after async boundaries',
   { concurrency: false },
   async () => {
     resetBackgroundStore();
@@ -47,7 +48,7 @@ test(
       }, 0);
     };
 
-    const refreshPromise = refreshTrackedTab(1);
+    const refreshPromise = refreshTrackedTabMetrics(1);
 
     const replacementRecord = makeTrackedTabRecord(1, { pageRuntimeReady: false });
     backgroundStore.trackedTabsById = { 1: replacementRecord };
@@ -63,7 +64,7 @@ test(
 );
 
 test(
-  'syncTrackedWindowTabs does not mark already-open unsuspended tabs as recently unsuspended on initial rehydrate',
+  'rebuildTrackedTabsForWindow does not mark already-open unsuspended tabs as recently unsuspended on initial rehydrate',
   { concurrency: false },
   async () => {
     resetBackgroundStore();
@@ -84,7 +85,7 @@ test(
       ]);
     };
 
-    await syncTrackedWindowTabs(1, { force: true });
+    await rebuildTrackedTabsForWindow(1, { force: true });
 
     const record = backgroundStore.trackedTabsById[1];
     assert.equal(record.status, TAB_STATES.UNSUSPENDED);
@@ -93,7 +94,7 @@ test(
 );
 
 test(
-  'syncTrackedWindowTabs keeps the recent unsuspend grace for real suspended-to-unsuspended transitions',
+  'rebuildTrackedTabsForWindow keeps the recent unsuspend grace for real suspended-to-unsuspended transitions',
   { concurrency: false },
   async () => {
     resetBackgroundStore();
@@ -120,7 +121,7 @@ test(
       ]);
     };
 
-    await syncTrackedWindowTabs(1, { force: true });
+    await rebuildTrackedTabsForWindow(1, { force: true });
 
     const record = backgroundStore.trackedTabsById[1];
     assert.equal(record.status, TAB_STATES.UNSUSPENDED);
@@ -129,7 +130,7 @@ test(
 );
 
 test(
-  'syncTrackedWindowTabs resets runtime readiness when a tracked tab navigates to a new video URL',
+  'rebuildTrackedTabsForWindow resets runtime readiness when a tracked tab navigates to a new video URL',
   { concurrency: false },
   async () => {
     resetBackgroundStore();
@@ -159,7 +160,7 @@ test(
       ]);
     };
 
-    await syncTrackedWindowTabs(1, { force: true });
+    await rebuildTrackedTabsForWindow(1, { force: true });
 
     const record = backgroundStore.trackedTabsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
@@ -172,7 +173,7 @@ test(
 );
 
 test(
-  'syncTrackedWindowTabs preserves tracked state when the primary tab query fails',
+  'rebuildTrackedTabsForWindow preserves tracked state when the primary tab query fails',
   { concurrency: false },
   async () => {
     resetBackgroundStore(1);
@@ -192,7 +193,7 @@ test(
       globalThis.chrome.runtime.lastError = null;
     };
 
-    await syncTrackedWindowTabs(1, { force: true });
+    await rebuildTrackedTabsForWindow(1, { force: true });
 
     assert.deepEqual(Object.keys(backgroundStore.trackedTabsById), ['1']);
     assert.deepEqual(backgroundStore.visibleOrder, [1]);
@@ -202,7 +203,7 @@ test(
 );
 
 test(
-  'refreshTrackedTab updates the stored URL when collected metrics come from a new watch page',
+  'refreshTrackedTabMetrics updates the stored URL when collected metrics come from a new watch page',
   { concurrency: false },
   async () => {
     resetBackgroundStore();
@@ -238,7 +239,7 @@ test(
       });
     };
 
-    await refreshTrackedTab(1);
+    await refreshTrackedTabMetrics(1);
 
     const record = backgroundStore.trackedTabsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
@@ -250,7 +251,7 @@ test(
 );
 
 test(
-  'refreshTrackedTab ignores async metric payloads that no longer match the tracked URL',
+  'refreshTrackedTabMetrics ignores async metric payloads that no longer match the tracked URL',
   { concurrency: false },
   async () => {
     resetBackgroundStore();
@@ -295,7 +296,7 @@ test(
       }, 0);
     };
 
-    const refreshPromise = refreshTrackedTab(1);
+    const refreshPromise = refreshTrackedTabMetrics(1);
 
     backgroundStore.trackedTabsById[1] = makeTrackedTabRecord(1, {
       url: 'https://www.youtube.com/watch?v=new',
@@ -317,7 +318,7 @@ test(
 );
 
 test(
-  'refreshTrackedTab keeps remaining time stale until the current page reports media ready',
+  'refreshTrackedTabMetrics keeps remaining time stale until the current page reports media ready',
   { concurrency: false },
   async () => {
     resetBackgroundStore();
@@ -354,7 +355,7 @@ test(
       });
     };
 
-    await refreshTrackedTab(1);
+    await refreshTrackedTabMetrics(1);
 
     const record = backgroundStore.trackedTabsById[1];
     assert.equal(record.pageRuntimeReady, true);
@@ -366,7 +367,7 @@ test(
 );
 
 test(
-  'refreshTrackedTab keeps remaining time stale when page metadata and video duration disagree',
+  'refreshTrackedTabMetrics keeps remaining time stale when page metadata and video duration disagree',
   { concurrency: false },
   async () => {
     resetBackgroundStore();
@@ -408,7 +409,7 @@ test(
       });
     };
 
-    await refreshTrackedTab(1);
+    await refreshTrackedTabMetrics(1);
 
     const record = backgroundStore.trackedTabsById[1];
     assert.equal(record.pageRuntimeReady, true);

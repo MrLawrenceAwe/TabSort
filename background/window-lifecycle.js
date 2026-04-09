@@ -1,10 +1,10 @@
 import { REFRESH_ALARM_NAME, REFRESH_INTERVAL_MINUTES } from '../shared/constants.js';
 import { isValidWindowId } from '../shared/guards.js';
-import { backgroundStore, updateTrackedWindowId } from './store.js';
-import { logListenerError, withErrorLogging } from './listener-helpers.js';
+import { logDebug, logListenerError, withErrorLogging } from '../shared/log.js';
 import { recomputeSortState } from './sort-state.js';
-import { refreshTrackedTab, syncTrackedWindowTabs } from './tracked-tabs.js';
-import { logDebug } from '../shared/log.js';
+import { backgroundStore, setTrackedWindowId } from './store.js';
+import { refreshTrackedTabMetrics } from './tracked-tab-metrics.js';
+import { rebuildTrackedTabsForWindow } from './tracked-tab-registry.js';
 
 const MIN_REFRESH_INTERVAL_MINUTES = 1;
 const refreshIntervalMinutes = Math.max(REFRESH_INTERVAL_MINUTES, MIN_REFRESH_INTERVAL_MINUTES);
@@ -28,7 +28,7 @@ const getLastFocusedWindowId = () =>
   });
 
 export function resetTrackedWindow() {
-  updateTrackedWindowId(null, { force: true });
+  setTrackedWindowId(null, { force: true });
   backgroundStore.trackedTabsById = {};
   backgroundStore.snapshotSignature = null;
   recomputeSortState();
@@ -37,11 +37,11 @@ export function resetTrackedWindow() {
 async function rehydrateTrackedTabs() {
   const lastFocusedWindowId = await getLastFocusedWindowId();
   const targetWindowId = isValidWindowId(lastFocusedWindowId) ? lastFocusedWindowId : null;
-  await syncTrackedWindowTabs(targetWindowId, { force: true });
+  await rebuildTrackedTabsForWindow(targetWindowId, { force: true });
 
   const ids = Object.keys(backgroundStore.trackedTabsById).map(Number);
   if (ids.length) {
-    await Promise.all(ids.map(refreshTrackedTab));
+    await Promise.all(ids.map(refreshTrackedTabMetrics));
   }
 }
 
@@ -77,9 +77,9 @@ export function initializeWindowLifecycle() {
   chrome.alarms.onAlarm.addListener(
     withErrorLogging('alarms.onAlarm', async (alarm) => {
       if (alarm.name !== REFRESH_ALARM_NAME) return;
-      await syncTrackedWindowTabs(backgroundStore.trackedWindowId, { force: true });
+      await rebuildTrackedTabsForWindow(backgroundStore.trackedWindowId, { force: true });
       const ids = Object.keys(backgroundStore.trackedTabsById).map(Number);
-      await Promise.all(ids.map(refreshTrackedTab));
+      await Promise.all(ids.map(refreshTrackedTabMetrics));
     }),
   );
 
@@ -95,8 +95,8 @@ export function initializeWindowLifecycle() {
     withErrorLogging('windows.onFocusChanged', async (windowId) => {
       if (!isValidWindowId(windowId)) return;
       if (windowId === backgroundStore.trackedWindowId) return;
-      updateTrackedWindowId(windowId, { force: true });
-      await syncTrackedWindowTabs(windowId, { force: true });
+      setTrackedWindowId(windowId, { force: true });
+      await rebuildTrackedTabsForWindow(windowId, { force: true });
     }),
   );
 

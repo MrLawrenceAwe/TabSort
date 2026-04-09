@@ -4,8 +4,8 @@ export const backgroundStore = {
   trackedTabsById: {},
   targetOrder: [],
   visibleOrder: [],
-  tabsSorted: false,
-  readiness: null,
+  allSortableTabsSorted: false,
+  sortSummary: null,
   trackedWindowId: null,
   snapshotSignature: null,
   syncToken: 0,
@@ -13,7 +13,7 @@ export const backgroundStore = {
 
 export const now = () => Date.now();
 
-export function updateTrackedWindowId(windowId, { force = false } = {}) {
+export function setTrackedWindowId(windowId, { force = false } = {}) {
   if (isValidWindowId(windowId)) {
     if (force || !isValidWindowId(backgroundStore.trackedWindowId)) {
       backgroundStore.trackedWindowId = windowId;
@@ -22,4 +22,8 @@ export function updateTrackedWindowId(windowId, { force = false } = {}) {
     backgroundStore.trackedWindowId = null;
   }
   return isValidWindowId(backgroundStore.trackedWindowId) ? backgroundStore.trackedWindowId : null;
+}
+
+export function canHandleWindow(windowId) {
+  return backgroundStore.trackedWindowId == null || windowId === backgroundStore.trackedWindowId;
 }
