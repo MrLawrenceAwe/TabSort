@@ -130,8 +130,15 @@ export async function handlePageMediaReadyMessage(_message, sender) {
   const tabId = sender?.tab?.id;
   const windowId = sender?.tab?.windowId;
   if (!isSenderInTrackedWindow(windowId)) return;
-  setTrackedWindowId(windowId);
   if (!isFiniteNumber(tabId)) return;
+  if (!isWatchOrShortsPage(sender?.tab?.url)) {
+    if (backgroundStore.trackedTabsById[tabId]) {
+      delete backgroundStore.trackedTabsById[tabId];
+      recomputeSortState();
+    }
+    return;
+  }
+  setTrackedWindowId(windowId);
   const record = ensureTrackedTabRecord(tabId, windowId);
   record.pageMediaReady = true;
   await refreshTrackedTabMetrics(tabId);
@@ -157,6 +164,7 @@ export async function handlePageVideoDetailsMessage(message, sender) {
   const record = ensureTrackedTabRecord(tabId, windowId, { url: detailUrl });
   const urlChanged = hasYoutubeVideoIdentityChanged(record.url, detailUrl);
   if (urlChanged) {
+    record.pageRuntimeReady = false;
     record.isLiveStream = false;
     record.pageMediaReady = false;
     record.videoDetails = null;

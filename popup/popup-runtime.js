@@ -22,6 +22,11 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let snapshotPollTimeoutId = null;
 let snapshotPollInFlight = false;
+let popupRuntimeActive = false;
+
+export function shouldRetrySnapshotPoll(snapshot, runtimeActive = popupRuntimeActive) {
+  return Boolean(runtimeActive) && snapshot == null;
+}
 
 function clearSnapshotPollTimeout() {
   if (snapshotPollTimeoutId == null) return;
@@ -34,13 +39,17 @@ function scheduleSnapshotPoll() {
   snapshotPollTimeoutId = setTimeout(async () => {
     snapshotPollTimeoutId = null;
     snapshotPollInFlight = true;
+    let snapshot = null;
     try {
-      const snapshot = await loadSnapshot();
+      snapshot = await loadSnapshot();
       if (snapshot) renderSnapshot(snapshot);
     } catch (error) {
       logPopupError('Failed to refresh pending tab snapshot', error);
     } finally {
       snapshotPollInFlight = false;
+      if (shouldRetrySnapshotPoll(snapshot)) {
+        scheduleSnapshotPoll();
+      }
     }
   }, SNAPSHOT_POLL_DELAY_MS);
 }
@@ -235,6 +244,7 @@ async function initializeControls() {
 }
 
 export async function initializePopupRuntime() {
+  popupRuntimeActive = true;
   initializeView();
   renderHeaderView();
   setErrorMessage('');
@@ -262,11 +272,22 @@ export async function initializePopupRuntime() {
   }
 
   window.addEventListener('unload', () => {
+    popupRuntimeActive = false;
     clearSnapshotPollTimeout();
     chrome.runtime.onMessage.removeListener(messageListener);
   });
 }
 
-initializePopupRuntime().catch((error) => {
-  logPopupMessage(MESSAGE_TYPES.ERROR, `Failed to initialize popup: ${toErrorMessage(error)}`);
-});
+function canBootstrapPopupRuntime() {
+  return (
+    typeof window !== 'undefined' &&
+    typeof document !== 'undefined' &&
+    Boolean(globalThis.chrome?.runtime?.sendMessage)
+  );
+}
+
+if (canBootstrapPopupRuntime()) {
+  initializePopupRuntime().catch((error) => {
+    logPopupMessage(MESSAGE_TYPES.ERROR, `Failed to initialize popup: ${toErrorMessage(error)}`);
+  });
+}

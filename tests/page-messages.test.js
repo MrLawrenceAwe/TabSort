@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import { backgroundStore } from '../background/store.js';
 import {
+  handlePageMediaReadyMessage,
   handlePageRuntimeReadyMessage,
   handlePageVideoDetailsMessage,
 } from '../background/message-router.js';
@@ -128,11 +129,47 @@ test('handlePageRuntimeReadyMessage marks the runtime ready without collecting m
   assert.equal(record.isRemainingTimeStale, true);
 });
 
+test('handlePageMediaReadyMessage removes tracked rows when a stale event arrives off watch/shorts', async () => {
+  resetBackgroundStore(1);
+  backgroundStore.trackedTabsById = {
+    7: makeTrackedTabRecord(7, {
+      videoDetails: { title: 'Video 7', remainingTime: 25, lengthSeconds: 100 },
+      isRemainingTimeStale: false,
+    }),
+  };
+  backgroundStore.visibleOrder = [7];
+  backgroundStore.targetOrder = [7];
+  globalThis.chrome.tabs = {
+    get() {
+      throw new Error('tabs.get should not be called for stale non-watch media-ready events');
+    },
+    sendMessage() {
+      throw new Error('tabs.sendMessage should not be called for stale non-watch media-ready events');
+    },
+  };
+
+  await handlePageMediaReadyMessage(
+    {},
+    {
+      tab: {
+        id: 7,
+        windowId: 1,
+        url: 'https://www.youtube.com/results?search_query=music',
+      },
+    },
+  );
+
+  assert.equal(backgroundStore.trackedTabsById[7], undefined);
+  assert.deepEqual(backgroundStore.visibleOrder, []);
+  assert.deepEqual(backgroundStore.targetOrder, []);
+});
+
 test('handlePageVideoDetailsMessage resets carried remaining time on watch-to-watch SPA navigation', async () => {
   resetBackgroundStore(1);
   backgroundStore.trackedTabsById = {
     7: makeTrackedTabRecord(7, {
       url: 'https://www.youtube.com/watch?v=old',
+      pageRuntimeReady: true,
       videoDetails: { title: 'Old Video', remainingTime: 25, lengthSeconds: 100 },
       isRemainingTimeStale: false,
     }),
@@ -158,6 +195,7 @@ test('handlePageVideoDetailsMessage resets carried remaining time on watch-to-wa
 
   const record = backgroundStore.trackedTabsById[7];
   assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
+  assert.equal(record.pageRuntimeReady, false);
   assert.equal(record.videoDetails.title, 'New Video');
   assert.equal(record.videoDetails.lengthSeconds, 400);
   assert.equal(record.videoDetails.remainingTime, 400);
