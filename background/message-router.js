@@ -1,12 +1,12 @@
 import { TAB_STATES } from '../shared/constants.js';
-import { isFiniteNumber, isValidWindowId } from '../shared/guards.js';
+import { isFiniteNumber, isValidWindowId } from '../shared/utils.js';
 import { logDebug } from '../shared/log.js';
 import { buildTabSnapshot } from './tab-snapshot.js';
 import { ensureTrackedTabRecord } from './tab-record.js';
 import { recomputeSortState } from './sort-state.js';
-import { backgroundStore, now, setTrackedWindowId } from './store.js';
-import { refreshTrackedTabMetrics } from './tracked-tab-metrics.js';
-import { rebuildTrackedTabsForWindow } from './tracked-tab-registry.js';
+import { now, setTrackedWindowId, trackingState } from './tracking-state.js';
+import { refreshTabPlaybackState } from './tab-playback-state.js';
+import { syncTrackedTabsForWindow } from './tracked-tab-sync.js';
 import { sortWindowTabs } from './window-sort.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
@@ -27,8 +27,8 @@ function createAsyncResponder(sendResponse) {
 }
 
 function isSenderInTrackedWindow(windowId) {
-  if (backgroundStore.trackedWindowId == null) return true;
-  return typeof windowId === 'number' && windowId === backgroundStore.trackedWindowId;
+  if (trackingState.trackedWindowId == null) return true;
+  return typeof windowId === 'number' && windowId === trackingState.trackedWindowId;
 }
 
 function getForcedTrackingOptions(windowId) {
@@ -62,7 +62,7 @@ export async function reloadTab(message) {
     logDebug(`tabs.reload failed for ${tabId}`, error);
   }
   if (!didReload) return;
-  const record = backgroundStore.trackedTabsById[tabId];
+  const record = trackingState.trackedTabsById[tabId];
   if (!record) return;
 
   record.status = TAB_STATES.LOADING;
@@ -78,25 +78,25 @@ export async function reloadTab(message) {
 }
 
 export async function syncTrackedTabs(message) {
-  await rebuildTrackedTabsForWindow(message.windowId, getForcedTrackingOptions(message.windowId));
+  await syncTrackedTabsForWindow(message.windowId, getForcedTrackingOptions(message.windowId));
 }
 
 export async function getTabSnapshot(message) {
-  await rebuildTrackedTabsForWindow(message.windowId, getForcedTrackingOptions(message.windowId));
-  const ids = Object.keys(backgroundStore.trackedTabsById).map(Number);
-  await Promise.all(ids.map(refreshTrackedTabMetrics));
+  await syncTrackedTabsForWindow(message.windowId, getForcedTrackingOptions(message.windowId));
+  const ids = Object.keys(trackingState.trackedTabsById).map(Number);
+  await Promise.all(ids.map(refreshTabPlaybackState));
   return buildTabSnapshot();
 }
 
 export async function handleSortRequest(message) {
   const targetWindowId = isValidWindowId(message.windowId)
     ? message.windowId
-    : backgroundStore.trackedWindowId;
+    : trackingState.trackedWindowId;
   if (isValidWindowId(targetWindowId)) {
     setTrackedWindowId(targetWindowId, { force: true });
   }
   await sortWindowTabs(targetWindowId);
-  await rebuildTrackedTabsForWindow(targetWindowId, getForcedTrackingOptions(targetWindowId));
+  await syncTrackedTabsForWindow(targetWindowId, getForcedTrackingOptions(targetWindowId));
 }
 
 export async function handlePageRuntimeReadyMessage(_message, sender) {
@@ -105,8 +105,8 @@ export async function handlePageRuntimeReadyMessage(_message, sender) {
   if (!isSenderInTrackedWindow(windowId)) return;
   if (!isFiniteNumber(tabId)) return;
   if (!isWatchOrShortsPage(sender?.tab?.url)) {
-    if (backgroundStore.trackedTabsById[tabId]) {
-      delete backgroundStore.trackedTabsById[tabId];
+    if (trackingState.trackedTabsById[tabId]) {
+      delete trackingState.trackedTabsById[tabId];
       recomputeSortState();
     }
     return;
@@ -132,8 +132,8 @@ export async function handlePageMediaReadyMessage(_message, sender) {
   if (!isSenderInTrackedWindow(windowId)) return;
   if (!isFiniteNumber(tabId)) return;
   if (!isWatchOrShortsPage(sender?.tab?.url)) {
-    if (backgroundStore.trackedTabsById[tabId]) {
-      delete backgroundStore.trackedTabsById[tabId];
+    if (trackingState.trackedTabsById[tabId]) {
+      delete trackingState.trackedTabsById[tabId];
       recomputeSortState();
     }
     return;
@@ -141,7 +141,7 @@ export async function handlePageMediaReadyMessage(_message, sender) {
   setTrackedWindowId(windowId);
   const record = ensureTrackedTabRecord(tabId, windowId);
   record.pageMediaReady = true;
-  await refreshTrackedTabMetrics(tabId);
+  await refreshTabPlaybackState(tabId);
 }
 
 export async function handlePageVideoDetailsMessage(message, sender) {
@@ -154,8 +154,8 @@ export async function handlePageVideoDetailsMessage(message, sender) {
 
   const detailUrl = details.url || sender?.tab?.url;
   if (!isWatchOrShortsPage(detailUrl)) {
-    if (backgroundStore.trackedTabsById[tabId]) {
-      delete backgroundStore.trackedTabsById[tabId];
+    if (trackingState.trackedTabsById[tabId]) {
+      delete trackingState.trackedTabsById[tabId];
       recomputeSortState();
     }
     return;

@@ -1,4 +1,4 @@
-import { toErrorMessage } from './errors.js';
+import { toErrorMessage } from './utils.js';
 
 function log(level, context, detail) {
   const suffix = detail == null ? '' : `: ${toErrorMessage(detail)}`;

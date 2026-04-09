@@ -1,6 +1,6 @@
 import { MEDIA_READY_STATE_THRESHOLD } from '../../shared/constants.js';
 import { inferIsLiveNow } from './live-status.js';
-import { isFiniteNumber } from '../../shared/guards.js';
+import { isFiniteNumber } from '../../shared/utils.js';
 import { collectPageVideoDetails, getPrimaryVideoElement } from './metadata.js';
 
 const runtimeConfig = {
@@ -296,12 +296,12 @@ export function resetRuntimeStateForTests() {
   mediaReadyUrl = null;
   lastMediaReadyVideoElement = null;
   lastMediaReadyFingerprint = null;
-  bootstrapRuntime.initialized = false;
+  bootstrapPageRuntime.initialized = false;
 }
 
-export function bootstrapRuntime() {
-  if (bootstrapRuntime.initialized) return;
-  bootstrapRuntime.initialized = true;
+export function bootstrapPageRuntime() {
+  if (bootstrapPageRuntime.initialized) return;
+  bootstrapPageRuntime.initialized = true;
 
   if (!hasRuntime()) return;
 
@@ -337,3 +337,5 @@ export function bootstrapRuntime() {
     lastMediaReadyFingerprint = null;
   });
 }
+
+export const bootstrapRuntime = bootstrapPageRuntime;

@@ -1,5 +1,5 @@
-import { isFiniteNumber } from '../shared/guards.js';
-import { backgroundStore } from './store.js';
+import { isFiniteNumber } from '../shared/utils.js';
+import { trackingState } from './tracking-state.js';
 
 const FALLBACK_TAB_INDEX = Number.MAX_SAFE_INTEGER;
 
@@ -31,7 +31,7 @@ export function ensureTrackedTabRecord(tabId, windowId, defaults = {}) {
     return undefined;
   }
 
-  const records = backgroundStore.trackedTabsById;
+  const records = trackingState.trackedTabsById;
   let record = records[tabId];
 
   if (!record) {

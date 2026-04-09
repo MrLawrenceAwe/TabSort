@@ -1,4 +1,12 @@
-import { popupViewModel } from './view-model.js';
+import { createEmptySortSummary } from '../shared/sort-summary.js';
+
+export const popupViewState = {
+  sortSummary: createEmptySortSummary(),
+  allSortableTabsSorted: false,
+  activeWindowId: null,
+};
+
+export const popupViewModel = popupViewState;
 
 const domCache = {
   errorElement: null,
@@ -12,7 +20,17 @@ const domCache = {
   initialized: false,
 };
 
-export function initializeView() {
+export function setActiveWindowId(windowId) {
+  popupViewState.activeWindowId = typeof windowId === 'number' ? windowId : null;
+}
+
+export function updatePopupViewState(updates = {}) {
+  Object.assign(popupViewState, updates);
+}
+
+export const updatePopupViewModel = updatePopupViewState;
+
+export function initializePopupView() {
   if (domCache.initialized) return;
 
   domCache.errorElement = document.getElementById('popupError');
@@ -26,16 +44,18 @@ export function initializeView() {
   domCache.initialized = true;
 }
 
+export const initializeView = initializePopupView;
+
 function getCachedElement(key) {
-  if (!domCache.initialized) initializeView();
+  if (!domCache.initialized) initializePopupView();
   return domCache[key];
 }
 
 function updateStatus(statusElement) {
   if (!statusElement) return;
-  const trackedTabCount = popupViewModel.sortSummary.counts.tracked;
-  const readyTabCount = popupViewModel.sortSummary.counts.ready;
-  if (!popupViewModel.allSortableTabsSorted) {
+  const trackedTabCount = popupViewState.sortSummary.counts.tracked;
+  const readyTabCount = popupViewState.sortSummary.counts.ready;
+  if (!popupViewState.allSortableTabsSorted) {
     statusElement.style.display = trackedTabCount <= 1 ? 'none' : 'block';
     statusElement.textContent = `${readyTabCount}/${trackedTabCount} ready for sort.`;
     statusElement.style.color = 'var(--status-text-color)';
@@ -46,7 +66,7 @@ function updateStatus(statusElement) {
 
 function updateSortedBadge(sortedBadgeElement) {
   if (!sortedBadgeElement) return;
-  sortedBadgeElement.style.display = popupViewModel.allSortableTabsSorted ? 'block' : 'none';
+  sortedBadgeElement.style.display = popupViewState.allSortableTabsSorted ? 'block' : 'none';
 }
 
 export function getEmptyStateMessage(trackedTabCount) {
@@ -61,7 +81,7 @@ export function getEmptyStateMessage(trackedTabCount) {
 
 function updateEmptyState(emptyStateElement) {
   if (!emptyStateElement) return;
-  const message = getEmptyStateMessage(popupViewModel.sortSummary.counts.tracked);
+  const message = getEmptyStateMessage(popupViewState.sortSummary.counts.tracked);
   emptyStateElement.textContent = message;
   emptyStateElement.classList.toggle('hide', !message);
 }
@@ -82,17 +102,18 @@ function updateSortButton(sortButton, shouldShowSort) {
   if (!sortButton) return;
   if (shouldShowSort) {
     sortButton.style.setProperty('display', 'block', 'important');
-    const { ready, tracked } = popupViewModel.sortSummary.counts;
+    const { ready, tracked } = popupViewState.sortSummary.counts;
     const allTabsReady = ready === tracked;
     const readyBackground = 'var(--all-ready-row-background)';
     const readyText = 'var(--all-ready-row-text)';
-    sortButton.style.backgroundColor = allTabsReady ? readyBackground : 'var(--action-button-background)';
+    sortButton.style.backgroundColor = allTabsReady
+      ? readyBackground
+      : 'var(--action-button-background)';
     sortButton.style.color = allTabsReady ? readyText : 'var(--action-button-color)';
-    sortButton.style.borderColor = allTabsReady ? readyBackground : 'var(--action-button-border-color)';
-    sortButton.textContent = getSortButtonText(
-      ready,
-      tracked,
-    );
+    sortButton.style.borderColor = allTabsReady
+      ? readyBackground
+      : 'var(--action-button-border-color)';
+    sortButton.textContent = getSortButtonText(ready, tracked);
     return;
   }
   sortButton.style.setProperty('display', 'none', 'important');
@@ -112,7 +133,7 @@ export function setSecondaryColumnsVisible(visible) {
   tabStatus?.classList[method]('hide');
 }
 
-export function setOptionToggleVisibility(visible) {
+function setOptionToggleVisibility(visible) {
   document.querySelectorAll('.option-toggle').forEach((toggle) => {
     if (toggle instanceof HTMLElement) {
       toggle.style.display = visible ? 'flex' : 'none';
@@ -120,22 +141,19 @@ export function setOptionToggleVisibility(visible) {
   });
 }
 
-export function renderHeaderView() {
+export function renderPopupView() {
   const emptyStateElement = getCachedElement('emptyStateElement');
   const statusElement = getCachedElement('statusElement');
   const sortButton = getCachedElement('sortButton');
   const sortedBadgeElement = getCachedElement('sortedBadgeElement');
   const table = getCachedElement('table');
-  const { counts, readyTabs } = popupViewModel.sortSummary;
+  const { counts, readyTabs } = popupViewState.sortSummary;
 
-  const readySubsetExists =
-    counts.ready >= 2 &&
-    counts.ready < counts.tracked;
-  const readySubsetNeedsSorting =
-    readySubsetExists && (!readyTabs.contiguous || !readyTabs.atFront);
+  const readySubsetExists = counts.ready >= 2 && counts.ready < counts.tracked;
+  const readySubsetNeedsSorting = readySubsetExists && (!readyTabs.contiguous || !readyTabs.atFront);
   const shouldShowSort =
     counts.ready >= 2 &&
-    !popupViewModel.allSortableTabsSorted &&
+    !popupViewState.allSortableTabsSorted &&
     (readyTabs.outOfOrder || readySubsetNeedsSorting);
 
   setOptionToggleVisibility(shouldShowSort);
@@ -145,10 +163,12 @@ export function renderHeaderView() {
   updateSortButton(sortButton, shouldShowSort);
   updateEmptyState(emptyStateElement);
 
-  if (popupViewModel.allSortableTabsSorted && table) {
+  if (popupViewState.allSortableTabsSorted && table) {
     clearReadyRows(table);
   }
 }
+
+export const renderHeaderView = renderPopupView;
 
 export function addClassToAllRows(table, className) {
   for (let i = 1; i < table.rows.length; i += 1) {

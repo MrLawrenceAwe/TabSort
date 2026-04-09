@@ -14,7 +14,7 @@
       "*://*.youtube.com/*"
     ],
     "background": {
-      "service_worker": "background/service-worker.js",
+      "service_worker": "background/worker-entry.js",
       "type": "module"
     },
     "action": {
@@ -24,18 +24,18 @@
     "content_scripts": [
       {
         "matches": ["*://*.youtube.com/watch*", "*://*.youtube.com/shorts*"],
-        "js": ["content/youtube/bootstrap.js"],
+        "js": ["content/youtube/runtime-entry.js"],
         "run_at": "document_end"
       }
     ],
     "web_accessible_resources": [
       {
         "resources": [
-          "content/youtube/runtime.js",
+          "content/youtube/page-runtime.js",
           "content/youtube/metadata.js",
           "content/youtube/live-status.js",
           "shared/constants.js",
-          "shared/guards.js"
+          "shared/utils.js"
         ],
         "matches": ["*://*.youtube.com/*"]
       }

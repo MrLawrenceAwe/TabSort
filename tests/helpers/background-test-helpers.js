@@ -1,6 +1,6 @@
 import { TAB_STATES } from '../../shared/constants.js';
 import { createEmptySortSummary } from '../../shared/sort-summary.js';
-import { backgroundStore } from '../../background/store.js';
+import { backgroundStore } from '../../background/tracking-state.js';
 
 export function ensureChromeApi({ tabs = false } = {}) {
   if (!globalThis.chrome) {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { backgroundStore } from '../background/store.js';
+import { backgroundStore } from '../background/tracking-state.js';
 import { recomputeSortState } from '../background/sort-state.js';
 import {
   ensureChromeApi,
