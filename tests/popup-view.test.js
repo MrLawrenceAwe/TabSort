@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { getEmptyStateMessage } from '../popup/view.js';
+import { getEmptyStateMessage, getSortButtonText } from '../popup/view.js';
 
 test('getEmptyStateMessage explains when no tracked tabs are available', () => {
   assert.equal(
@@ -19,4 +19,9 @@ test('getEmptyStateMessage explains when one more tab is needed', () => {
 
 test('getEmptyStateMessage hides once sorting can be meaningful', () => {
   assert.equal(getEmptyStateMessage(2), '');
+});
+
+test('getSortButtonText distinguishes partial and full sorts', () => {
+  assert.equal(getSortButtonText(2, 4), 'Move Ready Tabs First');
+  assert.equal(getSortButtonText(3, 3), 'Sort All Tabs');
 });

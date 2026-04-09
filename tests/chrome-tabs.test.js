@@ -37,3 +37,16 @@ test('listWindowTabs keeps explicit window ids when one is provided', async () =
     { windowId: 9, hidden: true },
   ]);
 });
+
+test('listWindowTabs returns null when a Chrome query fails', async () => {
+  globalThis.chrome.tabs.query = (query, callback) => {
+    globalThis.chrome.runtime.lastError =
+      query.hidden === true ? new Error('hidden query failed') : null;
+    callback([]);
+    globalThis.chrome.runtime.lastError = null;
+  };
+
+  const tabs = await listWindowTabs(9);
+
+  assert.equal(tabs, null);
+});
