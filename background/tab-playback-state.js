@@ -1,9 +1,9 @@
 import { TAB_STATES } from '../shared/constants.js';
-import { isFiniteNumber } from '../shared/guards.js';
+import { isFiniteNumber } from '../shared/utils.js';
 import { logDebug } from '../shared/log.js';
 import { getTab, sendMessageToTab } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
-import { backgroundStore, setTrackedWindowId } from './store.js';
+import { setTrackedWindowId, trackingState } from './tracking-state.js';
 import { getYoutubeVideoIdentity, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 const MEDIA_DURATION_SYNC_TOLERANCE_SECONDS = 2;
@@ -56,15 +56,15 @@ function hasMediaDurationMismatch(metricsPayload, record, resolvedLengthSeconds)
   );
 }
 
-export async function refreshTrackedTabMetrics(tabId) {
+export async function refreshTabPlaybackState(tabId) {
   try {
-    let record = backgroundStore.trackedTabsById[tabId];
+    let record = trackingState.trackedTabsById[tabId];
     if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
 
     let tab = await getTab(tabId);
-    record = backgroundStore.trackedTabsById[tabId];
+    record = trackingState.trackedTabsById[tabId];
     if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
-    if (backgroundStore.trackedWindowId != null && tab.windowId !== backgroundStore.trackedWindowId) return;
+    if (trackingState.trackedWindowId != null && tab.windowId !== trackingState.trackedWindowId) return;
     if (tab.windowId != null) {
       record.windowId = tab.windowId;
       setTrackedWindowId(tab.windowId);
@@ -75,13 +75,13 @@ export async function refreshTrackedTabMetrics(tabId) {
 
     const requestedUrl = tab.url || record.url || null;
     const result = await sendMessageToTab(tabId, { type: 'collectVideoMetrics' });
-    record = backgroundStore.trackedTabsById[tabId];
+    record = trackingState.trackedTabsById[tabId];
     if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
 
     tab = await getTab(tabId);
-    record = backgroundStore.trackedTabsById[tabId];
+    record = trackingState.trackedTabsById[tabId];
     if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
-    if (backgroundStore.trackedWindowId != null && tab.windowId !== backgroundStore.trackedWindowId) return;
+    if (trackingState.trackedWindowId != null && tab.windowId !== trackingState.trackedWindowId) return;
     if (tab.windowId != null) {
       record.windowId = tab.windowId;
       setTrackedWindowId(tab.windowId);
@@ -181,6 +181,8 @@ export async function refreshTrackedTabMetrics(tabId) {
 
     recomputeSortState();
   } catch (error) {
-    logDebug(`refreshTrackedTabMetrics failed for ${tabId}`, error);
+    logDebug(`refreshTabPlaybackState failed for ${tabId}`, error);
   }
 }
+
+export const refreshTrackedTabMetrics = refreshTabPlaybackState;

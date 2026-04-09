@@ -1,17 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { backgroundStore } from '../background/store.js';
+import { backgroundStore } from '../../background/tracking-state.js';
 import {
   handlePageMediaReadyMessage,
   handlePageRuntimeReadyMessage,
   handlePageVideoDetailsMessage,
-} from '../background/message-router.js';
+} from '../../background/message-router.js';
 import {
   ensureChromeApi,
   makeTrackedTabRecord,
   resetBackgroundStore,
-} from './helpers/background-test-helpers.js';
+} from '../helpers/background-test-helpers.js';
 
 ensureChromeApi();
 

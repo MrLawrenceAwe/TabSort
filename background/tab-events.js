@@ -1,10 +1,10 @@
-import { isFiniteNumber, isValidWindowId } from '../shared/guards.js';
+import { isFiniteNumber, isValidWindowId } from '../shared/utils.js';
 import { logDebug, logWarn, withErrorLogging } from '../shared/log.js';
 import { getTab } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
-import { backgroundStore, canHandleWindow } from './store.js';
-import { refreshTrackedTabMetrics } from './tracked-tab-metrics.js';
-import { rebuildTrackedTabsForWindow } from './tracked-tab-registry.js';
+import { canHandleWindow, trackingState } from './tracking-state.js';
+import { refreshTabPlaybackState } from './tab-playback-state.js';
+import { syncTrackedTabsForWindow } from './tracked-tab-sync.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function syncForWindowChange(label, resolveWindowId) {
@@ -12,7 +12,7 @@ function syncForWindowChange(label, resolveWindowId) {
     const windowId = resolveWindowId(...args);
     if (!isValidWindowId(windowId)) return;
     if (!canHandleWindow(windowId)) return;
-    await rebuildTrackedTabsForWindow(windowId);
+    await syncTrackedTabsForWindow(windowId);
   });
 }
 
@@ -27,9 +27,9 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
         changeInfo.status === 'loading' ||
         changeInfo.url
       ) {
-        await rebuildTrackedTabsForWindow(tab.windowId);
+        await syncTrackedTabsForWindow(tab.windowId);
         if (isWatchOrShortsPage(tab.url)) {
-          await refreshTrackedTabMetrics(tabId);
+          await refreshTabPlaybackState(tabId);
         }
       }
     }),
@@ -43,11 +43,11 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
     withErrorLogging('tabs.onActivated', async (activeInfo) => {
       if (!isValidWindowId(activeInfo?.windowId)) return;
       if (!canHandleWindow(activeInfo.windowId)) return;
-      await rebuildTrackedTabsForWindow(activeInfo.windowId);
+      await syncTrackedTabsForWindow(activeInfo.windowId);
       if (!isFiniteNumber(activeInfo.tabId)) return;
       const tab = await getTab(activeInfo.tabId);
       if (!isWatchOrShortsPage(tab?.url)) return;
-      await refreshTrackedTabMetrics(activeInfo.tabId);
+      await refreshTabPlaybackState(activeInfo.tabId);
     }),
   );
 
@@ -61,8 +61,8 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
 
   chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     if (!canHandleWindow(removeInfo?.windowId)) return;
-    delete backgroundStore.trackedTabsById[tabId];
-    if (removeInfo?.isWindowClosing && removeInfo.windowId === backgroundStore.trackedWindowId) {
+    delete trackingState.trackedTabsById[tabId];
+    if (removeInfo?.isWindowClosing && removeInfo.windowId === trackingState.trackedWindowId) {
       if (typeof onTrackedWindowClosed === 'function') {
         onTrackedWindowClosed();
       }
@@ -82,8 +82,8 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
           try {
             const tab = await getTab(details.tabId);
             if (
-              backgroundStore.trackedWindowId != null &&
-              tab.windowId !== backgroundStore.trackedWindowId
+              trackingState.trackedWindowId != null &&
+              tab.windowId !== trackingState.trackedWindowId
             ) {
               return;
             }
@@ -92,12 +92,12 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
             logDebug(`getTab failed for history update ${details.tabId}`, error);
             return;
           }
-        } else if (backgroundStore.trackedWindowId != null) {
-          windowIdForUpdate = backgroundStore.trackedWindowId;
+        } else if (trackingState.trackedWindowId != null) {
+          windowIdForUpdate = trackingState.trackedWindowId;
         }
 
-        await rebuildTrackedTabsForWindow(windowIdForUpdate);
-        await refreshTrackedTabMetrics(details.tabId);
+        await syncTrackedTabsForWindow(windowIdForUpdate);
+        await refreshTabPlaybackState(details.tabId);
       }),
       { url: [{ hostContains: 'youtube.com' }] },
     );

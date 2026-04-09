@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES } from '../shared/constants.js';
-import { backgroundStore } from '../background/store.js';
+import { backgroundStore } from '../background/tracking-state.js';
 import { reloadTab } from '../background/message-router.js';
 import {
   ensureChromeApi,

@@ -1,6 +1,6 @@
 import { createEmptySortSummary } from '../shared/sort-summary.js';
-import { backgroundStore } from './store.js';
 import { logDebug } from '../shared/log.js';
+import { trackingState } from './tracking-state.js';
 
 function cloneTrackedTabRecord(record) {
   if (!record || typeof record !== 'object') return record;
@@ -22,7 +22,7 @@ function cloneSortSummary(summary) {
 
 export function buildTabSnapshot() {
   const trackedTabsById = Object.fromEntries(
-    Object.entries(backgroundStore.trackedTabsById).map(([id, record]) => [
+    Object.entries(trackingState.trackedTabsById).map(([id, record]) => [
       id,
       cloneTrackedTabRecord(record),
     ]),
@@ -30,10 +30,10 @@ export function buildTabSnapshot() {
 
   return {
     trackedTabsById,
-    targetOrder: [...backgroundStore.targetOrder],
-    visibleOrder: [...backgroundStore.visibleOrder],
-    allSortableTabsSorted: backgroundStore.allSortableTabsSorted,
-    sortSummary: cloneSortSummary(backgroundStore.sortSummary),
+    targetOrder: [...trackingState.targetOrder],
+    visibleOrder: [...trackingState.visibleOrder],
+    allSortableTabsSorted: trackingState.allSortableTabsSorted,
+    sortSummary: cloneSortSummary(trackingState.sortSummary),
   };
 }
 
@@ -41,8 +41,8 @@ export function broadcastSnapshotUpdate({ force = false } = {}) {
   try {
     const snapshot = buildTabSnapshot();
     const signature = JSON.stringify(snapshot);
-    if (!force && signature === backgroundStore.snapshotSignature) return;
-    backgroundStore.snapshotSignature = signature;
+    if (!force && signature === trackingState.snapshotSignature) return;
+    trackingState.snapshotSignature = signature;
 
     chrome.runtime.sendMessage({ type: 'tabSnapshotUpdated', payload: snapshot }, () => {
       const err = chrome.runtime.lastError;

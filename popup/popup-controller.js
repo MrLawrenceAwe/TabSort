@@ -1,18 +1,20 @@
-import { MESSAGE_TYPES } from '../shared/constants.js';
-import { toErrorMessage } from '../shared/errors.js';
+import { MESSAGE_TYPES, TAB_STATES } from '../shared/constants.js';
 import { EMPTY_SORT_SUMMARY } from '../shared/sort-summary.js';
 import { loadSortOptions, persistSortOptions } from '../shared/storage.js';
-import { shouldAutoRefreshSnapshot } from './snapshot-refresh.js';
-import { popupViewModel, setActiveWindowId, updatePopupViewModel } from './view-model.js';
-import { insertRowCells } from './tab-row.js';
-import { startThemeSync } from './theme.js';
+import { toErrorMessage } from '../shared/utils.js';
+import { determineUserAction, USER_ACTIONS } from './tab-action-policy.js';
 import {
   addClassToAllRows,
-  initializeView,
-  renderHeaderView,
+  initializePopupView,
+  popupViewState,
+  renderPopupView,
+  setActiveWindowId,
   setErrorMessage,
   setSecondaryColumnsVisible,
-} from './header-view.js';
+  updatePopupViewState,
+} from './popup-view.js';
+import { renderTabRow } from './tab-row-view.js';
+import { startThemeSync } from './theme.js';
 
 const SNAPSHOT_RETRY_DELAY_MS = 150;
 const SNAPSHOT_MAX_ATTEMPTS = 2;
@@ -22,10 +24,31 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let snapshotPollTimeoutId = null;
 let snapshotPollInFlight = false;
-let popupRuntimeActive = false;
+let popupControllerActive = false;
 
-export function shouldRetrySnapshotPoll(snapshot, runtimeActive = popupRuntimeActive) {
-  return Boolean(runtimeActive) && snapshot == null;
+export function shouldAutoRefreshRecord(record) {
+  if (!record || record.isLiveStream) return false;
+
+  const userAction = determineUserAction(record);
+  if (
+    record.status === TAB_STATES.UNSUSPENDED &&
+    record.isRemainingTimeStale &&
+    userAction === USER_ACTIONS.NO_ACTION
+  ) {
+    return true;
+  }
+
+  return record.status === TAB_STATES.LOADING && userAction === USER_ACTIONS.WAIT_FOR_LOAD;
+}
+
+export function shouldAutoRefreshSnapshot(snapshot) {
+  const trackedTabsById = snapshot?.trackedTabsById;
+  if (!trackedTabsById || typeof trackedTabsById !== 'object') return false;
+  return Object.values(trackedTabsById).some((record) => shouldAutoRefreshRecord(record));
+}
+
+export function shouldRetrySnapshotPoll(snapshot, controllerActive = popupControllerActive) {
+  return Boolean(controllerActive) && snapshot == null;
 }
 
 function clearSnapshotPollTimeout() {
@@ -52,6 +75,17 @@ function scheduleSnapshotPoll() {
       }
     }
   }, SNAPSHOT_POLL_DELAY_MS);
+}
+
+function postRuntimeMessage(type, data = {}, callback) {
+  const message = { type, ...data };
+  if (typeof popupViewState.activeWindowId === 'number' && message.windowId == null) {
+    message.windowId = popupViewState.activeWindowId;
+  }
+  if (typeof callback === 'function') {
+    return chrome.runtime.sendMessage(message, callback);
+  }
+  return chrome.runtime.sendMessage(message);
 }
 
 function logPopupMessage(type = MESSAGE_TYPES.ERROR, message = 'Message is undefined') {
@@ -89,25 +123,15 @@ function syncActiveWindow() {
       }
       if (tabs && tabs.length) {
         const tab = tabs[0];
-        setActiveWindowId(typeof tab.windowId === 'number' ? tab.windowId : null);
-        resolve({ tabId: tab.id, windowId: typeof tab.windowId === 'number' ? tab.windowId : null });
+        const windowId = typeof tab.windowId === 'number' ? tab.windowId : null;
+        setActiveWindowId(windowId);
+        resolve({ tabId: tab.id, windowId });
         return;
       }
       setActiveWindowId(null);
       reject(new Error('No active tab'));
     });
   });
-}
-
-function postRuntimeMessage(type, data = {}, callback) {
-  const message = { type, ...data };
-  if (typeof popupViewModel.activeWindowId === 'number' && message.windowId == null) {
-    message.windowId = popupViewModel.activeWindowId;
-  }
-  if (typeof callback === 'function') {
-    return chrome.runtime.sendMessage(message, callback);
-  }
-  return chrome.runtime.sendMessage(message);
 }
 
 function requestRuntimeMessage(type, data = {}) {
@@ -196,7 +220,7 @@ function renderSnapshot(snapshot) {
       sortSummary.order.allRemainingTimesKnown &&
       !sortSummary.readyTabs.outOfOrder);
 
-  updatePopupViewModel({
+  updatePopupViewState({
     allSortableTabsSorted: shouldUseSortedView,
     sortSummary,
   });
@@ -213,7 +237,7 @@ function renderSnapshot(snapshot) {
       isRemainingTimeStale: Boolean(tabRecord.isRemainingTimeStale),
     };
     if (normalizedRecord.isRemainingTimeStale) row.classList.add('stale-remaining-row');
-    insertRowCells(row, normalizedRecord, shouldUseSortedView, postRuntimeMessage);
+    renderTabRow(row, normalizedRecord, shouldUseSortedView, postRuntimeMessage);
     rowFragment.appendChild(row);
   }
   tbody.replaceChildren(rowFragment);
@@ -222,7 +246,7 @@ function renderSnapshot(snapshot) {
     addClassToAllRows(table, 'all-ready-row');
   }
 
-  renderHeaderView();
+  renderPopupView();
 
   clearSnapshotPollTimeout();
   if (shouldAutoRefreshSnapshot(snapshot)) {
@@ -243,10 +267,10 @@ async function initializeControls() {
   }
 }
 
-export async function initializePopupRuntime() {
-  popupRuntimeActive = true;
-  initializeView();
-  renderHeaderView();
+export async function initializePopupController() {
+  popupControllerActive = true;
+  initializePopupView();
+  renderPopupView();
   setErrorMessage('');
 
   await runSafely(syncActiveWindow, 'Failed to refresh active context');
@@ -272,13 +296,13 @@ export async function initializePopupRuntime() {
   }
 
   window.addEventListener('unload', () => {
-    popupRuntimeActive = false;
+    popupControllerActive = false;
     clearSnapshotPollTimeout();
     chrome.runtime.onMessage.removeListener(messageListener);
   });
 }
 
-function canBootstrapPopupRuntime() {
+function canBootstrapPopupController() {
   return (
     typeof window !== 'undefined' &&
     typeof document !== 'undefined' &&
@@ -286,8 +310,11 @@ function canBootstrapPopupRuntime() {
   );
 }
 
-if (canBootstrapPopupRuntime()) {
-  initializePopupRuntime().catch((error) => {
-    logPopupMessage(MESSAGE_TYPES.ERROR, `Failed to initialize popup: ${toErrorMessage(error)}`);
+if (canBootstrapPopupController()) {
+  initializePopupController().catch((error) => {
+    logPopupMessage(
+      MESSAGE_TYPES.ERROR,
+      `Failed to initialize popup: ${toErrorMessage(error)}`,
+    );
   });
 }

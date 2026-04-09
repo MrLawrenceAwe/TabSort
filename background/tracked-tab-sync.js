@@ -1,8 +1,8 @@
 import { TAB_STATES } from '../shared/constants.js';
-import { isValidWindowId } from '../shared/guards.js';
+import { isValidWindowId } from '../shared/utils.js';
 import { getTabState, listWindowTabs } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
-import { backgroundStore, now, setTrackedWindowId } from './store.js';
+import { now, setTrackedWindowId, trackingState } from './tracking-state.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function markLoadingStartedAt(record, previousStatus, nextStatus) {
@@ -25,23 +25,23 @@ function markUnsuspendedAt(record, previousStatus, nextStatus) {
   }
 }
 
-export async function rebuildTrackedTabsForWindow(windowId, options = {}) {
-  const syncToken = (backgroundStore.syncToken += 1);
+export async function syncTrackedTabsForWindow(windowId, options = {}) {
+  const syncToken = (trackingState.syncToken += 1);
   const resolvedWindowId = setTrackedWindowId(windowId, options);
   const tabs = await listWindowTabs(resolvedWindowId);
-  if (syncToken !== backgroundStore.syncToken) return;
+  if (syncToken !== trackingState.syncToken) return;
   if (!Array.isArray(tabs)) return;
   if (resolvedWindowId == null && tabs.length === 0) return;
 
   if (
     isValidWindowId(resolvedWindowId) &&
-    isValidWindowId(backgroundStore.trackedWindowId) &&
-    resolvedWindowId !== backgroundStore.trackedWindowId
+    isValidWindowId(trackingState.trackedWindowId) &&
+    resolvedWindowId !== trackingState.trackedWindowId
   ) {
     return;
   }
 
-  const previousRecords = backgroundStore.trackedTabsById;
+  const previousRecords = trackingState.trackedTabsById;
   const nextRecords = {};
 
   for (const tab of tabs) {
@@ -91,7 +91,9 @@ export async function rebuildTrackedTabsForWindow(windowId, options = {}) {
     nextRecords[tab.id] = nextRecord;
   }
 
-  if (syncToken !== backgroundStore.syncToken) return;
-  backgroundStore.trackedTabsById = nextRecords;
+  if (syncToken !== trackingState.syncToken) return;
+  trackingState.trackedTabsById = nextRecords;
   recomputeSortState();
 }
+
+export const rebuildTrackedTabsForWindow = syncTrackedTabsForWindow;

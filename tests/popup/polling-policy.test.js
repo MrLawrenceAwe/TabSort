@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { shouldRetrySnapshotPoll } from '../popup/popup-runtime.js';
-import { LOADING_GRACE_MS, RECENTLY_UNSUSPENDED_MS, TAB_STATES } from '../shared/constants.js';
-import { shouldAutoRefreshRecord, shouldAutoRefreshSnapshot } from '../popup/snapshot-refresh.js';
+import { shouldRetrySnapshotPoll } from '../../popup/popup-controller.js';
+import { LOADING_GRACE_MS, RECENTLY_UNSUSPENDED_MS, TAB_STATES } from '../../shared/constants.js';
+import {
+  shouldAutoRefreshRecord,
+  shouldAutoRefreshSnapshot,
+} from '../../popup/popup-controller.js';
 
 function makeRecord(overrides = {}) {
   return {

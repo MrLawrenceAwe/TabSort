@@ -5,7 +5,7 @@ import {
   bootstrapRuntime,
   resetRuntimeStateForTests,
   shouldSendPageRuntimeReady,
-} from '../content/youtube/runtime.js';
+} from '../content/youtube/page-runtime.js';
 
 class FakeMutationObserver {
   constructor(callback) {

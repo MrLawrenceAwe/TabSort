@@ -1,14 +1,5 @@
-import { TAB_STATES, RECENTLY_UNSUSPENDED_MS, LOADING_GRACE_MS } from '../shared/constants.js';
-import { isFiniteNumber } from '../shared/guards.js';
-
-export const USER_ACTIONS = {
-  RELOAD_TAB: 'Reload tab',
-  INTERACT_WITH_TAB: 'Interact with tab',
-  WAIT_FOR_LOAD: 'Wait for tab to load',
-  INTERACT_WITH_TAB_THEN_RELOAD: 'Interact with tab/Reload tab',
-  VIEW_TAB_TO_REFRESH_TIME: 'View tab to refresh time',
-  NO_ACTION: '',
-};
+import { isFiniteNumber } from '../shared/utils.js';
+import { determineUserAction, USER_ACTIONS } from './tab-action-policy.js';
 
 const MESSAGE_ACTIONS = Object.freeze({
   ACTIVATE_TAB: 'activateTab',
@@ -27,7 +18,7 @@ const COLUMN_CONFIG = Object.freeze({
   ],
 });
 
-export function insertRowCells(row, tabRecord, isSortedView, postRuntimeMessage) {
+export function renderTabRow(row, tabRecord, isSortedView, postRuntimeMessage) {
   row.insertCell(0).textContent = tabRecord.videoDetails?.title ?? tabRecord.url;
 
   const userAction = determineUserAction(tabRecord);
@@ -40,13 +31,14 @@ export function insertRowCells(row, tabRecord, isSortedView, postRuntimeMessage)
   if (hasRemainingTime && !isSortedView) row.classList.add('ready-row');
 }
 
+export const insertRowCells = renderTabRow;
+
 function insertInfoCells(row, record, sortedView, userAction) {
   const columns = sortedView ? COLUMN_CONFIG.sorted : COLUMN_CONFIG.unsorted;
 
   columns.forEach((column) => {
     const cell = row.insertCell(row.cells.length);
     const value = column.getter(record, userAction);
-
     cell.textContent = sortedView ? value : toDisplayText(value);
   });
 }
@@ -119,8 +111,7 @@ function formatIndex(record) {
 }
 
 function toDisplayText(value) {
-  if (value) return value;
-  return USER_ACTIONS.NO_ACTION;
+  return value || USER_ACTIONS.NO_ACTION;
 }
 
 function formatRemaining(seconds) {
@@ -132,50 +123,4 @@ function formatRemaining(seconds) {
   return hours < 1
     ? `${minutes}m ${wholeSeconds}s`
     : `${hours}h ${minutes}m ${wholeSeconds}s`;
-}
-
-function determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended) {
-  switch (tabRecord.status) {
-    case TAB_STATES.UNSUSPENDED:
-      if (recentlyUnsuspended) return USER_ACTIONS.NO_ACTION;
-      if (tabRecord.isActiveTab || !tabRecord.pageRuntimeReady) return USER_ACTIONS.RELOAD_TAB;
-      return USER_ACTIONS.INTERACT_WITH_TAB_THEN_RELOAD;
-    case TAB_STATES.SUSPENDED:
-      return USER_ACTIONS.INTERACT_WITH_TAB;
-    case TAB_STATES.LOADING:
-      if (
-        typeof tabRecord.loadingStartedAt === 'number' &&
-        Date.now() - tabRecord.loadingStartedAt >= LOADING_GRACE_MS
-      ) {
-        return USER_ACTIONS.INTERACT_WITH_TAB;
-      }
-      return USER_ACTIONS.WAIT_FOR_LOAD;
-    default:
-      return USER_ACTIONS.NO_ACTION;
-  }
-}
-
-export function determineUserAction(tabRecord) {
-  if (tabRecord?.isLiveStream) {
-    return USER_ACTIONS.NO_ACTION;
-  }
-
-  const videoDetails = tabRecord?.videoDetails;
-  const hasRemainingTime = isFiniteNumber(videoDetails?.remainingTime);
-
-  const recentlyUnsuspended =
-    tabRecord.unsuspendedTimestamp && Date.now() - tabRecord.unsuspendedTimestamp < RECENTLY_UNSUSPENDED_MS;
-
-  if (!hasRemainingTime) {
-    return determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended);
-  }
-
-  if (tabRecord?.isRemainingTimeStale) {
-    if (!tabRecord.pageRuntimeReady || tabRecord.isActiveTab) {
-      return determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended);
-    }
-    return USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME;
-  }
-
-  return USER_ACTIONS.NO_ACTION;
 }

@@ -1,15 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { TAB_STATES } from '../shared/constants.js';
-import { backgroundStore } from '../background/store.js';
-import { refreshTrackedTabMetrics } from '../background/tracked-tab-metrics.js';
-import { rebuildTrackedTabsForWindow } from '../background/tracked-tab-registry.js';
+import { TAB_STATES } from '../../shared/constants.js';
+import { backgroundStore } from '../../background/tracking-state.js';
+import { refreshTrackedTabMetrics } from '../../background/tab-playback-state.js';
+import { rebuildTrackedTabsForWindow } from '../../background/tracked-tab-sync.js';
 import {
   ensureChromeApi,
   makeTrackedTabRecord,
   resetBackgroundStore,
-} from './helpers/background-test-helpers.js';
+} from '../helpers/background-test-helpers.js';
 
 ensureChromeApi({ tabs: true });
 
