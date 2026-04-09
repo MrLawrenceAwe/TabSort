@@ -8,7 +8,7 @@ import { backgroundStore, now, setTrackedWindowId } from './store.js';
 import { refreshTrackedTabMetrics } from './tracked-tab-metrics.js';
 import { rebuildTrackedTabsForWindow } from './tracked-tab-registry.js';
 import { sortWindowTabs } from './window-sort.js';
-import { isWatchOrShortsPage } from './youtube-url-utils.js';
+import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function createAsyncResponder(sendResponse) {
   return (fn, label) => {
@@ -155,13 +155,8 @@ export async function handlePageVideoDetailsMessage(message, sender) {
   }
 
   const record = ensureTrackedTabRecord(tabId, windowId, { url: detailUrl });
-  const urlChanged = Boolean(record.url) && Boolean(detailUrl) && record.url !== detailUrl;
-  const titleChanged =
-    typeof details.title === 'string' &&
-    details.title &&
-    typeof record.videoDetails?.title === 'string' &&
-    record.videoDetails.title !== details.title;
-  if (urlChanged || titleChanged) {
+  const urlChanged = hasYoutubeVideoIdentityChanged(record.url, detailUrl);
+  if (urlChanged) {
     record.isLiveStream = false;
     record.pageMediaReady = false;
     record.videoDetails = null;
