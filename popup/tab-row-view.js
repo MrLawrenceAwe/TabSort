@@ -1,4 +1,4 @@
-import { isFiniteNumber } from '../shared/utils.js';
+import { isFiniteNumber } from '../shared/guards.js';
 import { determineUserAction, USER_ACTIONS } from './tab-action-policy.js';
 
 const MESSAGE_ACTIONS = Object.freeze({
@@ -21,17 +21,15 @@ const COLUMN_CONFIG = Object.freeze({
 export function renderTabRow(row, tabRecord, isSortedView, postRuntimeMessage) {
   row.insertCell(0).textContent = tabRecord.videoDetails?.title ?? tabRecord.url;
 
-  const userAction = determineUserAction(tabRecord);
-  if (!isSortedView) insertUserActionCell(row, tabRecord, userAction, postRuntimeMessage);
+  const requiredAction = determineUserAction(tabRecord);
+  if (!isSortedView) insertUserActionCell(row, tabRecord, requiredAction, postRuntimeMessage);
 
-  insertInfoCells(row, tabRecord, isSortedView, userAction);
+  insertInfoCells(row, tabRecord, isSortedView, requiredAction);
 
   const remaining = tabRecord?.videoDetails?.remainingTime;
   const hasRemainingTime = isFiniteNumber(remaining) && !tabRecord.isRemainingTimeStale;
   if (hasRemainingTime && !isSortedView) row.classList.add('ready-row');
 }
-
-export const insertRowCells = renderTabRow;
 
 function insertInfoCells(row, record, sortedView, userAction) {
   const columns = sortedView ? COLUMN_CONFIG.sorted : COLUMN_CONFIG.unsorted;
@@ -90,14 +88,14 @@ function createActionLink(text, actionType, tabId, postRuntimeMessage) {
   return linkElement;
 }
 
-export function formatRemainingStatus(record, userAction = determineUserAction(record)) {
+export function formatRemainingStatus(record, requiredAction = determineUserAction(record)) {
   if (record.isLiveStream) return 'Live Stream';
 
   const remaining = record?.videoDetails?.remainingTime;
   const hasRemainingTime = isFiniteNumber(remaining);
 
   if (record.isRemainingTimeStale) {
-    return userAction === USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME
+    return requiredAction === USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME
       ? USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME
       : 'unavailable';
   }

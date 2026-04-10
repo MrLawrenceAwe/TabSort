@@ -1,33 +1,33 @@
-import { isFiniteNumber, isValidWindowId } from '../shared/utils.js';
+import { isFiniteNumber, isValidWindowId } from '../shared/guards.js';
 import { logDebug, logWarn, withErrorLogging } from '../shared/log.js';
 import { getTab } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
-import { canHandleWindow, trackingState } from './tracking-state.js';
+import { canManageWindow, managedState } from './managed-state.js';
 import { refreshTabPlaybackState } from './tab-playback-state.js';
-import { syncTrackedTabsForWindow } from './tracked-tab-sync.js';
+import { syncWindowTabRecords } from './tab-record-sync.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function syncForWindowChange(label, resolveWindowId) {
   return withErrorLogging(label, async (...args) => {
     const windowId = resolveWindowId(...args);
     if (!isValidWindowId(windowId)) return;
-    if (!canHandleWindow(windowId)) return;
-    await syncTrackedTabsForWindow(windowId);
+    if (!canManageWindow(windowId)) return;
+    await syncWindowTabRecords(windowId);
   });
 }
 
-export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}) {
+export function registerTabAndNavigationListeners({ onManagedWindowClosed } = {}) {
   chrome.tabs.onUpdated.addListener(
     withErrorLogging('tabs.onUpdated', async (tabId, changeInfo, tab) => {
       if (!tab) return;
-      if (!canHandleWindow(tab.windowId)) return;
+      if (!canManageWindow(tab.windowId)) return;
       if (
         Object.prototype.hasOwnProperty.call(changeInfo, 'discarded') ||
         changeInfo.status === 'complete' ||
         changeInfo.status === 'loading' ||
         changeInfo.url
       ) {
-        await syncTrackedTabsForWindow(tab.windowId);
+        await syncWindowTabRecords(tab.windowId);
         if (isWatchOrShortsPage(tab.url)) {
           await refreshTabPlaybackState(tabId);
         }
@@ -42,8 +42,8 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
   chrome.tabs.onActivated.addListener(
     withErrorLogging('tabs.onActivated', async (activeInfo) => {
       if (!isValidWindowId(activeInfo?.windowId)) return;
-      if (!canHandleWindow(activeInfo.windowId)) return;
-      await syncTrackedTabsForWindow(activeInfo.windowId);
+      if (!canManageWindow(activeInfo.windowId)) return;
+      await syncWindowTabRecords(activeInfo.windowId);
       if (!isFiniteNumber(activeInfo.tabId)) return;
       const tab = await getTab(activeInfo.tabId);
       if (!isWatchOrShortsPage(tab?.url)) return;
@@ -60,11 +60,11 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
   );
 
   chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-    if (!canHandleWindow(removeInfo?.windowId)) return;
-    delete trackingState.trackedTabsById[tabId];
-    if (removeInfo?.isWindowClosing && removeInfo.windowId === trackingState.trackedWindowId) {
-      if (typeof onTrackedWindowClosed === 'function') {
-        onTrackedWindowClosed();
+    if (!canManageWindow(removeInfo?.windowId)) return;
+    delete managedState.tabRecordsById[tabId];
+    if (removeInfo?.isWindowClosing && removeInfo.windowId === managedState.managedWindowId) {
+      if (typeof onManagedWindowClosed === 'function') {
+        onManagedWindowClosed();
       }
       return;
     }
@@ -82,8 +82,8 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
           try {
             const tab = await getTab(details.tabId);
             if (
-              trackingState.trackedWindowId != null &&
-              tab.windowId !== trackingState.trackedWindowId
+              managedState.managedWindowId != null &&
+              tab.windowId !== managedState.managedWindowId
             ) {
               return;
             }
@@ -92,11 +92,11 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
             logDebug(`getTab failed for history update ${details.tabId}`, error);
             return;
           }
-        } else if (trackingState.trackedWindowId != null) {
-          windowIdForUpdate = trackingState.trackedWindowId;
+        } else if (managedState.managedWindowId != null) {
+          windowIdForUpdate = managedState.managedWindowId;
         }
 
-        await syncTrackedTabsForWindow(windowIdForUpdate);
+        await syncWindowTabRecords(windowIdForUpdate);
         await refreshTabPlaybackState(details.tabId);
       }),
       { url: [{ hostContains: 'youtube.com' }] },

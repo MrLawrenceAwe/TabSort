@@ -1,7 +1,7 @@
 import { MESSAGE_TYPES } from '../shared/constants.js';
-import { toErrorMessage } from '../shared/utils.js';
+import { toErrorMessage } from '../shared/errors.js';
 
-export function createPopupRuntimeClient({
+export function createRuntimeClient({
   getActiveWindowId,
   setActiveWindowId,
 } = {}) {
@@ -20,9 +20,9 @@ export function createPopupRuntimeClient({
   function requestRuntimeMessage(type, data = {}) {
     return new Promise((resolve, reject) => {
       postRuntimeMessage(type, data, (response) => {
-        const err = chrome.runtime.lastError;
-        if (err) {
-          reject(err);
+        const runtimeError = chrome.runtime.lastError;
+        if (runtimeError) {
+          reject(runtimeError);
           return;
         }
         resolve(response);
@@ -48,10 +48,10 @@ export function createPopupRuntimeClient({
   function syncActiveWindow() {
     return new Promise((resolve, reject) => {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        const err = chrome.runtime.lastError;
-        if (err) {
+        const runtimeError = chrome.runtime.lastError;
+        if (runtimeError) {
           setActiveWindowId?.(null);
-          reject(err);
+          reject(runtimeError);
           return;
         }
         if (tabs && tabs.length) {

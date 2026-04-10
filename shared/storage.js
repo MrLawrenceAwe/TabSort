@@ -19,9 +19,9 @@ export function loadSortOptions() {
     }
     try {
       storage.get(DEFAULT_SORT_OPTIONS, (items) => {
-        const err = getRuntimeLastError();
-        if (err) {
-          console.warn(`[TabSort] storage get failed: ${err.message}`);
+        const runtimeError = getRuntimeLastError();
+        if (runtimeError) {
+          console.warn(`[TabSort] storage get failed: ${runtimeError.message}`);
           resolve({ ...DEFAULT_SORT_OPTIONS });
           return;
         }
@@ -43,9 +43,9 @@ export function persistSortOptions(update) {
     }
     try {
       storage.set(update, () => {
-        const err = getRuntimeLastError();
-        if (err) {
-          console.warn(`[TabSort] storage set failed: ${err.message}`);
+        const runtimeError = getRuntimeLastError();
+        if (runtimeError) {
+          console.warn(`[TabSort] storage set failed: ${runtimeError.message}`);
         }
         resolve();
       });

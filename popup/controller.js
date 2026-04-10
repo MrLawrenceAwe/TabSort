@@ -1,32 +1,32 @@
 import { MESSAGE_TYPES } from '../shared/constants.js';
+import { toErrorMessage } from '../shared/errors.js';
 import { loadSortOptions, persistSortOptions } from '../shared/storage.js';
-import { toErrorMessage } from '../shared/utils.js';
-import { createPopupRuntimeClient } from './popup-runtime-client.js';
-import { createSnapshotClient } from './popup-snapshot-client.js';
+import { createRuntimeClient } from './runtime-client.js';
+import { createSnapshotClient } from './snapshot-client.js';
 import {
   createSnapshotPoller,
-  shouldAutoRefreshRecord,
-  shouldAutoRefreshSnapshot,
+  shouldPollRecord,
+  shouldPollSnapshot,
   shouldRetrySnapshotPoll,
-} from './popup-snapshot-poller.js';
-import { renderSnapshot } from './popup-snapshot-view.js';
+} from './snapshot-poller.js';
+import { renderSnapshot } from './snapshot-view.js';
 import {
-  initializePopupView,
-  popupViewState,
-  renderPopupView,
+  initializeView,
+  renderView,
   setActiveWindowId,
   setErrorMessage,
-} from './popup-view.js';
+  viewState,
+} from './view.js';
 import { startThemeSync } from './theme.js';
 
 const SNAPSHOT_RETRY_DELAY_MS = 150;
 const SNAPSHOT_MAX_ATTEMPTS = 2;
 const SNAPSHOT_POLL_DELAY_MS = 1000;
 
-let popupControllerActive = false;
+let isControllerActive = false;
 
-const runtimeClient = createPopupRuntimeClient({
-  getActiveWindowId: () => popupViewState.activeWindowId,
+const runtimeClient = createRuntimeClient({
+  getActiveWindowId: () => viewState.activeWindowId,
   setActiveWindowId,
 });
 const snapshotClient = createSnapshotClient({
@@ -40,7 +40,7 @@ const snapshotClient = createSnapshotClient({
 });
 const snapshotPoller = createSnapshotPoller({
   delayMs: SNAPSHOT_POLL_DELAY_MS,
-  isControllerActive: () => popupControllerActive,
+  isControllerActive: () => isControllerActive,
   loadSnapshot: snapshotClient.loadSnapshot,
   logPopupError: runtimeClient.logPopupError,
   onSnapshot: (snapshot) => {
@@ -50,7 +50,7 @@ const snapshotPoller = createSnapshotPoller({
   },
 });
 
-async function runSafely(task, context) {
+async function runWithPopupErrorLogging(task, context) {
   try {
     return await task();
   } catch (error) {
@@ -59,7 +59,7 @@ async function runSafely(task, context) {
   }
 }
 
-async function initializeControls() {
+async function initializeSortOptions() {
   startThemeSync();
   const options = await loadSortOptions();
   const groupNonYoutubeToggle = document.getElementById('groupNonYoutubeTabsToggle');
@@ -73,20 +73,20 @@ async function initializeControls() {
 }
 
 export async function initializePopupController() {
-  popupControllerActive = true;
-  initializePopupView();
-  renderPopupView();
+  isControllerActive = true;
+  initializeView();
+  renderView();
   setErrorMessage('');
 
-  await runSafely(runtimeClient.syncActiveWindow, 'Failed to refresh active context');
-  await runSafely(initializeControls, 'Failed to set up option controls');
-  await runSafely(async () => {
+  await runWithPopupErrorLogging(runtimeClient.syncActiveWindow, 'Failed to refresh active context');
+  await runWithPopupErrorLogging(initializeSortOptions, 'Failed to set up option controls');
+  await runWithPopupErrorLogging(async () => {
     const snapshot = await snapshotClient.loadSnapshot();
     if (snapshot) {
       renderSnapshot(snapshot, {
         postRuntimeMessage: runtimeClient.postRuntimeMessage,
       });
-      snapshotPoller.refreshIfNeeded(snapshot);
+      snapshotPoller.scheduleIfNeeded(snapshot);
     }
   }, 'Failed to request initial snapshot');
 
@@ -96,7 +96,7 @@ export async function initializePopupController() {
         renderSnapshot(message.payload, {
           postRuntimeMessage: runtimeClient.postRuntimeMessage,
         });
-        snapshotPoller.refreshIfNeeded(message.payload);
+        snapshotPoller.scheduleIfNeeded(message.payload);
       }).catch((error) => {
         runtimeClient.logPopupError('Failed to render incoming snapshot', error);
       });
@@ -111,13 +111,13 @@ export async function initializePopupController() {
   }
 
   window.addEventListener('unload', () => {
-    popupControllerActive = false;
+    isControllerActive = false;
     snapshotPoller.clear();
     chrome.runtime.onMessage.removeListener(messageListener);
   });
 }
 
-function canBootstrapPopupController() {
+function canBootstrapController() {
   return (
     typeof window !== 'undefined' &&
     typeof document !== 'undefined' &&
@@ -125,7 +125,7 @@ function canBootstrapPopupController() {
   );
 }
 
-if (canBootstrapPopupController()) {
+if (canBootstrapController()) {
   initializePopupController().catch((error) => {
     runtimeClient.logPopupMessage(
       MESSAGE_TYPES.ERROR,
@@ -135,7 +135,7 @@ if (canBootstrapPopupController()) {
 }
 
 export {
-  shouldAutoRefreshRecord,
-  shouldAutoRefreshSnapshot,
+  shouldPollRecord,
+  shouldPollSnapshot,
   shouldRetrySnapshotPoll,
 };

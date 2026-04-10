@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { popupViewModel } from '../../popup/popup-view.js';
+import { viewState } from '../../popup/view.js';
 
 test('popup view model keeps sort summary flags available for view decisions', () => {
-  popupViewModel.sortSummary.backgroundTabs.haveStaleRemainingTime = true;
-  assert.equal(popupViewModel.sortSummary.backgroundTabs.haveStaleRemainingTime, true);
+  viewState.sortSummary.backgroundTabs.haveStaleRemainingTime = true;
+  assert.equal(viewState.sortSummary.backgroundTabs.haveStaleRemainingTime, true);
 });

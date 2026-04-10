@@ -1,12 +1,10 @@
 import { createEmptySortSummary } from '../shared/sort-summary.js';
 
-export const popupViewState = {
+export const viewState = {
   sortSummary: createEmptySortSummary(),
   allSortableTabsSorted: false,
   activeWindowId: null,
 };
-
-export const popupViewModel = popupViewState;
 
 const domCache = {
   errorElement: null,
@@ -21,16 +19,14 @@ const domCache = {
 };
 
 export function setActiveWindowId(windowId) {
-  popupViewState.activeWindowId = typeof windowId === 'number' ? windowId : null;
+  viewState.activeWindowId = typeof windowId === 'number' ? windowId : null;
 }
 
-export function updatePopupViewState(updates = {}) {
-  Object.assign(popupViewState, updates);
+export function updateViewState(updates = {}) {
+  Object.assign(viewState, updates);
 }
 
-export const updatePopupViewModel = updatePopupViewState;
-
-export function initializePopupView() {
+export function initializeView() {
   if (domCache.initialized) return;
 
   domCache.errorElement = document.getElementById('popupError');
@@ -44,18 +40,16 @@ export function initializePopupView() {
   domCache.initialized = true;
 }
 
-export const initializeView = initializePopupView;
-
 function getCachedElement(key) {
-  if (!domCache.initialized) initializePopupView();
+  if (!domCache.initialized) initializeView();
   return domCache[key];
 }
 
 function updateStatus(statusElement) {
   if (!statusElement) return;
-  const trackedTabCount = popupViewState.sortSummary.counts.tracked;
-  const readyTabCount = popupViewState.sortSummary.counts.ready;
-  if (!popupViewState.allSortableTabsSorted) {
+  const trackedTabCount = viewState.sortSummary.counts.tracked;
+  const readyTabCount = viewState.sortSummary.counts.ready;
+  if (!viewState.allSortableTabsSorted) {
     statusElement.style.display = trackedTabCount <= 1 ? 'none' : 'block';
     statusElement.textContent = `${readyTabCount}/${trackedTabCount} ready for sort.`;
     statusElement.style.color = 'var(--status-text-color)';
@@ -66,14 +60,14 @@ function updateStatus(statusElement) {
 
 function updateSortedBadge(sortedBadgeElement) {
   if (!sortedBadgeElement) return;
-  sortedBadgeElement.style.display = popupViewState.allSortableTabsSorted ? 'block' : 'none';
+  sortedBadgeElement.style.display = viewState.allSortableTabsSorted ? 'block' : 'none';
 }
 
-export function getEmptyStateMessage(trackedTabCount) {
-  if (trackedTabCount <= 0) {
+export function getEmptyStateMessage(tabCount) {
+  if (tabCount <= 0) {
     return 'Open YouTube watch or shorts tabs in this window to sort them.';
   }
-  if (trackedTabCount === 1) {
+  if (tabCount === 1) {
     return 'Open at least one more YouTube video tab in this window to sort them.';
   }
   return '';
@@ -81,7 +75,7 @@ export function getEmptyStateMessage(trackedTabCount) {
 
 function updateEmptyState(emptyStateElement) {
   if (!emptyStateElement) return;
-  const message = getEmptyStateMessage(popupViewState.sortSummary.counts.tracked);
+  const message = getEmptyStateMessage(viewState.sortSummary.counts.tracked);
   emptyStateElement.textContent = message;
   emptyStateElement.classList.toggle('hide', !message);
 }
@@ -94,15 +88,15 @@ export function setErrorMessage(message = '') {
   errorElement.classList.toggle('hide', !nextMessage);
 }
 
-export function getSortButtonText(readyTabCount, trackedTabCount) {
-  return readyTabCount === trackedTabCount ? 'Sort All Tabs' : 'Move Ready Tabs First';
+export function getSortButtonText(readyTabCount, totalTabCount) {
+  return readyTabCount === totalTabCount ? 'Sort All Tabs' : 'Move Ready Tabs First';
 }
 
 function updateSortButton(sortButton, shouldShowSort) {
   if (!sortButton) return;
   if (shouldShowSort) {
     sortButton.style.setProperty('display', 'block', 'important');
-    const { ready, tracked } = popupViewState.sortSummary.counts;
+    const { ready, tracked } = viewState.sortSummary.counts;
     const allTabsReady = ready === tracked;
     const readyBackground = 'var(--all-ready-row-background)';
     const readyText = 'var(--all-ready-row-text)';
@@ -141,19 +135,19 @@ function setOptionToggleVisibility(visible) {
   });
 }
 
-export function renderPopupView() {
+export function renderView() {
   const emptyStateElement = getCachedElement('emptyStateElement');
   const statusElement = getCachedElement('statusElement');
   const sortButton = getCachedElement('sortButton');
   const sortedBadgeElement = getCachedElement('sortedBadgeElement');
   const table = getCachedElement('table');
-  const { counts, readyTabs } = popupViewState.sortSummary;
+  const { counts, readyTabs } = viewState.sortSummary;
 
   const readySubsetExists = counts.ready >= 2 && counts.ready < counts.tracked;
   const readySubsetNeedsSorting = readySubsetExists && (!readyTabs.contiguous || !readyTabs.atFront);
   const shouldShowSort =
     counts.ready >= 2 &&
-    !popupViewState.allSortableTabsSorted &&
+    !viewState.allSortableTabsSorted &&
     (readyTabs.outOfOrder || readySubsetNeedsSorting);
 
   setOptionToggleVisibility(shouldShowSort);
@@ -163,14 +157,12 @@ export function renderPopupView() {
   updateSortButton(sortButton, shouldShowSort);
   updateEmptyState(emptyStateElement);
 
-  if (popupViewState.allSortableTabsSorted && table) {
+  if (viewState.allSortableTabsSorted && table) {
     clearReadyRows(table);
   }
 }
 
-export const renderHeaderView = renderPopupView;
-
-export function addClassToAllRows(table, className) {
+export function addClassToDataRows(table, className) {
   for (let i = 1; i < table.rows.length; i += 1) {
     table.rows[i].classList.add(className);
   }

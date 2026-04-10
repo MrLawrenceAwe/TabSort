@@ -1,6 +1,6 @@
 import { MEDIA_READY_STATE_THRESHOLD } from '../../shared/constants.js';
 import { inferIsLiveNow } from './live-status.js';
-import { isFiniteNumber } from '../../shared/utils.js';
+import { isFiniteNumber } from '../../shared/guards.js';
 import { collectPageVideoDetails, getPrimaryVideoElement } from './metadata.js';
 
 const runtimeConfig = {
@@ -389,14 +389,12 @@ export function createPageRuntimeSession({
   };
 }
 
-const defaultRuntimeSession = createPageRuntimeSession();
+const defaultPageRuntimeSession = createPageRuntimeSession();
 
 export function resetRuntimeStateForTests() {
-  defaultRuntimeSession.reset();
+  defaultPageRuntimeSession.reset();
 }
 
 export function bootstrapPageRuntime() {
-  defaultRuntimeSession.bootstrap();
+  defaultPageRuntimeSession.bootstrap();
 }
-
-export const bootstrapRuntime = bootstrapPageRuntime;

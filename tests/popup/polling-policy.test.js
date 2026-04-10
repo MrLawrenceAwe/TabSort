@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { shouldRetrySnapshotPoll } from '../../popup/popup-controller.js';
+import { shouldRetrySnapshotPoll } from '../../popup/controller.js';
 import { LOADING_GRACE_MS, RECENTLY_UNSUSPENDED_MS, TAB_STATES } from '../../shared/constants.js';
 import {
-  shouldAutoRefreshRecord,
-  shouldAutoRefreshSnapshot,
-} from '../../popup/popup-controller.js';
+  shouldPollRecord,
+  shouldPollSnapshot,
+} from '../../popup/controller.js';
 
 function makeRecord(overrides = {}) {
   return {
@@ -24,39 +24,39 @@ function makeRecord(overrides = {}) {
   };
 }
 
-test('shouldAutoRefreshRecord polls recently unsuspended stale tabs that need no user action yet', () => {
+test('shouldPollRecord polls recently unsuspended stale tabs that need no user action yet', () => {
   const record = makeRecord({
     isRemainingTimeStale: true,
     pageRuntimeReady: false,
     unsuspendedTimestamp: Date.now() - (RECENTLY_UNSUSPENDED_MS - 1000),
   });
 
-  assert.equal(shouldAutoRefreshRecord(record), true);
+  assert.equal(shouldPollRecord(record), true);
 });
 
-test('shouldAutoRefreshRecord does not poll stale tabs once they require a reload', () => {
+test('shouldPollRecord does not poll stale tabs once they require a reload', () => {
   const record = makeRecord({
     isRemainingTimeStale: true,
     pageRuntimeReady: false,
     unsuspendedTimestamp: Date.now() - (RECENTLY_UNSUSPENDED_MS + 1000),
   });
 
-  assert.equal(shouldAutoRefreshRecord(record), false);
+  assert.equal(shouldPollRecord(record), false);
 });
 
-test('shouldAutoRefreshRecord polls loading tabs during the loading grace window', () => {
+test('shouldPollRecord polls loading tabs during the loading grace window', () => {
   const record = makeRecord({
     status: TAB_STATES.LOADING,
     pageRuntimeReady: false,
     loadingStartedAt: Date.now() - (LOADING_GRACE_MS - 1000),
   });
 
-  assert.equal(shouldAutoRefreshRecord(record), true);
+  assert.equal(shouldPollRecord(record), true);
 });
 
-test('shouldAutoRefreshSnapshot polls only when at least one tracked tab can self-resolve', () => {
+test('shouldPollSnapshot polls only when at least one tracked tab can self-resolve', () => {
   const snapshot = {
-    trackedTabsById: {
+    tabRecordsById: {
       1: makeRecord({
         isRemainingTimeStale: true,
         pageRuntimeReady: false,
@@ -70,9 +70,9 @@ test('shouldAutoRefreshSnapshot polls only when at least one tracked tab can sel
     },
   };
 
-  assert.equal(shouldAutoRefreshSnapshot(snapshot), true);
+  assert.equal(shouldPollSnapshot(snapshot), true);
   assert.equal(
-    shouldAutoRefreshSnapshot({ trackedTabsById: { 2: snapshot.trackedTabsById[2] } }),
+    shouldPollSnapshot({ tabRecordsById: { 2: snapshot.tabRecordsById[2] } }),
     false,
   );
 });

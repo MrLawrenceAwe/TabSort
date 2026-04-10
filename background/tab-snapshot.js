@@ -1,8 +1,8 @@
-import { createEmptySortSummary } from '../shared/sort-summary.js';
+import { cloneSortSummary, createEmptySortSummary } from '../shared/sort-summary.js';
 import { logDebug } from '../shared/log.js';
-import { trackingState } from './tracking-state.js';
+import { managedState } from './managed-state.js';
 
-function cloneTrackedTabRecord(record) {
+function cloneTabRecord(record) {
   if (!record || typeof record !== 'object') return record;
   return {
     ...record,
@@ -10,30 +10,20 @@ function cloneTrackedTabRecord(record) {
   };
 }
 
-function cloneSortSummary(summary) {
-  const resolvedSummary = summary || createEmptySortSummary();
-  return {
-    counts: { ...resolvedSummary.counts },
-    readyTabs: { ...resolvedSummary.readyTabs },
-    backgroundTabs: { ...resolvedSummary.backgroundTabs },
-    order: { ...resolvedSummary.order },
-  };
-}
-
 export function buildTabSnapshot() {
-  const trackedTabsById = Object.fromEntries(
-    Object.entries(trackingState.trackedTabsById).map(([id, record]) => [
+  const tabRecordsById = Object.fromEntries(
+    Object.entries(managedState.tabRecordsById).map(([id, record]) => [
       id,
-      cloneTrackedTabRecord(record),
+      cloneTabRecord(record),
     ]),
   );
 
   return {
-    trackedTabsById,
-    targetOrder: [...trackingState.targetOrder],
-    visibleOrder: [...trackingState.visibleOrder],
-    allSortableTabsSorted: trackingState.allSortableTabsSorted,
-    sortSummary: cloneSortSummary(trackingState.sortSummary),
+    tabRecordsById,
+    targetOrder: [...managedState.targetOrder],
+    visibleOrder: [...managedState.visibleOrder],
+    allSortableTabsSorted: managedState.allSortableTabsSorted,
+    sortSummary: cloneSortSummary(managedState.sortSummary || createEmptySortSummary()),
   };
 }
 
@@ -41,13 +31,13 @@ export function broadcastSnapshotUpdate({ force = false } = {}) {
   try {
     const snapshot = buildTabSnapshot();
     const signature = JSON.stringify(snapshot);
-    if (!force && signature === trackingState.snapshotSignature) return;
-    trackingState.snapshotSignature = signature;
+    if (!force && signature === managedState.snapshotSignature) return;
+    managedState.snapshotSignature = signature;
 
     chrome.runtime.sendMessage({ type: 'tabSnapshotUpdated', payload: snapshot }, () => {
-      const err = chrome.runtime.lastError;
-      if (err?.message && !/Receiving end/i.test(err.message)) {
-        console.debug(`[TabSort] broadcast warning: ${err.message}`);
+      const runtimeError = chrome.runtime.lastError;
+      if (runtimeError?.message && !/Receiving end/i.test(runtimeError.message)) {
+        console.debug(`[TabSort] broadcast warning: ${runtimeError.message}`);
       }
     });
   } catch (error) {

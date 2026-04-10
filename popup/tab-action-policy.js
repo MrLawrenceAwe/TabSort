@@ -1,5 +1,5 @@
 import { LOADING_GRACE_MS, RECENTLY_UNSUSPENDED_MS, TAB_STATES } from '../shared/constants.js';
-import { isFiniteNumber } from '../shared/utils.js';
+import { isFiniteNumber } from '../shared/guards.js';
 
 export const USER_ACTIONS = {
   RELOAD_TAB: 'Reload tab',

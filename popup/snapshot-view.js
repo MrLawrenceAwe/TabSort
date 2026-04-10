@@ -1,11 +1,11 @@
 import { cloneSortSummary } from '../shared/sort-summary.js';
 import {
-  addClassToAllRows,
-  renderPopupView,
+  addClassToDataRows,
+  renderView,
   setErrorMessage,
   setSecondaryColumnsVisible,
-  updatePopupViewState,
-} from './popup-view.js';
+  updateViewState,
+} from './view.js';
 import { renderTabRow } from './tab-row-view.js';
 
 export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
@@ -16,7 +16,7 @@ export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
   if (!table) return;
   const tbody = table.tBodies[0] ?? table.createTBody();
 
-  const tabRecords = snapshot.trackedTabsById || {};
+  const tabRecords = snapshot.tabRecordsById || {};
   const visibleOrder = snapshot.visibleOrder || [];
   const sortSummary = cloneSortSummary(snapshot.sortSummary);
   const backgroundSortedFlag = snapshot.allSortableTabsSorted === true;
@@ -26,7 +26,7 @@ export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
       sortSummary.order.allRemainingTimesKnown &&
       !sortSummary.readyTabs.outOfOrder);
 
-  updatePopupViewState({
+  updateViewState({
     allSortableTabsSorted: shouldUseSortedView,
     sortSummary,
   });
@@ -49,8 +49,8 @@ export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
   tbody.replaceChildren(rowFragment);
 
   if (sortSummary.order.allRemainingTimesKnown && !shouldUseSortedView) {
-    addClassToAllRows(table, 'all-ready-row');
+    addClassToDataRows(table, 'all-ready-row');
   }
 
-  renderPopupView();
+  renderView();
 }

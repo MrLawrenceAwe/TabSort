@@ -1,10 +1,10 @@
 import { REFRESH_ALARM_NAME, REFRESH_INTERVAL_MINUTES } from '../shared/constants.js';
-import { isValidWindowId } from '../shared/utils.js';
+import { isValidWindowId } from '../shared/guards.js';
 import { logDebug, logListenerError, withErrorLogging } from '../shared/log.js';
 import { recomputeSortState } from './sort-state.js';
-import { setTrackedWindowId, trackingState } from './tracking-state.js';
+import { managedState, setManagedWindowId } from './managed-state.js';
 import { refreshTabPlaybackState } from './tab-playback-state.js';
-import { syncTrackedTabsForWindow } from './tracked-tab-sync.js';
+import { syncWindowTabRecords } from './tab-record-sync.js';
 
 const MIN_REFRESH_INTERVAL_MINUTES = 1;
 const refreshIntervalMinutes = Math.max(REFRESH_INTERVAL_MINUTES, MIN_REFRESH_INTERVAL_MINUTES);
@@ -13,9 +13,9 @@ const getLastFocusedWindowId = () =>
   new Promise((resolve) => {
     try {
       chrome.windows.getLastFocused({ populate: false }, (win) => {
-        const err = chrome.runtime.lastError;
-        if (err) {
-          logDebug('windows.getLastFocused failed', err);
+        const runtimeError = chrome.runtime.lastError;
+        if (runtimeError) {
+          logDebug('windows.getLastFocused failed', runtimeError);
           resolve(null);
           return;
         }
@@ -27,19 +27,19 @@ const getLastFocusedWindowId = () =>
     }
   });
 
-export function resetTrackedWindow() {
-  setTrackedWindowId(null, { force: true });
-  trackingState.trackedTabsById = {};
-  trackingState.snapshotSignature = null;
+export function resetManagedWindow() {
+  setManagedWindowId(null, { force: true });
+  managedState.tabRecordsById = {};
+  managedState.snapshotSignature = null;
   recomputeSortState();
 }
 
-async function rehydrateTrackedTabs() {
+async function syncInitialWindowState() {
   const lastFocusedWindowId = await getLastFocusedWindowId();
   const targetWindowId = isValidWindowId(lastFocusedWindowId) ? lastFocusedWindowId : null;
-  await syncTrackedTabsForWindow(targetWindowId, { force: true });
+  await syncWindowTabRecords(targetWindowId, { force: true });
 
-  const ids = Object.keys(trackingState.trackedTabsById).map(Number);
+  const ids = Object.keys(managedState.tabRecordsById).map(Number);
   if (ids.length) {
     await Promise.all(ids.map(refreshTabPlaybackState));
   }
@@ -72,21 +72,21 @@ export function ensureRefreshAlarm() {
 
 export function initializeWindowLifecycle() {
   ensureRefreshAlarm();
-  rehydrateTrackedTabs().catch((error) => logListenerError('rehydration', error));
+  syncInitialWindowState().catch((error) => logListenerError('initial window sync', error));
 
   chrome.alarms.onAlarm.addListener(
     withErrorLogging('alarms.onAlarm', async (alarm) => {
       if (alarm.name !== REFRESH_ALARM_NAME) return;
-      await syncTrackedTabsForWindow(trackingState.trackedWindowId, { force: true });
-      const ids = Object.keys(trackingState.trackedTabsById).map(Number);
+      await syncWindowTabRecords(managedState.managedWindowId, { force: true });
+      const ids = Object.keys(managedState.tabRecordsById).map(Number);
       await Promise.all(ids.map(refreshTabPlaybackState));
     }),
   );
 
   chrome.windows.onRemoved.addListener(
     withErrorLogging('windows.onRemoved', async (windowId) => {
-      if (windowId === trackingState.trackedWindowId) {
-        resetTrackedWindow();
+      if (windowId === managedState.managedWindowId) {
+        resetManagedWindow();
       }
     }),
   );
@@ -94,9 +94,9 @@ export function initializeWindowLifecycle() {
   chrome.windows.onFocusChanged.addListener(
     withErrorLogging('windows.onFocusChanged', async (windowId) => {
       if (!isValidWindowId(windowId)) return;
-      if (windowId === trackingState.trackedWindowId) return;
-      setTrackedWindowId(windowId, { force: true });
-      await syncTrackedTabsForWindow(windowId, { force: true });
+      if (windowId === managedState.managedWindowId) return;
+      setManagedWindowId(windowId, { force: true });
+      await syncWindowTabRecords(windowId, { force: true });
     }),
   );
 

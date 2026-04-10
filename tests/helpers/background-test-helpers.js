@@ -1,6 +1,6 @@
 import { TAB_STATES } from '../../shared/constants.js';
 import { createEmptySortSummary } from '../../shared/sort-summary.js';
-import { backgroundStore } from '../../background/tracking-state.js';
+import { managedState } from '../../background/managed-state.js';
 
 export function ensureChromeApi({ tabs = false } = {}) {
   if (!globalThis.chrome) {
@@ -19,18 +19,18 @@ export function ensureChromeApi({ tabs = false } = {}) {
   };
 }
 
-export function resetBackgroundStore(trackedWindowId = null) {
-  backgroundStore.trackedTabsById = {};
-  backgroundStore.targetOrder = [];
-  backgroundStore.visibleOrder = [];
-  backgroundStore.allSortableTabsSorted = false;
-  backgroundStore.sortSummary = createEmptySortSummary();
-  backgroundStore.trackedWindowId = trackedWindowId;
-  backgroundStore.snapshotSignature = null;
-  backgroundStore.syncToken = 0;
+export function resetManagedState(managedWindowId = null) {
+  managedState.tabRecordsById = {};
+  managedState.targetOrder = [];
+  managedState.visibleOrder = [];
+  managedState.allSortableTabsSorted = false;
+  managedState.sortSummary = createEmptySortSummary();
+  managedState.managedWindowId = managedWindowId;
+  managedState.snapshotSignature = null;
+  managedState.syncToken = 0;
 }
 
-export function makeTrackedTabRecord(id = 1, overrides = {}) {
+export function makeTabRecord(id = 1, overrides = {}) {
   return {
     id,
     windowId: 1,
