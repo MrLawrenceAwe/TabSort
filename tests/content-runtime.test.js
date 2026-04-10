@@ -163,7 +163,7 @@ test('shouldSendPageRuntimeReady allows first-load, force-refresh, and URL-chang
 });
 
 test(
-  'bootstrapRuntime re-sends pageRuntimeReady after yt-navigate-finish changes the page URL',
+  'page runtime session re-sends pageRuntimeReady after yt-navigate-finish changes the page URL',
   () => {
     const runtime = createPageRuntimeSession();
     try {
@@ -200,7 +200,7 @@ test(
 );
 
 test(
-  'bootstrapRuntime waits for fresh media evidence before re-sending pageMediaReady on SPA navigation',
+  'page runtime session waits for fresh media evidence before re-sending pageMediaReady on SPA navigation',
   () => {
     const runtime = createPageRuntimeSession();
     try {

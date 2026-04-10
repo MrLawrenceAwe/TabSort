@@ -1,9 +1,9 @@
-import { isFiniteNumber } from '../shared/utils.js';
-import { trackingState } from './tracking-state.js';
+import { isFiniteNumber } from '../shared/guards.js';
+import { managedState } from './managed-state.js';
 
 const FALLBACK_TAB_INDEX = Number.MAX_SAFE_INTEGER;
 
-function createTrackedTabRecord(tabId, windowId, defaults = {}) {
+function createTabRecord(tabId, windowId, defaults = {}) {
   const initialWindowId = windowId ?? defaults.windowId ?? null;
   const initialIndex = isFiniteNumber(defaults.index) ? defaults.index : FALLBACK_TAB_INDEX;
   return {
@@ -26,17 +26,17 @@ function createTrackedTabRecord(tabId, windowId, defaults = {}) {
   };
 }
 
-export function ensureTrackedTabRecord(tabId, windowId, defaults = {}) {
+export function ensureTabRecord(tabId, windowId, defaults = {}) {
   if (!isFiniteNumber(tabId)) {
     return undefined;
   }
 
-  const records = trackingState.trackedTabsById;
-  let record = records[tabId];
+  const tabRecordsById = managedState.tabRecordsById;
+  let record = tabRecordsById[tabId];
 
   if (!record) {
-    record = createTrackedTabRecord(tabId, windowId, defaults);
-    records[tabId] = record;
+    record = createTabRecord(tabId, windowId, defaults);
+    tabRecordsById[tabId] = record;
   } else if (windowId != null) {
     record.windowId = windowId;
   }

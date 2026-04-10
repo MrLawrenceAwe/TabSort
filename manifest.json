@@ -24,7 +24,7 @@
     "content_scripts": [
       {
         "matches": ["*://*.youtube.com/watch*", "*://*.youtube.com/shorts*"],
-        "js": ["content/youtube/runtime-entry.js"],
+        "js": ["content/youtube/bootstrap-entry.js"],
         "run_at": "document_end"
       }
     ],
@@ -35,7 +35,7 @@
           "content/youtube/metadata.js",
           "content/youtube/live-status.js",
           "shared/constants.js",
-          "shared/utils.js"
+          "shared/guards.js"
         ],
         "matches": ["*://*.youtube.com/*"]
       }

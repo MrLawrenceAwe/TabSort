@@ -2,22 +2,22 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES } from '../shared/constants.js';
-import { backgroundStore } from '../background/tracking-state.js';
+import { managedState } from '../background/managed-state.js';
 import { reloadTab } from '../background/message-router.js';
 import {
   ensureChromeApi,
-  makeTrackedTabRecord,
-  resetBackgroundStore,
+  makeTabRecord,
+  resetManagedState,
 } from './helpers/background-test-helpers.js';
 
 ensureChromeApi({ tabs: true });
 
 test('reloadTab does not mutate record state when chrome.tabs.reload fails', { concurrency: false }, async () => {
-  resetBackgroundStore();
-  backgroundStore.trackedTabsById = {
-    1: makeTrackedTabRecord(1, { videoDetails: { remainingTime: 100 }, isRemainingTimeStale: false }),
+  resetManagedState();
+  managedState.tabRecordsById = {
+    1: makeTabRecord(1, { videoDetails: { remainingTime: 100 }, isRemainingTimeStale: false }),
   };
-  const before = JSON.parse(JSON.stringify(backgroundStore.trackedTabsById[1]));
+  const before = JSON.parse(JSON.stringify(managedState.tabRecordsById[1]));
 
   globalThis.chrome.tabs.reload = async () => {
     throw new Error('reload failed');
@@ -25,20 +25,20 @@ test('reloadTab does not mutate record state when chrome.tabs.reload fails', { c
 
   await reloadTab({ tabId: 1, windowId: 1 });
 
-  assert.deepEqual(backgroundStore.trackedTabsById[1], before);
+  assert.deepEqual(managedState.tabRecordsById[1], before);
 });
 
 test('reloadTab marks record loading only after successful reload call', { concurrency: false }, async () => {
-  resetBackgroundStore();
-  backgroundStore.trackedTabsById = {
-    1: makeTrackedTabRecord(1, { videoDetails: { remainingTime: 100 }, isRemainingTimeStale: false }),
+  resetManagedState();
+  managedState.tabRecordsById = {
+    1: makeTabRecord(1, { videoDetails: { remainingTime: 100 }, isRemainingTimeStale: false }),
   };
 
   globalThis.chrome.tabs.reload = async () => {};
 
   await reloadTab({ tabId: 1, windowId: 1 });
 
-  const record = backgroundStore.trackedTabsById[1];
+  const record = managedState.tabRecordsById[1];
   assert.equal(record.status, TAB_STATES.LOADING);
   assert.equal(record.pageRuntimeReady, false);
   assert.equal(record.isRemainingTimeStale, true);

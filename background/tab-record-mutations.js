@@ -1,14 +1,14 @@
 import { TAB_STATES } from '../shared/constants.js';
 import { recomputeSortState } from './sort-state.js';
-import { now, trackingState } from './tracking-state.js';
+import { managedState, now } from './managed-state.js';
 
-export function clearTrackedTabRemainingTime(record) {
+export function clearTabRemainingTime(record) {
   if (record?.videoDetails && record.videoDetails.remainingTime != null) {
     record.videoDetails.remainingTime = null;
   }
 }
 
-export function markTrackedTabStale(
+export function markTabRecordStale(
   record,
   {
     clearRemainingTime = true,
@@ -27,31 +27,31 @@ export function markTrackedTabStale(
   if (clearVideoDetails) {
     record.videoDetails = null;
   } else if (clearRemainingTime) {
-    clearTrackedTabRemainingTime(record);
+    clearTabRemainingTime(record);
   }
 
   record.isRemainingTimeStale = true;
 }
 
-export function markTrackedTabReloading(record) {
+export function markTabRecordReloading(record) {
   if (!record) return;
   const timestamp = now();
   record.status = TAB_STATES.LOADING;
   record.loadingStartedAt = timestamp;
   record.unsuspendedTimestamp = timestamp;
-  markTrackedTabStale(record);
+  markTabRecordStale(record);
 }
 
-export function markTrackedTabVideoChanged(record) {
-  markTrackedTabStale(record, {
+export function markTabRecordVideoChanged(record) {
+  markTabRecordStale(record, {
     clearVideoDetails: true,
     resetLiveStream: true,
   });
 }
 
-export function removeTrackedTab(tabId) {
-  if (!trackingState.trackedTabsById[tabId]) return false;
-  delete trackingState.trackedTabsById[tabId];
+export function removeTabRecord(tabId) {
+  if (!managedState.tabRecordsById[tabId]) return false;
+  delete managedState.tabRecordsById[tabId];
   recomputeSortState();
   return true;
 }

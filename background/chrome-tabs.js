@@ -18,9 +18,9 @@ export function queryTabs(query) {
   return new Promise((resolve) => {
     try {
       chrome.tabs.query(query, (tabs) => {
-        const err = chrome.runtime.lastError;
-        if (err) {
-          logWarn(`tabs.query failed for ${JSON.stringify(query)}`, err);
+        const runtimeError = chrome.runtime.lastError;
+        if (runtimeError) {
+          logWarn(`tabs.query failed for ${JSON.stringify(query)}`, runtimeError);
           resolve(null);
           return;
         }
@@ -45,18 +45,18 @@ export async function listWindowTabs(windowId = null) {
     return null;
   }
 
-  const extraTabs = Array.isArray(hiddenTabs) ? hiddenTabs : [];
+  const hiddenTabList = Array.isArray(hiddenTabs) ? hiddenTabs : [];
 
-  const deduped = [];
+  const deduplicatedTabs = [];
   const seen = new Set();
-  for (const tab of [...visibleTabs, ...extraTabs]) {
+  for (const tab of [...visibleTabs, ...hiddenTabList]) {
     if (!tab || typeof tab.id !== 'number') continue;
     if (seen.has(tab.id)) continue;
     seen.add(tab.id);
-    deduped.push(tab);
+    deduplicatedTabs.push(tab);
   }
 
-  return deduped;
+  return deduplicatedTabs;
 }
 
 export function getTab(tabId) {
@@ -74,10 +74,10 @@ export function getTab(tabId) {
 export function sendMessageToTab(tabId, payload) {
   return new Promise((resolve) => {
     chrome.tabs.sendMessage(tabId, payload, (responsePayload) => {
-      const err = chrome.runtime.lastError;
-      if (err) {
-        console.debug(`[TabSort] skipped message to tab ${tabId}: ${err.message}`);
-        resolve({ ok: false, error: err });
+      const runtimeError = chrome.runtime.lastError;
+      if (runtimeError) {
+        console.debug(`[TabSort] skipped message to tab ${tabId}: ${runtimeError.message}`);
+        resolve({ ok: false, error: runtimeError });
         return;
       }
       resolve({ ok: true, data: responsePayload });

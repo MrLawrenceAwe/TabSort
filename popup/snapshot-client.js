@@ -1,7 +1,7 @@
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function isValidSnapshot(snapshot) {
-  return snapshot && typeof snapshot === 'object' && 'trackedTabsById' in snapshot;
+  return snapshot && typeof snapshot === 'object' && 'tabRecordsById' in snapshot;
 }
 
 export function createSnapshotClient({

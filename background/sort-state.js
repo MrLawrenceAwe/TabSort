@@ -1,8 +1,8 @@
 import { TAB_STATES } from '../shared/constants.js';
-import { isFiniteNumber } from '../shared/utils.js';
+import { isFiniteNumber } from '../shared/guards.js';
 import { createEmptySortSummary } from '../shared/sort-summary.js';
 import { broadcastSnapshotUpdate } from './tab-snapshot.js';
-import { trackingState } from './tracking-state.js';
+import { managedState } from './managed-state.js';
 
 function areIdListsEqual(a, b) {
   if (a.length !== b.length) return false;
@@ -184,10 +184,10 @@ function applyDerivedSortState({
   alreadySorted,
   sortSummary,
 }) {
-  trackingState.targetOrder = targetOrder;
-  trackingState.visibleOrder = visibleOrder;
-  trackingState.allSortableTabsSorted = allRemainingTimesKnown && alreadySorted;
-  trackingState.sortSummary = sortSummary
+  managedState.targetOrder = targetOrder;
+  managedState.visibleOrder = visibleOrder;
+  managedState.allSortableTabsSorted = allRemainingTimesKnown && alreadySorted;
+  managedState.sortSummary = sortSummary
     ? {
         counts: { ...sortSummary.counts },
         readyTabs: { ...sortSummary.readyTabs },
@@ -200,7 +200,7 @@ function applyDerivedSortState({
 }
 
 export function recomputeSortState() {
-  const records = Object.values(trackingState.trackedTabsById);
+  const records = Object.values(managedState.tabRecordsById);
   const derivedState = deriveSortState(records);
   applyDerivedSortState(derivedState);
 }

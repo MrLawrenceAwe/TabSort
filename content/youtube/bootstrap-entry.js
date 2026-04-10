@@ -5,7 +5,7 @@
   const MAX_BOOTSTRAP_ATTEMPTS = 2;
   const RETRY_DELAY_MS = 100;
 
-  async function bootstrapWithRetry() {
+  async function bootstrapPageRuntimeWithRetry() {
     let lastError = null;
     for (let attempt = 1; attempt <= MAX_BOOTSTRAP_ATTEMPTS; attempt += 1) {
       try {
@@ -27,5 +27,5 @@
     }
   }
 
-  bootstrapWithRetry();
+  bootstrapPageRuntimeWithRetry();
 })();

@@ -1,7 +1,7 @@
 import { TAB_STATES } from '../shared/constants.js';
 import { determineUserAction, USER_ACTIONS } from './tab-action-policy.js';
 
-export function shouldAutoRefreshRecord(record) {
+export function shouldPollRecord(record) {
   if (!record || record.isLiveStream) return false;
 
   const userAction = determineUserAction(record);
@@ -16,10 +16,10 @@ export function shouldAutoRefreshRecord(record) {
   return record.status === TAB_STATES.LOADING && userAction === USER_ACTIONS.WAIT_FOR_LOAD;
 }
 
-export function shouldAutoRefreshSnapshot(snapshot) {
-  const trackedTabsById = snapshot?.trackedTabsById;
-  if (!trackedTabsById || typeof trackedTabsById !== 'object') return false;
-  return Object.values(trackedTabsById).some((record) => shouldAutoRefreshRecord(record));
+export function shouldPollSnapshot(snapshot) {
+  const tabRecordsById = snapshot?.tabRecordsById;
+  if (!tabRecordsById || typeof tabRecordsById !== 'object') return false;
+  return Object.values(tabRecordsById).some((record) => shouldPollRecord(record));
 }
 
 export function shouldRetrySnapshotPoll(snapshot, controllerActive) {
@@ -59,7 +59,7 @@ export function createSnapshotPoller({
         pollInFlight = false;
         if (
           shouldRetrySnapshotPoll(snapshot, isControllerActive()) ||
-          (isControllerActive() && shouldAutoRefreshSnapshot(snapshot))
+          (isControllerActive() && shouldPollSnapshot(snapshot))
         ) {
           schedule();
         }
@@ -67,16 +67,16 @@ export function createSnapshotPoller({
     }, delayMs);
   }
 
-  function refreshIfNeeded(snapshot) {
+  function scheduleIfNeeded(snapshot) {
     clear();
-    if (isControllerActive() && shouldAutoRefreshSnapshot(snapshot)) {
+    if (isControllerActive() && shouldPollSnapshot(snapshot)) {
       schedule();
     }
   }
 
   return {
     clear,
-    refreshIfNeeded,
+    scheduleIfNeeded,
     schedule,
   };
 }

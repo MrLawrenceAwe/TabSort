@@ -1,10 +1,10 @@
 import { TAB_STATES } from '../shared/constants.js';
-import { isFiniteNumber } from '../shared/utils.js';
+import { isFiniteNumber } from '../shared/guards.js';
 import { logDebug } from '../shared/log.js';
 import { getTab, sendMessageToTab } from './chrome-tabs.js';
-import { markTrackedTabStale } from './tracked-tab-mutations.js';
+import { markTabRecordStale } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { setTrackedWindowId, trackingState } from './tracking-state.js';
+import { managedState, setManagedWindowId } from './managed-state.js';
 import { getYoutubeVideoIdentity, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 const MEDIA_DURATION_SYNC_TOLERANCE_SECONDS = 2;
@@ -57,23 +57,23 @@ function hasMediaDurationMismatch(metricsPayload, record, resolvedLengthSeconds)
   );
 }
 
-async function loadTrackedTabContext(tabId) {
-  const initialRecord = trackingState.trackedTabsById[tabId];
+async function loadTabRecordContext(tabId) {
+  const initialRecord = managedState.tabRecordsById[tabId];
   if (!initialRecord || initialRecord.status !== TAB_STATES.UNSUSPENDED) {
     return null;
   }
 
   const tab = await getTab(tabId);
-  const record = trackingState.trackedTabsById[tabId];
+  const record = managedState.tabRecordsById[tabId];
   if (!record || record.status !== TAB_STATES.UNSUSPENDED) {
     return null;
   }
-  if (trackingState.trackedWindowId != null && tab.windowId !== trackingState.trackedWindowId) {
+  if (managedState.managedWindowId != null && tab.windowId !== managedState.managedWindowId) {
     return null;
   }
   if (tab.windowId != null) {
     record.windowId = tab.windowId;
-    setTrackedWindowId(tab.windowId);
+    setManagedWindowId(tab.windowId);
   }
   record.isActiveTab = Boolean(tab.active);
   record.isHidden = Boolean(tab.hidden);
@@ -86,17 +86,17 @@ async function loadTrackedTabContext(tabId) {
 
 export async function refreshTabPlaybackState(tabId) {
   try {
-    const initialContext = await loadTrackedTabContext(tabId);
+    const initialContext = await loadTabRecordContext(tabId);
     if (!initialContext) return;
 
     const requestedUrl = initialContext.tab.url || initialContext.record.url || null;
     const result = await sendMessageToTab(tabId, { type: 'collectVideoMetrics' });
-    const currentContext = await loadTrackedTabContext(tabId);
+    const currentContext = await loadTabRecordContext(tabId);
     if (!currentContext) return;
     const { record, tab } = currentContext;
 
     if (!result || result.ok !== true) {
-      markTrackedTabStale(record);
+      markTabRecordStale(record);
       recomputeSortState();
       return;
     }
@@ -132,7 +132,7 @@ export async function refreshTabPlaybackState(tabId) {
 
     const videoLengthSeconds = resolveVideoLengthSeconds(metricsPayload, record);
     const currentTimeSeconds = Number(metricsPayload.currentTime ?? NaN);
-    const rate = Number(metricsPayload.playbackRate ?? 1);
+    const playbackRate = Number(metricsPayload.playbackRate ?? 1);
 
     if (record.isLiveStream) {
       record.videoDetails.lengthSeconds = isFiniteNumber(videoLengthSeconds) ? videoLengthSeconds : null;
@@ -170,7 +170,8 @@ export async function refreshTabPlaybackState(tabId) {
     if (isFiniteNumber(currentTimeSeconds)) {
       const remainingSeconds = Math.max(
         0,
-        (videoLengthSeconds - currentTimeSeconds) / (isFiniteNumber(rate) && rate > 0 ? rate : 1),
+        (videoLengthSeconds - currentTimeSeconds) /
+          (isFiniteNumber(playbackRate) && playbackRate > 0 ? playbackRate : 1),
       );
       record.videoDetails.remainingTime = remainingSeconds;
       record.isRemainingTimeStale = false;
@@ -184,5 +185,3 @@ export async function refreshTabPlaybackState(tabId) {
     logDebug(`refreshTabPlaybackState failed for ${tabId}`, error);
   }
 }
-
-export const refreshTrackedTabMetrics = refreshTabPlaybackState;
