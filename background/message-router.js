@@ -1,10 +1,14 @@
-import { TAB_STATES } from '../shared/constants.js';
 import { isFiniteNumber, isValidWindowId } from '../shared/utils.js';
 import { logDebug } from '../shared/log.js';
 import { buildTabSnapshot } from './tab-snapshot.js';
 import { ensureTrackedTabRecord } from './tab-record.js';
+import {
+  markTrackedTabReloading,
+  markTrackedTabVideoChanged,
+  removeTrackedTab,
+} from './tracked-tab-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { now, setTrackedWindowId, trackingState } from './tracking-state.js';
+import { setTrackedWindowId, trackingState } from './tracking-state.js';
 import { refreshTabPlaybackState } from './tab-playback-state.js';
 import { syncTrackedTabsForWindow } from './tracked-tab-sync.js';
 import { sortWindowTabs } from './window-sort.js';
@@ -33,6 +37,11 @@ function isSenderInTrackedWindow(windowId) {
 
 function getForcedTrackingOptions(windowId) {
   return isValidWindowId(windowId) ? { force: true } : undefined;
+}
+
+function removeTabWhenSenderLeavesVideoPage(tabId) {
+  if (!isFiniteNumber(tabId)) return false;
+  return removeTrackedTab(tabId);
 }
 
 export async function activateTab(message) {
@@ -65,15 +74,7 @@ export async function reloadTab(message) {
   const record = trackingState.trackedTabsById[tabId];
   if (!record) return;
 
-  record.status = TAB_STATES.LOADING;
-  record.loadingStartedAt = now();
-  record.unsuspendedTimestamp = now();
-  record.pageRuntimeReady = false;
-  record.pageMediaReady = false;
-  record.isRemainingTimeStale = true;
-  if (record.videoDetails && record.videoDetails.remainingTime != null) {
-    record.videoDetails.remainingTime = null;
-  }
+  markTrackedTabReloading(record);
   recomputeSortState();
 }
 
@@ -105,10 +106,7 @@ export async function handlePageRuntimeReadyMessage(_message, sender) {
   if (!isSenderInTrackedWindow(windowId)) return;
   if (!isFiniteNumber(tabId)) return;
   if (!isWatchOrShortsPage(sender?.tab?.url)) {
-    if (trackingState.trackedTabsById[tabId]) {
-      delete trackingState.trackedTabsById[tabId];
-      recomputeSortState();
-    }
+    removeTabWhenSenderLeavesVideoPage(tabId);
     return;
   }
   setTrackedWindowId(windowId);
@@ -132,10 +130,7 @@ export async function handlePageMediaReadyMessage(_message, sender) {
   if (!isSenderInTrackedWindow(windowId)) return;
   if (!isFiniteNumber(tabId)) return;
   if (!isWatchOrShortsPage(sender?.tab?.url)) {
-    if (trackingState.trackedTabsById[tabId]) {
-      delete trackingState.trackedTabsById[tabId];
-      recomputeSortState();
-    }
+    removeTabWhenSenderLeavesVideoPage(tabId);
     return;
   }
   setTrackedWindowId(windowId);
@@ -154,21 +149,14 @@ export async function handlePageVideoDetailsMessage(message, sender) {
 
   const detailUrl = details.url || sender?.tab?.url;
   if (!isWatchOrShortsPage(detailUrl)) {
-    if (trackingState.trackedTabsById[tabId]) {
-      delete trackingState.trackedTabsById[tabId];
-      recomputeSortState();
-    }
+    removeTabWhenSenderLeavesVideoPage(tabId);
     return;
   }
 
   const record = ensureTrackedTabRecord(tabId, windowId, { url: detailUrl });
   const urlChanged = hasYoutubeVideoIdentityChanged(record.url, detailUrl);
   if (urlChanged) {
-    record.pageRuntimeReady = false;
-    record.isLiveStream = false;
-    record.pageMediaReady = false;
-    record.videoDetails = null;
-    record.isRemainingTimeStale = true;
+    markTrackedTabVideoChanged(record);
   }
   if (details.url) record.url = details.url;
   record.videoDetails = record.videoDetails || {};

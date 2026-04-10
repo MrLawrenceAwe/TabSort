@@ -2,8 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  bootstrapRuntime,
-  resetRuntimeStateForTests,
+  createPageRuntimeSession,
   shouldSendPageRuntimeReady,
 } from '../content/youtube/page-runtime.js';
 
@@ -165,13 +164,12 @@ test('shouldSendPageRuntimeReady allows first-load, force-refresh, and URL-chang
 
 test(
   'bootstrapRuntime re-sends pageRuntimeReady after yt-navigate-finish changes the page URL',
-  { concurrency: false },
   () => {
-    resetRuntimeStateForTests();
+    const runtime = createPageRuntimeSession();
     try {
       const { windowTarget, updatePage } = installRuntimeTestDom();
 
-      bootstrapRuntime();
+      runtime.bootstrap();
 
       const initialReadySignals = installRuntimeTestDom.messages.filter(
         (message) => message?.type === 'pageRuntimeReady',
@@ -195,7 +193,7 @@ test(
       );
       assert.equal(detailSignals.at(-1)?.details?.url, 'https://www.youtube.com/watch?v=two');
     } finally {
-      resetRuntimeStateForTests();
+      runtime.reset();
       resetGlobals();
     }
   },
@@ -203,13 +201,12 @@ test(
 
 test(
   'bootstrapRuntime waits for fresh media evidence before re-sending pageMediaReady on SPA navigation',
-  { concurrency: false },
   () => {
-    resetRuntimeStateForTests();
+    const runtime = createPageRuntimeSession();
     try {
       const { windowTarget, updatePage, video } = installRuntimeTestDom();
 
-      bootstrapRuntime();
+      runtime.bootstrap();
 
       const initialMediaReadySignals = installRuntimeTestDom.messages.filter(
         (message) => message?.type === 'pageMediaReady',
@@ -238,7 +235,7 @@ test(
       );
       assert.equal(mediaReadyAfterFreshVideo.length, 2);
     } finally {
-      resetRuntimeStateForTests();
+      runtime.reset();
       resetGlobals();
     }
   },

@@ -2,6 +2,7 @@ import { TAB_STATES } from '../shared/constants.js';
 import { isFiniteNumber } from '../shared/utils.js';
 import { logDebug } from '../shared/log.js';
 import { getTab, sendMessageToTab } from './chrome-tabs.js';
+import { markTrackedTabStale } from './tracked-tab-mutations.js';
 import { recomputeSortState } from './sort-state.js';
 import { setTrackedWindowId, trackingState } from './tracking-state.js';
 import { getYoutubeVideoIdentity, isWatchOrShortsPage } from './youtube-url-utils.js';
@@ -56,47 +57,46 @@ function hasMediaDurationMismatch(metricsPayload, record, resolvedLengthSeconds)
   );
 }
 
+async function loadTrackedTabContext(tabId) {
+  const initialRecord = trackingState.trackedTabsById[tabId];
+  if (!initialRecord || initialRecord.status !== TAB_STATES.UNSUSPENDED) {
+    return null;
+  }
+
+  const tab = await getTab(tabId);
+  const record = trackingState.trackedTabsById[tabId];
+  if (!record || record.status !== TAB_STATES.UNSUSPENDED) {
+    return null;
+  }
+  if (trackingState.trackedWindowId != null && tab.windowId !== trackingState.trackedWindowId) {
+    return null;
+  }
+  if (tab.windowId != null) {
+    record.windowId = tab.windowId;
+    setTrackedWindowId(tab.windowId);
+  }
+  record.isActiveTab = Boolean(tab.active);
+  record.isHidden = Boolean(tab.hidden);
+  if (!isWatchOrShortsPage(tab.url)) {
+    return null;
+  }
+
+  return { record, tab };
+}
+
 export async function refreshTabPlaybackState(tabId) {
   try {
-    let record = trackingState.trackedTabsById[tabId];
-    if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
+    const initialContext = await loadTrackedTabContext(tabId);
+    if (!initialContext) return;
 
-    let tab = await getTab(tabId);
-    record = trackingState.trackedTabsById[tabId];
-    if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
-    if (trackingState.trackedWindowId != null && tab.windowId !== trackingState.trackedWindowId) return;
-    if (tab.windowId != null) {
-      record.windowId = tab.windowId;
-      setTrackedWindowId(tab.windowId);
-    }
-    record.isActiveTab = Boolean(tab.active);
-    record.isHidden = Boolean(tab.hidden);
-    if (!isWatchOrShortsPage(tab.url)) return;
-
-    const requestedUrl = tab.url || record.url || null;
+    const requestedUrl = initialContext.tab.url || initialContext.record.url || null;
     const result = await sendMessageToTab(tabId, { type: 'collectVideoMetrics' });
-    record = trackingState.trackedTabsById[tabId];
-    if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
-
-    tab = await getTab(tabId);
-    record = trackingState.trackedTabsById[tabId];
-    if (!record || record.status !== TAB_STATES.UNSUSPENDED) return;
-    if (trackingState.trackedWindowId != null && tab.windowId !== trackingState.trackedWindowId) return;
-    if (tab.windowId != null) {
-      record.windowId = tab.windowId;
-      setTrackedWindowId(tab.windowId);
-    }
-    record.isActiveTab = Boolean(tab.active);
-    record.isHidden = Boolean(tab.hidden);
-    if (!isWatchOrShortsPage(tab.url)) return;
+    const currentContext = await loadTrackedTabContext(tabId);
+    if (!currentContext) return;
+    const { record, tab } = currentContext;
 
     if (!result || result.ok !== true) {
-      record.pageRuntimeReady = false;
-      record.pageMediaReady = false;
-      if (record.videoDetails && record.videoDetails.remainingTime != null) {
-        record.videoDetails.remainingTime = null;
-      }
-      record.isRemainingTimeStale = true;
+      markTrackedTabStale(record);
       recomputeSortState();
       return;
     }

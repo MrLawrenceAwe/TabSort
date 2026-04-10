@@ -82,15 +82,17 @@ function extractInitialPlayerResponse(source) {
   }
 }
 
-function parseYouTubeInitialPlayerResponse(logContentError) {
+function parseYouTubeInitialPlayerResponse(logContentError, environment = globalThis) {
+  const runtimeWindow = environment.window ?? globalThis.window;
+  const runtimeDocument = environment.document ?? globalThis.document;
   let playerResponse = null;
   try {
-    if (window.ytInitialPlayerResponse) playerResponse = window.ytInitialPlayerResponse;
+    if (runtimeWindow?.ytInitialPlayerResponse) playerResponse = runtimeWindow.ytInitialPlayerResponse;
   } catch (error) {
     logContentError('Reading window.ytInitialPlayerResponse', error);
   }
   if (!playerResponse) {
-    const scripts = Array.from(document.scripts || []);
+    const scripts = Array.from(runtimeDocument?.scripts || []);
     for (const script of scripts) {
       if (script?.textContent?.includes('ytInitialPlayerResponse')) {
         const parsed = extractInitialPlayerResponse(script.textContent);
@@ -104,18 +106,23 @@ function parseYouTubeInitialPlayerResponse(logContentError) {
   return playerResponse || {};
 }
 
-export function getPrimaryVideoElement() {
-  const videos = Array.from(document.querySelectorAll('video'));
+export function getPrimaryVideoElement(environment = globalThis) {
+  const runtimeDocument = environment.document ?? globalThis.document;
+  const runtimeWindow = environment.window ?? globalThis.window;
+  const VideoElement = environment.HTMLVideoElement ?? globalThis.HTMLVideoElement;
+  const videos = Array.from(runtimeDocument?.querySelectorAll?.('video') || []);
   if (videos.length === 0) return null;
   if (videos.length === 1) return videos[0];
 
-  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
-  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+  const viewportWidth =
+    runtimeWindow?.innerWidth || runtimeDocument?.documentElement?.clientWidth || 0;
+  const viewportHeight =
+    runtimeWindow?.innerHeight || runtimeDocument?.documentElement?.clientHeight || 0;
 
   let best = videos[0];
   let bestArea = -1;
   for (const video of videos) {
-    if (!(video instanceof HTMLVideoElement)) continue;
+    if (typeof VideoElement === 'function' && !(video instanceof VideoElement)) continue;
     const rect = video.getBoundingClientRect();
     const width = Math.max(0, Math.min(rect.right, viewportWidth) - Math.max(rect.left, 0));
     const height = Math.max(0, Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0));
@@ -135,17 +142,19 @@ export function getPrimaryVideoElement() {
   return best;
 }
 
-export function collectPageVideoDetails({ inferIsLiveNow, logContentError }) {
-  const docTitle = cleanTitle(document.title);
-  const ogTitle = cleanTitle(document.querySelector('meta[property="og:title"]')?.content);
-  const itempropTitle = cleanTitle(document.querySelector('meta[itemprop="name"]')?.content);
-  const playerResponse = parseYouTubeInitialPlayerResponse(logContentError);
+export function collectPageVideoDetails({ inferIsLiveNow, logContentError, environment = globalThis }) {
+  const runtimeDocument = environment.document ?? globalThis.document;
+  const runtimeLocation = environment.location ?? globalThis.location;
+  const docTitle = cleanTitle(runtimeDocument?.title);
+  const ogTitle = cleanTitle(runtimeDocument?.querySelector?.('meta[property="og:title"]')?.content);
+  const itempropTitle = cleanTitle(runtimeDocument?.querySelector?.('meta[itemprop="name"]')?.content);
+  const playerResponse = parseYouTubeInitialPlayerResponse(logContentError, environment);
 
   const title =
     docTitle || ogTitle || itempropTitle || cleanTitle(playerResponse?.videoDetails?.title) || null;
 
   let lengthSeconds = parseIsoDurationSeconds(
-    document.querySelector('meta[itemprop="duration"]')?.getAttribute('content'),
+    runtimeDocument?.querySelector?.('meta[itemprop="duration"]')?.getAttribute('content'),
   );
 
   if (lengthSeconds == null) {
@@ -153,10 +162,10 @@ export function collectPageVideoDetails({ inferIsLiveNow, logContentError }) {
     if (responseLengthSeconds != null) lengthSeconds = Number(responseLengthSeconds);
   }
 
-  const isLiveBroadcastMeta = document
-    .querySelector('meta[itemprop="isLiveBroadcast"]')
+  const isLiveBroadcastMeta = runtimeDocument
+    ?.querySelector?.('meta[itemprop="isLiveBroadcast"]')
     ?.getAttribute('content');
-  const endDateMeta = document.querySelector('meta[itemprop="endDate"]')?.getAttribute('content');
+  const endDateMeta = runtimeDocument?.querySelector?.('meta[itemprop="endDate"]')?.getAttribute('content');
   const liveBroadcastDetails = playerResponse?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails;
   const isLive = inferIsLiveNow({
     metaIsLiveBroadcast: isLiveBroadcastMeta,
@@ -167,5 +176,5 @@ export function collectPageVideoDetails({ inferIsLiveNow, logContentError }) {
     lengthSeconds,
   });
 
-  return { title, lengthSeconds, isLive, url: location.href };
+  return { title, lengthSeconds, isLive, url: runtimeLocation?.href };
 }
