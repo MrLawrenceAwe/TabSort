@@ -1,24 +1,3 @@
-export function createEmptySortSummary() {
-  return {
-    counts: {
-      tracked: 0,
-      ready: 0,
-    },
-    readyTabs: {
-      contiguous: true,
-      atFront: true,
-      outOfOrder: false,
-    },
-    backgroundTabs: {
-      haveStaleRemainingTime: false,
-    },
-    order: {
-      allRemainingTimesKnown: false,
-      allSorted: false,
-    },
-  };
-}
-
 export const EMPTY_SORT_SUMMARY = Object.freeze({
   counts: Object.freeze({
     tracked: 0,
@@ -37,3 +16,28 @@ export const EMPTY_SORT_SUMMARY = Object.freeze({
     allSorted: false,
   }),
 });
+
+export function cloneSortSummary(source = EMPTY_SORT_SUMMARY) {
+  return {
+    counts: {
+      ...EMPTY_SORT_SUMMARY.counts,
+      ...(source?.counts || {}),
+    },
+    readyTabs: {
+      ...EMPTY_SORT_SUMMARY.readyTabs,
+      ...(source?.readyTabs || {}),
+    },
+    backgroundTabs: {
+      ...EMPTY_SORT_SUMMARY.backgroundTabs,
+      ...(source?.backgroundTabs || {}),
+    },
+    order: {
+      ...EMPTY_SORT_SUMMARY.order,
+      ...(source?.order || {}),
+    },
+  };
+}
+
+export function createEmptySortSummary() {
+  return cloneSortSummary();
+}
