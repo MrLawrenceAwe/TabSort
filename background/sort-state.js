@@ -2,7 +2,7 @@ import { TAB_STATES } from '../shared/constants.js';
 import { isFiniteNumber } from '../shared/guards.js';
 import { createEmptySortSummary } from '../shared/sort-summary.js';
 import { broadcastSnapshotUpdate } from './tab-snapshot.js';
-import { managedState } from './managed-state.js';
+import { applyManagedSortState, managedState } from './managed-state.js';
 
 function areIdListsEqual(a, b) {
   if (a.length !== b.length) return false;
@@ -58,13 +58,14 @@ function isRecordSortableByRemainingTime(record) {
   return !record?.isLiveStream;
 }
 
-function buildSortSummary(records, currentOrder) {
-  if (!Array.isArray(records) || records.length === 0) {
+function buildSortSummary({ trackedRecords, sortableRecords, sortableOrder }) {
+  if (!Array.isArray(trackedRecords) || trackedRecords.length === 0) {
     return createEmptySortSummary();
   }
 
-  const recordMap = new Map(records.map((record) => [record.id, record]));
-  const trackedTabCount = records.length;
+  const recordMap = new Map(sortableRecords.map((record) => [record.id, record]));
+  const trackedTabCount = trackedRecords.length;
+  const sortableTabCount = sortableRecords.length;
 
   let backgroundTabsHaveStaleRemainingTime = false;
   let readyTabCount = 0;
@@ -80,7 +81,7 @@ function buildSortSummary(records, currentOrder) {
   let encounteredNonReadyBeforeReady = false;
   let gapAfterReady = false;
 
-  for (const tabId of currentOrder) {
+  for (const tabId of sortableOrder) {
     const record = recordMap.get(tabId);
     if (!record) continue;
     orderedIdsWithRecords.push(tabId);
@@ -119,7 +120,7 @@ function buildSortSummary(records, currentOrder) {
     readyTabsAreOutOfOrder = !areIdListsEqual(readyIdsInCurrentOrder, readyIdsByRemaining);
   }
 
-  const allRemainingTimesKnown = trackedTabCount > 1 && readyTabCount === trackedTabCount;
+  const allRemainingTimesKnown = sortableTabCount > 1 && readyTabCount === sortableTabCount;
   const allSorted =
     allRemainingTimesKnown && areIdListsEqual(orderedIdsWithRecords, readyIdsByRemaining);
 
@@ -165,8 +166,11 @@ function deriveSortState(records) {
     sortableOrder.length === targetOrder.length &&
     sortableOrder.every((id, index) => id === targetOrder[index]);
 
-  const sortSummary = buildSortSummary(sortableRecords, sortableOrder);
-  sortSummary.counts.tracked = records.length;
+  const sortSummary = buildSortSummary({
+    trackedRecords: records,
+    sortableRecords,
+    sortableOrder,
+  });
 
   return {
     visibleOrder,
@@ -184,18 +188,12 @@ function applyDerivedSortState({
   alreadySorted,
   sortSummary,
 }) {
-  managedState.targetOrder = targetOrder;
-  managedState.visibleOrder = visibleOrder;
-  managedState.allSortableTabsSorted = allRemainingTimesKnown && alreadySorted;
-  managedState.sortSummary = sortSummary
-    ? {
-        counts: { ...sortSummary.counts },
-        readyTabs: { ...sortSummary.readyTabs },
-        backgroundTabs: { ...sortSummary.backgroundTabs },
-        order: { ...sortSummary.order },
-      }
-    : null;
-
+  applyManagedSortState({
+    targetOrder,
+    visibleOrder,
+    allSortableTabsSorted: allRemainingTimesKnown && alreadySorted,
+    sortSummary,
+  });
   broadcastSnapshotUpdate();
 }
 

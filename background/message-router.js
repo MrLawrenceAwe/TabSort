@@ -8,7 +8,7 @@ import {
   removeTabRecord,
 } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { managedState, setManagedWindowId } from './managed-state.js';
+import { listManagedTabIds, managedState, setManagedWindowId } from './managed-state.js';
 import { refreshTabPlaybackState } from './tab-playback-state.js';
 import { syncWindowTabRecords } from './tab-record-sync.js';
 import { sortWindowTabs } from './window-sort.js';
@@ -84,7 +84,7 @@ export async function syncWindowTabs(message) {
 
 export async function getWindowSnapshot(message) {
   await syncWindowTabRecords(message.windowId, getManagedWindowOptions(message.windowId));
-  const ids = Object.keys(managedState.tabRecordsById).map(Number);
+  const ids = listManagedTabIds();
   await Promise.all(ids.map(refreshTabPlaybackState));
   return buildTabSnapshot();
 }

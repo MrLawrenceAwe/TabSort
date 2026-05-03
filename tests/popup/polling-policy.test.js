@@ -8,6 +8,9 @@ import {
   shouldPollSnapshot,
 } from '../../popup/controller.js';
 
+const NOW_MS = 100_000;
+const fakeNow = () => NOW_MS;
+
 function makeRecord(overrides = {}) {
   return {
     id: 1,
@@ -28,30 +31,30 @@ test('shouldPollRecord polls recently unsuspended stale tabs that need no user a
   const record = makeRecord({
     isRemainingTimeStale: true,
     pageRuntimeReady: false,
-    unsuspendedTimestamp: Date.now() - (RECENTLY_UNSUSPENDED_MS - 1000),
+    unsuspendedTimestamp: NOW_MS - (RECENTLY_UNSUSPENDED_MS - 1000),
   });
 
-  assert.equal(shouldPollRecord(record), true);
+  assert.equal(shouldPollRecord(record, { now: fakeNow }), true);
 });
 
 test('shouldPollRecord does not poll stale tabs once they require a reload', () => {
   const record = makeRecord({
     isRemainingTimeStale: true,
     pageRuntimeReady: false,
-    unsuspendedTimestamp: Date.now() - (RECENTLY_UNSUSPENDED_MS + 1000),
+    unsuspendedTimestamp: NOW_MS - (RECENTLY_UNSUSPENDED_MS + 1000),
   });
 
-  assert.equal(shouldPollRecord(record), false);
+  assert.equal(shouldPollRecord(record, { now: fakeNow }), false);
 });
 
 test('shouldPollRecord polls loading tabs during the loading grace window', () => {
   const record = makeRecord({
     status: TAB_STATES.LOADING,
     pageRuntimeReady: false,
-    loadingStartedAt: Date.now() - (LOADING_GRACE_MS - 1000),
+    loadingStartedAt: NOW_MS - (LOADING_GRACE_MS - 1000),
   });
 
-  assert.equal(shouldPollRecord(record), true);
+  assert.equal(shouldPollRecord(record, { now: fakeNow }), true);
 });
 
 test('shouldPollSnapshot polls only when at least one tracked tab can self-resolve', () => {
@@ -60,19 +63,19 @@ test('shouldPollSnapshot polls only when at least one tracked tab can self-resol
       1: makeRecord({
         isRemainingTimeStale: true,
         pageRuntimeReady: false,
-        unsuspendedTimestamp: Date.now() - (RECENTLY_UNSUSPENDED_MS - 1000),
+        unsuspendedTimestamp: NOW_MS - (RECENTLY_UNSUSPENDED_MS - 1000),
       }),
       2: makeRecord({
         isRemainingTimeStale: true,
         pageRuntimeReady: false,
-        unsuspendedTimestamp: Date.now() - (RECENTLY_UNSUSPENDED_MS + 1000),
+        unsuspendedTimestamp: NOW_MS - (RECENTLY_UNSUSPENDED_MS + 1000),
       }),
     },
   };
 
-  assert.equal(shouldPollSnapshot(snapshot), true);
+  assert.equal(shouldPollSnapshot(snapshot, { now: fakeNow }), true);
   assert.equal(
-    shouldPollSnapshot({ tabRecordsById: { 2: snapshot.tabRecordsById[2] } }),
+    shouldPollSnapshot({ tabRecordsById: { 2: snapshot.tabRecordsById[2] } }, { now: fakeNow }),
     false,
   );
 });

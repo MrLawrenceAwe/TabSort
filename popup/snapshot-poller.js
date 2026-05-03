@@ -1,10 +1,10 @@
 import { TAB_STATES } from '../shared/constants.js';
 import { determineUserAction, USER_ACTIONS } from './tab-action-policy.js';
 
-export function shouldPollRecord(record) {
+export function shouldPollRecord(record, { now = Date.now } = {}) {
   if (!record || record.isLiveStream) return false;
 
-  const userAction = determineUserAction(record);
+  const userAction = determineUserAction(record, { now });
   if (
     record.status === TAB_STATES.UNSUSPENDED &&
     record.isRemainingTimeStale &&
@@ -16,10 +16,10 @@ export function shouldPollRecord(record) {
   return record.status === TAB_STATES.LOADING && userAction === USER_ACTIONS.WAIT_FOR_LOAD;
 }
 
-export function shouldPollSnapshot(snapshot) {
+export function shouldPollSnapshot(snapshot, { now = Date.now } = {}) {
   const tabRecordsById = snapshot?.tabRecordsById;
   if (!tabRecordsById || typeof tabRecordsById !== 'object') return false;
-  return Object.values(tabRecordsById).some((record) => shouldPollRecord(record));
+  return Object.values(tabRecordsById).some((record) => shouldPollRecord(record, { now }));
 }
 
 export function shouldRetrySnapshotPoll(snapshot, controllerActive) {

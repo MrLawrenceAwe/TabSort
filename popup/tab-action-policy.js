@@ -10,7 +10,7 @@ export const USER_ACTIONS = {
   NO_ACTION: '',
 };
 
-function determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended) {
+function determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended, nowMs) {
   switch (tabRecord.status) {
     case TAB_STATES.UNSUSPENDED:
       if (recentlyUnsuspended) return USER_ACTIONS.NO_ACTION;
@@ -21,7 +21,7 @@ function determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended) 
     case TAB_STATES.LOADING:
       if (
         typeof tabRecord.loadingStartedAt === 'number' &&
-        Date.now() - tabRecord.loadingStartedAt >= LOADING_GRACE_MS
+        nowMs - tabRecord.loadingStartedAt >= LOADING_GRACE_MS
       ) {
         return USER_ACTIONS.INTERACT_WITH_TAB;
       }
@@ -31,23 +31,24 @@ function determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended) 
   }
 }
 
-export function determineUserAction(tabRecord) {
+export function determineUserAction(tabRecord, { now = Date.now } = {}) {
   if (tabRecord?.isLiveStream) {
     return USER_ACTIONS.NO_ACTION;
   }
 
+  const nowMs = now();
   const hasRemainingTime = isFiniteNumber(tabRecord?.videoDetails?.remainingTime);
   const recentlyUnsuspended =
     tabRecord.unsuspendedTimestamp &&
-    Date.now() - tabRecord.unsuspendedTimestamp < RECENTLY_UNSUSPENDED_MS;
+    nowMs - tabRecord.unsuspendedTimestamp < RECENTLY_UNSUSPENDED_MS;
 
   if (!hasRemainingTime) {
-    return determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended);
+    return determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended, nowMs);
   }
 
   if (tabRecord?.isRemainingTimeStale) {
     if (!tabRecord.pageRuntimeReady || tabRecord.isActiveTab) {
-      return determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended);
+      return determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended, nowMs);
     }
     return USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME;
   }

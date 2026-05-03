@@ -2,7 +2,7 @@ import { isFiniteNumber, isValidWindowId } from '../shared/guards.js';
 import { logDebug, logWarn, withErrorLogging } from '../shared/log.js';
 import { getTab } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
-import { canManageWindow, managedState } from './managed-state.js';
+import { canManageWindow, managedState, removeManagedTabRecord } from './managed-state.js';
 import { refreshTabPlaybackState } from './tab-playback-state.js';
 import { syncWindowTabRecords } from './tab-record-sync.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
@@ -61,7 +61,7 @@ export function registerTabAndNavigationListeners({ onManagedWindowClosed } = {}
 
   chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     if (!canManageWindow(removeInfo?.windowId)) return;
-    delete managedState.tabRecordsById[tabId];
+    removeManagedTabRecord(tabId);
     if (removeInfo?.isWindowClosing && removeInfo.windowId === managedState.managedWindowId) {
       if (typeof onManagedWindowClosed === 'function') {
         onManagedWindowClosed();

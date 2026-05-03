@@ -18,6 +18,25 @@ const domCache = {
   initialized: false,
 };
 
+function getRootDocument(rootDocument) {
+  return rootDocument ?? globalThis.document;
+}
+
+export function resetView() {
+  domCache.errorElement = null;
+  domCache.emptyStateElement = null;
+  domCache.statusElement = null;
+  domCache.sortButton = null;
+  domCache.sortedBadgeElement = null;
+  domCache.table = null;
+  domCache.actionRequiredColumn = null;
+  domCache.tabStatusColumn = null;
+  domCache.initialized = false;
+  viewState.sortSummary = createEmptySortSummary();
+  viewState.allSortableTabsSorted = false;
+  viewState.activeWindowId = null;
+}
+
 export function setActiveWindowId(windowId) {
   viewState.activeWindowId = typeof windowId === 'number' ? windowId : null;
 }
@@ -26,17 +45,19 @@ export function updateViewState(updates = {}) {
   Object.assign(viewState, updates);
 }
 
-export function initializeView() {
+export function initializeView(rootDocument = globalThis.document) {
   if (domCache.initialized) return;
+  const runtimeDocument = getRootDocument(rootDocument);
+  if (!runtimeDocument) return;
 
-  domCache.errorElement = document.getElementById('popupError');
-  domCache.emptyStateElement = document.getElementById('emptyState');
-  domCache.statusElement = document.getElementById('videoTabsReadyStatus');
-  domCache.sortButton = document.getElementById('sortButton');
-  domCache.sortedBadgeElement = document.getElementById('tabsSorted');
-  domCache.table = document.getElementById('infoTable');
-  domCache.actionRequiredColumn = document.querySelector('.action-required');
-  domCache.tabStatusColumn = document.querySelector('.tab-status');
+  domCache.errorElement = runtimeDocument.getElementById('popupError');
+  domCache.emptyStateElement = runtimeDocument.getElementById('emptyState');
+  domCache.statusElement = runtimeDocument.getElementById('videoTabsReadyStatus');
+  domCache.sortButton = runtimeDocument.getElementById('sortButton');
+  domCache.sortedBadgeElement = runtimeDocument.getElementById('tabsSorted');
+  domCache.table = runtimeDocument.getElementById('infoTable');
+  domCache.actionRequiredColumn = runtimeDocument.querySelector('.action-required');
+  domCache.tabStatusColumn = runtimeDocument.querySelector('.tab-status');
   domCache.initialized = true;
 }
 
@@ -128,7 +149,9 @@ export function setSecondaryColumnsVisible(visible) {
 }
 
 function setOptionToggleVisibility(visible) {
-  document.querySelectorAll('.option-toggle').forEach((toggle) => {
+  const runtimeDocument = getRootDocument();
+  if (!runtimeDocument?.querySelectorAll) return;
+  runtimeDocument.querySelectorAll('.option-toggle').forEach((toggle) => {
     if (toggle instanceof HTMLElement) {
       toggle.style.display = visible ? 'flex' : 'none';
     }

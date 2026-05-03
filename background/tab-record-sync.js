@@ -2,7 +2,14 @@ import { TAB_STATES } from '../shared/constants.js';
 import { isValidWindowId } from '../shared/guards.js';
 import { getTabState, listWindowTabs } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
-import { managedState, now, setManagedWindowId } from './managed-state.js';
+import {
+  beginManagedSync,
+  isManagedSyncCurrent,
+  managedState,
+  now,
+  replaceTabRecords,
+  setManagedWindowId,
+} from './managed-state.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function markLoadingStartedAt(record, previousStatus, nextStatus) {
@@ -26,10 +33,10 @@ function markUnsuspendedAt(record, previousStatus, nextStatus) {
 }
 
 export async function syncWindowTabRecords(windowId, options = {}) {
-  const syncToken = (managedState.syncToken += 1);
+  const syncToken = beginManagedSync();
   const resolvedWindowId = setManagedWindowId(windowId, options);
   const tabs = await listWindowTabs(resolvedWindowId);
-  if (syncToken !== managedState.syncToken) return;
+  if (!isManagedSyncCurrent(syncToken)) return;
   if (!Array.isArray(tabs)) return;
   if (resolvedWindowId == null && tabs.length === 0) return;
 
@@ -94,7 +101,7 @@ export async function syncWindowTabRecords(windowId, options = {}) {
     nextTabRecords[tab.id] = nextTabRecord;
   }
 
-  if (syncToken !== managedState.syncToken) return;
-  managedState.tabRecordsById = nextTabRecords;
+  if (!isManagedSyncCurrent(syncToken)) return;
+  replaceTabRecords(nextTabRecords);
   recomputeSortState();
 }
