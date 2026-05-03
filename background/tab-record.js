@@ -1,5 +1,5 @@
 import { isFiniteNumber } from '../shared/guards.js';
-import { managedState } from './managed-state.js';
+import { managedState, writeManagedTabRecord } from './managed-state.js';
 
 const FALLBACK_TAB_INDEX = Number.MAX_SAFE_INTEGER;
 
@@ -36,7 +36,7 @@ export function ensureTabRecord(tabId, windowId, defaults = {}) {
 
   if (!record) {
     record = createTabRecord(tabId, windowId, defaults);
-    tabRecordsById[tabId] = record;
+    writeManagedTabRecord(tabId, record);
   } else if (windowId != null) {
     record.windowId = windowId;
   }

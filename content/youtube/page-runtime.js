@@ -24,6 +24,8 @@ function createRuntimeState() {
     lastMediaReadyFingerprint: null,
     mediaReadyListenerVideo: null,
     mediaReadyListenerCleanup: null,
+    listenerCleanupCallbacks: [],
+    runtimeMessageListener: null,
   };
 }
 
@@ -81,6 +83,29 @@ export function createPageRuntimeSession({
     }
     state.mediaReadyListenerVideo = null;
     state.mediaReadyListenerCleanup = null;
+  }
+
+  function registerCleanup(cleanup) {
+    if (typeof cleanup !== 'function') return;
+    state.listenerCleanupCallbacks.push(cleanup);
+  }
+
+  function addWindowEventListener(target, type, listener, options) {
+    if (!target?.addEventListener) return;
+    target.addEventListener(type, listener, options);
+    registerCleanup(() => {
+      target.removeEventListener?.(type, listener, options);
+    });
+  }
+
+  function addRuntimeMessageListener(listener) {
+    const runtime = getChrome()?.runtime;
+    const messageBus = runtime?.onMessage;
+    if (!messageBus?.addListener) return;
+    messageBus.addListener(listener);
+    registerCleanup(() => {
+      messageBus.removeListener?.(listener);
+    });
   }
 
   function isCurrentPageMediaReady() {
@@ -304,6 +329,18 @@ export function createPageRuntimeSession({
     state.lastKnownTitleText = null;
   }
 
+  function disposeListeners() {
+    while (state.listenerCleanupCallbacks.length) {
+      const cleanup = state.listenerCleanupCallbacks.pop();
+      try {
+        cleanup?.();
+      } catch (error) {
+        logContentError('Cleaning up page runtime listener', error);
+      }
+    }
+    state.runtimeMessageListener = null;
+  }
+
   function syncPageSession() {
     const currentUrl = getCurrentPageUrl();
     if (currentUrl && currentUrl !== state.observedPageUrl) {
@@ -328,6 +365,7 @@ export function createPageRuntimeSession({
 
   function reset() {
     disposeObservers();
+    disposeListeners();
     state.observedPageUrl = null;
     state.runtimeReadyUrl = null;
     state.mediaReadyUrl = null;
@@ -344,11 +382,9 @@ export function createPageRuntimeSession({
 
     const runtimeWindow = getWindow();
     const runtimeDocument = getDocument();
-    const runtimeChrome = getChrome();
-
-    runtimeChrome.runtime.onMessage.addListener((message, _sender, sendResponse) =>
-      handleCollectVideoMetrics(message, sendResponse),
-    );
+    state.runtimeMessageListener = (message, _sender, sendResponse) =>
+      handleCollectVideoMetrics(message, sendResponse);
+    addRuntimeMessageListener(state.runtimeMessageListener);
 
     if (
       runtimeDocument?.readyState === 'complete' ||
@@ -356,24 +392,25 @@ export function createPageRuntimeSession({
     ) {
       refreshPageState({ includeReadySignal: true });
     } else {
-      runtimeWindow?.addEventListener(
+      addWindowEventListener(
+        runtimeWindow,
         'DOMContentLoaded',
         () => refreshPageState({ includeReadySignal: true }),
         { once: true },
       );
     }
 
-    runtimeWindow?.addEventListener('yt-navigate-finish', () => {
+    addWindowEventListener(runtimeWindow, 'yt-navigate-finish', () => {
       refreshPageState({ includeReadySignal: true });
     });
 
-    runtimeWindow?.addEventListener('pageshow', (event) => {
+    addWindowEventListener(runtimeWindow, 'pageshow', (event) => {
       if (event.persisted) {
         refreshPageState({ includeReadySignal: true, forceReadySignal: true });
       }
     });
 
-    runtimeWindow?.addEventListener('pagehide', () => {
+    addWindowEventListener(runtimeWindow, 'pagehide', () => {
       disposeObservers();
       state.runtimeReadyUrl = null;
       state.mediaReadyUrl = null;

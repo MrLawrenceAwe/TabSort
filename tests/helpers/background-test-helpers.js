@@ -1,6 +1,9 @@
 import { TAB_STATES } from '../../shared/constants.js';
 import { createEmptySortSummary } from '../../shared/sort-summary.js';
-import { managedState } from '../../background/managed-state.js';
+import {
+  applyManagedSortState,
+  resetManagedState as resetBackgroundManagedState,
+} from '../../background/managed-state.js';
 
 export function ensureChromeApi({ tabs = false } = {}) {
   if (!globalThis.chrome) {
@@ -20,14 +23,8 @@ export function ensureChromeApi({ tabs = false } = {}) {
 }
 
 export function resetManagedState(managedWindowId = null) {
-  managedState.tabRecordsById = {};
-  managedState.targetOrder = [];
-  managedState.visibleOrder = [];
-  managedState.allSortableTabsSorted = false;
-  managedState.sortSummary = createEmptySortSummary();
-  managedState.managedWindowId = managedWindowId;
-  managedState.snapshotSignature = null;
-  managedState.syncToken = 0;
+  resetBackgroundManagedState({ managedWindowId });
+  applyManagedSortState({ sortSummary: createEmptySortSummary() });
 }
 
 export function makeTabRecord(id = 1, overrides = {}) {

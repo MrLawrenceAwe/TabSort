@@ -1,6 +1,6 @@
 import { TAB_STATES } from '../shared/constants.js';
 import { recomputeSortState } from './sort-state.js';
-import { managedState, now } from './managed-state.js';
+import { now, removeManagedTabRecord } from './managed-state.js';
 
 export function clearTabRemainingTime(record) {
   if (record?.videoDetails && record.videoDetails.remainingTime != null) {
@@ -50,8 +50,7 @@ export function markTabRecordVideoChanged(record) {
 }
 
 export function removeTabRecord(tabId) {
-  if (!managedState.tabRecordsById[tabId]) return false;
-  delete managedState.tabRecordsById[tabId];
+  if (!removeManagedTabRecord(tabId)) return false;
   recomputeSortState();
   return true;
 }

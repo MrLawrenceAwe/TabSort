@@ -1,6 +1,6 @@
 import { cloneSortSummary, createEmptySortSummary } from '../shared/sort-summary.js';
 import { logDebug } from '../shared/log.js';
-import { managedState } from './managed-state.js';
+import { assignManagedSnapshotSignature, managedState } from './managed-state.js';
 
 function cloneTabRecord(record) {
   if (!record || typeof record !== 'object') return record;
@@ -32,7 +32,7 @@ export function broadcastSnapshotUpdate({ force = false } = {}) {
     const snapshot = buildTabSnapshot();
     const signature = JSON.stringify(snapshot);
     if (!force && signature === managedState.snapshotSignature) return;
-    managedState.snapshotSignature = signature;
+    assignManagedSnapshotSignature(signature);
 
     chrome.runtime.sendMessage({ type: 'tabSnapshotUpdated', payload: snapshot }, () => {
       const runtimeError = chrome.runtime.lastError;

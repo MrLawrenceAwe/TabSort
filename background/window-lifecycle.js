@@ -2,7 +2,12 @@ import { REFRESH_ALARM_NAME, REFRESH_INTERVAL_MINUTES } from '../shared/constant
 import { isValidWindowId } from '../shared/guards.js';
 import { logDebug, logListenerError, withErrorLogging } from '../shared/log.js';
 import { recomputeSortState } from './sort-state.js';
-import { managedState, setManagedWindowId } from './managed-state.js';
+import {
+  listManagedTabIds,
+  managedState,
+  resetManagedState as resetBackgroundManagedState,
+  setManagedWindowId,
+} from './managed-state.js';
 import { refreshTabPlaybackState } from './tab-playback-state.js';
 import { syncWindowTabRecords } from './tab-record-sync.js';
 
@@ -28,9 +33,7 @@ const getLastFocusedWindowId = () =>
   });
 
 export function resetManagedWindow() {
-  setManagedWindowId(null, { force: true });
-  managedState.tabRecordsById = {};
-  managedState.snapshotSignature = null;
+  resetBackgroundManagedState();
   recomputeSortState();
 }
 
@@ -39,7 +42,7 @@ async function syncInitialWindowState() {
   const targetWindowId = isValidWindowId(lastFocusedWindowId) ? lastFocusedWindowId : null;
   await syncWindowTabRecords(targetWindowId, { force: true });
 
-  const ids = Object.keys(managedState.tabRecordsById).map(Number);
+  const ids = listManagedTabIds();
   if (ids.length) {
     await Promise.all(ids.map(refreshTabPlaybackState));
   }
@@ -78,7 +81,7 @@ export function initializeWindowLifecycle() {
     withErrorLogging('alarms.onAlarm', async (alarm) => {
       if (alarm.name !== REFRESH_ALARM_NAME) return;
       await syncWindowTabRecords(managedState.managedWindowId, { force: true });
-      const ids = Object.keys(managedState.tabRecordsById).map(Number);
+      const ids = listManagedTabIds();
       await Promise.all(ids.map(refreshTabPlaybackState));
     }),
   );

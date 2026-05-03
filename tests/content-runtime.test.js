@@ -99,13 +99,24 @@ function installRuntimeTestDom() {
       },
       onMessage: {
         addListener(listener) {
+          installRuntimeTestDom.runtimeMessageListeners.add(listener);
           installRuntimeTestDom.onMessageListener = listener;
+        },
+        removeListener(listener) {
+          installRuntimeTestDom.runtimeMessageListeners.delete(listener);
+          installRuntimeTestDom.onMessageListener =
+            installRuntimeTestDom.runtimeMessageListeners.size > 0
+              ? Array.from(installRuntimeTestDom.runtimeMessageListeners).at(-1)
+              : null;
         },
       },
     },
   };
 
   return {
+    getRuntimeMessageListenerCount() {
+      return installRuntimeTestDom.runtimeMessageListeners.size;
+    },
     windowTarget,
     updatePage({ href, title, duration }) {
       globalThis.location.href = href;
@@ -122,6 +133,7 @@ function installRuntimeTestDom() {
 
 installRuntimeTestDom.messages = [];
 installRuntimeTestDom.onMessageListener = null;
+installRuntimeTestDom.runtimeMessageListeners = new Set();
 
 function resetGlobals() {
   delete globalThis.MutationObserver;
@@ -131,6 +143,7 @@ function resetGlobals() {
   delete globalThis.chrome;
   installRuntimeTestDom.messages = [];
   installRuntimeTestDom.onMessageListener = null;
+  installRuntimeTestDom.runtimeMessageListeners = new Set();
 }
 
 test('shouldSendPageRuntimeReady allows first-load, force-refresh, and URL-change signals', () => {
@@ -240,3 +253,25 @@ test(
     }
   },
 );
+
+test('page runtime session reset removes listeners before a second bootstrap', () => {
+  const runtime = createPageRuntimeSession();
+  try {
+    const { getRuntimeMessageListenerCount, windowTarget } = installRuntimeTestDom();
+
+    runtime.bootstrap();
+    assert.equal(getRuntimeMessageListenerCount(), 1);
+    assert.equal(windowTarget.listeners.size, 3);
+
+    runtime.reset();
+    assert.equal(getRuntimeMessageListenerCount(), 0);
+    assert.equal(windowTarget.listeners.size, 0);
+
+    runtime.bootstrap();
+    assert.equal(getRuntimeMessageListenerCount(), 1);
+    assert.equal(windowTarget.listeners.size, 3);
+  } finally {
+    runtime.reset();
+    resetGlobals();
+  }
+});
