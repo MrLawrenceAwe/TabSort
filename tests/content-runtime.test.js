@@ -5,6 +5,7 @@ import {
   createPageRuntimeSession,
   shouldSendPageRuntimeReady,
 } from '../content/youtube/page-runtime.js';
+import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 
 class FakeMutationObserver {
   constructor(callback) {
@@ -185,7 +186,7 @@ test(
       runtime.bootstrap();
 
       const initialReadySignals = installRuntimeTestDom.messages.filter(
-        (message) => message?.type === 'pageRuntimeReady',
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PAGE_RUNTIME_READY,
       );
       assert.equal(initialReadySignals.length, 1);
 
@@ -197,12 +198,12 @@ test(
       windowTarget.dispatch('yt-navigate-finish');
 
       const readySignalsAfterNavigation = installRuntimeTestDom.messages.filter(
-        (message) => message?.type === 'pageRuntimeReady',
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PAGE_RUNTIME_READY,
       );
       assert.equal(readySignalsAfterNavigation.length, 2);
 
       const detailSignals = installRuntimeTestDom.messages.filter(
-        (message) => message?.type === 'pageVideoDetails',
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PAGE_VIDEO_DETAILS,
       );
       assert.equal(detailSignals.at(-1)?.details?.url, 'https://www.youtube.com/watch?v=two');
     } finally {
@@ -222,7 +223,7 @@ test(
       runtime.bootstrap();
 
       const initialMediaReadySignals = installRuntimeTestDom.messages.filter(
-        (message) => message?.type === 'pageMediaReady',
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY,
       );
       assert.equal(initialMediaReadySignals.length, 1);
 
@@ -234,7 +235,7 @@ test(
       windowTarget.dispatch('yt-navigate-finish');
 
       const mediaReadyAfterNavigation = installRuntimeTestDom.messages.filter(
-        (message) => message?.type === 'pageMediaReady',
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY,
       );
       assert.equal(mediaReadyAfterNavigation.length, 1);
 
@@ -244,7 +245,7 @@ test(
       video.dispatch('loadedmetadata');
 
       const mediaReadyAfterFreshVideo = installRuntimeTestDom.messages.filter(
-        (message) => message?.type === 'pageMediaReady',
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY,
       );
       assert.equal(mediaReadyAfterFreshVideo.length, 2);
     } finally {

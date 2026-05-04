@@ -201,8 +201,13 @@ h2 {
     border-radius: 4px;
 }
 
+.action-button.all-tabs-ready {
+    color: var(--all-ready-row-text);
+    background-color: var(--all-ready-row-background);
+    border-color: var(--all-ready-row-background);
+}
+
 .tabs-sorted {
-    display: none;
     align-self: flex-end;
     color: var(--tabs-sorted-color);
     font-size: 13px;
@@ -211,9 +216,5 @@ h2 {
 }
 
 .hide {
-    display: none;
-}
-
-#sortButton {
     display: none !important;
 }

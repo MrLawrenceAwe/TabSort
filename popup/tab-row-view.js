@@ -1,9 +1,10 @@
 import { isFiniteNumber } from '../shared/guards.js';
+import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { determineUserAction, USER_ACTIONS } from './tab-action-policy.js';
 
 const MESSAGE_ACTIONS = Object.freeze({
-  ACTIVATE_TAB: 'activateTab',
-  RELOAD_TAB: 'reloadTab',
+  ACTIVATE_TAB: RUNTIME_MESSAGE_TYPES.ACTIVATE_TAB,
+  RELOAD_TAB: RUNTIME_MESSAGE_TYPES.RELOAD_TAB,
 });
 
 const COLUMN_CONFIG = Object.freeze({

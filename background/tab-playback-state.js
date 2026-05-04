@@ -1,6 +1,7 @@
 import { TAB_STATES } from '../shared/constants.js';
 import { isFiniteNumber } from '../shared/guards.js';
 import { logDebug } from '../shared/log.js';
+import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { getTab, sendMessageToTab } from './chrome-tabs.js';
 import { markTabRecordStale } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
@@ -90,7 +91,9 @@ export async function refreshTabPlaybackState(tabId) {
     if (!initialContext) return;
 
     const requestedUrl = initialContext.tab.url || initialContext.record.url || null;
-    const result = await sendMessageToTab(tabId, { type: 'collectVideoMetrics' });
+    const result = await sendMessageToTab(tabId, {
+      type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS,
+    });
     const currentContext = await loadTabRecordContext(tabId);
     if (!currentContext) return;
     const { record, tab } = currentContext;

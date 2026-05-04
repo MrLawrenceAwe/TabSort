@@ -1,5 +1,6 @@
 import { MESSAGE_TYPES } from '../shared/constants.js';
 import { toErrorMessage } from '../shared/errors.js';
+import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { loadSortOptions, persistSortOptions } from '../shared/storage.js';
 import { createRuntimeClient } from './runtime-client.js';
 import { createSnapshotClient } from './snapshot-client.js';
@@ -91,7 +92,7 @@ export async function initializePopupController() {
   }, 'Failed to request initial snapshot');
 
   const messageListener = (message) => {
-    if (message?.type === 'tabSnapshotUpdated' && message.payload) {
+    if (message?.type === RUNTIME_MESSAGE_TYPES.TAB_SNAPSHOT_UPDATED && message.payload) {
       Promise.resolve().then(() => {
         renderSnapshot(message.payload, {
           postRuntimeMessage: runtimeClient.postRuntimeMessage,
@@ -107,7 +108,9 @@ export async function initializePopupController() {
 
   const sortButton = document.getElementById('sortButton');
   if (sortButton) {
-    sortButton.addEventListener('click', () => runtimeClient.postRuntimeMessage('sortWindowTabs'));
+    sortButton.addEventListener('click', () =>
+      runtimeClient.postRuntimeMessage(RUNTIME_MESSAGE_TYPES.SORT_WINDOW_TABS),
+    );
   }
 
   window.addEventListener('unload', () => {

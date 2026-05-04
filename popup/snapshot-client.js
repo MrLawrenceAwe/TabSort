@@ -1,3 +1,5 @@
+import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function isValidSnapshot(snapshot) {
@@ -20,10 +22,10 @@ export function createSnapshotClient({
       try {
         if (attempt > 1) {
           await syncActiveWindow().catch(() => {});
-          await requestRuntimeMessage('ping').catch(() => {});
+          await requestRuntimeMessage(RUNTIME_MESSAGE_TYPES.PING).catch(() => {});
           await sleep(retryDelayMs);
         }
-        const response = await requestRuntimeMessage('getTabSnapshot', {});
+        const response = await requestRuntimeMessage(RUNTIME_MESSAGE_TYPES.GET_TAB_SNAPSHOT, {});
         if (isValidSnapshot(response)) {
           setErrorMessage('');
           return response;

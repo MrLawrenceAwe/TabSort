@@ -2,6 +2,7 @@ import { TAB_STATES } from '../shared/constants.js';
 import { isValidWindowId } from '../shared/guards.js';
 import { getTabState, listWindowTabs } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
+import { createTabRecord } from './tab-record.js';
 import {
   beginManagedSync,
   isManagedSyncCurrent,
@@ -61,9 +62,7 @@ export async function syncWindowTabRecords(windowId, options = {}) {
     const statusChanged = previousTabRecord.status && previousTabRecord.status !== nextStatus;
     const isUnsuspended = nextStatus === TAB_STATES.UNSUSPENDED;
 
-    const nextTabRecord = {
-      id: tab.id,
-      windowId: tab.windowId,
+    const nextTabRecord = createTabRecord(tab.id, tab.windowId, {
       url: tab.url,
       index: tab.index,
       pinned: Boolean(tab.pinned),
@@ -85,7 +84,7 @@ export async function syncWindowTabRecords(windowId, options = {}) {
         Boolean(previousTabRecord.isRemainingTimeStale) ||
         statusChanged ||
         urlChanged,
-    };
+    });
 
     markLoadingStartedAt(nextTabRecord, previousTabRecord.status, nextStatus);
     markUnsuspendedAt(nextTabRecord, previousTabRecord.status, nextStatus);

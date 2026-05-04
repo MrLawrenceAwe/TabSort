@@ -20,3 +20,4 @@ Chrome extension that keeps YouTube video tabs organised by the time you still h
 ## Development
 
 - Run tests with `npm test`.
+- Run tests and syntax checks with `npm run check`.

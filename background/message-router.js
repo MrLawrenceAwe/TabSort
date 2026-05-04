@@ -1,5 +1,6 @@
 import { isFiniteNumber, isValidWindowId } from '../shared/guards.js';
 import { logDebug } from '../shared/log.js';
+import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { buildTabSnapshot } from './tab-snapshot.js';
 import { ensureTabRecord } from './tab-record.js';
 import {
@@ -185,19 +186,22 @@ export function registerMessageRouter() {
     const respondAsync = createAsyncResponder(sendResponse);
 
     const handlers = {
-      syncTrackedTabs: () => syncWindowTabs(message),
-      getTabSnapshot: () => getWindowSnapshot(message),
-      sortWindowTabs: () => handleSortRequest(message),
-      ping: async () => ({ ok: true }),
-      activateTab: () => activateTab(message),
-      reloadTab: () => reloadTab(message),
-      logPopupMessage: async () => {
+      [RUNTIME_MESSAGE_TYPES.SYNC_TRACKED_TABS]: () => syncWindowTabs(message),
+      [RUNTIME_MESSAGE_TYPES.GET_TAB_SNAPSHOT]: () => getWindowSnapshot(message),
+      [RUNTIME_MESSAGE_TYPES.SORT_WINDOW_TABS]: () => handleSortRequest(message),
+      [RUNTIME_MESSAGE_TYPES.PING]: async () => ({ ok: true }),
+      [RUNTIME_MESSAGE_TYPES.ACTIVATE_TAB]: () => activateTab(message),
+      [RUNTIME_MESSAGE_TYPES.RELOAD_TAB]: () => reloadTab(message),
+      [RUNTIME_MESSAGE_TYPES.LOG_POPUP_MESSAGE]: async () => {
         const level = message.level === 'error' ? 'error' : 'log';
         console[level](`[Popup] ${message.text}`);
       },
-      pageRuntimeReady: () => handlePageRuntimeReadyMessage(message, sender),
-      pageMediaReady: () => handlePageMediaReadyMessage(message, sender),
-      pageVideoDetails: () => handlePageVideoDetailsMessage(message, sender),
+      [RUNTIME_MESSAGE_TYPES.PAGE_RUNTIME_READY]: () =>
+        handlePageRuntimeReadyMessage(message, sender),
+      [RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY]: () =>
+        handlePageMediaReadyMessage(message, sender),
+      [RUNTIME_MESSAGE_TYPES.PAGE_VIDEO_DETAILS]: () =>
+        handlePageVideoDetailsMessage(message, sender),
     };
 
     if (handlers[type]) {
