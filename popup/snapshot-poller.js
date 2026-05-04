@@ -1,4 +1,4 @@
-import { TAB_STATES } from '../shared/constants.js';
+import { TAB_STATES } from '../shared/tab-states.js';
 import { determineUserAction, USER_ACTIONS } from './tab-action-policy.js';
 
 export function shouldPollRecord(record, { now = Date.now } = {}) {
@@ -8,7 +8,7 @@ export function shouldPollRecord(record, { now = Date.now } = {}) {
   if (
     record.status === TAB_STATES.UNSUSPENDED &&
     record.isRemainingTimeStale &&
-    userAction === USER_ACTIONS.NO_ACTION
+    userAction === USER_ACTIONS.NONE
   ) {
     return true;
   }

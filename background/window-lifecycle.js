@@ -1,13 +1,13 @@
-import { REFRESH_ALARM_NAME, REFRESH_INTERVAL_MINUTES } from '../shared/constants.js';
+import { REFRESH_ALARM_NAME, REFRESH_INTERVAL_MINUTES } from './refresh-config.js';
 import { isValidWindowId } from '../shared/guards.js';
 import { logDebug, logListenerError, withErrorLogging } from '../shared/log.js';
 import { recomputeSortState } from './sort-state.js';
 import {
-  listManagedTabIds,
-  managedState,
-  resetManagedState as resetBackgroundManagedState,
-  setManagedWindowId,
-} from './managed-state.js';
+  listTabIds,
+  trackedWindowState,
+  resetTrackedWindowState as resetBackgroundTrackedWindowState,
+  setWindowId,
+} from './tracked-window-state.js';
 import { refreshTabPlaybackState } from './tab-playback-state.js';
 import { syncWindowTabRecords } from './tab-record-sync.js';
 
@@ -32,8 +32,8 @@ const getLastFocusedWindowId = () =>
     }
   });
 
-export function resetManagedWindow() {
-  resetBackgroundManagedState();
+export function resetTrackedWindow() {
+  resetBackgroundTrackedWindowState();
   recomputeSortState();
 }
 
@@ -42,7 +42,7 @@ async function syncInitialWindowState() {
   const targetWindowId = isValidWindowId(lastFocusedWindowId) ? lastFocusedWindowId : null;
   await syncWindowTabRecords(targetWindowId, { force: true });
 
-  const ids = listManagedTabIds();
+  const ids = listTabIds();
   if (ids.length) {
     await Promise.all(ids.map(refreshTabPlaybackState));
   }
@@ -80,16 +80,16 @@ export function initializeWindowLifecycle() {
   chrome.alarms.onAlarm.addListener(
     withErrorLogging('alarms.onAlarm', async (alarm) => {
       if (alarm.name !== REFRESH_ALARM_NAME) return;
-      await syncWindowTabRecords(managedState.managedWindowId, { force: true });
-      const ids = listManagedTabIds();
+      await syncWindowTabRecords(trackedWindowState.windowId, { force: true });
+      const ids = listTabIds();
       await Promise.all(ids.map(refreshTabPlaybackState));
     }),
   );
 
   chrome.windows.onRemoved.addListener(
     withErrorLogging('windows.onRemoved', async (windowId) => {
-      if (windowId === managedState.managedWindowId) {
-        resetManagedWindow();
+      if (windowId === trackedWindowState.windowId) {
+        resetTrackedWindow();
       }
     }),
   );
@@ -97,8 +97,8 @@ export function initializeWindowLifecycle() {
   chrome.windows.onFocusChanged.addListener(
     withErrorLogging('windows.onFocusChanged', async (windowId) => {
       if (!isValidWindowId(windowId)) return;
-      if (windowId === managedState.managedWindowId) return;
-      setManagedWindowId(windowId, { force: true });
+      if (windowId === trackedWindowState.windowId) return;
+      setWindowId(windowId, { force: true });
       await syncWindowTabRecords(windowId, { force: true });
     }),
   );

@@ -12,8 +12,8 @@ export const EMPTY_SORT_SUMMARY = Object.freeze({
     haveStaleRemainingTime: false,
   }),
   order: Object.freeze({
-    allRemainingTimesKnown: false,
-    allSorted: false,
+    allSortableVodDurationsKnown: false,
+    allSortableVodTabsSorted: false,
   }),
 });
 

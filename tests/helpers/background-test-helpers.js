@@ -1,9 +1,9 @@
-import { TAB_STATES } from '../../shared/constants.js';
+import { TAB_STATES } from '../../shared/tab-states.js';
 import { createEmptySortSummary } from '../../shared/sort-summary.js';
 import {
-  applyManagedSortState,
-  resetManagedState as resetBackgroundManagedState,
-} from '../../background/managed-state.js';
+  applySortState,
+  resetTrackedWindowState as resetBackgroundTrackedWindowState,
+} from '../../background/tracked-window-state.js';
 import { createTabRecord } from '../../background/tab-record.js';
 
 export function ensureChromeApi({ tabs = false } = {}) {
@@ -23,9 +23,9 @@ export function ensureChromeApi({ tabs = false } = {}) {
   };
 }
 
-export function resetManagedState(managedWindowId = null) {
-  resetBackgroundManagedState({ managedWindowId });
-  applyManagedSortState({ sortSummary: createEmptySortSummary() });
+export function resetTrackedWindowState(windowId = null) {
+  resetBackgroundTrackedWindowState({ windowId });
+  applySortState({ sortSummary: createEmptySortSummary() });
 }
 
 export function makeTabRecord(id = 1, overrides = {}) {

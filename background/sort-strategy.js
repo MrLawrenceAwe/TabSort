@@ -1,6 +1,6 @@
 import { getHostnameKey, isWatchOrShortsPage, isYoutubeDomain } from './youtube-url-utils.js';
 
-export function buildYoutubeTabOrder(unpinnedTabs, orderedManagedTabIds) {
+export function buildYoutubeTabOrder(unpinnedTabs, orderedTrackedTabIds) {
   const youtubeTabs = unpinnedTabs
     .filter((tab) => tab && isYoutubeDomain(tab.url))
     .sort((a, b) => a.index - b.index);
@@ -8,7 +8,7 @@ export function buildYoutubeTabOrder(unpinnedTabs, orderedManagedTabIds) {
 
   const youtubeVideoTabs = youtubeTabs.filter((tab) => isWatchOrShortsPage(tab.url));
   const youtubeVideoTabIds = new Set(youtubeVideoTabs.map((tab) => tab.id));
-  const orderedVideoTabIds = orderedManagedTabIds.filter((id) => youtubeVideoTabIds.has(id));
+  const orderedVideoTabIds = orderedTrackedTabIds.filter((id) => youtubeVideoTabIds.has(id));
   const seenYoutubeTabIds = new Set(orderedVideoTabIds);
   const remainingVideoTabIds = youtubeVideoTabs
     .map((tab) => tab.id)

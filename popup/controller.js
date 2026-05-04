@@ -1,4 +1,4 @@
-import { MESSAGE_TYPES } from '../shared/constants.js';
+import { POPUP_LOG_LEVELS } from '../shared/log-levels.js';
 import { toErrorMessage } from '../shared/errors.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { loadSortOptions, persistSortOptions } from '../shared/storage.js';
@@ -131,7 +131,7 @@ function canBootstrapController() {
 if (canBootstrapController()) {
   initializePopupController().catch((error) => {
     runtimeClient.logPopupMessage(
-      MESSAGE_TYPES.ERROR,
+      POPUP_LOG_LEVELS.ERROR,
       `Failed to initialize popup: ${toErrorMessage(error)}`,
     );
   });

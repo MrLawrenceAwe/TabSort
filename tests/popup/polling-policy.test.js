@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { shouldRetrySnapshotPoll } from '../../popup/controller.js';
-import { LOADING_GRACE_MS, RECENTLY_UNSUSPENDED_MS, TAB_STATES } from '../../shared/constants.js';
+import { TAB_STATES } from '../../shared/tab-states.js';
+import { LOADING_GRACE_MS, RECENTLY_UNSUSPENDED_MS } from '../../popup/polling-config.js';
 import {
   shouldPollRecord,
   shouldPollSnapshot,

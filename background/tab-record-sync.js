@@ -1,16 +1,16 @@
-import { TAB_STATES } from '../shared/constants.js';
+import { TAB_STATES } from '../shared/tab-states.js';
 import { isValidWindowId } from '../shared/guards.js';
 import { getTabState, listWindowTabs } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
 import { createTabRecord } from './tab-record.js';
 import {
-  beginManagedSync,
-  isManagedSyncCurrent,
-  managedState,
+  beginSync,
+  isSyncCurrent,
+  trackedWindowState,
   now,
   replaceTabRecords,
-  setManagedWindowId,
-} from './managed-state.js';
+  setWindowId,
+} from './tracked-window-state.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function markLoadingStartedAt(record, previousStatus, nextStatus) {
@@ -34,22 +34,22 @@ function markUnsuspendedAt(record, previousStatus, nextStatus) {
 }
 
 export async function syncWindowTabRecords(windowId, options = {}) {
-  const syncToken = beginManagedSync();
-  const resolvedWindowId = setManagedWindowId(windowId, options);
+  const syncToken = beginSync();
+  const resolvedWindowId = setWindowId(windowId, options);
   const tabs = await listWindowTabs(resolvedWindowId);
-  if (!isManagedSyncCurrent(syncToken)) return;
+  if (!isSyncCurrent(syncToken)) return;
   if (!Array.isArray(tabs)) return;
   if (resolvedWindowId == null && tabs.length === 0) return;
 
   if (
     isValidWindowId(resolvedWindowId) &&
-    isValidWindowId(managedState.managedWindowId) &&
-    resolvedWindowId !== managedState.managedWindowId
+    isValidWindowId(trackedWindowState.windowId) &&
+    resolvedWindowId !== trackedWindowState.windowId
   ) {
     return;
   }
 
-  const previousTabRecords = managedState.tabRecordsById;
+  const previousTabRecords = trackedWindowState.tabRecordsById;
   const nextTabRecords = {};
 
   for (const tab of tabs) {
@@ -100,7 +100,7 @@ export async function syncWindowTabRecords(windowId, options = {}) {
     nextTabRecords[tab.id] = nextTabRecord;
   }
 
-  if (!isManagedSyncCurrent(syncToken)) return;
+  if (!isSyncCurrent(syncToken)) return;
   replaceTabRecords(nextTabRecords);
   recomputeSortState();
 }

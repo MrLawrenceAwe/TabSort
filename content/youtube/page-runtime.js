@@ -1,8 +1,11 @@
-import { MEDIA_READY_STATE_THRESHOLD } from '../../shared/constants.js';
+import { MEDIA_READY_STATE_THRESHOLD } from './media-config.js';
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import { inferIsLiveNow } from './live-status.js';
 import { isFiniteNumber } from '../../shared/guards.js';
-import { collectPageVideoDetails, getPrimaryVideoElement } from './metadata.js';
+import { collectPageVideoDetails } from './metadata.js';
+import { createMediaReadinessTracker } from './media-readiness.js';
+import { createTitleObserver } from './title-observer.js';
+import { handleCollectVideoMetricsMessage } from './video-metrics.js';
 
 const runtimeConfig = {
   mediaReadyStateThreshold: MEDIA_READY_STATE_THRESHOLD,
@@ -78,14 +81,6 @@ export function createPageRuntimeSession({
     });
   }
 
-  function clearMediaReadyListener() {
-    if (typeof state.mediaReadyListenerCleanup === 'function') {
-      state.mediaReadyListenerCleanup();
-    }
-    state.mediaReadyListenerVideo = null;
-    state.mediaReadyListenerCleanup = null;
-  }
-
   function registerCleanup(cleanup) {
     if (typeof cleanup !== 'function') return;
     state.listenerCleanupCallbacks.push(cleanup);
@@ -107,31 +102,6 @@ export function createPageRuntimeSession({
     registerCleanup(() => {
       messageBus.removeListener?.(listener);
     });
-  }
-
-  function isCurrentPageMediaReady() {
-    const currentUrl = getCurrentPageUrl();
-    return Boolean(currentUrl) && currentUrl === state.mediaReadyUrl;
-  }
-
-  function getVideoFingerprint(video) {
-    if (!video || typeof video !== 'object') return '';
-    const source =
-      (typeof video.currentSrc === 'string' && video.currentSrc) ||
-      (typeof video.src === 'string' && video.src) ||
-      '';
-    const duration = config.isFiniteNumber(video.duration)
-      ? String(Math.round(video.duration * 1000))
-      : '';
-    return `${source}|${duration}`;
-  }
-
-  function hasFreshMediaEvidence(video, observedFreshMediaEvent) {
-    if (observedFreshMediaEvent) return true;
-    if (!state.lastMediaReadyVideoElement) return true;
-    if (video !== state.lastMediaReadyVideoElement) return true;
-    const fingerprint = getVideoFingerprint(video);
-    return Boolean(fingerprint) && fingerprint !== state.lastMediaReadyFingerprint;
   }
 
   function doesVideoDurationMatchPage(video) {
@@ -169,174 +139,26 @@ export function createPageRuntimeSession({
     );
   }
 
-  function attachVideoReadyListener() {
-    const video = getPrimaryVideoElement(environment);
-    if (!video) return false;
-    if (isCurrentPageMediaReady()) return true;
-    if (state.mediaReadyListenerVideo === video) return true;
-
-    clearMediaReadyListener();
-
-    const events = ['loadedmetadata', 'loadeddata', 'durationchange', 'canplay'];
-    let observedFreshMediaEvent = false;
-    const cleanup = () => {
-      events.forEach((eventName) => video.removeEventListener(eventName, onAny));
-      if (state.mediaReadyListenerVideo === video) {
-        state.mediaReadyListenerVideo = null;
-        state.mediaReadyListenerCleanup = null;
-      }
-    };
-    const send = () => {
-      state.mediaReadyUrl = getCurrentPageUrl();
-      state.lastMediaReadyVideoElement = video;
-      state.lastMediaReadyFingerprint = getVideoFingerprint(video);
-      trySendRuntimeMessage(
-        createRuntimeMessage(RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY),
-        'page media ready',
-      );
-      cleanup();
-    };
-    const maybeSend = () => {
-      if (
-        video.readyState >= config.mediaReadyStateThreshold &&
-        config.isFiniteNumber(video.duration) &&
-        hasFreshMediaEvidence(video, observedFreshMediaEvent) &&
-        doesVideoDurationMatchPage(video)
-      ) {
-        send();
-        return true;
-      }
-      return false;
-    };
-    const onAny = () => {
-      observedFreshMediaEvent = true;
-      maybeSend();
-    };
-
-    if (maybeSend()) return true;
-
-    events.forEach((eventName) => video.addEventListener(eventName, onAny));
-    state.mediaReadyListenerVideo = video;
-    state.mediaReadyListenerCleanup = cleanup;
-    return true;
-  }
-
-  function watchForVideoMount() {
-    attachVideoReadyListener();
-    if (isCurrentPageMediaReady()) {
-      if (state.videoMountObserver) {
-        state.videoMountObserver.disconnect();
-        state.videoMountObserver = null;
-      }
-      return;
-    }
-
-    const MutationObserverCtor = getMutationObserver();
-    const runtimeDocument = getDocument();
-    if (!MutationObserverCtor || !runtimeDocument?.documentElement) return;
-
-    if (!state.videoMountObserver) {
-      state.videoMountObserver = new MutationObserverCtor(() => {
-        attachVideoReadyListener();
-        if (isCurrentPageMediaReady()) {
-          state.videoMountObserver.disconnect();
-          state.videoMountObserver = null;
-        }
-      });
-      state.videoMountObserver.observe(runtimeDocument.documentElement, {
-        childList: true,
-        subtree: true,
-      });
-      return;
-    }
-
-    attachVideoReadyListener();
-    if (isCurrentPageMediaReady()) {
-      state.videoMountObserver.disconnect();
-      state.videoMountObserver = null;
-    }
-  }
-
-  function observeTitleElement(titleElement) {
-    if (!titleElement || titleElement === state.observedTitleElement) return;
-    const shouldSendUpdate = state.observedTitleElement !== null;
-    state.observedTitleElement = titleElement;
-    state.lastKnownTitleText = titleElement.textContent;
-
-    if (state.titleTextObserver) state.titleTextObserver.disconnect();
-    const MutationObserverCtor = getMutationObserver();
-    if (!MutationObserverCtor) return;
-    state.titleTextObserver = new MutationObserverCtor(() => {
-      const nextTitle = titleElement.textContent;
-      if (nextTitle === state.lastKnownTitleText) return;
-      state.lastKnownTitleText = nextTitle;
-      publishPageVideoDetails();
-    });
-    state.titleTextObserver.observe(titleElement, {
-      childList: true,
-      characterData: true,
-      subtree: true,
-    });
-
-    if (shouldSendUpdate) {
-      publishPageVideoDetails();
-    }
-  }
-
-  function watchTitleChanges() {
-    const runtimeDocument = getDocument();
-    observeTitleElement(runtimeDocument?.querySelector?.('title'));
-    if (state.titleElementObserver) return;
-
-    const target = runtimeDocument?.head || runtimeDocument?.documentElement;
-    const MutationObserverCtor = getMutationObserver();
-    if (!target || !MutationObserverCtor) return;
-
-    state.titleElementObserver = new MutationObserverCtor(() => {
-      observeTitleElement(runtimeDocument.querySelector('title'));
-    });
-    state.titleElementObserver.observe(target, { childList: true, subtree: true });
-  }
-
-  function handleCollectVideoMetrics(message, sendResponse) {
-    if (!message || message.type !== RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS) return false;
-
-    const video = getPrimaryVideoElement(environment);
-    const details = collectPageDetails();
-    const payload = {
-      title: details.title || null,
-      url: details.url,
-      pageMediaReady: isCurrentPageMediaReady(),
-      lengthSeconds: config.isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
-      isLive: Boolean(details.isLive),
-      duration: video && config.isFiniteNumber(video.duration) ? video.duration : null,
-      currentTime: video && config.isFiniteNumber(video.currentTime) ? video.currentTime : null,
-      playbackRate:
-        video && config.isFiniteNumber(video.playbackRate) && video.playbackRate > 0
-          ? video.playbackRate
-          : 1,
-      paused: video ? video.paused : null,
-    };
-    sendResponse(payload);
-    return true;
-  }
+  const mediaReadiness = createMediaReadinessTracker({
+    config,
+    environment,
+    state,
+    getCurrentPageUrl,
+    getDocument,
+    getMutationObserver,
+    trySendRuntimeMessage,
+    doesVideoDurationMatchPage,
+  });
+  const titleObserver = createTitleObserver({
+    state,
+    getDocument,
+    getMutationObserver,
+    publishPageVideoDetails,
+  });
 
   function disposeObservers() {
-    clearMediaReadyListener();
-    if (state.videoMountObserver) {
-      state.videoMountObserver.disconnect();
-      state.videoMountObserver = null;
-    }
-    if (state.titleElementObserver) {
-      state.titleElementObserver.disconnect();
-      state.titleElementObserver = null;
-    }
-    if (state.titleTextObserver) {
-      state.titleTextObserver.disconnect();
-      state.titleTextObserver = null;
-    }
-    state.observedTitleElement = null;
-    state.lastKnownTitleText = null;
+    mediaReadiness.disposeMediaObservers();
+    titleObserver.disposeTitleObservers();
   }
 
   function disposeListeners() {
@@ -369,8 +191,8 @@ export function createPageRuntimeSession({
       sendPageRuntimeReady({ force: forceReadySignal });
     }
     publishPageVideoDetails();
-    watchForVideoMount();
-    watchTitleChanges();
+    mediaReadiness.watchForVideoMount();
+    titleObserver.watchTitleChanges();
   }
 
   function reset() {
@@ -393,7 +215,12 @@ export function createPageRuntimeSession({
     const runtimeWindow = getWindow();
     const runtimeDocument = getDocument();
     state.runtimeMessageListener = (message, _sender, sendResponse) =>
-      handleCollectVideoMetrics(message, sendResponse);
+      handleCollectVideoMetricsMessage(message, sendResponse, {
+        config,
+        environment,
+        collectPageDetails,
+        isCurrentPageMediaReady: mediaReadiness.isCurrentPageMediaReady,
+      });
     addRuntimeMessageListener(state.runtimeMessageListener);
 
     if (

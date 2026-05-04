@@ -1,0 +1,1 @@
+export const MEDIA_READY_STATE_THRESHOLD = 2;

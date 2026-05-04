@@ -1,4 +1,4 @@
-import { TAB_STATES } from '../shared/constants.js';
+import { TAB_STATES } from '../shared/tab-states.js';
 import { logDebug, logWarn } from '../shared/log.js';
 
 export async function moveTabsInOrder(tabIds, startIndex = 0) {
