@@ -1,5 +1,6 @@
 import { cloneSortSummary, createEmptySortSummary } from '../shared/sort-summary.js';
 import { logDebug } from '../shared/log.js';
+import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { assignManagedSnapshotSignature, managedState } from './managed-state.js';
 
 function cloneTabRecord(record) {
@@ -34,12 +35,15 @@ export function broadcastSnapshotUpdate({ force = false } = {}) {
     if (!force && signature === managedState.snapshotSignature) return;
     assignManagedSnapshotSignature(signature);
 
-    chrome.runtime.sendMessage({ type: 'tabSnapshotUpdated', payload: snapshot }, () => {
-      const runtimeError = chrome.runtime.lastError;
-      if (runtimeError?.message && !/Receiving end/i.test(runtimeError.message)) {
-        console.debug(`[TabSort] broadcast warning: ${runtimeError.message}`);
-      }
-    });
+    chrome.runtime.sendMessage(
+      createRuntimeMessage(RUNTIME_MESSAGE_TYPES.TAB_SNAPSHOT_UPDATED, { payload: snapshot }),
+      () => {
+        const runtimeError = chrome.runtime.lastError;
+        if (runtimeError?.message && !/Receiving end/i.test(runtimeError.message)) {
+          console.debug(`[TabSort] broadcast warning: ${runtimeError.message}`);
+        }
+      },
+    );
   } catch (error) {
     logDebug('broadcastSnapshotUpdate failed', error);
   }

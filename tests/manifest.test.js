@@ -25,6 +25,12 @@ test('manifest exposes dynamically imported content modules to YouTube pages', (
     'content/youtube/live-status.js',
     'shared/constants.js',
     'shared/guards.js',
+    'shared/messages.js',
   ]);
   assert.deepEqual(youtubeEntry.matches, ['*://*.youtube.com/*']);
+});
+
+test('manifest avoids unused tab group permission', () => {
+  const manifest = loadManifest();
+  assert.equal(manifest.permissions.includes('tabGroups'), false);
 });

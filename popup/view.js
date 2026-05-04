@@ -71,17 +71,16 @@ function updateStatus(statusElement) {
   const trackedTabCount = viewState.sortSummary.counts.tracked;
   const readyTabCount = viewState.sortSummary.counts.ready;
   if (!viewState.allSortableTabsSorted) {
-    statusElement.style.display = trackedTabCount <= 1 ? 'none' : 'block';
+    statusElement.classList.toggle('hide', trackedTabCount <= 1);
     statusElement.textContent = `${readyTabCount}/${trackedTabCount} ready for sort.`;
-    statusElement.style.color = 'var(--status-text-color)';
     return;
   }
-  statusElement.style.display = 'none';
+  statusElement.classList.add('hide');
 }
 
 function updateSortedBadge(sortedBadgeElement) {
   if (!sortedBadgeElement) return;
-  sortedBadgeElement.style.display = viewState.allSortableTabsSorted ? 'block' : 'none';
+  sortedBadgeElement.classList.toggle('hide', !viewState.allSortableTabsSorted);
 }
 
 export function getEmptyStateMessage(tabCount) {
@@ -115,23 +114,14 @@ export function getSortButtonText(readyTabCount, totalTabCount) {
 
 function updateSortButton(sortButton, shouldShowSort) {
   if (!sortButton) return;
+  sortButton.classList.toggle('hide', !shouldShowSort);
   if (shouldShowSort) {
-    sortButton.style.setProperty('display', 'block', 'important');
     const { ready, tracked } = viewState.sortSummary.counts;
-    const allTabsReady = ready === tracked;
-    const readyBackground = 'var(--all-ready-row-background)';
-    const readyText = 'var(--all-ready-row-text)';
-    sortButton.style.backgroundColor = allTabsReady
-      ? readyBackground
-      : 'var(--action-button-background)';
-    sortButton.style.color = allTabsReady ? readyText : 'var(--action-button-color)';
-    sortButton.style.borderColor = allTabsReady
-      ? readyBackground
-      : 'var(--action-button-border-color)';
+    sortButton.classList.toggle('all-tabs-ready', ready === tracked);
     sortButton.textContent = getSortButtonText(ready, tracked);
     return;
   }
-  sortButton.style.setProperty('display', 'none', 'important');
+  sortButton.classList.remove('all-tabs-ready');
 }
 
 function clearReadyRows(table) {
@@ -152,9 +142,7 @@ function setOptionToggleVisibility(visible) {
   const runtimeDocument = getRootDocument();
   if (!runtimeDocument?.querySelectorAll) return;
   runtimeDocument.querySelectorAll('.option-toggle').forEach((toggle) => {
-    if (toggle instanceof HTMLElement) {
-      toggle.style.display = visible ? 'flex' : 'none';
-    }
+    toggle.classList?.toggle('hide', !visible);
   });
 }
 

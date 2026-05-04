@@ -4,6 +4,7 @@ import {
   applyManagedSortState,
   resetManagedState as resetBackgroundManagedState,
 } from '../../background/managed-state.js';
+import { createTabRecord } from '../../background/tab-record.js';
 
 export function ensureChromeApi({ tabs = false } = {}) {
   if (!globalThis.chrome) {
@@ -28,9 +29,7 @@ export function resetManagedState(managedWindowId = null) {
 }
 
 export function makeTabRecord(id = 1, overrides = {}) {
-  return {
-    id,
-    windowId: 1,
+  return createTabRecord(id, 1, {
     url: `https://www.youtube.com/watch?v=${id}`,
     index: 0,
     pinned: false,
@@ -45,5 +44,5 @@ export function makeTabRecord(id = 1, overrides = {}) {
     unsuspendedTimestamp: null,
     isRemainingTimeStale: true,
     ...overrides,
-  };
+  });
 }

@@ -1,4 +1,5 @@
 import { MEDIA_READY_STATE_THRESHOLD } from '../../shared/constants.js';
+import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import { inferIsLiveNow } from './live-status.js';
 import { isFiniteNumber } from '../../shared/guards.js';
 import { collectPageVideoDetails, getPrimaryVideoElement } from './metadata.js';
@@ -148,7 +149,10 @@ export function createPageRuntimeSession({
     try {
       const details = collectPageDetails();
       if (details.title || details.lengthSeconds != null || details.isLive) {
-        trySendRuntimeMessage({ type: 'pageVideoDetails', details }, 'page video details');
+        trySendRuntimeMessage(
+          createRuntimeMessage(RUNTIME_MESSAGE_TYPES.PAGE_VIDEO_DETAILS, { details }),
+          'page video details',
+        );
       }
     } catch (error) {
       logContentError('Sending page video details', error);
@@ -159,7 +163,10 @@ export function createPageRuntimeSession({
     const currentUrl = getCurrentPageUrl();
     if (!shouldSendPageRuntimeReady(currentUrl, state.runtimeReadyUrl, { force })) return;
     state.runtimeReadyUrl = currentUrl;
-    trySendRuntimeMessage({ type: 'pageRuntimeReady' }, 'page runtime ready');
+    trySendRuntimeMessage(
+      createRuntimeMessage(RUNTIME_MESSAGE_TYPES.PAGE_RUNTIME_READY),
+      'page runtime ready',
+    );
   }
 
   function attachVideoReadyListener() {
@@ -183,7 +190,10 @@ export function createPageRuntimeSession({
       state.mediaReadyUrl = getCurrentPageUrl();
       state.lastMediaReadyVideoElement = video;
       state.lastMediaReadyFingerprint = getVideoFingerprint(video);
-      trySendRuntimeMessage({ type: 'pageMediaReady' }, 'page media ready');
+      trySendRuntimeMessage(
+        createRuntimeMessage(RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY),
+        'page media ready',
+      );
       cleanup();
     };
     const maybeSend = () => {
@@ -289,7 +299,7 @@ export function createPageRuntimeSession({
   }
 
   function handleCollectVideoMetrics(message, sendResponse) {
-    if (!message || message.type !== 'collectVideoMetrics') return false;
+    if (!message || message.type !== RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS) return false;
 
     const video = getPrimaryVideoElement(environment);
     const details = collectPageDetails();

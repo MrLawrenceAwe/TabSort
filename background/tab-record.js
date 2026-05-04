@@ -3,7 +3,11 @@ import { managedState, writeManagedTabRecord } from './managed-state.js';
 
 const FALLBACK_TAB_INDEX = Number.MAX_SAFE_INTEGER;
 
-function createTabRecord(tabId, windowId, defaults = {}) {
+function cloneVideoDetails(videoDetails) {
+  return videoDetails && typeof videoDetails === 'object' ? { ...videoDetails } : null;
+}
+
+export function createTabRecord(tabId, windowId, defaults = {}) {
   const initialWindowId = windowId ?? defaults.windowId ?? null;
   const initialIndex = isFiniteNumber(defaults.index) ? defaults.index : FALLBACK_TAB_INDEX;
   return {
@@ -18,7 +22,7 @@ function createTabRecord(tabId, windowId, defaults = {}) {
     isLiveStream: Boolean(defaults.isLiveStream),
     isActiveTab: Boolean(defaults.isActiveTab),
     isHidden: Boolean(defaults.isHidden),
-    videoDetails: defaults.videoDetails ?? null,
+    videoDetails: cloneVideoDetails(defaults.videoDetails),
     loadingStartedAt: defaults.loadingStartedAt ?? null,
     unsuspendedTimestamp: defaults.unsuspendedTimestamp ?? null,
     isRemainingTimeStale:

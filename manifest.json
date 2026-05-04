@@ -7,8 +7,7 @@
       "tabs",
       "alarms",
       "webNavigation",
-      "storage",
-      "tabGroups"
+      "storage"
     ],
     "host_permissions": [
       "*://*.youtube.com/*"
@@ -35,7 +34,8 @@
           "content/youtube/metadata.js",
           "content/youtube/live-status.js",
           "shared/constants.js",
-          "shared/guards.js"
+          "shared/guards.js",
+          "shared/messages.js"
         ],
         "matches": ["*://*.youtube.com/*"]
       }
