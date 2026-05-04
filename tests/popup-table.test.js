@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { TAB_STATES, RECENTLY_UNSUSPENDED_MS, LOADING_GRACE_MS } from '../shared/constants.js';
-import { determineUserAction } from '../popup/tab-action-policy.js';
+import { TAB_STATES } from '../shared/tab-states.js';
+import { RECENTLY_UNSUSPENDED_MS, LOADING_GRACE_MS } from '../popup/polling-config.js';
+import { determineUserAction, USER_ACTIONS } from '../popup/tab-action-policy.js';
 import { formatRemainingStatus } from '../popup/tab-row-view.js';
 
 function makeRecord(overrides = {}) {
@@ -27,7 +28,7 @@ test('stale rows without remaining time do not suggest viewing the tab', () => {
     unsuspendedTimestamp: Date.now() - (RECENTLY_UNSUSPENDED_MS + 1000),
   });
 
-  assert.equal(determineUserAction(record), 'Reload tab');
+  assert.equal(determineUserAction(record), USER_ACTIONS.RELOAD_TAB);
   assert.equal(formatRemainingStatus(record), 'unavailable');
 });
 
@@ -38,11 +39,11 @@ test('recently unsuspended rows avoid contradictory stale guidance', () => {
     unsuspendedTimestamp: Date.now(),
   });
 
-  assert.equal(determineUserAction(record), '');
+  assert.equal(determineUserAction(record), USER_ACTIONS.NONE);
   assert.equal(formatRemainingStatus(record), 'unavailable');
 });
 
-test('stale rows with remaining time can still request view interaction when appropriate', () => {
+test('stale rows with remaining time can still request a focused tab when appropriate', () => {
   const record = makeRecord({
     isRemainingTimeStale: true,
     videoDetails: { remainingTime: 320 },
@@ -50,11 +51,11 @@ test('stale rows with remaining time can still request view interaction when app
     isActiveTab: false,
   });
 
-  assert.equal(determineUserAction(record), 'View tab to refresh time');
+  assert.equal(determineUserAction(record), USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME);
   assert.equal(formatRemainingStatus(record), 'View tab to refresh time');
 });
 
-test('loading rows switch from waiting to interaction after the loading grace period', () => {
+test('loading rows switch from waiting to focus after the loading grace period', () => {
   const recentLoadingRecord = makeRecord({
     status: TAB_STATES.LOADING,
     pageRuntimeReady: false,
@@ -67,6 +68,6 @@ test('loading rows switch from waiting to interaction after the loading grace pe
     loadingStartedAt: Date.now() - (LOADING_GRACE_MS + 1000),
   });
 
-  assert.equal(determineUserAction(recentLoadingRecord), 'Wait for tab to load');
-  assert.equal(determineUserAction(stalledLoadingRecord), 'Interact with tab');
+  assert.equal(determineUserAction(recentLoadingRecord), USER_ACTIONS.WAIT_FOR_LOAD);
+  assert.equal(determineUserAction(stalledLoadingRecord), USER_ACTIONS.FOCUS_TAB);
 });

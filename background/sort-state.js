@@ -1,8 +1,8 @@
-import { TAB_STATES } from '../shared/constants.js';
+import { TAB_STATES } from '../shared/tab-states.js';
 import { isFiniteNumber } from '../shared/guards.js';
 import { createEmptySortSummary } from '../shared/sort-summary.js';
 import { broadcastSnapshotUpdate } from './tab-snapshot.js';
-import { applyManagedSortState, managedState } from './managed-state.js';
+import { applySortState, trackedWindowState } from './tracked-window-state.js';
 
 function areIdListsEqual(a, b) {
   if (a.length !== b.length) return false;
@@ -120,9 +120,9 @@ function buildSortSummary({ trackedRecords, sortableRecords, sortableOrder }) {
     readyTabsAreOutOfOrder = !areIdListsEqual(readyIdsInCurrentOrder, readyIdsByRemaining);
   }
 
-  const allRemainingTimesKnown = sortableTabCount > 1 && readyTabCount === sortableTabCount;
-  const allSorted =
-    allRemainingTimesKnown && areIdListsEqual(orderedIdsWithRecords, readyIdsByRemaining);
+  const allSortableVodDurationsKnown = sortableTabCount > 1 && readyTabCount === sortableTabCount;
+  const allSortableVodTabsSorted =
+    allSortableVodDurationsKnown && areIdListsEqual(orderedIdsWithRecords, readyIdsByRemaining);
 
   return {
     counts: {
@@ -138,8 +138,8 @@ function buildSortSummary({ trackedRecords, sortableRecords, sortableOrder }) {
       haveStaleRemainingTime: backgroundTabsHaveStaleRemainingTime,
     },
     order: {
-      allRemainingTimesKnown,
-      allSorted,
+      allSortableVodDurationsKnown,
+      allSortableVodTabsSorted,
     },
   };
 }
@@ -159,7 +159,7 @@ function deriveSortState(records) {
     unknownRemainingEntries,
     sortableOrder,
   );
-  const allRemainingTimesKnown = unknownRemainingEntries.length === 0;
+  const allSortableVodDurationsKnown = unknownRemainingEntries.length === 0;
 
   const alreadySorted =
     sortableOrder.length > 0 &&
@@ -175,7 +175,7 @@ function deriveSortState(records) {
   return {
     visibleOrder,
     targetOrder,
-    allRemainingTimesKnown,
+    allSortableVodDurationsKnown,
     alreadySorted,
     sortSummary,
   };
@@ -184,21 +184,21 @@ function deriveSortState(records) {
 function applyDerivedSortState({
   visibleOrder,
   targetOrder,
-  allRemainingTimesKnown,
+  allSortableVodDurationsKnown,
   alreadySorted,
   sortSummary,
 }) {
-  applyManagedSortState({
+  applySortState({
     targetOrder,
     visibleOrder,
-    allSortableTabsSorted: allRemainingTimesKnown && alreadySorted,
+    allSortableVodTabsSorted: allSortableVodDurationsKnown && alreadySorted,
     sortSummary,
   });
   broadcastSnapshotUpdate();
 }
 
 export function recomputeSortState() {
-  const records = Object.values(managedState.tabRecordsById);
+  const records = Object.values(trackedWindowState.tabRecordsById);
   const derivedState = deriveSortState(records);
   applyDerivedSortState(derivedState);
 }

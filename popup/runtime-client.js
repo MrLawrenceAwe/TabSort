@@ -1,4 +1,4 @@
-import { MESSAGE_TYPES } from '../shared/constants.js';
+import { POPUP_LOG_LEVELS } from '../shared/log-levels.js';
 import { toErrorMessage } from '../shared/errors.js';
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 
@@ -31,8 +31,8 @@ export function createRuntimeClient({
     });
   }
 
-  function logPopupMessage(type = MESSAGE_TYPES.ERROR, message = 'Message is undefined') {
-    const logger = type === MESSAGE_TYPES.ERROR ? 'error' : 'log';
+  function logPopupMessage(type = POPUP_LOG_LEVELS.ERROR, message = 'Message is undefined') {
+    const logger = type === POPUP_LOG_LEVELS.ERROR ? 'error' : 'log';
     console[logger](`[Popup] ${message}`);
     postRuntimeMessage(RUNTIME_MESSAGE_TYPES.LOG_POPUP_MESSAGE, { level: type, text: message });
   }
@@ -43,7 +43,7 @@ export function createRuntimeClient({
       console.debug(`[Popup] ${context}: ${message}`);
       return;
     }
-    logPopupMessage(MESSAGE_TYPES.ERROR, `${context}: ${message}`);
+    logPopupMessage(POPUP_LOG_LEVELS.ERROR, `${context}: ${message}`);
   }
 
   function syncActiveWindow() {

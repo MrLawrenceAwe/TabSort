@@ -9,7 +9,7 @@ import {
   removeTabRecord,
 } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { listManagedTabIds, managedState, setManagedWindowId } from './managed-state.js';
+import { listTabIds, trackedWindowState, setWindowId } from './tracked-window-state.js';
 import { refreshTabPlaybackState } from './tab-playback-state.js';
 import { syncWindowTabRecords } from './tab-record-sync.js';
 import { sortWindowTabs } from './window-sort.js';
@@ -31,12 +31,12 @@ function createAsyncResponder(sendResponse) {
   };
 }
 
-function isSenderInManagedWindow(windowId) {
-  if (managedState.managedWindowId == null) return true;
-  return typeof windowId === 'number' && windowId === managedState.managedWindowId;
+function isSenderInTrackedWindow(windowId) {
+  if (trackedWindowState.windowId == null) return true;
+  return typeof windowId === 'number' && windowId === trackedWindowState.windowId;
 }
 
-function getManagedWindowOptions(windowId) {
+function getTrackedWindowOptions(windowId) {
   return isValidWindowId(windowId) ? { force: true } : undefined;
 }
 
@@ -49,7 +49,7 @@ export async function activateTab(message) {
   const tabId = message.tabId;
   if (!isFiniteNumber(tabId)) return;
   if (isValidWindowId(message.windowId)) {
-    setManagedWindowId(message.windowId, { force: true });
+    setWindowId(message.windowId, { force: true });
   }
   try {
     await chrome.tabs.update(tabId, { active: true });
@@ -62,7 +62,7 @@ export async function reloadTab(message) {
   const tabId = message.tabId;
   if (!isFiniteNumber(tabId)) return;
   if (isValidWindowId(message.windowId)) {
-    setManagedWindowId(message.windowId, { force: true });
+    setWindowId(message.windowId, { force: true });
   }
   let didReload = false;
   try {
@@ -72,7 +72,7 @@ export async function reloadTab(message) {
     logDebug(`tabs.reload failed for ${tabId}`, error);
   }
   if (!didReload) return;
-  const record = managedState.tabRecordsById[tabId];
+  const record = trackedWindowState.tabRecordsById[tabId];
   if (!record) return;
 
   markTabRecordReloading(record);
@@ -80,12 +80,12 @@ export async function reloadTab(message) {
 }
 
 export async function syncWindowTabs(message) {
-  await syncWindowTabRecords(message.windowId, getManagedWindowOptions(message.windowId));
+  await syncWindowTabRecords(message.windowId, getTrackedWindowOptions(message.windowId));
 }
 
 export async function getWindowSnapshot(message) {
-  await syncWindowTabRecords(message.windowId, getManagedWindowOptions(message.windowId));
-  const ids = listManagedTabIds();
+  await syncWindowTabRecords(message.windowId, getTrackedWindowOptions(message.windowId));
+  const ids = listTabIds();
   await Promise.all(ids.map(refreshTabPlaybackState));
   return buildTabSnapshot();
 }
@@ -93,24 +93,24 @@ export async function getWindowSnapshot(message) {
 export async function handleSortRequest(message) {
   const targetWindowId = isValidWindowId(message.windowId)
     ? message.windowId
-    : managedState.managedWindowId;
+    : trackedWindowState.windowId;
   if (isValidWindowId(targetWindowId)) {
-    setManagedWindowId(targetWindowId, { force: true });
+    setWindowId(targetWindowId, { force: true });
   }
   await sortWindowTabs(targetWindowId);
-  await syncWindowTabRecords(targetWindowId, getManagedWindowOptions(targetWindowId));
+  await syncWindowTabRecords(targetWindowId, getTrackedWindowOptions(targetWindowId));
 }
 
 export async function handlePageRuntimeReadyMessage(_message, sender) {
   const tabId = sender?.tab?.id;
   const windowId = sender?.tab?.windowId;
-  if (!isSenderInManagedWindow(windowId)) return;
+  if (!isSenderInTrackedWindow(windowId)) return;
   if (!isFiniteNumber(tabId)) return;
   if (!isWatchOrShortsPage(sender?.tab?.url)) {
     removeTabRecordWhenSenderLeavesVideoPage(tabId);
     return;
   }
-  setManagedWindowId(windowId);
+  setWindowId(windowId);
 
   const record = ensureTabRecord(tabId, windowId, {
     url: sender?.tab?.url ?? null,
@@ -128,13 +128,13 @@ export async function handlePageRuntimeReadyMessage(_message, sender) {
 export async function handlePageMediaReadyMessage(_message, sender) {
   const tabId = sender?.tab?.id;
   const windowId = sender?.tab?.windowId;
-  if (!isSenderInManagedWindow(windowId)) return;
+  if (!isSenderInTrackedWindow(windowId)) return;
   if (!isFiniteNumber(tabId)) return;
   if (!isWatchOrShortsPage(sender?.tab?.url)) {
     removeTabRecordWhenSenderLeavesVideoPage(tabId);
     return;
   }
-  setManagedWindowId(windowId);
+  setWindowId(windowId);
   const record = ensureTabRecord(tabId, windowId);
   record.pageMediaReady = true;
   await refreshTabPlaybackState(tabId);
@@ -144,8 +144,8 @@ export async function handlePageVideoDetailsMessage(message, sender) {
   const tabId = sender?.tab?.id;
   const windowId = sender?.tab?.windowId;
   const details = message.details || {};
-  if (!isSenderInManagedWindow(windowId)) return;
-  setManagedWindowId(windowId);
+  if (!isSenderInTrackedWindow(windowId)) return;
+  setWindowId(windowId);
   if (!isFiniteNumber(tabId)) return;
 
   const detailUrl = details.url || sender?.tab?.url;

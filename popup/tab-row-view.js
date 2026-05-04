@@ -1,6 +1,6 @@
 import { isFiniteNumber } from '../shared/guards.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
-import { determineUserAction, USER_ACTIONS } from './tab-action-policy.js';
+import { determineUserAction, getUserActionLabel, USER_ACTIONS } from './tab-action-policy.js';
 
 const MESSAGE_ACTIONS = Object.freeze({
   ACTIVATE_TAB: RUNTIME_MESSAGE_TYPES.ACTIVATE_TAB,
@@ -44,32 +44,32 @@ function insertInfoCells(row, record, sortedView, userAction) {
 
 function insertUserActionCell(row, record, action, postRuntimeMessage) {
   const cell = row.insertCell(1);
-  if (!action) {
+  if (action === USER_ACTIONS.NONE) {
     cell.textContent = '—';
     return;
   }
 
-  if (action === USER_ACTIONS.INTERACT_WITH_TAB_THEN_RELOAD) {
-    const interact = createActionLink(
-      USER_ACTIONS.INTERACT_WITH_TAB,
+  if (action === USER_ACTIONS.FOCUS_THEN_RELOAD) {
+    const focus = createActionLink(
+      getUserActionLabel(USER_ACTIONS.FOCUS_TAB),
       MESSAGE_ACTIONS.ACTIVATE_TAB,
       record.id,
       postRuntimeMessage,
     );
     const reload = createActionLink(
-      USER_ACTIONS.RELOAD_TAB,
+      getUserActionLabel(USER_ACTIONS.RELOAD_TAB),
       MESSAGE_ACTIONS.RELOAD_TAB,
       record.id,
       postRuntimeMessage,
     );
-    cell.appendChild(interact);
+    cell.appendChild(focus);
     cell.appendChild(document.createTextNode('/'));
     cell.appendChild(reload);
     return;
   }
 
   const linkElement = createActionLink(
-    action,
+    getUserActionLabel(action),
     action === USER_ACTIONS.RELOAD_TAB ? MESSAGE_ACTIONS.RELOAD_TAB : MESSAGE_ACTIONS.ACTIVATE_TAB,
     record.id,
     postRuntimeMessage,
@@ -97,7 +97,7 @@ export function formatRemainingStatus(record, requiredAction = determineUserActi
 
   if (record.isRemainingTimeStale) {
     return requiredAction === USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME
-      ? USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME
+      ? getUserActionLabel(USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME)
       : 'unavailable';
   }
 
@@ -110,7 +110,7 @@ function formatIndex(record) {
 }
 
 function toDisplayText(value) {
-  return value || USER_ACTIONS.NO_ACTION;
+  return value ? getUserActionLabel(value) || value : '';
 }
 
 function formatRemaining(seconds) {

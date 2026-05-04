@@ -1,4 +1,4 @@
-import { DEFAULT_SORT_OPTIONS } from './constants.js';
+import { DEFAULT_SORT_OPTIONS } from './sort-options.js';
 
 const getChromeApi = () => globalThis.chrome ?? null;
 const getRuntimeLastError = () => getChromeApi()?.runtime?.lastError ?? null;

@@ -1,11 +1,11 @@
-import { TAB_STATES } from '../shared/constants.js';
+import { TAB_STATES } from '../shared/tab-states.js';
 import { isFiniteNumber } from '../shared/guards.js';
 import { logDebug } from '../shared/log.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { getTab, sendMessageToTab } from './chrome-tabs.js';
 import { markTabRecordStale } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { managedState, setManagedWindowId } from './managed-state.js';
+import { trackedWindowState, setWindowId } from './tracked-window-state.js';
 import { getYoutubeVideoIdentity, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 const MEDIA_DURATION_SYNC_TOLERANCE_SECONDS = 2;
@@ -59,22 +59,22 @@ function hasMediaDurationMismatch(metricsPayload, record, resolvedLengthSeconds)
 }
 
 async function loadTabRecordContext(tabId) {
-  const initialRecord = managedState.tabRecordsById[tabId];
+  const initialRecord = trackedWindowState.tabRecordsById[tabId];
   if (!initialRecord || initialRecord.status !== TAB_STATES.UNSUSPENDED) {
     return null;
   }
 
   const tab = await getTab(tabId);
-  const record = managedState.tabRecordsById[tabId];
+  const record = trackedWindowState.tabRecordsById[tabId];
   if (!record || record.status !== TAB_STATES.UNSUSPENDED) {
     return null;
   }
-  if (managedState.managedWindowId != null && tab.windowId !== managedState.managedWindowId) {
+  if (trackedWindowState.windowId != null && tab.windowId !== trackedWindowState.windowId) {
     return null;
   }
   if (tab.windowId != null) {
     record.windowId = tab.windowId;
-    setManagedWindowId(tab.windowId);
+    setWindowId(tab.windowId);
   }
   record.isActiveTab = Boolean(tab.active);
   record.isHidden = Boolean(tab.hidden);

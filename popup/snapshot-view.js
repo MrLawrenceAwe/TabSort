@@ -19,15 +19,15 @@ export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
   const tabRecords = snapshot.tabRecordsById || {};
   const visibleOrder = snapshot.visibleOrder || [];
   const sortSummary = cloneSortSummary(snapshot.sortSummary);
-  const backgroundSortedFlag = snapshot.allSortableTabsSorted === true;
+  const backgroundSortedFlag = snapshot.allSortableVodTabsSorted === true;
   const shouldUseSortedView =
-    sortSummary.order.allSorted ||
+    sortSummary.order.allSortableVodTabsSorted ||
     (backgroundSortedFlag &&
-      sortSummary.order.allRemainingTimesKnown &&
+      sortSummary.order.allSortableVodDurationsKnown &&
       !sortSummary.readyTabs.outOfOrder);
 
   updateViewState({
-    allSortableTabsSorted: shouldUseSortedView,
+    allSortableVodTabsSorted: shouldUseSortedView,
     sortSummary,
   });
 
@@ -48,7 +48,7 @@ export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
   }
   tbody.replaceChildren(rowFragment);
 
-  if (sortSummary.order.allRemainingTimesKnown && !shouldUseSortedView) {
+  if (sortSummary.order.allSortableVodDurationsKnown && !shouldUseSortedView) {
     addClassToDataRows(table, 'all-ready-row');
   }
 

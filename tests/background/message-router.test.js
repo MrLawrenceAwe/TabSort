@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { managedState } from '../../background/managed-state.js';
+import { trackedWindowState } from '../../background/tracked-window-state.js';
 import {
   handlePageMediaReadyMessage,
   handlePageRuntimeReadyMessage,
@@ -10,13 +10,13 @@ import {
 import {
   ensureChromeApi,
   makeTabRecord,
-  resetManagedState,
+  resetTrackedWindowState,
 } from '../helpers/background-test-helpers.js';
 
 ensureChromeApi();
 
 test('handlePageVideoDetailsMessage does not create records for non-watch YouTube pages', async () => {
-  resetManagedState(1);
+  resetTrackedWindowState(1);
 
   await handlePageVideoDetailsMessage(
     {
@@ -34,21 +34,21 @@ test('handlePageVideoDetailsMessage does not create records for non-watch YouTub
     },
   );
 
-  assert.equal(managedState.tabRecordsById[7], undefined);
-  assert.deepEqual(managedState.visibleOrder, []);
-  assert.deepEqual(managedState.targetOrder, []);
+  assert.equal(trackedWindowState.tabRecordsById[7], undefined);
+  assert.deepEqual(trackedWindowState.visibleOrder, []);
+  assert.deepEqual(trackedWindowState.targetOrder, []);
 });
 
 test('handlePageVideoDetailsMessage removes tracked rows when tab leaves watch/shorts', async () => {
-  resetManagedState(1);
-  managedState.tabRecordsById = {
+  resetTrackedWindowState(1);
+  trackedWindowState.tabRecordsById = {
     7: makeTabRecord(7, {
       videoDetails: { title: 'Video 7', remainingTime: 25, lengthSeconds: 100 },
       isRemainingTimeStale: false,
     }),
   };
-  managedState.visibleOrder = [7];
-  managedState.targetOrder = [7];
+  trackedWindowState.visibleOrder = [7];
+  trackedWindowState.targetOrder = [7];
 
   await handlePageVideoDetailsMessage(
     {
@@ -66,21 +66,21 @@ test('handlePageVideoDetailsMessage removes tracked rows when tab leaves watch/s
     },
   );
 
-  assert.equal(managedState.tabRecordsById[7], undefined);
-  assert.deepEqual(managedState.visibleOrder, []);
-  assert.deepEqual(managedState.targetOrder, []);
+  assert.equal(trackedWindowState.tabRecordsById[7], undefined);
+  assert.deepEqual(trackedWindowState.visibleOrder, []);
+  assert.deepEqual(trackedWindowState.targetOrder, []);
 });
 
 test('handlePageRuntimeReadyMessage removes tracked rows when a SPA tab leaves watch/shorts', async () => {
-  resetManagedState(1);
-  managedState.tabRecordsById = {
+  resetTrackedWindowState(1);
+  trackedWindowState.tabRecordsById = {
     7: makeTabRecord(7, {
       videoDetails: { title: 'Video 7', remainingTime: 25, lengthSeconds: 100 },
       isRemainingTimeStale: false,
     }),
   };
-  managedState.visibleOrder = [7];
-  managedState.targetOrder = [7];
+  trackedWindowState.visibleOrder = [7];
+  trackedWindowState.targetOrder = [7];
 
   await handlePageRuntimeReadyMessage(
     {},
@@ -93,13 +93,13 @@ test('handlePageRuntimeReadyMessage removes tracked rows when a SPA tab leaves w
     },
   );
 
-  assert.equal(managedState.tabRecordsById[7], undefined);
-  assert.deepEqual(managedState.visibleOrder, []);
-  assert.deepEqual(managedState.targetOrder, []);
+  assert.equal(trackedWindowState.tabRecordsById[7], undefined);
+  assert.deepEqual(trackedWindowState.visibleOrder, []);
+  assert.deepEqual(trackedWindowState.targetOrder, []);
 });
 
 test('handlePageRuntimeReadyMessage marks the runtime ready without collecting metrics', async () => {
-  resetManagedState(1);
+  resetTrackedWindowState(1);
   globalThis.chrome.tabs = {
     get() {
       throw new Error('tabs.get should not be called on pageRuntimeReady');
@@ -120,25 +120,25 @@ test('handlePageRuntimeReadyMessage marks the runtime ready without collecting m
     },
   );
 
-  const record = managedState.tabRecordsById[7];
+  const record = trackedWindowState.tabRecordsById[7];
   assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
-  assert.deepEqual(managedState.visibleOrder, [7]);
-  assert.deepEqual(managedState.targetOrder, [7]);
+  assert.deepEqual(trackedWindowState.visibleOrder, [7]);
+  assert.deepEqual(trackedWindowState.targetOrder, [7]);
   assert.equal(record.pageRuntimeReady, true);
   assert.equal(record.pageMediaReady, false);
   assert.equal(record.isRemainingTimeStale, true);
 });
 
 test('handlePageMediaReadyMessage removes tracked rows when a stale event arrives off watch/shorts', async () => {
-  resetManagedState(1);
-  managedState.tabRecordsById = {
+  resetTrackedWindowState(1);
+  trackedWindowState.tabRecordsById = {
     7: makeTabRecord(7, {
       videoDetails: { title: 'Video 7', remainingTime: 25, lengthSeconds: 100 },
       isRemainingTimeStale: false,
     }),
   };
-  managedState.visibleOrder = [7];
-  managedState.targetOrder = [7];
+  trackedWindowState.visibleOrder = [7];
+  trackedWindowState.targetOrder = [7];
   globalThis.chrome.tabs = {
     get() {
       throw new Error('tabs.get should not be called for stale non-watch media-ready events');
@@ -159,14 +159,14 @@ test('handlePageMediaReadyMessage removes tracked rows when a stale event arrive
     },
   );
 
-  assert.equal(managedState.tabRecordsById[7], undefined);
-  assert.deepEqual(managedState.visibleOrder, []);
-  assert.deepEqual(managedState.targetOrder, []);
+  assert.equal(trackedWindowState.tabRecordsById[7], undefined);
+  assert.deepEqual(trackedWindowState.visibleOrder, []);
+  assert.deepEqual(trackedWindowState.targetOrder, []);
 });
 
 test('handlePageVideoDetailsMessage resets carried remaining time on watch-to-watch SPA navigation', async () => {
-  resetManagedState(1);
-  managedState.tabRecordsById = {
+  resetTrackedWindowState(1);
+  trackedWindowState.tabRecordsById = {
     7: makeTabRecord(7, {
       url: 'https://www.youtube.com/watch?v=old',
       pageRuntimeReady: true,
@@ -193,7 +193,7 @@ test('handlePageVideoDetailsMessage resets carried remaining time on watch-to-wa
     },
   );
 
-  const record = managedState.tabRecordsById[7];
+  const record = trackedWindowState.tabRecordsById[7];
   assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
   assert.equal(record.pageRuntimeReady, false);
   assert.equal(record.videoDetails.title, 'New Video');
@@ -203,8 +203,8 @@ test('handlePageVideoDetailsMessage resets carried remaining time on watch-to-wa
 });
 
 test('handlePageVideoDetailsMessage preserves ready state when the title changes for the same watch URL', async () => {
-  resetManagedState(1);
-  managedState.tabRecordsById = {
+  resetTrackedWindowState(1);
+  trackedWindowState.tabRecordsById = {
     7: makeTabRecord(7, {
       url: 'https://www.youtube.com/watch?v=new',
       pageMediaReady: true,
@@ -231,7 +231,7 @@ test('handlePageVideoDetailsMessage preserves ready state when the title changes
     },
   );
 
-  const record = managedState.tabRecordsById[7];
+  const record = trackedWindowState.tabRecordsById[7];
   assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
   assert.equal(record.pageMediaReady, true);
   assert.equal(record.videoDetails.title, 'Cyberpunk 2077 - PS5 Pro Update Trailer');
@@ -241,8 +241,8 @@ test('handlePageVideoDetailsMessage preserves ready state when the title changes
 });
 
 test('handlePageVideoDetailsMessage preserves ready state when only watch URL parameters change', async () => {
-  resetManagedState(1);
-  managedState.tabRecordsById = {
+  resetTrackedWindowState(1);
+  trackedWindowState.tabRecordsById = {
     7: makeTabRecord(7, {
       url: 'https://www.youtube.com/watch?v=new',
       pageMediaReady: true,
@@ -269,7 +269,7 @@ test('handlePageVideoDetailsMessage preserves ready state when only watch URL pa
     },
   );
 
-  const record = managedState.tabRecordsById[7];
+  const record = trackedWindowState.tabRecordsById[7];
   assert.equal(record.url, 'https://www.youtube.com/watch?v=new&list=abc123&index=10');
   assert.equal(record.pageMediaReady, true);
   assert.equal(record.videoDetails.remainingTime, 120);
