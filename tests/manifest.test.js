@@ -33,6 +33,14 @@ test('manifest exposes dynamically imported content modules to YouTube pages', (
   assert.deepEqual(youtubeEntry.matches, ['*://*.youtube.com/*']);
 });
 
+test('manifest injects YouTube runtime on all YouTube pages for SPA navigation', () => {
+  const manifest = loadManifest();
+  const [youtubeContentScript] = manifest.content_scripts;
+
+  assert.deepEqual(youtubeContentScript.matches, ['*://*.youtube.com/*']);
+  assert.deepEqual(youtubeContentScript.js, ['content/youtube/bootstrap-entry.js']);
+});
+
 test('manifest avoids unused tab group permission', () => {
   const manifest = loadManifest();
   assert.equal(manifest.permissions.includes('tabGroups'), false);

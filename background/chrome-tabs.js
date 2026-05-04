@@ -34,29 +34,14 @@ export function queryTabs(query) {
 }
 
 export async function listWindowTabs(windowId = null) {
-  const baseQuery = windowId != null ? { windowId } : { lastFocusedWindow: true };
+  const query = windowId != null ? { windowId } : { lastFocusedWindow: true };
+  const tabs = await queryTabs(query);
 
-  const [visibleTabs, hiddenTabs] = await Promise.all([
-    queryTabs(baseQuery),
-    queryTabs({ ...baseQuery, hidden: true }),
-  ]);
-
-  if (!Array.isArray(visibleTabs)) {
+  if (!Array.isArray(tabs)) {
     return null;
   }
 
-  const hiddenTabList = Array.isArray(hiddenTabs) ? hiddenTabs : [];
-
-  const deduplicatedTabs = [];
-  const seen = new Set();
-  for (const tab of [...visibleTabs, ...hiddenTabList]) {
-    if (!tab || typeof tab.id !== 'number') continue;
-    if (seen.has(tab.id)) continue;
-    seen.add(tab.id);
-    deduplicatedTabs.push(tab);
-  }
-
-  return deduplicatedTabs;
+  return tabs.filter((tab) => tab && typeof tab.id === 'number');
 }
 
 export function getTab(tabId) {
