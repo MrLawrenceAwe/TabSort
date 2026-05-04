@@ -22,7 +22,7 @@
     },
     "content_scripts": [
       {
-        "matches": ["*://*.youtube.com/watch*", "*://*.youtube.com/shorts*"],
+        "matches": ["*://*.youtube.com/*"],
         "js": ["content/youtube/bootstrap-entry.js"],
         "run_at": "document_end"
       }

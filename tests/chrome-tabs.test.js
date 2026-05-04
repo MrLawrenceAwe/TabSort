@@ -16,10 +16,7 @@ test('listWindowTabs uses the last focused window when no explicit id is provide
 
   await listWindowTabs();
 
-  assert.deepEqual(queries, [
-    { lastFocusedWindow: true },
-    { lastFocusedWindow: true, hidden: true },
-  ]);
+  assert.deepEqual(queries, [{ lastFocusedWindow: true }]);
 });
 
 test('listWindowTabs keeps explicit window ids when one is provided', async () => {
@@ -32,16 +29,12 @@ test('listWindowTabs keeps explicit window ids when one is provided', async () =
 
   await listWindowTabs(9);
 
-  assert.deepEqual(queries, [
-    { windowId: 9 },
-    { windowId: 9, hidden: true },
-  ]);
+  assert.deepEqual(queries, [{ windowId: 9 }]);
 });
 
 test('listWindowTabs returns null when a Chrome query fails', async () => {
-  globalThis.chrome.tabs.query = (query, callback) => {
-    globalThis.chrome.runtime.lastError =
-      query.hidden === true ? null : new Error('visible query failed');
+  globalThis.chrome.tabs.query = (_query, callback) => {
+    globalThis.chrome.runtime.lastError = new Error('query failed');
     callback([]);
     globalThis.chrome.runtime.lastError = null;
   };
@@ -51,18 +44,14 @@ test('listWindowTabs returns null when a Chrome query fails', async () => {
   assert.equal(tabs, null);
 });
 
-test('listWindowTabs falls back to visible tabs when the hidden-tab query fails', async () => {
-  globalThis.chrome.tabs.query = (query, callback) => {
-    globalThis.chrome.runtime.lastError =
-      query.hidden === true ? new Error('hidden query failed') : null;
-    callback(
-      query.hidden === true
-        ? []
-        : [
-            { id: 1, windowId: 9, url: 'https://www.youtube.com/watch?v=1' },
-            { id: 2, windowId: 9, url: 'https://www.youtube.com/watch?v=2' },
-          ],
-    );
+test('listWindowTabs filters out malformed tab entries from Chrome results', async () => {
+  globalThis.chrome.tabs.query = (_query, callback) => {
+    callback([
+      { id: 1, windowId: 9, url: 'https://www.youtube.com/watch?v=1' },
+      { windowId: 9, url: 'https://www.youtube.com/watch?v=missing-id' },
+      null,
+      { id: 2, windowId: 9, url: 'https://www.youtube.com/watch?v=2' },
+    ]);
     globalThis.chrome.runtime.lastError = null;
   };
 
