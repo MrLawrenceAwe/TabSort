@@ -8,8 +8,8 @@ export const EMPTY_SORT_SUMMARY = Object.freeze({
     atFront: true,
     outOfOrder: false,
   }),
-  backgroundTabs: Object.freeze({
-    haveStaleRemainingTime: false,
+  inactiveTabs: Object.freeze({
+    hasStaleRemainingTime: false,
   }),
   order: Object.freeze({
     allSortableTabsReady: false,
@@ -27,9 +27,9 @@ export function cloneSortSummary(source = EMPTY_SORT_SUMMARY) {
       ...EMPTY_SORT_SUMMARY.sortReadyTabs,
       ...(source?.sortReadyTabs || {}),
     },
-    backgroundTabs: {
-      ...EMPTY_SORT_SUMMARY.backgroundTabs,
-      ...(source?.backgroundTabs || {}),
+    inactiveTabs: {
+      ...EMPTY_SORT_SUMMARY.inactiveTabs,
+      ...(source?.inactiveTabs || {}),
     },
     order: {
       ...EMPTY_SORT_SUMMARY.order,

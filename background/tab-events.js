@@ -2,8 +2,9 @@ import { isFiniteNumber, isValidWindowId } from '../shared/guards.js';
 import { logDebug, logWarn, withErrorLogging } from '../shared/log.js';
 import { getTab } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
-import { canManageWindow, trackedWindowState, removeTabRecordFromState } from './tracked-window-state.js';
-import { refreshTabPlaybackState } from './tab-playback-sync.js';
+import { refreshTabPlaybackMetrics } from './tab-playback-metrics.js';
+import { windowSessionState } from './window-session-state.js';
+import { canManageWindow, removeTabRecordFromState } from './window-session-store.js';
 import { syncWindowTabRecords } from './tab-record-sync.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 
@@ -29,7 +30,7 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
       ) {
         await syncWindowTabRecords(tab.windowId);
         if (isWatchOrShortsPage(tab.url)) {
-          await refreshTabPlaybackState(tabId);
+          await refreshTabPlaybackMetrics(tabId);
         }
       }
     }),
@@ -47,7 +48,7 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
       if (!isFiniteNumber(activeInfo.tabId)) return;
       const tab = await getTab(activeInfo.tabId);
       if (!isWatchOrShortsPage(tab?.url)) return;
-      await refreshTabPlaybackState(activeInfo.tabId);
+      await refreshTabPlaybackMetrics(activeInfo.tabId);
     }),
   );
 
@@ -62,7 +63,7 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
   chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     if (!canManageWindow(removeInfo?.windowId)) return;
     removeTabRecordFromState(tabId);
-    if (removeInfo?.isWindowClosing && removeInfo.windowId === trackedWindowState.windowId) {
+    if (removeInfo?.isWindowClosing && removeInfo.windowId === windowSessionState.windowId) {
       if (typeof onTrackedWindowClosed === 'function') {
         onTrackedWindowClosed();
       }
@@ -82,8 +83,8 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
           try {
             const tab = await getTab(details.tabId);
             if (
-              trackedWindowState.windowId != null &&
-              tab.windowId !== trackedWindowState.windowId
+              windowSessionState.windowId != null &&
+              tab.windowId !== windowSessionState.windowId
             ) {
               return;
             }
@@ -92,12 +93,12 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
             logDebug(`getTab failed for history update ${details.tabId}`, error);
             return;
           }
-        } else if (trackedWindowState.windowId != null) {
-          windowIdForUpdate = trackedWindowState.windowId;
+        } else if (windowSessionState.windowId != null) {
+          windowIdForUpdate = windowSessionState.windowId;
         }
 
         await syncWindowTabRecords(windowIdForUpdate);
-        await refreshTabPlaybackState(details.tabId);
+        await refreshTabPlaybackMetrics(details.tabId);
       }),
       { url: [{ hostContains: 'youtube.com' }] },
     );

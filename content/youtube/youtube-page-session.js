@@ -37,7 +37,7 @@ export function shouldSendPageRuntimeReadySignal(currentUrl, lastReadyUrl, { for
   return Boolean(currentUrl) && (force || currentUrl !== lastReadyUrl);
 }
 
-export function createYoutubePageRuntime({
+export function createYoutubePageSession({
   config = pageSessionConfig,
   environment = globalThis,
 } = {}) {
@@ -267,12 +267,12 @@ export function createYoutubePageRuntime({
   };
 }
 
-const defaultYoutubePageRuntime = createYoutubePageRuntime();
+const defaultYoutubePageSession = createYoutubePageSession();
 
 export function resetRuntimeStateForTests() {
-  defaultYoutubePageRuntime.reset();
+  defaultYoutubePageSession.reset();
 }
 
-export function bootstrapYoutubePageRuntime() {
-  defaultYoutubePageRuntime.bootstrap();
+export function bootstrapYoutubePageSession() {
+  defaultYoutubePageSession.bootstrap();
 }

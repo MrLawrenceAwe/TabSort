@@ -1,11 +1,11 @@
-import { popupUiState } from './popup-ui-state.js';
-import { getPopupDocument, getPopupElement } from './popup-dom.js';
+import { getPopupDocument, getPopupElement } from './dom.js';
+import { popupState } from './state.js';
 
 function updateStatus(statusElement) {
   if (!statusElement) return;
-  const trackedTabCount = popupUiState.sortSummary.counts.tracked;
-  const sortReadyTabCount = popupUiState.sortSummary.counts.sortReady;
-  if (!popupUiState.currentOrderMatchesTarget) {
+  const trackedTabCount = popupState.sortSummary.counts.tracked;
+  const sortReadyTabCount = popupState.sortSummary.counts.sortReady;
+  if (!popupState.currentOrderMatchesTarget) {
     statusElement.classList.toggle('hide', trackedTabCount <= 1);
     statusElement.textContent = `${sortReadyTabCount}/${trackedTabCount} ready for sort.`;
     return;
@@ -15,7 +15,7 @@ function updateStatus(statusElement) {
 
 function updateSortedBadge(sortedBadgeElement) {
   if (!sortedBadgeElement) return;
-  sortedBadgeElement.classList.toggle('hide', !popupUiState.currentOrderMatchesTarget);
+  sortedBadgeElement.classList.toggle('hide', !popupState.currentOrderMatchesTarget);
 }
 
 export function getEmptyStateMessage(tabCount) {
@@ -30,7 +30,7 @@ export function getEmptyStateMessage(tabCount) {
 
 function updateEmptyState(emptyStateElement) {
   if (!emptyStateElement) return;
-  const message = getEmptyStateMessage(popupUiState.sortSummary.counts.tracked);
+  const message = getEmptyStateMessage(popupState.sortSummary.counts.tracked);
   emptyStateElement.textContent = message;
   emptyStateElement.classList.toggle('hide', !message);
 }
@@ -43,7 +43,7 @@ function updateSortButton(sortButton, shouldShowSort) {
   if (!sortButton) return;
   sortButton.classList.toggle('hide', !shouldShowSort);
   if (shouldShowSort) {
-    const { sortReady, tracked } = popupUiState.sortSummary.counts;
+    const { sortReady, tracked } = popupState.sortSummary.counts;
     sortButton.classList.toggle('all-tabs-ready', sortReady === tracked);
     sortButton.textContent = getSortButtonText(sortReady, tracked);
     return;
@@ -73,20 +73,20 @@ function setOptionToggleVisibility(visible) {
   });
 }
 
-export function renderPopupChrome() {
+export function renderPopupShell() {
   const emptyStateElement = getPopupElement('emptyStateElement');
   const statusElement = getPopupElement('statusElement');
   const sortButton = getPopupElement('sortButton');
   const sortedBadgeElement = getPopupElement('sortedBadgeElement');
   const table = getPopupElement('table');
-  const { counts, sortReadyTabs } = popupUiState.sortSummary;
+  const { counts, sortReadyTabs } = popupState.sortSummary;
 
   const sortReadySubsetExists = counts.sortReady >= 2 && counts.sortReady < counts.tracked;
   const sortReadySubsetNeedsSorting =
     sortReadySubsetExists && (!sortReadyTabs.contiguous || !sortReadyTabs.atFront);
   const shouldShowSort =
     counts.sortReady >= 2 &&
-    !popupUiState.currentOrderMatchesTarget &&
+    !popupState.currentOrderMatchesTarget &&
     (sortReadyTabs.outOfOrder || sortReadySubsetNeedsSorting);
 
   setOptionToggleVisibility(shouldShowSort);
@@ -96,7 +96,7 @@ export function renderPopupChrome() {
   updateSortButton(sortButton, shouldShowSort);
   updateEmptyState(emptyStateElement);
 
-  if (popupUiState.currentOrderMatchesTarget && table) {
+  if (popupState.currentOrderMatchesTarget && table) {
     clearReadyRows(table);
   }
 }

@@ -5,13 +5,13 @@
   const MAX_BOOTSTRAP_ATTEMPTS = 2;
   const RETRY_DELAY_MS = 100;
 
-  async function bootstrapYoutubePageRuntimeWithRetry() {
+  async function bootstrapYoutubePageSessionWithRetry() {
     let lastError = null;
     for (let attempt = 1; attempt <= MAX_BOOTSTRAP_ATTEMPTS; attempt += 1) {
       try {
-        const module = await import(runtime.getURL('content/youtube/youtube-page-runtime.js'));
-        if (typeof module?.bootstrapYoutubePageRuntime === 'function') {
-          module.bootstrapYoutubePageRuntime();
+        const module = await import(runtime.getURL('content/youtube/youtube-page-session.js'));
+        if (typeof module?.bootstrapYoutubePageSession === 'function') {
+          module.bootstrapYoutubePageSession();
         }
         return;
       } catch (error) {
@@ -27,5 +27,5 @@
     }
   }
 
-  bootstrapYoutubePageRuntimeWithRetry();
+  bootstrapYoutubePageSessionWithRetry();
 })();
