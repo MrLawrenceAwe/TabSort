@@ -7,6 +7,7 @@ import {
   handlePageRuntimeReady,
   handlePageVideoDetails,
 } from '../../background/page-message-handlers.js';
+import { refreshTabPlaybackMetrics } from '../../background/tab-playback-sync.js';
 import {
   ensureChromeApi,
   createTabRecordFixture,
@@ -275,3 +276,75 @@ test('handlePageVideoDetails preserves ready state when only watch URL parameter
   assert.equal(record.videoDetails.remainingTime, 120);
   assert.equal(record.isRemainingTimeStale, false);
 });
+
+test(
+  'same-video parameter navigation keeps ready remaining time through runtime refresh',
+  { concurrency: false },
+  async () => {
+    resetTrackedWindowState(1);
+    windowSessionState.tabRecordsById = {
+      7: createTabRecordFixture(7, {
+        url: 'https://www.youtube.com/watch?v=new',
+        pageRuntimeReady: true,
+        pageMediaReady: true,
+        videoDetails: { title: 'Video', remainingTime: 120, lengthSeconds: 300 },
+        isRemainingTimeStale: false,
+      }),
+    };
+
+    const sender = {
+      tab: {
+        id: 7,
+        windowId: 1,
+        url: 'https://www.youtube.com/watch?v=new&list=abc123&index=10',
+        index: 0,
+        pinned: false,
+        active: false,
+        hidden: false,
+      },
+    };
+
+    await handlePageRuntimeReady({}, sender);
+    await handlePageVideoDetails(
+      {
+        details: {
+          url: sender.tab.url,
+          title: 'Video',
+          lengthSeconds: 300,
+          isLive: false,
+        },
+      },
+      sender,
+    );
+
+    globalThis.chrome.tabs.get = (_tabId, callback) => {
+      callback({
+        id: 7,
+        windowId: 1,
+        url: sender.tab.url,
+        active: false,
+        hidden: false,
+      });
+    };
+    globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
+      callback({
+        title: 'Video',
+        url: sender.tab.url,
+        pageMediaReady: false,
+        lengthSeconds: 300,
+        duration: 300,
+        currentTime: 180,
+        playbackRate: 1,
+        isLive: false,
+      });
+    };
+
+    await refreshTabPlaybackMetrics(7);
+
+    const record = windowSessionState.tabRecordsById[7];
+    assert.equal(record.url, sender.tab.url);
+    assert.equal(record.pageMediaReady, true);
+    assert.equal(record.videoDetails.remainingTime, 120);
+    assert.equal(record.isRemainingTimeStale, false);
+  },
+);
