@@ -1,4 +1,4 @@
-export function toBooleanFlag(value) {
+function toBooleanFlag(value) {
   if (value === true) return true;
   if (value === false || value == null) return false;
   if (typeof value === 'string') {

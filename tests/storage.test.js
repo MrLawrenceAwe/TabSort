@@ -1,8 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { getStorageArea, loadSortOptions, saveSortOptions } from '../shared/storage.js';
-import { DEFAULT_SORT_OPTIONS } from '../shared/sort-options.js';
+import {
+  DEFAULT_SORT_OPTIONS,
+  getStorageArea,
+  loadSortOptions,
+  saveSortOptions,
+} from '../shared/storage.js';
 
 function withMissingChrome(fn) {
   const hadChrome = Object.prototype.hasOwnProperty.call(globalThis, 'chrome');

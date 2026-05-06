@@ -49,7 +49,7 @@ async function syncInitialWindowState() {
   }
 }
 
-export function ensureRefreshAlarm() {
+function ensureRefreshAlarm() {
   try {
     chrome.alarms.get(REFRESH_ALARM_NAME, (alarm) => {
       if (chrome.runtime.lastError) {

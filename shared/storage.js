@@ -1,4 +1,6 @@
-import { DEFAULT_SORT_OPTIONS } from './sort-options.js';
+export const DEFAULT_SORT_OPTIONS = Object.freeze({
+  groupNonYoutubeTabsByDomain: false,
+});
 
 const getChromeApi = () => globalThis.chrome ?? null;
 const getRuntimeLastError = () => getChromeApi()?.runtime?.lastError ?? null;

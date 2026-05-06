@@ -13,7 +13,7 @@ export const USER_ACTIONS = {
   NONE: 'none',
 };
 
-export const USER_ACTION_LABELS = {
+const USER_ACTION_LABELS = {
   [USER_ACTIONS.RELOAD_TAB]: 'Reload tab',
   [USER_ACTIONS.FOCUS_TAB]: 'Focus tab',
   [USER_ACTIONS.WAIT_FOR_LOAD]: 'Wait for tab to load',

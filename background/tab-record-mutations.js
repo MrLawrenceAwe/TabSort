@@ -4,7 +4,7 @@ import { createTabRecord } from './tab-record.js';
 import { recomputeSortState } from './sort-state.js';
 import { getCurrentTimeMs, removeTabRecordFromState } from './window-state.js';
 
-export function clearTabRemainingTime(record) {
+function clearTabRemainingTime(record) {
   if (record?.videoDetails && record.videoDetails.remainingTime != null) {
     record.videoDetails.remainingTime = null;
   }
@@ -44,7 +44,7 @@ export function markTabRecordReloading(record) {
   resetTabRecordState(record);
 }
 
-export function markTabRecordVideoChanged(record) {
+function markTabRecordVideoChanged(record) {
   resetTabRecordState(record, {
     clearVideoDetails: true,
     resetLiveStream: true,

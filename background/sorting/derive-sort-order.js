@@ -9,7 +9,7 @@ export function areTabIdListsEqual(a, b) {
   return true;
 }
 
-export function deriveTabIdOrder(records) {
+function deriveTabIdOrder(records) {
   const resolveIndex = (record) =>
     (isFiniteNumber(record?.index) ? record.index : Number.MAX_SAFE_INTEGER);
   return records
@@ -75,5 +75,3 @@ export function deriveSortOrder(records) {
     currentOrderMatchesTarget: allSortableTabsReady && currentSortableOrderMatchesTarget,
   };
 }
-
-export const deriveRemainingTimePlan = deriveSortOrder;
