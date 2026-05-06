@@ -1,6 +1,6 @@
 import { TAB_STATES } from '../shared/tab-states.js';
 import { recomputeSortState } from './sort-state.js';
-import { getCurrentTimeMs, removeTabRecordFromState } from './window-session-store.js';
+import { getCurrentTimeMs, removeTabRecordFromState } from './window-session-actions.js';
 
 export function clearTabRemainingTime(record) {
   if (record?.videoDetails && record.videoDetails.remainingTime != null) {
@@ -8,7 +8,7 @@ export function clearTabRemainingTime(record) {
   }
 }
 
-export function markTabRecordStale(
+export function resetTabRecordState(
   record,
   {
     clearRemainingTime = true,
@@ -39,11 +39,11 @@ export function markTabRecordReloading(record) {
   record.status = TAB_STATES.LOADING;
   record.loadingStartedAt = timestamp;
   record.unsuspendedTimestamp = timestamp;
-  markTabRecordStale(record);
+  resetTabRecordState(record);
 }
 
 export function markTabRecordVideoChanged(record) {
-  markTabRecordStale(record, {
+  resetTabRecordState(record, {
     clearVideoDetails: true,
     resetLiveStream: true,
   });

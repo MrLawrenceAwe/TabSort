@@ -1,7 +1,7 @@
 import { POPUP_LOG_LEVELS } from '../shared/log-levels.js';
 import { toErrorMessage } from '../shared/errors.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
-import { loadSortOptions, persistSortOptions } from '../shared/storage.js';
+import { loadSortOptions, saveSortOptions } from '../shared/storage.js';
 import { createRuntimeClient } from './runtime-client.js';
 import { createSnapshotClient } from './snapshot-client.js';
 import {
@@ -20,7 +20,7 @@ const SNAPSHOT_RETRY_DELAY_MS = 150;
 const SNAPSHOT_MAX_ATTEMPTS = 2;
 const SNAPSHOT_POLL_DELAY_MS = 1000;
 
-let isControllerActive = false;
+let isPopupAppActive = false;
 
 const runtimeClient = createRuntimeClient({
   getActiveWindowId: () => popupState.activeWindowId,
@@ -37,7 +37,7 @@ const snapshotClient = createSnapshotClient({
 });
 const snapshotPoller = createSnapshotPoller({
   delayMs: SNAPSHOT_POLL_DELAY_MS,
-  isControllerActive: () => isControllerActive,
+  isAppActive: () => isPopupAppActive,
   loadSnapshot: snapshotClient.loadSnapshot,
   logPopupError: runtimeClient.logPopupError,
   onSnapshot: (snapshot) => {
@@ -64,13 +64,13 @@ async function initializeSortOptions() {
   if (groupNonYoutubeToggle) {
     groupNonYoutubeToggle.checked = Boolean(options.groupNonYoutubeTabsByDomain);
     groupNonYoutubeToggle.addEventListener('change', () => {
-      persistSortOptions({ groupNonYoutubeTabsByDomain: groupNonYoutubeToggle.checked });
+      saveSortOptions({ groupNonYoutubeTabsByDomain: groupNonYoutubeToggle.checked });
     });
   }
 }
 
-export async function initializePopupController() {
-  isControllerActive = true;
+export async function initializePopupApp() {
+  isPopupAppActive = true;
   initializePopupDom();
   renderPopupShell();
   setErrorMessage('');
@@ -110,13 +110,13 @@ export async function initializePopupController() {
   }
 
   window.addEventListener('unload', () => {
-    isControllerActive = false;
+    isPopupAppActive = false;
     snapshotPoller.clear();
     chrome.runtime.onMessage.removeListener(messageListener);
   });
 }
 
-function canBootstrapController() {
+function canBootstrapPopupApp() {
   return (
     typeof window !== 'undefined' &&
     typeof document !== 'undefined' &&
@@ -124,8 +124,8 @@ function canBootstrapController() {
   );
 }
 
-if (canBootstrapController()) {
-  initializePopupController().catch((error) => {
+if (canBootstrapPopupApp()) {
+  initializePopupApp().catch((error) => {
     runtimeClient.logPopupMessage(
       POPUP_LOG_LEVELS.ERROR,
       `Failed to initialize popup: ${toErrorMessage(error)}`,

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { getStorageArea, loadSortOptions, persistSortOptions } from '../shared/storage.js';
+import { getStorageArea, loadSortOptions, saveSortOptions } from '../shared/storage.js';
 import { DEFAULT_SORT_OPTIONS } from '../shared/sort-options.js';
 
 function withMissingChrome(fn) {
@@ -34,8 +34,8 @@ test('loadSortOptions falls back to defaults when chrome is unavailable', async 
   });
 });
 
-test('persistSortOptions resolves when chrome is unavailable', async () => {
+test('saveSortOptions resolves when chrome is unavailable', async () => {
   await withMissingChrome(async () => {
-    await assert.doesNotReject(() => persistSortOptions({ groupNonYoutubeTabsByDomain: true }));
+    await assert.doesNotReject(() => saveSortOptions({ groupNonYoutubeTabsByDomain: true }));
   });
 });

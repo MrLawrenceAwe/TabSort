@@ -34,7 +34,7 @@ export function loadSortOptions() {
   });
 }
 
-export function persistSortOptions(update) {
+export function saveSortOptions(update) {
   const storage = getStorageArea();
   return new Promise((resolve) => {
     if (!storage || !update || typeof update !== 'object') {

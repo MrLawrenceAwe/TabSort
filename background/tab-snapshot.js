@@ -1,8 +1,8 @@
 import { cloneSortSummary, createEmptySortSummary } from '../shared/sort-summary.js';
 import { logDebug } from '../shared/log.js';
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
-import { windowSessionState } from './window-session-state.js';
-import { setSnapshotSignature } from './window-session-store.js';
+import { windowSessionState } from './window-session.js';
+import { setSnapshotSignature } from './window-session-actions.js';
 
 function cloneTabRecord(record) {
   if (!record || typeof record !== 'object') return record;

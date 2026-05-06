@@ -1,6 +1,6 @@
 import { createEmptySortSummary } from '../shared/sort-summary.js';
 
-export function createWindowSessionStateShape() {
+export function createWindowSessionState() {
   return {
     tabRecordsById: {},
     targetSortableTabIds: [],
@@ -13,4 +13,4 @@ export function createWindowSessionStateShape() {
   };
 }
 
-export const windowSessionState = createWindowSessionStateShape();
+export const windowSessionState = createWindowSessionState();

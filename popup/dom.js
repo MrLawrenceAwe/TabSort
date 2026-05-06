@@ -1,14 +1,18 @@
-const popupElements = {
-  errorElement: null,
-  emptyStateElement: null,
-  statusElement: null,
-  sortButton: null,
-  sortedBadgeElement: null,
-  table: null,
-  actionRequiredColumn: null,
-  tabStatusColumn: null,
-  initialized: false,
-};
+function createEmptyPopupElements() {
+  return {
+    errorElement: null,
+    emptyStateElement: null,
+    statusElement: null,
+    sortButton: null,
+    sortedBadgeElement: null,
+    table: null,
+    actionRequiredColumn: null,
+    tabStatusColumn: null,
+    initialized: false,
+  };
+}
+
+const popupElements = createEmptyPopupElements();
 
 let rootPopupDocument = null;
 
@@ -17,15 +21,7 @@ function getRootDocument(nextDocument) {
 }
 
 export function resetPopupDom() {
-  popupElements.errorElement = null;
-  popupElements.emptyStateElement = null;
-  popupElements.statusElement = null;
-  popupElements.sortButton = null;
-  popupElements.sortedBadgeElement = null;
-  popupElements.table = null;
-  popupElements.actionRequiredColumn = null;
-  popupElements.tabStatusColumn = null;
-  popupElements.initialized = false;
+  Object.assign(popupElements, createEmptyPopupElements());
   rootPopupDocument = null;
 }
 
