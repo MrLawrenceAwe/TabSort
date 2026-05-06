@@ -1,7 +1,6 @@
 import { isFiniteNumber } from '../shared/guards.js';
+import { MEDIA_DURATION_SYNC_TOLERANCE_SECONDS } from '../shared/media-policy.js';
 import { getYoutubeVideoIdentity } from './youtube-url-utils.js';
-
-const MEDIA_DURATION_SYNC_TOLERANCE_SECONDS = 2;
 
 function areEquivalentVideoUrls(leftUrl, rightUrl) {
   const leftIdentity = getYoutubeVideoIdentity(leftUrl);

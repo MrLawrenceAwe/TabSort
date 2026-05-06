@@ -65,7 +65,10 @@ export function createYoutubePageController({
     if (!config.isFiniteNumber(details.lengthSeconds)) {
       return true;
     }
-    return Math.abs(video.duration - details.lengthSeconds) <= 2;
+    return (
+      Math.abs(video.duration - details.lengthSeconds) <=
+      config.mediaDurationSyncToleranceSeconds
+    );
   }
 
   function dispatchPageReadySignal({ force = false } = {}) {
