@@ -13,7 +13,7 @@ export function createMediaReadinessTracker({
 }) {
   function isCurrentPageMediaReady() {
     const currentUrl = getCurrentPageUrl();
-    return Boolean(currentUrl) && currentUrl === state.mediaReadyPageUrl;
+    return Boolean(currentUrl) && currentUrl === state.mediaReadyUrl;
   }
 
   function getVideoFingerprint(video) {
@@ -30,8 +30,8 @@ export function createMediaReadinessTracker({
 
   function hasFreshMediaEvidence(video, observedFreshMediaEvent) {
     if (observedFreshMediaEvent) return true;
-    if (!state.lastMediaReadyVideoElement) return true;
-    if (video !== state.lastMediaReadyVideoElement) return true;
+    if (!state.lastReadyVideo) return true;
+    if (video !== state.lastReadyVideo) return true;
     const fingerprint = getVideoFingerprint(video);
     return Boolean(fingerprint) && fingerprint !== state.lastMediaReadyFingerprint;
   }
@@ -62,8 +62,8 @@ export function createMediaReadinessTracker({
       }
     };
     const send = () => {
-      state.mediaReadyPageUrl = getCurrentPageUrl();
-      state.lastMediaReadyVideoElement = video;
+      state.mediaReadyUrl = getCurrentPageUrl();
+      state.lastReadyVideo = video;
       state.lastMediaReadyFingerprint = getVideoFingerprint(video);
       sendExtensionMessage(
         createRuntimeMessage(RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY),

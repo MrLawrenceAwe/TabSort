@@ -1,4 +1,4 @@
-import { getHostnameKey, isWatchOrShortsPage, isYoutubeDomain } from './youtube-url-utils.js';
+import { getHostnameKey, isWatchOrShortsPage, isYoutubeDomain } from '../youtube-url-utils.js';
 
 export function buildYoutubeTabOrder(unpinnedTabs, orderedTrackedTabIds) {
   const youtubeTabs = unpinnedTabs

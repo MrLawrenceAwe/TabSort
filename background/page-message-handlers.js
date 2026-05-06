@@ -3,8 +3,8 @@ import { ensureTabRecord } from './tab-record.js';
 import { markTabRecordVideoChanged, removeTabRecord } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
 import { refreshTabPlaybackMetrics } from './tab-playback-metrics.js';
-import { windowSessionState } from './window-session-state.js';
-import { setWindowId } from './window-session-store.js';
+import { windowSessionState } from './window-session.js';
+import { setWindowId } from './window-session-actions.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function isSenderInTrackedWindow(windowId) {

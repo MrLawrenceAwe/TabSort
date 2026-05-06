@@ -7,13 +7,13 @@ import { createMediaReadinessTracker } from './media-readiness.js';
 import { createTitleObserver } from './title-observer.js';
 import { handleCollectVideoMetricsMessage } from './video-metrics.js';
 
-const pageSessionConfig = {
+const pageRuntimeConfig = {
   mediaReadyStateThreshold: MEDIA_READY_STATE_THRESHOLD,
   isFiniteNumber,
   inferIsLiveNow,
 };
 
-function createPageSessionState() {
+function createPageRuntimeState() {
   return {
     initialized: false,
     videoMountObserver: null,
@@ -22,13 +22,13 @@ function createPageSessionState() {
     observedTitleElement: null,
     lastKnownTitleText: null,
     observedPageUrl: null,
-    lastRuntimeReadyPageUrl: null,
-    mediaReadyPageUrl: null,
-    lastMediaReadyVideoElement: null,
+    lastReadyUrl: null,
+    mediaReadyUrl: null,
+    lastReadyVideo: null,
     lastMediaReadyFingerprint: null,
     mediaReadyListenerVideo: null,
     mediaReadyListenerCleanup: null,
-    listenerCleanupCallbacks: [],
+    cleanupFns: [],
     runtimeMessageListener: null,
   };
 }
@@ -37,11 +37,11 @@ export function shouldSendPageRuntimeReadySignal(currentUrl, lastReadyUrl, { for
   return Boolean(currentUrl) && (force || currentUrl !== lastReadyUrl);
 }
 
-export function createYoutubePageSession({
-  config = pageSessionConfig,
+export function createYoutubePageRuntime({
+  config = pageRuntimeConfig,
   environment = globalThis,
 } = {}) {
-  const state = createPageSessionState();
+  const state = createPageRuntimeState();
 
   const getDocument = () => environment.document ?? globalThis.document;
   const getWindow = () => environment.window ?? globalThis.window;
@@ -83,7 +83,7 @@ export function createYoutubePageSession({
 
   function registerCleanup(cleanup) {
     if (typeof cleanup !== 'function') return;
-    state.listenerCleanupCallbacks.push(cleanup);
+    state.cleanupFns.push(cleanup);
   }
 
   function addWindowEventListener(target, type, listener, options) {
@@ -132,11 +132,11 @@ export function createYoutubePageSession({
   function sendPageRuntimeReady({ force = false } = {}) {
     const currentUrl = getCurrentPageUrl();
     if (
-      !shouldSendPageRuntimeReadySignal(currentUrl, state.lastRuntimeReadyPageUrl, { force })
+      !shouldSendPageRuntimeReadySignal(currentUrl, state.lastReadyUrl, { force })
     ) {
       return;
     }
-    state.lastRuntimeReadyPageUrl = currentUrl;
+    state.lastReadyUrl = currentUrl;
     sendExtensionMessage(
       createRuntimeMessage(RUNTIME_MESSAGE_TYPES.PAGE_RUNTIME_READY),
       'page runtime ready',
@@ -166,8 +166,8 @@ export function createYoutubePageSession({
   }
 
   function disposeListeners() {
-    while (state.listenerCleanupCallbacks.length) {
-      const cleanup = state.listenerCleanupCallbacks.pop();
+    while (state.cleanupFns.length) {
+      const cleanup = state.cleanupFns.pop();
       try {
         cleanup?.();
       } catch (error) {
@@ -177,20 +177,20 @@ export function createYoutubePageSession({
     state.runtimeMessageListener = null;
   }
 
-  function syncPageSession() {
+  function syncPageRuntime() {
     const currentUrl = getCurrentPageUrl();
     if (currentUrl && currentUrl !== state.observedPageUrl) {
       disposeObservers();
       state.observedPageUrl = currentUrl;
-      state.lastRuntimeReadyPageUrl = null;
-      state.mediaReadyPageUrl = null;
+      state.lastReadyUrl = null;
+      state.mediaReadyUrl = null;
     } else if (!state.observedPageUrl && currentUrl) {
       state.observedPageUrl = currentUrl;
     }
   }
 
   function refreshPageState({ includeReadySignal = false, forceReadySignal = false } = {}) {
-    syncPageSession();
+    syncPageRuntime();
     if (includeReadySignal) {
       sendPageRuntimeReady({ force: forceReadySignal });
     }
@@ -203,9 +203,9 @@ export function createYoutubePageSession({
     disposeObservers();
     disposeListeners();
     state.observedPageUrl = null;
-    state.lastRuntimeReadyPageUrl = null;
-    state.mediaReadyPageUrl = null;
-    state.lastMediaReadyVideoElement = null;
+    state.lastReadyUrl = null;
+    state.mediaReadyUrl = null;
+    state.lastReadyVideo = null;
     state.lastMediaReadyFingerprint = null;
     state.initialized = false;
   }
@@ -253,9 +253,9 @@ export function createYoutubePageSession({
 
     addWindowEventListener(runtimeWindow, 'pagehide', () => {
       disposeObservers();
-      state.lastRuntimeReadyPageUrl = null;
-      state.mediaReadyPageUrl = null;
-      state.lastMediaReadyVideoElement = null;
+      state.lastReadyUrl = null;
+      state.mediaReadyUrl = null;
+      state.lastReadyVideo = null;
       state.lastMediaReadyFingerprint = null;
     });
   }
@@ -267,12 +267,12 @@ export function createYoutubePageSession({
   };
 }
 
-const defaultYoutubePageSession = createYoutubePageSession();
+const defaultYoutubePageRuntime = createYoutubePageRuntime();
 
 export function resetRuntimeStateForTests() {
-  defaultYoutubePageSession.reset();
+  defaultYoutubePageRuntime.reset();
 }
 
-export function bootstrapYoutubePageSession() {
-  defaultYoutubePageSession.bootstrap();
+export function bootstrapYoutubePageRuntime() {
+  defaultYoutubePageRuntime.bootstrap();
 }

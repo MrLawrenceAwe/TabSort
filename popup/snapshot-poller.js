@@ -22,13 +22,13 @@ export function shouldPollSnapshot(snapshot, { now = Date.now } = {}) {
   return Object.values(tabRecordsById).some((record) => shouldPollRecord(record, { now }));
 }
 
-export function shouldRetrySnapshotPoll(snapshot, controllerActive) {
-  return Boolean(controllerActive) && snapshot == null;
+export function shouldRetrySnapshotPoll(snapshot, appActive) {
+  return Boolean(appActive) && snapshot == null;
 }
 
 export function createSnapshotPoller({
   delayMs,
-  isControllerActive,
+  isAppActive,
   loadSnapshot,
   logPopupError,
   onSnapshot,
@@ -58,8 +58,8 @@ export function createSnapshotPoller({
       } finally {
         pollInFlight = false;
         if (
-          shouldRetrySnapshotPoll(snapshot, isControllerActive()) ||
-          (isControllerActive() && shouldPollSnapshot(snapshot))
+          shouldRetrySnapshotPoll(snapshot, isAppActive()) ||
+          (isAppActive() && shouldPollSnapshot(snapshot))
         ) {
           schedule();
         }
@@ -69,7 +69,7 @@ export function createSnapshotPoller({
 
   function scheduleIfNeeded(snapshot) {
     clear();
-    if (isControllerActive() && shouldPollSnapshot(snapshot)) {
+    if (isAppActive() && shouldPollSnapshot(snapshot)) {
       schedule();
     }
   }

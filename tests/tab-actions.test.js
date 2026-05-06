@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES } from '../shared/tab-states.js';
-import { windowSessionState } from '../background/window-session-state.js';
+import { windowSessionState } from '../background/window-session.js';
 import { reloadTab } from '../background/tab-command-handlers.js';
 import {
   ensureChromeApi,

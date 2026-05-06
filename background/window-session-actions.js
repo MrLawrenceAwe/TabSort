@@ -1,11 +1,11 @@
 import { cloneSortSummary, createEmptySortSummary } from '../shared/sort-summary.js';
 import { isValidWindowId } from '../shared/guards.js';
-import { createWindowSessionStateShape, windowSessionState } from './window-session-state.js';
+import { createWindowSessionState, windowSessionState } from './window-session.js';
 
 export const getCurrentTimeMs = () => Date.now();
 
 export function resetWindowSessionState({ windowId = null } = {}) {
-  const nextState = createWindowSessionStateShape();
+  const nextState = createWindowSessionState();
   nextState.windowId = isValidWindowId(windowId) ? windowId : null;
   Object.assign(windowSessionState, nextState);
   return windowSessionState;

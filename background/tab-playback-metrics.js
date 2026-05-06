@@ -3,10 +3,10 @@ import { isFiniteNumber } from '../shared/guards.js';
 import { logDebug } from '../shared/log.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { getTab, sendMessageToTab } from './chrome-tabs.js';
-import { markTabRecordStale } from './tab-record-mutations.js';
+import { resetTabRecordState } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { windowSessionState } from './window-session-state.js';
-import { setWindowId } from './window-session-store.js';
+import { windowSessionState } from './window-session.js';
+import { setWindowId } from './window-session-actions.js';
 import { getYoutubeVideoIdentity, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 const MEDIA_DURATION_SYNC_TOLERANCE_SECONDS = 2;
@@ -152,7 +152,7 @@ export async function refreshTabPlaybackMetrics(tabId) {
     const { record, tab } = currentContext;
 
     if (!result || result.ok !== true) {
-      markTabRecordStale(record);
+      resetTabRecordState(record);
       recomputeSortState();
       return;
     }

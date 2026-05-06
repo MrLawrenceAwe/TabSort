@@ -3,15 +3,11 @@ import { logDebug } from '../shared/log.js';
 import { buildTabSnapshot } from './tab-snapshot.js';
 import { markTabRecordReloading } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
+import { reorderWindowTabs } from './sorting/apply-window-tab-order.js';
 import { refreshTabPlaybackMetrics } from './tab-playback-metrics.js';
-import { windowSessionState } from './window-session-state.js';
-import { listTabIds, setWindowId } from './window-session-store.js';
+import { windowSessionState } from './window-session.js';
+import { listTabIds, setWindowId } from './window-session-actions.js';
 import { syncWindowTabRecords } from './tab-record-sync.js';
-import { reorderWindowTabs } from './tab-reorder.js';
-
-export function getTrackedWindowOptions(windowId) {
-  return isValidWindowId(windowId) ? { force: true } : undefined;
-}
 
 export async function activateTab(message) {
   const tabId = message.tabId;
@@ -48,11 +44,17 @@ export async function reloadTab(message) {
 }
 
 export async function syncWindowTabs(message) {
-  await syncWindowTabRecords(message.windowId, getTrackedWindowOptions(message.windowId));
+  await syncWindowTabRecords(
+    message.windowId,
+    isValidWindowId(message.windowId) ? { force: true } : undefined,
+  );
 }
 
 export async function getWindowSnapshot(message) {
-  await syncWindowTabRecords(message.windowId, getTrackedWindowOptions(message.windowId));
+  await syncWindowTabRecords(
+    message.windowId,
+    isValidWindowId(message.windowId) ? { force: true } : undefined,
+  );
   const ids = listTabIds();
   await Promise.all(ids.map(refreshTabPlaybackMetrics));
   return buildTabSnapshot();
@@ -66,5 +68,8 @@ export async function applyTabSortOrder(message) {
     setWindowId(targetWindowId, { force: true });
   }
   await reorderWindowTabs(targetWindowId);
-  await syncWindowTabRecords(targetWindowId, getTrackedWindowOptions(targetWindowId));
+  await syncWindowTabRecords(
+    targetWindowId,
+    isValidWindowId(targetWindowId) ? { force: true } : undefined,
+  );
 }
