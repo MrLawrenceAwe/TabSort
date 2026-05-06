@@ -3,14 +3,14 @@ import { isValidWindowId } from '../shared/guards.js';
 import { getTabState, listWindowTabs } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
 import { createTabRecord } from './tab-record.js';
-import { windowSessionState } from './window-session.js';
+import { windowSessionState } from './window-state.js';
 import {
   beginSync,
   isSyncCurrent,
   getCurrentTimeMs,
   replaceTabRecords,
   setWindowId,
-} from './window-session-store.js';
+} from './window-state.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function syncLoadingTimestamp(record, previousStatus, nextStatus) {

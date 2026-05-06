@@ -1,11 +1,10 @@
 import { broadcastSnapshotUpdate } from './tab-snapshot.js';
-import { deriveRemainingTimePlan } from './sorting/derive-remaining-time-plan.js';
+import { deriveSortOrder } from './sorting/derive-sort-order.js';
 import { deriveSortSummary } from './sorting/derive-sort-summary.js';
-import { windowSessionState } from './window-session.js';
-import { applySortState } from './window-session-store.js';
+import { applySortState, trackedWindowState } from './window-state.js';
 
 function deriveSortState(records) {
-  const sortPlan = deriveRemainingTimePlan(records);
+  const sortPlan = deriveSortOrder(records);
   const sortSummary = deriveSortSummary({
     trackedRecords: records,
     sortableRecords: sortPlan.sortableRecords,
@@ -36,7 +35,7 @@ function applyDerivedSortState({
 }
 
 export function recomputeSortState() {
-  const records = Object.values(windowSessionState.tabRecordsById);
+  const records = Object.values(trackedWindowState.tabRecordsById);
   const derivedState = deriveSortState(records);
   applyDerivedSortState(derivedState);
 }

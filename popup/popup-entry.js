@@ -20,7 +20,7 @@ const SNAPSHOT_RETRY_DELAY_MS = 150;
 const SNAPSHOT_MAX_ATTEMPTS = 2;
 const SNAPSHOT_POLL_DELAY_MS = 1000;
 
-let isPopupAppActive = false;
+let isPopupActive = false;
 
 const runtimeClient = createRuntimeClient({
   getActiveWindowId: () => popupState.activeWindowId,
@@ -37,7 +37,7 @@ const snapshotClient = createSnapshotClient({
 });
 const snapshotPoller = createSnapshotPoller({
   delayMs: SNAPSHOT_POLL_DELAY_MS,
-  isAppActive: () => isPopupAppActive,
+  isAppActive: () => isPopupActive,
   loadSnapshot: snapshotClient.loadSnapshot,
   logPopupError: runtimeClient.logPopupError,
   onSnapshot: (snapshot) => {
@@ -59,35 +59,27 @@ async function runWithPopupErrorLogging(task, context) {
 async function initializeSortOptions() {
   startThemeSync();
   const options = await loadSortOptions();
-  const groupNonYoutubeToggle = document.getElementById('groupNonYoutubeTabsToggle');
+  const sortOtherTabsToggle = document.getElementById('groupNonYoutubeTabsToggle');
 
-  if (groupNonYoutubeToggle) {
-    groupNonYoutubeToggle.checked = Boolean(options.groupNonYoutubeTabsByDomain);
-    groupNonYoutubeToggle.addEventListener('change', () => {
-      saveSortOptions({ groupNonYoutubeTabsByDomain: groupNonYoutubeToggle.checked });
+  if (sortOtherTabsToggle) {
+    sortOtherTabsToggle.checked = Boolean(options.groupNonYoutubeTabsByDomain);
+    sortOtherTabsToggle.addEventListener('change', () => {
+      saveSortOptions({ groupNonYoutubeTabsByDomain: sortOtherTabsToggle.checked });
     });
   }
 }
 
-export async function initializePopupApp() {
-  isPopupAppActive = true;
-  initializePopupDom();
-  renderPopupShell();
-  setErrorMessage('');
+async function loadInitialSnapshot() {
+  const snapshot = await snapshotClient.loadSnapshot();
+  if (!snapshot) return;
+  renderSnapshot(snapshot, {
+    postRuntimeMessage: runtimeClient.postRuntimeMessage,
+  });
+  snapshotPoller.scheduleIfNeeded(snapshot);
+}
 
-  await runWithPopupErrorLogging(runtimeClient.syncActiveWindow, 'Failed to refresh active context');
-  await runWithPopupErrorLogging(initializeSortOptions, 'Failed to set up option controls');
-  await runWithPopupErrorLogging(async () => {
-    const snapshot = await snapshotClient.loadSnapshot();
-    if (snapshot) {
-      renderSnapshot(snapshot, {
-        postRuntimeMessage: runtimeClient.postRuntimeMessage,
-      });
-      snapshotPoller.scheduleIfNeeded(snapshot);
-    }
-  }, 'Failed to request initial snapshot');
-
-  const messageListener = (message) => {
+function createSnapshotMessageListener() {
+  return (message) => {
     if (message?.type === RUNTIME_MESSAGE_TYPES.TAB_SNAPSHOT_UPDATED && message.payload) {
       Promise.resolve().then(() => {
         renderSnapshot(message.payload, {
@@ -99,24 +91,42 @@ export async function initializePopupApp() {
       });
     }
   };
+}
 
-  chrome.runtime.onMessage.addListener(messageListener);
-
+function registerPopupControls() {
   const sortButton = document.getElementById('sortButton');
   if (sortButton) {
     sortButton.addEventListener('click', () =>
       runtimeClient.postRuntimeMessage(RUNTIME_MESSAGE_TYPES.REORDER_WINDOW_TABS),
     );
   }
+}
 
+function registerPopupLifecycle(messageListener) {
+  chrome.runtime.onMessage.addListener(messageListener);
   window.addEventListener('unload', () => {
-    isPopupAppActive = false;
+    isPopupActive = false;
     snapshotPoller.clear();
     chrome.runtime.onMessage.removeListener(messageListener);
   });
 }
 
-function canBootstrapPopupApp() {
+export async function initializePopup() {
+  isPopupActive = true;
+  initializePopupDom();
+  renderPopupShell();
+  setErrorMessage('');
+
+  await runWithPopupErrorLogging(runtimeClient.syncActiveWindow, 'Failed to refresh active context');
+  await runWithPopupErrorLogging(initializeSortOptions, 'Failed to set up option controls');
+  await runWithPopupErrorLogging(loadInitialSnapshot, 'Failed to request initial snapshot');
+
+  const messageListener = createSnapshotMessageListener();
+  registerPopupControls();
+  registerPopupLifecycle(messageListener);
+}
+
+function canBootstrapPopup() {
   return (
     typeof window !== 'undefined' &&
     typeof document !== 'undefined' &&
@@ -124,8 +134,8 @@ function canBootstrapPopupApp() {
   );
 }
 
-if (canBootstrapPopupApp()) {
-  initializePopupApp().catch((error) => {
+if (canBootstrapPopup()) {
+  initializePopup().catch((error) => {
     runtimeClient.logPopupMessage(
       POPUP_LOG_LEVELS.ERROR,
       `Failed to initialize popup: ${toErrorMessage(error)}`,

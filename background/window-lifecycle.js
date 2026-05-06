@@ -2,12 +2,12 @@ import { REFRESH_ALARM_NAME, REFRESH_INTERVAL_MINUTES } from './refresh-config.j
 import { isValidWindowId } from '../shared/guards.js';
 import { logDebug, logListenerError, withErrorLogging } from '../shared/log.js';
 import { recomputeSortState } from './sort-state.js';
-import { windowSessionState } from './window-session.js';
+import { windowSessionState } from './window-state.js';
 import {
   listTabIds,
   resetWindowSessionState,
   setWindowId,
-} from './window-session-store.js';
+} from './window-state.js';
 import { refreshTabPlaybackMetrics } from './tab-playback-sync.js';
 import { syncWindowTabRecords } from './tab-record-sync.js';
 

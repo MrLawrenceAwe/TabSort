@@ -2,15 +2,14 @@ import { isValidWindowId } from '../../shared/guards.js';
 import { loadSortOptions } from '../../shared/storage.js';
 import { hasReadyRemainingTime } from '../sort-readiness.js';
 import { listWindowTabs, moveTabsInOrder } from '../chrome-tabs.js';
-import { windowSessionState } from '../window-session.js';
-import { setWindowId } from '../window-session-store.js';
-import { buildNonYoutubeOrder, buildYoutubeTabOrder } from './build-window-tab-order.js';
+import { setTrackedWindowId, trackedWindowState } from '../window-state.js';
+import { buildNonYoutubeOrder, buildYoutubeTabOrder } from './build-tab-order.js';
 
-export async function reorderWindowTabs(windowId = windowSessionState.windowId) {
-  const targetSortableTabIds = windowSessionState.targetSortableTabIds.slice();
+export async function reorderWindowTabs(windowId = trackedWindowState.windowId) {
+  const targetSortableTabIds = trackedWindowState.targetSortableTabIds.slice();
 
   const readyTabIds = targetSortableTabIds.filter((tabId) => {
-    const record = windowSessionState.tabRecordsById[tabId];
+    const record = trackedWindowState.tabRecordsById[tabId];
     return hasReadyRemainingTime(record);
   });
 
@@ -18,7 +17,7 @@ export async function reorderWindowTabs(windowId = windowSessionState.windowId) 
 
   const options = await loadSortOptions();
   const targetWindowId = isValidWindowId(windowId)
-    ? setWindowId(windowId, { force: true })
+    ? setTrackedWindowId(windowId, { force: true })
     : null;
   const tabs = await listWindowTabs(targetWindowId);
   if (!Array.isArray(tabs) || tabs.length === 0) return;

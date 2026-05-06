@@ -1,7 +1,7 @@
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import { collectPageVideoDetails } from './video-details.js';
 
-export function createContentRuntimeMessaging({ config, environment, getChrome, getLocation }) {
+export function createRuntimeMessaging({ config, environment, getChrome, getLocation }) {
   function logContentError(context, error) {
     const message = error instanceof Error ? error.message : String(error);
     console.warn(`[TabSort] ${context}: ${message}`);
