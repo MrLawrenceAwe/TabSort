@@ -21,9 +21,9 @@ export function buildTabSnapshot() {
 
   return {
     tabRecordsById,
-    targetSortableVideoOrder: [...trackedWindowState.targetSortableVideoOrder],
-    visibleOrder: [...trackedWindowState.visibleOrder],
-    sortableVideosSortedByRemainingTime: trackedWindowState.sortableVideosSortedByRemainingTime,
+    targetSortableTabIds: [...trackedWindowState.targetSortableTabIds],
+    visibleTabIds: [...trackedWindowState.visibleTabIds],
+    currentOrderMatchesTarget: trackedWindowState.currentOrderMatchesTarget,
     sortSummary: cloneSortSummary(trackedWindowState.sortSummary || createEmptySortSummary()),
   };
 }

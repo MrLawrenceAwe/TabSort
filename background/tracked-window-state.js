@@ -4,9 +4,9 @@ import { isValidWindowId } from '../shared/guards.js';
 function createTrackedWindowStateShape() {
   return {
     tabRecordsById: {},
-    targetSortableVideoOrder: [],
-    visibleOrder: [],
-    sortableVideosSortedByRemainingTime: false,
+    targetSortableTabIds: [],
+    visibleTabIds: [],
+    currentOrderMatchesTarget: false,
     sortSummary: createEmptySortSummary(),
     windowId: null,
     snapshotSignature: null,
@@ -16,7 +16,7 @@ function createTrackedWindowStateShape() {
 
 export const trackedWindowState = createTrackedWindowStateShape();
 
-export const now = () => Date.now();
+export const getCurrentTimeMs = () => Date.now();
 
 export function resetTrackedWindowState({ windowId = null } = {}) {
   const nextState = createTrackedWindowStateShape();
@@ -65,14 +65,14 @@ export function isSyncCurrent(syncToken) {
 }
 
 export function applySortState({
-  visibleOrder = [],
-  targetSortableVideoOrder = [],
-  sortableVideosSortedByRemainingTime = false,
+  visibleTabIds = [],
+  targetSortableTabIds = [],
+  currentOrderMatchesTarget = false,
   sortSummary = createEmptySortSummary(),
 } = {}) {
-  trackedWindowState.targetSortableVideoOrder = [...targetSortableVideoOrder];
-  trackedWindowState.visibleOrder = [...visibleOrder];
-  trackedWindowState.sortableVideosSortedByRemainingTime = Boolean(sortableVideosSortedByRemainingTime);
+  trackedWindowState.targetSortableTabIds = [...targetSortableTabIds];
+  trackedWindowState.visibleTabIds = [...visibleTabIds];
+  trackedWindowState.currentOrderMatchesTarget = Boolean(currentOrderMatchesTarget);
   trackedWindowState.sortSummary = cloneSortSummary(sortSummary);
 }
 

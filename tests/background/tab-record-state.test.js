@@ -229,8 +229,8 @@ test(
         isRemainingTimeStale: false,
       }),
     };
-    trackedWindowState.visibleOrder = [1];
-    trackedWindowState.targetSortableVideoOrder = [1];
+    trackedWindowState.visibleTabIds = [1];
+    trackedWindowState.targetSortableTabIds = [1];
 
     globalThis.chrome.tabs.query = (query, callback) => {
       globalThis.chrome.runtime.lastError =
@@ -242,8 +242,8 @@ test(
     await syncWindowTabRecords(1, { force: true });
 
     assert.deepEqual(Object.keys(trackedWindowState.tabRecordsById), ['1']);
-    assert.deepEqual(trackedWindowState.visibleOrder, [1]);
-    assert.deepEqual(trackedWindowState.targetSortableVideoOrder, [1]);
+    assert.deepEqual(trackedWindowState.visibleTabIds, [1]);
+    assert.deepEqual(trackedWindowState.targetSortableTabIds, [1]);
     assert.equal(trackedWindowState.tabRecordsById[1].videoDetails.remainingTime, 90);
   },
 );

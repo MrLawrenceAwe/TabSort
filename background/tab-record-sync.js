@@ -7,16 +7,16 @@ import {
   beginSync,
   isSyncCurrent,
   trackedWindowState,
-  now,
+  getCurrentTimeMs,
   replaceTabRecords,
   setWindowId,
 } from './tracked-window-state.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
-function markLoadingStartedAt(record, previousStatus, nextStatus) {
+function syncLoadingTimestamp(record, previousStatus, nextStatus) {
   if (nextStatus === TAB_STATES.LOADING) {
     if (previousStatus !== TAB_STATES.LOADING || typeof record.loadingStartedAt !== 'number') {
-      record.loadingStartedAt = now();
+      record.loadingStartedAt = getCurrentTimeMs();
     }
     return;
   }
@@ -24,12 +24,12 @@ function markLoadingStartedAt(record, previousStatus, nextStatus) {
   record.loadingStartedAt = null;
 }
 
-function markUnsuspendedAt(record, previousStatus, nextStatus) {
+function recordUnsuspendedTransition(record, previousStatus, nextStatus) {
   if (
     (previousStatus === TAB_STATES.SUSPENDED || previousStatus === TAB_STATES.LOADING) &&
     nextStatus === TAB_STATES.UNSUSPENDED
   ) {
-    record.unsuspendedTimestamp = now();
+    record.unsuspendedTimestamp = getCurrentTimeMs();
   }
 }
 
@@ -86,8 +86,8 @@ export async function syncWindowTabRecords(windowId, options = {}) {
         urlChanged,
     });
 
-    markLoadingStartedAt(nextTabRecord, previousTabRecord.status, nextStatus);
-    markUnsuspendedAt(nextTabRecord, previousTabRecord.status, nextStatus);
+    syncLoadingTimestamp(nextTabRecord, previousTabRecord.status, nextStatus);
+    recordUnsuspendedTransition(nextTabRecord, previousTabRecord.status, nextStatus);
 
     if (
       (!isUnsuspended || urlChanged) &&

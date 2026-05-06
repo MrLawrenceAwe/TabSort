@@ -1,25 +1,25 @@
 import { cloneSortSummary } from '../shared/sort-summary-model.js';
 import {
   addClassToDataRows,
-  renderView,
+  renderPopupChrome,
   setErrorMessage,
   setSecondaryColumnsVisible,
-  updateViewState,
+  applyPopupUiState,
 } from './view.js';
 import { renderTabRow } from './tab-row-view.js';
 
-export function derivePopupSnapshotViewState(snapshot) {
+export function deriveSnapshotUiState(snapshot) {
   const sortSummary = cloneSortSummary(snapshot?.sortSummary);
-  const snapshotSaysSorted = snapshot?.sortableVideosSortedByRemainingTime === true;
-  const sortableVideosSortedByRemainingTime =
-    sortSummary.order.sortableVideosSortedByRemainingTime ||
-    (snapshotSaysSorted &&
-      sortSummary.order.allSortableVideosSortReady &&
+  const snapshotSaysOrderMatchesTarget = snapshot?.currentOrderMatchesTarget === true;
+  const currentOrderMatchesTarget =
+    sortSummary.order.currentOrderMatchesTarget ||
+    (snapshotSaysOrderMatchesTarget &&
+      sortSummary.order.allSortableTabsReady &&
       !sortSummary.sortReadyTabs.outOfOrder);
 
   return {
     sortSummary,
-    sortableVideosSortedByRemainingTime,
+    currentOrderMatchesTarget,
   };
 }
 
@@ -32,18 +32,18 @@ export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
   const tbody = table.tBodies[0] ?? table.createTBody();
 
   const tabRecords = snapshot.tabRecordsById || {};
-  const visibleOrder = snapshot.visibleOrder || [];
-  const { sortSummary, sortableVideosSortedByRemainingTime } = derivePopupSnapshotViewState(snapshot);
+  const visibleTabIds = snapshot.visibleTabIds || [];
+  const { sortSummary, currentOrderMatchesTarget } = deriveSnapshotUiState(snapshot);
 
-  updateViewState({
-    sortableVideosSortedByRemainingTime,
+  applyPopupUiState({
+    currentOrderMatchesTarget,
     sortSummary,
   });
 
-  setSecondaryColumnsVisible(!sortableVideosSortedByRemainingTime);
+  setSecondaryColumnsVisible(!currentOrderMatchesTarget);
 
   const rowFragment = document.createDocumentFragment();
-  for (const tabId of visibleOrder) {
+  for (const tabId of visibleTabIds) {
     const row = document.createElement('tr');
     const tabRecord = tabRecords[tabId];
     if (!tabRecord) continue;
@@ -52,14 +52,14 @@ export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
       isRemainingTimeStale: Boolean(tabRecord.isRemainingTimeStale),
     };
     if (normalizedRecord.isRemainingTimeStale) row.classList.add('stale-remaining-row');
-    renderTabRow(row, normalizedRecord, sortableVideosSortedByRemainingTime, postRuntimeMessage);
+    renderTabRow(row, normalizedRecord, currentOrderMatchesTarget, postRuntimeMessage);
     rowFragment.appendChild(row);
   }
   tbody.replaceChildren(rowFragment);
 
-  if (sortSummary.order.allSortableVideosSortReady && !sortableVideosSortedByRemainingTime) {
+  if (sortSummary.order.allSortableTabsReady && !currentOrderMatchesTarget) {
     addClassToDataRows(table, 'all-sort-ready-row');
   }
 
-  renderView();
+  renderPopupChrome();
 }
