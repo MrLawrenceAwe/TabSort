@@ -1,4 +1,6 @@
-import { toErrorMessage } from './errors.js';
+export function toErrorMessage(error) {
+  return error instanceof Error ? error.message : String(error);
+}
 
 function log(level, context, detail) {
   const suffix = detail == null ? '' : `: ${toErrorMessage(detail)}`;

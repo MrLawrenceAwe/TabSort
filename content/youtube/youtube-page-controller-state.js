@@ -3,13 +3,13 @@ import { isFiniteNumber } from '../../shared/guards.js';
 
 const DEFAULT_MEDIA_READY_STATE_THRESHOLD = 2;
 
-export const pageRuntimeConfig = {
+export const youtubePageControllerConfig = {
   mediaReadyStateThreshold: DEFAULT_MEDIA_READY_STATE_THRESHOLD,
   isFiniteNumber,
   inferIsLiveNow,
 };
 
-export function createRuntimeState() {
+export function createYoutubePageControllerState() {
   return {
     initialized: false,
     videoMountObserver: null,
@@ -29,6 +29,6 @@ export function createRuntimeState() {
   };
 }
 
-export function shouldSendPageRuntimeReadySignal(currentUrl, lastReadyUrl, { force = false } = {}) {
+export function shouldSendPageReadySignal(currentUrl, lastReadyUrl, { force = false } = {}) {
   return Boolean(currentUrl) && (force || currentUrl !== lastReadyUrl);
 }

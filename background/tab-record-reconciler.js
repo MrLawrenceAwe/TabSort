@@ -3,13 +3,13 @@ import { isValidWindowId } from '../shared/guards.js';
 import { getTabState, listWindowTabs } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
 import { createTabRecord } from './tab-record.js';
-import { windowSessionState } from './window-state.js';
+import { trackedWindowState } from './window-state.js';
 import {
   beginSync,
   isSyncCurrent,
   getCurrentTimeMs,
   replaceTabRecords,
-  setWindowId,
+  setTrackedWindowId,
 } from './window-state.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
@@ -33,9 +33,9 @@ function recordUnsuspendedTransition(record, previousStatus, nextStatus) {
   }
 }
 
-export async function syncWindowTabRecords(windowId, options = {}) {
+export async function reconcileWindowTabRecords(windowId, options = {}) {
   const syncToken = beginSync();
-  const resolvedWindowId = setWindowId(windowId, options);
+  const resolvedWindowId = setTrackedWindowId(windowId, options);
   const tabs = await listWindowTabs(resolvedWindowId);
   if (!isSyncCurrent(syncToken)) return;
   if (!Array.isArray(tabs)) return;
@@ -43,13 +43,13 @@ export async function syncWindowTabRecords(windowId, options = {}) {
 
   if (
     isValidWindowId(resolvedWindowId) &&
-    isValidWindowId(windowSessionState.windowId) &&
-    resolvedWindowId !== windowSessionState.windowId
+    isValidWindowId(trackedWindowState.windowId) &&
+    resolvedWindowId !== trackedWindowState.windowId
   ) {
     return;
   }
 
-  const previousTabRecords = windowSessionState.tabRecordsById;
+  const previousTabRecords = trackedWindowState.tabRecordsById;
   const nextTabRecords = {};
 
   for (const tab of tabs) {

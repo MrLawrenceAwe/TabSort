@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { createPageRuntime } from '../content/youtube/page-runtime.js';
-import { shouldSendPageRuntimeReadySignal } from '../content/youtube/runtime-state.js';
+import { createYoutubePageController } from '../content/youtube/youtube-page-controller.js';
+import { shouldSendPageReadySignal } from '../content/youtube/youtube-page-controller-state.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 
 class FakeMutationObserver {
@@ -145,20 +145,20 @@ function resetGlobals() {
   installRuntimeTestDom.runtimeMessageListeners = new Set();
 }
 
-test('shouldSendPageRuntimeReadySignal allows first-load, force-refresh, and URL-change signals', () => {
+test('shouldSendPageReadySignal allows first-load, force-refresh, and URL-change signals', () => {
   assert.equal(
-    shouldSendPageRuntimeReadySignal('https://www.youtube.com/watch?v=one', null),
+    shouldSendPageReadySignal('https://www.youtube.com/watch?v=one', null),
     true,
   );
   assert.equal(
-    shouldSendPageRuntimeReadySignal(
+    shouldSendPageReadySignal(
       'https://www.youtube.com/watch?v=one',
       'https://www.youtube.com/watch?v=one',
     ),
     false,
   );
   assert.equal(
-    shouldSendPageRuntimeReadySignal(
+    shouldSendPageReadySignal(
       'https://www.youtube.com/watch?v=one',
       'https://www.youtube.com/watch?v=one',
       { force: true },
@@ -166,7 +166,7 @@ test('shouldSendPageRuntimeReadySignal allows first-load, force-refresh, and URL
     true,
   );
   assert.equal(
-    shouldSendPageRuntimeReadySignal(
+    shouldSendPageReadySignal(
       'https://www.youtube.com/watch?v=two',
       'https://www.youtube.com/watch?v=one',
     ),
@@ -177,7 +177,7 @@ test('shouldSendPageRuntimeReadySignal allows first-load, force-refresh, and URL
 test(
   'page runtime session re-sends pageRuntimeReady after yt-navigate-finish changes the page URL',
   () => {
-    const runtime = createPageRuntime();
+    const runtime = createYoutubePageController();
     try {
       const { windowTarget, updatePage } = installRuntimeTestDom();
 
@@ -214,7 +214,7 @@ test(
 test(
   'page runtime session waits for fresh media evidence before re-sending pageMediaReady on SPA navigation',
   () => {
-    const runtime = createPageRuntime();
+    const runtime = createYoutubePageController();
     try {
       const { windowTarget, updatePage, video } = installRuntimeTestDom();
 
@@ -254,7 +254,7 @@ test(
 );
 
 test('page runtime session reset removes listeners before a second bootstrap', () => {
-  const runtime = createPageRuntime();
+  const runtime = createYoutubePageController();
   try {
     const { getRuntimeMessageListenerCount, windowTarget } = installRuntimeTestDom();
 

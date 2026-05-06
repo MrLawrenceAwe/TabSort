@@ -4,9 +4,9 @@ import { buildTabSnapshot } from './tab-snapshot.js';
 import { markTabRecordReloading } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
 import { reorderWindowTabs } from './sorting/reorder-window-tabs.js';
-import { refreshTabPlaybackMetrics } from './tab-playback-sync.js';
+import { refreshTabPlaybackMetrics } from './playback-metrics-refresher.js';
 import { listTabIds, setTrackedWindowId, trackedWindowState } from './window-state.js';
-import { syncWindowTabRecords } from './tab-record-sync.js';
+import { reconcileWindowTabRecords } from './tab-record-reconciler.js';
 
 export async function activateTab(message) {
   const tabId = message.tabId;
@@ -43,14 +43,14 @@ export async function reloadTab(message) {
 }
 
 export async function syncWindowTabs(message) {
-  await syncWindowTabRecords(
+  await reconcileWindowTabRecords(
     message.windowId,
     isValidWindowId(message.windowId) ? { force: true } : undefined,
   );
 }
 
 export async function getWindowSnapshot(message) {
-  await syncWindowTabRecords(
+  await reconcileWindowTabRecords(
     message.windowId,
     isValidWindowId(message.windowId) ? { force: true } : undefined,
   );
@@ -67,7 +67,7 @@ export async function applyTabSortOrder(message) {
     setTrackedWindowId(targetWindowId, { force: true });
   }
   await reorderWindowTabs(targetWindowId);
-  await syncWindowTabRecords(
+  await reconcileWindowTabRecords(
     targetWindowId,
     isValidWindowId(targetWindowId) ? { force: true } : undefined,
   );

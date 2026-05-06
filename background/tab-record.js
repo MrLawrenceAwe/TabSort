@@ -1,5 +1,5 @@
 import { isFiniteNumber } from '../shared/guards.js';
-import { windowSessionState } from './window-state.js';
+import { trackedWindowState } from './window-state.js';
 import { writeTabRecord } from './window-state.js';
 
 const FALLBACK_TAB_INDEX = Number.MAX_SAFE_INTEGER;
@@ -36,7 +36,7 @@ export function ensureTabRecord(tabId, windowId, defaults = {}) {
     return undefined;
   }
 
-  const tabRecordsById = windowSessionState.tabRecordsById;
+  const tabRecordsById = trackedWindowState.tabRecordsById;
   let record = tabRecordsById[tabId];
 
   if (!record) {

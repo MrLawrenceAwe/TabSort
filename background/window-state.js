@@ -15,10 +15,8 @@ export function createTrackedWindowState() {
     syncToken: 0,
   };
 }
-export const createWindowSessionState = createTrackedWindowState;
 
 export const trackedWindowState = createTrackedWindowState();
-export const windowSessionState = trackedWindowState;
 
 export function resetTrackedWindowState({ windowId = null } = {}) {
   const nextState = createTrackedWindowState();
@@ -26,7 +24,6 @@ export function resetTrackedWindowState({ windowId = null } = {}) {
   Object.assign(trackedWindowState, nextState);
   return trackedWindowState;
 }
-export const resetWindowSessionState = resetTrackedWindowState;
 
 export function replaceTabRecords(tabRecordsById = {}) {
   trackedWindowState.tabRecordsById = tabRecordsById;
@@ -89,7 +86,6 @@ export function setTrackedWindowId(windowId, { force = false } = {}) {
   }
   return isValidWindowId(trackedWindowState.windowId) ? trackedWindowState.windowId : null;
 }
-export const setWindowId = setTrackedWindowId;
 
 export function canManageWindow(windowId) {
   return trackedWindowState.windowId == null || windowId === trackedWindowState.windowId;
