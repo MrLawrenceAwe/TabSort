@@ -77,17 +77,17 @@ export async function applyPageVideoDetails(message, sender) {
   if (details.url) record.url = details.url;
   record.videoDetails = record.videoDetails || {};
   if (details.title) record.videoDetails.title = details.title;
-  if (typeof details.isLive === 'boolean') record.isLiveStream = details.isLive;
+  if (typeof details.isLive === 'boolean') record.isLiveNow = details.isLive;
 
   if (isFiniteNumber(details.lengthSeconds)) {
     record.videoDetails.lengthSeconds = details.lengthSeconds;
-    if (!record.isLiveStream && record.videoDetails.remainingTime == null) {
+    if (!record.isLiveNow && record.videoDetails.remainingTime == null) {
       record.videoDetails.remainingTime = details.lengthSeconds;
       record.isRemainingTimeStale = true;
     }
   }
 
-  if (record.isLiveStream) {
+  if (record.isLiveNow) {
     record.videoDetails.remainingTime = null;
     record.isRemainingTimeStale = false;
   }

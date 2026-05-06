@@ -19,7 +19,7 @@ export function createTabRecord(tabId, windowId, defaults = {}) {
     status: defaults.status ?? null,
     pageRuntimeReady: Boolean(defaults.pageRuntimeReady),
     pageMediaReady: Boolean(defaults.pageMediaReady),
-    isLiveStream: Boolean(defaults.isLiveStream),
+    isLiveNow: Boolean(defaults.isLiveNow),
     isActiveTab: Boolean(defaults.isActiveTab),
     isHidden: Boolean(defaults.isHidden),
     videoDetails: cloneVideoDetails(defaults.videoDetails),

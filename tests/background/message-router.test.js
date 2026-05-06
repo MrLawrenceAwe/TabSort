@@ -36,7 +36,7 @@ test('applyPageVideoDetails does not create records for non-watch YouTube pages'
 
   assert.equal(trackedWindowState.tabRecordsById[7], undefined);
   assert.deepEqual(trackedWindowState.visibleOrder, []);
-  assert.deepEqual(trackedWindowState.targetOrder, []);
+  assert.deepEqual(trackedWindowState.targetSortableVideoOrder, []);
 });
 
 test('applyPageVideoDetails removes tracked rows when tab leaves watch/shorts', async () => {
@@ -48,7 +48,7 @@ test('applyPageVideoDetails removes tracked rows when tab leaves watch/shorts', 
     }),
   };
   trackedWindowState.visibleOrder = [7];
-  trackedWindowState.targetOrder = [7];
+  trackedWindowState.targetSortableVideoOrder = [7];
 
   await applyPageVideoDetails(
     {
@@ -68,7 +68,7 @@ test('applyPageVideoDetails removes tracked rows when tab leaves watch/shorts', 
 
   assert.equal(trackedWindowState.tabRecordsById[7], undefined);
   assert.deepEqual(trackedWindowState.visibleOrder, []);
-  assert.deepEqual(trackedWindowState.targetOrder, []);
+  assert.deepEqual(trackedWindowState.targetSortableVideoOrder, []);
 });
 
 test('markPageRuntimeReady removes tracked rows when a SPA tab leaves watch/shorts', async () => {
@@ -80,7 +80,7 @@ test('markPageRuntimeReady removes tracked rows when a SPA tab leaves watch/shor
     }),
   };
   trackedWindowState.visibleOrder = [7];
-  trackedWindowState.targetOrder = [7];
+  trackedWindowState.targetSortableVideoOrder = [7];
 
   await markPageRuntimeReady(
     {},
@@ -95,7 +95,7 @@ test('markPageRuntimeReady removes tracked rows when a SPA tab leaves watch/shor
 
   assert.equal(trackedWindowState.tabRecordsById[7], undefined);
   assert.deepEqual(trackedWindowState.visibleOrder, []);
-  assert.deepEqual(trackedWindowState.targetOrder, []);
+  assert.deepEqual(trackedWindowState.targetSortableVideoOrder, []);
 });
 
 test('markPageRuntimeReady marks the runtime ready without collecting metrics', async () => {
@@ -123,7 +123,7 @@ test('markPageRuntimeReady marks the runtime ready without collecting metrics', 
   const record = trackedWindowState.tabRecordsById[7];
   assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
   assert.deepEqual(trackedWindowState.visibleOrder, [7]);
-  assert.deepEqual(trackedWindowState.targetOrder, [7]);
+  assert.deepEqual(trackedWindowState.targetSortableVideoOrder, [7]);
   assert.equal(record.pageRuntimeReady, true);
   assert.equal(record.pageMediaReady, false);
   assert.equal(record.isRemainingTimeStale, true);
@@ -138,7 +138,7 @@ test('markPageMediaReady removes tracked rows when a stale event arrives off wat
     }),
   };
   trackedWindowState.visibleOrder = [7];
-  trackedWindowState.targetOrder = [7];
+  trackedWindowState.targetSortableVideoOrder = [7];
   globalThis.chrome.tabs = {
     get() {
       throw new Error('tabs.get should not be called for stale non-watch media-ready events');
@@ -161,7 +161,7 @@ test('markPageMediaReady removes tracked rows when a stale event arrives off wat
 
   assert.equal(trackedWindowState.tabRecordsById[7], undefined);
   assert.deepEqual(trackedWindowState.visibleOrder, []);
-  assert.deepEqual(trackedWindowState.targetOrder, []);
+  assert.deepEqual(trackedWindowState.targetSortableVideoOrder, []);
 });
 
 test('applyPageVideoDetails resets carried remaining time on watch-to-watch SPA navigation', async () => {

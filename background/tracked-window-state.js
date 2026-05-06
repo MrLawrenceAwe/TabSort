@@ -1,12 +1,12 @@
-import { cloneSortSummary, createEmptySortSummary } from '../shared/sort-summary.js';
+import { cloneSortSummary, createEmptySortSummary } from '../shared/sort-summary-model.js';
 import { isValidWindowId } from '../shared/guards.js';
 
 function createTrackedWindowStateShape() {
   return {
     tabRecordsById: {},
-    targetOrder: [],
+    targetSortableVideoOrder: [],
     visibleOrder: [],
-    sortableVideosSortedByTime: false,
+    sortableVideosSortedByRemainingTime: false,
     sortSummary: createEmptySortSummary(),
     windowId: null,
     snapshotSignature: null,
@@ -66,13 +66,13 @@ export function isSyncCurrent(syncToken) {
 
 export function applySortState({
   visibleOrder = [],
-  targetOrder = [],
-  sortableVideosSortedByTime = false,
+  targetSortableVideoOrder = [],
+  sortableVideosSortedByRemainingTime = false,
   sortSummary = createEmptySortSummary(),
 } = {}) {
-  trackedWindowState.targetOrder = [...targetOrder];
+  trackedWindowState.targetSortableVideoOrder = [...targetSortableVideoOrder];
   trackedWindowState.visibleOrder = [...visibleOrder];
-  trackedWindowState.sortableVideosSortedByTime = Boolean(sortableVideosSortedByTime);
+  trackedWindowState.sortableVideosSortedByRemainingTime = Boolean(sortableVideosSortedByRemainingTime);
   trackedWindowState.sortSummary = cloneSortSummary(sortSummary);
 }
 

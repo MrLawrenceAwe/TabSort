@@ -11,10 +11,10 @@
     --action-button-background: #ffffff;
     --action-button-color: #000000;
     --action-button-border-color: transparent;
-    --ready-row-background: #ffffff;
-    --ready-row-text: #000000;
-    --all-ready-row-background: #1f8c3a;
-    --all-ready-row-text: #ffffff;
+    --sort-ready-row-background: #ffffff;
+    --sort-ready-row-text: #000000;
+    --all-sort-ready-row-background: #1f8c3a;
+    --all-sort-ready-row-text: #ffffff;
     --stale-row-background: #4b2f2f;
     --stale-row-text: #ffd6d6;
     --tabs-sorted-color: #ffffff;
@@ -33,10 +33,10 @@
     --action-button-background: #ffffff;
     --action-button-color: #1a1a1a;
     --action-button-border-color: #d2d2d7;
-    --ready-row-background: #c5d4ff;
-    --ready-row-text: #173566;
-    --all-ready-row-background: #63c56c;
-    --all-ready-row-text: #ffffff;
+    --sort-ready-row-background: #c5d4ff;
+    --sort-ready-row-text: #173566;
+    --all-sort-ready-row-background: #63c56c;
+    --all-sort-ready-row-text: #ffffff;
     --stale-row-background: #fbe9e7;
     --stale-row-text: #7b2e2e;
     --tabs-sorted-color: #000000;
@@ -116,14 +116,14 @@ h2 {
     color: var(--text-color);
 }
 
-.ready-row td {
-    background-color: var(--ready-row-background) !important;
-    color: var(--ready-row-text) !important;
+.sort-ready-row td {
+    background-color: var(--sort-ready-row-background) !important;
+    color: var(--sort-ready-row-text) !important;
 }
 
-.all-ready-row td {
-    background-color: var(--all-ready-row-background) !important;
-    color: var(--all-ready-row-text) !important;
+.all-sort-ready-row td {
+    background-color: var(--all-sort-ready-row-background) !important;
+    color: var(--all-sort-ready-row-text) !important;
 }
 
 .stale-remaining-row td {
@@ -202,9 +202,9 @@ h2 {
 }
 
 .action-button.all-tabs-ready {
-    color: var(--all-ready-row-text);
-    background-color: var(--all-ready-row-background);
-    border-color: var(--all-ready-row-background);
+    color: var(--all-sort-ready-row-text);
+    background-color: var(--all-sort-ready-row-background);
+    border-color: var(--all-sort-ready-row-background);
 }
 
 .tabs-sorted {

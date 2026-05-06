@@ -2,7 +2,7 @@ import { MEDIA_READY_STATE_THRESHOLD } from './media-config.js';
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import { inferIsLiveNow } from './live-status.js';
 import { isFiniteNumber } from '../../shared/guards.js';
-import { collectPageVideoDetails } from './metadata.js';
+import { collectPageVideoDetails } from './video-details.js';
 import { createMediaReadinessTracker } from './media-readiness.js';
 import { createTitleObserver } from './title-observer.js';
 import { handleCollectVideoMetricsMessage } from './video-metrics.js';
@@ -23,7 +23,7 @@ function createPageSessionState() {
     lastKnownTitleText: null,
     observedPageUrl: null,
     lastRuntimeReadyPageUrl: null,
-    mediaReadyUrl: null,
+    mediaReadyPageUrl: null,
     lastMediaReadyVideoElement: null,
     lastMediaReadyFingerprint: null,
     mediaReadyListenerVideo: null,
@@ -183,7 +183,7 @@ export function createPageRuntimeSession({
       disposeObservers();
       state.observedPageUrl = currentUrl;
       state.lastRuntimeReadyPageUrl = null;
-      state.mediaReadyUrl = null;
+      state.mediaReadyPageUrl = null;
     } else if (!state.observedPageUrl && currentUrl) {
       state.observedPageUrl = currentUrl;
     }
@@ -204,7 +204,7 @@ export function createPageRuntimeSession({
     disposeListeners();
     state.observedPageUrl = null;
     state.lastRuntimeReadyPageUrl = null;
-    state.mediaReadyUrl = null;
+    state.mediaReadyPageUrl = null;
     state.lastMediaReadyVideoElement = null;
     state.lastMediaReadyFingerprint = null;
     state.initialized = false;
@@ -254,7 +254,7 @@ export function createPageRuntimeSession({
     addWindowEventListener(runtimeWindow, 'pagehide', () => {
       disposeObservers();
       state.lastRuntimeReadyPageUrl = null;
-      state.mediaReadyUrl = null;
+      state.mediaReadyPageUrl = null;
       state.lastMediaReadyVideoElement = null;
       state.lastMediaReadyFingerprint = null;
     });

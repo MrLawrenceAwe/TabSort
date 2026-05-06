@@ -42,7 +42,7 @@ function determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended, 
 }
 
 export function determineUserAction(tabRecord, { now = Date.now } = {}) {
-  if (tabRecord?.isLiveStream) {
+  if (tabRecord?.isLiveNow) {
     return USER_ACTIONS.NONE;
   }
 

@@ -1,5 +1,5 @@
-import { createEmptySortSummary } from '../shared/sort-summary.js';
-import { areTabIdListsEqual } from './sort-order.js';
+import { createEmptySortSummary } from '../shared/sort-summary-model.js';
+import { areTabIdListsEqual } from './sort-plan.js';
 import { hasReadyRemainingTime } from './sort-readiness.js';
 
 export function deriveSortSummary({ trackedRecords, sortableRecords, sortableOrder }) {
@@ -12,13 +12,13 @@ export function deriveSortSummary({ trackedRecords, sortableRecords, sortableOrd
   const sortableTabCount = sortableRecords.length;
 
   let backgroundTabsHaveStaleRemainingTime = false;
-  let readyTabCount = 0;
-  let readyTabsAreContiguous = true;
-  let readyTabsAreAtFront = true;
-  let readyTabsAreOutOfOrder = false;
+  let sortReadyTabCount = 0;
+  let sortReadyTabsAreContiguous = true;
+  let sortReadyTabsAreAtFront = true;
+  let sortReadyTabsAreOutOfOrder = false;
 
-  const readyIdsInCurrentOrder = [];
-  const readyEntries = [];
+  const sortReadyIdsInCurrentOrder = [];
+  const sortReadyEntries = [];
   const orderedIdsWithRecords = [];
 
   let encounteredReady = false;
@@ -36,11 +36,11 @@ export function deriveSortSummary({ trackedRecords, sortableRecords, sortableOrd
 
     const isReady = hasReadyRemainingTime(record);
     if (isReady) {
-      readyTabCount += 1;
-      readyIdsInCurrentOrder.push(record.id);
-      readyEntries.push({ id: record.id, remainingTime: record.videoDetails?.remainingTime || 0 });
+      sortReadyTabCount += 1;
+      sortReadyIdsInCurrentOrder.push(record.id);
+      sortReadyEntries.push({ id: record.id, remainingTime: record.videoDetails?.remainingTime || 0 });
       encounteredReady = true;
-      if (gapAfterReady) readyTabsAreContiguous = false;
+      if (gapAfterReady) sortReadyTabsAreContiguous = false;
       continue;
     }
 
@@ -52,41 +52,41 @@ export function deriveSortSummary({ trackedRecords, sortableRecords, sortableOrd
   }
 
   if (encounteredReady && encounteredNonReadyBeforeReady) {
-    readyTabsAreAtFront = false;
+    sortReadyTabsAreAtFront = false;
   }
 
-  const readyIdsByRemainingTime = readyEntries
+  const sortReadyIdsByRemainingTime = sortReadyEntries
     .slice()
     .sort((a, b) => a.remainingTime - b.remainingTime)
     .map((entry) => entry.id);
 
-  if (readyIdsInCurrentOrder.length >= 2) {
-    readyTabsAreOutOfOrder = !areTabIdListsEqual(
-      readyIdsInCurrentOrder,
-      readyIdsByRemainingTime,
+  if (sortReadyIdsInCurrentOrder.length >= 2) {
+    sortReadyTabsAreOutOfOrder = !areTabIdListsEqual(
+      sortReadyIdsInCurrentOrder,
+      sortReadyIdsByRemainingTime,
     );
   }
 
-  const allSortableVideosReady = sortableTabCount > 1 && readyTabCount === sortableTabCount;
-  const sortableVideosSortedByTime =
-    allSortableVideosReady && areTabIdListsEqual(orderedIdsWithRecords, readyIdsByRemainingTime);
+  const allSortableVideosSortReady = sortableTabCount > 1 && sortReadyTabCount === sortableTabCount;
+  const sortableVideosSortedByRemainingTime =
+    allSortableVideosSortReady && areTabIdListsEqual(orderedIdsWithRecords, sortReadyIdsByRemainingTime);
 
   return {
     counts: {
       tracked: trackedTabCount,
-      ready: readyTabCount,
+      sortReady: sortReadyTabCount,
     },
-    readyTabs: {
-      contiguous: readyTabsAreContiguous,
-      atFront: readyTabsAreAtFront,
-      outOfOrder: readyTabsAreOutOfOrder,
+    sortReadyTabs: {
+      contiguous: sortReadyTabsAreContiguous,
+      atFront: sortReadyTabsAreAtFront,
+      outOfOrder: sortReadyTabsAreOutOfOrder,
     },
     backgroundTabs: {
       haveStaleRemainingTime: backgroundTabsHaveStaleRemainingTime,
     },
     order: {
-      allSortableVideosReady,
-      sortableVideosSortedByTime,
+      allSortableVideosSortReady,
+      sortableVideosSortedByRemainingTime,
     },
   };
 }

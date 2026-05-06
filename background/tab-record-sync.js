@@ -73,7 +73,7 @@ export async function syncWindowTabRecords(windowId, options = {}) {
         nextStatus === TAB_STATES.UNSUSPENDED && !urlChanged
           ? Boolean(previousTabRecord.pageMediaReady)
           : false,
-      isLiveStream: urlChanged ? false : Boolean(previousTabRecord.isLiveStream),
+      isLiveNow: urlChanged ? false : Boolean(previousTabRecord.isLiveNow),
       isActiveTab: Boolean(tab.active),
       isHidden: Boolean(tab.hidden),
       videoDetails: urlChanged ? null : previousTabRecord.videoDetails || null,

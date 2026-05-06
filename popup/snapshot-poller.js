@@ -2,7 +2,7 @@ import { TAB_STATES } from '../shared/tab-states.js';
 import { determineUserAction, USER_ACTIONS } from './tab-action-policy.js';
 
 export function shouldPollRecord(record, { now = Date.now } = {}) {
-  if (!record || record.isLiveStream) return false;
+  if (!record || record.isLiveNow) return false;
 
   const userAction = determineUserAction(record, { now });
   if (

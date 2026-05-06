@@ -44,10 +44,10 @@ function buildTargetSortOrder(knownEntries, unknownEntries, currentOrder) {
 }
 
 function isRecordSortableByRemainingTime(record) {
-  return !record?.isLiveStream;
+  return !record?.isLiveNow;
 }
 
-export function deriveSortOrder(records) {
+export function deriveSortPlan(records) {
   const visibleOrder = deriveTabIdOrder(records);
   const movableRecords = records.filter((record) => !record.pinned);
   const sortableRecords = movableRecords.filter(isRecordSortableByRemainingTime);
@@ -55,23 +55,23 @@ export function deriveSortOrder(records) {
   const remainingTimeEntries = buildRemainingTimeEntries(sortableRecords);
   const knownRemainingEntries = remainingTimeEntries.filter((entry) => entry.remainingTime !== null);
   const unknownRemainingEntries = remainingTimeEntries.filter((entry) => entry.remainingTime === null);
-  const targetOrder = buildTargetSortOrder(
+  const targetSortableVideoOrder = buildTargetSortOrder(
     knownRemainingEntries,
     unknownRemainingEntries,
     sortableOrder,
   );
-  const allSortableVideosReady = unknownRemainingEntries.length === 0;
+  const allSortableVideosSortReady = unknownRemainingEntries.length === 0;
   const alreadySorted =
     sortableOrder.length > 0 &&
-    sortableOrder.length === targetOrder.length &&
-    sortableOrder.every((id, index) => id === targetOrder[index]);
+    sortableOrder.length === targetSortableVideoOrder.length &&
+    sortableOrder.every((id, index) => id === targetSortableVideoOrder[index]);
 
   return {
     visibleOrder,
-    targetOrder,
+    targetSortableVideoOrder,
     sortableRecords,
     sortableOrder,
-    allSortableVideosReady,
-    sortableVideosSortedByTime: allSortableVideosReady && alreadySorted,
+    allSortableVideosSortReady,
+    sortableVideosSortedByRemainingTime: allSortableVideosSortReady && alreadySorted,
   };
 }

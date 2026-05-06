@@ -130,14 +130,14 @@ export async function refreshTabPlaybackState(tabId) {
       record.url = payloadUrl || currentTabUrl;
     }
 
-    if (metricsPayload.isLive === true) record.isLiveStream = true;
-    if (metricsPayload.isLive === false) record.isLiveStream = false;
+    if (metricsPayload.isLive === true) record.isLiveNow = true;
+    if (metricsPayload.isLive === false) record.isLiveNow = false;
 
     const videoLengthSeconds = resolveVideoLengthSeconds(metricsPayload, record);
     const currentTimeSeconds = Number(metricsPayload.currentTime ?? NaN);
     const playbackRate = Number(metricsPayload.playbackRate ?? 1);
 
-    if (record.isLiveStream) {
+    if (record.isLiveNow) {
       record.videoDetails.lengthSeconds = isFiniteNumber(videoLengthSeconds) ? videoLengthSeconds : null;
       record.videoDetails.remainingTime = null;
       record.isRemainingTimeStale = false;

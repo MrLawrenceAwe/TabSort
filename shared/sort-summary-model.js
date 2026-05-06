@@ -1,9 +1,9 @@
 export const EMPTY_SORT_SUMMARY = Object.freeze({
   counts: Object.freeze({
     tracked: 0,
-    ready: 0,
+    sortReady: 0,
   }),
-  readyTabs: Object.freeze({
+  sortReadyTabs: Object.freeze({
     contiguous: true,
     atFront: true,
     outOfOrder: false,
@@ -12,8 +12,8 @@ export const EMPTY_SORT_SUMMARY = Object.freeze({
     haveStaleRemainingTime: false,
   }),
   order: Object.freeze({
-    allSortableVideosReady: false,
-    sortableVideosSortedByTime: false,
+    allSortableVideosSortReady: false,
+    sortableVideosSortedByRemainingTime: false,
   }),
 });
 
@@ -23,9 +23,9 @@ export function cloneSortSummary(source = EMPTY_SORT_SUMMARY) {
       ...EMPTY_SORT_SUMMARY.counts,
       ...(source?.counts || {}),
     },
-    readyTabs: {
-      ...EMPTY_SORT_SUMMARY.readyTabs,
-      ...(source?.readyTabs || {}),
+    sortReadyTabs: {
+      ...EMPTY_SORT_SUMMARY.sortReadyTabs,
+      ...(source?.sortReadyTabs || {}),
     },
     backgroundTabs: {
       ...EMPTY_SORT_SUMMARY.backgroundTabs,

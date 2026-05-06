@@ -1,5 +1,5 @@
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
-import { getPrimaryVideoElement } from './metadata.js';
+import { getPrimaryVideoElement } from './video-details.js';
 
 export function createMediaReadinessTracker({
   config,
@@ -13,7 +13,7 @@ export function createMediaReadinessTracker({
 }) {
   function isCurrentPageMediaReady() {
     const currentUrl = getCurrentPageUrl();
-    return Boolean(currentUrl) && currentUrl === state.mediaReadyUrl;
+    return Boolean(currentUrl) && currentUrl === state.mediaReadyPageUrl;
   }
 
   function getVideoFingerprint(video) {
@@ -62,7 +62,7 @@ export function createMediaReadinessTracker({
       }
     };
     const send = () => {
-      state.mediaReadyUrl = getCurrentPageUrl();
+      state.mediaReadyPageUrl = getCurrentPageUrl();
       state.lastMediaReadyVideoElement = video;
       state.lastMediaReadyFingerprint = getVideoFingerprint(video);
       sendExtensionMessage(

@@ -1,8 +1,8 @@
-import { createEmptySortSummary } from '../shared/sort-summary.js';
+import { createEmptySortSummary } from '../shared/sort-summary-model.js';
 
 export const viewState = {
   sortSummary: createEmptySortSummary(),
-  sortableVideosSortedByTime: false,
+  sortableVideosSortedByRemainingTime: false,
   activeWindowId: null,
 };
 
@@ -33,7 +33,7 @@ export function resetView() {
   domCache.tabStatusColumn = null;
   domCache.initialized = false;
   viewState.sortSummary = createEmptySortSummary();
-  viewState.sortableVideosSortedByTime = false;
+  viewState.sortableVideosSortedByRemainingTime = false;
   viewState.activeWindowId = null;
 }
 
@@ -69,10 +69,10 @@ function getCachedElement(key) {
 function updateStatus(statusElement) {
   if (!statusElement) return;
   const trackedTabCount = viewState.sortSummary.counts.tracked;
-  const readyTabCount = viewState.sortSummary.counts.ready;
-  if (!viewState.sortableVideosSortedByTime) {
+  const sortReadyTabCount = viewState.sortSummary.counts.sortReady;
+  if (!viewState.sortableVideosSortedByRemainingTime) {
     statusElement.classList.toggle('hide', trackedTabCount <= 1);
-    statusElement.textContent = `${readyTabCount}/${trackedTabCount} ready for sort.`;
+    statusElement.textContent = `${sortReadyTabCount}/${trackedTabCount} ready for sort.`;
     return;
   }
   statusElement.classList.add('hide');
@@ -80,7 +80,7 @@ function updateStatus(statusElement) {
 
 function updateSortedBadge(sortedBadgeElement) {
   if (!sortedBadgeElement) return;
-  sortedBadgeElement.classList.toggle('hide', !viewState.sortableVideosSortedByTime);
+  sortedBadgeElement.classList.toggle('hide', !viewState.sortableVideosSortedByRemainingTime);
 }
 
 export function getEmptyStateMessage(tabCount) {
@@ -108,17 +108,17 @@ export function setErrorMessage(message = '') {
   errorElement.classList.toggle('hide', !nextMessage);
 }
 
-export function getSortButtonText(readyTabCount, totalTabCount) {
-  return readyTabCount === totalTabCount ? 'Sort All Tabs' : 'Move Ready Tabs First';
+export function getSortButtonText(sortReadyTabCount, totalTabCount) {
+  return sortReadyTabCount === totalTabCount ? 'Sort All Tabs' : 'Move Ready Tabs First';
 }
 
 function updateSortButton(sortButton, shouldShowSort) {
   if (!sortButton) return;
   sortButton.classList.toggle('hide', !shouldShowSort);
   if (shouldShowSort) {
-    const { ready, tracked } = viewState.sortSummary.counts;
-    sortButton.classList.toggle('all-tabs-ready', ready === tracked);
-    sortButton.textContent = getSortButtonText(ready, tracked);
+    const { sortReady, tracked } = viewState.sortSummary.counts;
+    sortButton.classList.toggle('all-tabs-ready', sortReady === tracked);
+    sortButton.textContent = getSortButtonText(sortReady, tracked);
     return;
   }
   sortButton.classList.remove('all-tabs-ready');
@@ -126,7 +126,7 @@ function updateSortButton(sortButton, shouldShowSort) {
 
 function clearReadyRows(table) {
   for (let i = 1; i < table.rows.length; i += 1) {
-    table.rows[i].classList.remove('ready-row');
+    table.rows[i].classList.remove('sort-ready-row');
   }
 }
 
@@ -152,14 +152,15 @@ export function renderView() {
   const sortButton = getCachedElement('sortButton');
   const sortedBadgeElement = getCachedElement('sortedBadgeElement');
   const table = getCachedElement('table');
-  const { counts, readyTabs } = viewState.sortSummary;
+  const { counts, sortReadyTabs } = viewState.sortSummary;
 
-  const readySubsetExists = counts.ready >= 2 && counts.ready < counts.tracked;
-  const readySubsetNeedsSorting = readySubsetExists && (!readyTabs.contiguous || !readyTabs.atFront);
+  const sortReadySubsetExists = counts.sortReady >= 2 && counts.sortReady < counts.tracked;
+  const sortReadySubsetNeedsSorting =
+    sortReadySubsetExists && (!sortReadyTabs.contiguous || !sortReadyTabs.atFront);
   const shouldShowSort =
-    counts.ready >= 2 &&
-    !viewState.sortableVideosSortedByTime &&
-    (readyTabs.outOfOrder || readySubsetNeedsSorting);
+    counts.sortReady >= 2 &&
+    !viewState.sortableVideosSortedByRemainingTime &&
+    (sortReadyTabs.outOfOrder || sortReadySubsetNeedsSorting);
 
   setOptionToggleVisibility(shouldShowSort);
 
@@ -168,7 +169,7 @@ export function renderView() {
   updateSortButton(sortButton, shouldShowSort);
   updateEmptyState(emptyStateElement);
 
-  if (viewState.sortableVideosSortedByTime && table) {
+  if (viewState.sortableVideosSortedByRemainingTime && table) {
     clearReadyRows(table);
   }
 }

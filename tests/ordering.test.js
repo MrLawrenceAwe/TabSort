@@ -21,9 +21,9 @@ test('orders known remaining-time tabs before unknown tabs', () => {
 
   recomputeSortState();
 
-  assert.deepEqual(trackedWindowState.targetOrder, [3, 1, 2]);
+  assert.deepEqual(trackedWindowState.targetSortableVideoOrder, [3, 1, 2]);
   assert.deepEqual(trackedWindowState.visibleOrder, [1, 2, 3]);
-  assert.equal(trackedWindowState.sortableVideosSortedByTime, false);
+  assert.equal(trackedWindowState.sortableVideosSortedByRemainingTime, false);
 });
 
 test('marks window as sorted only when all actionable tabs are known and ordered', () => {
@@ -35,10 +35,10 @@ test('marks window as sorted only when all actionable tabs are known and ordered
 
   recomputeSortState();
 
-  assert.equal(trackedWindowState.sortableVideosSortedByTime, true);
-  assert.equal(trackedWindowState.sortSummary.order.allSortableVideosReady, true);
-  assert.equal(trackedWindowState.sortSummary.order.sortableVideosSortedByTime, true);
-  assert.equal(trackedWindowState.sortSummary.readyTabs.outOfOrder, false);
+  assert.equal(trackedWindowState.sortableVideosSortedByRemainingTime, true);
+  assert.equal(trackedWindowState.sortSummary.order.allSortableVideosSortReady, true);
+  assert.equal(trackedWindowState.sortSummary.order.sortableVideosSortedByRemainingTime, true);
+  assert.equal(trackedWindowState.sortSummary.sortReadyTabs.outOfOrder, false);
 });
 
 test('derives sort summary metrics for non-contiguous and out-of-order ready subsets', () => {
@@ -52,10 +52,10 @@ test('derives sort summary metrics for non-contiguous and out-of-order ready sub
 
   recomputeSortState();
 
-  assert.equal(trackedWindowState.sortSummary.counts.ready, 2);
-  assert.equal(trackedWindowState.sortSummary.readyTabs.atFront, false);
-  assert.equal(trackedWindowState.sortSummary.readyTabs.contiguous, false);
-  assert.equal(trackedWindowState.sortSummary.readyTabs.outOfOrder, true);
+  assert.equal(trackedWindowState.sortSummary.counts.sortReady, 2);
+  assert.equal(trackedWindowState.sortSummary.sortReadyTabs.atFront, false);
+  assert.equal(trackedWindowState.sortSummary.sortReadyTabs.contiguous, false);
+  assert.equal(trackedWindowState.sortSummary.sortReadyTabs.outOfOrder, true);
   assert.equal(trackedWindowState.sortSummary.backgroundTabs.haveStaleRemainingTime, true);
 });
 
@@ -70,7 +70,7 @@ test('handles records without a finite index deterministically', () => {
   recomputeSortState();
 
   assert.deepEqual(trackedWindowState.visibleOrder, [1, 2, 3]);
-  assert.deepEqual(trackedWindowState.targetOrder, [3, 2, 1]);
+  assert.deepEqual(trackedWindowState.targetSortableVideoOrder, [3, 2, 1]);
 });
 
 test('live tabs do not block sorted readiness for VOD tabs with known remaining times', () => {
@@ -80,7 +80,7 @@ test('live tabs do not block sorted readiness for VOD tabs with known remaining 
     2: makeTabRecord(2, { index: 1, videoDetails: { remainingTime: 15 }, isRemainingTimeStale: false }),
     3: makeTabRecord(3, {
       index: 2,
-      isLiveStream: true,
+      isLiveNow: true,
       videoDetails: { remainingTime: null },
       isRemainingTimeStale: false,
     }),
@@ -88,12 +88,12 @@ test('live tabs do not block sorted readiness for VOD tabs with known remaining 
 
   recomputeSortState();
 
-  assert.equal(trackedWindowState.sortableVideosSortedByTime, true);
+  assert.equal(trackedWindowState.sortableVideosSortedByRemainingTime, true);
   assert.equal(trackedWindowState.sortSummary.counts.tracked, 3);
-  assert.equal(trackedWindowState.sortSummary.counts.ready, 2);
-  assert.equal(trackedWindowState.sortSummary.order.allSortableVideosReady, true);
-  assert.equal(trackedWindowState.sortSummary.order.sortableVideosSortedByTime, true);
-  assert.deepEqual(trackedWindowState.targetOrder, [1, 2]);
+  assert.equal(trackedWindowState.sortSummary.counts.sortReady, 2);
+  assert.equal(trackedWindowState.sortSummary.order.allSortableVideosSortReady, true);
+  assert.equal(trackedWindowState.sortSummary.order.sortableVideosSortedByRemainingTime, true);
+  assert.deepEqual(trackedWindowState.targetSortableVideoOrder, [1, 2]);
 });
 
 test('pinned tracked tabs count toward popup totals without affecting sort summary', () => {
@@ -119,10 +119,10 @@ test('pinned tracked tabs count toward popup totals without affecting sort summa
 
   recomputeSortState();
 
-  assert.equal(trackedWindowState.sortableVideosSortedByTime, true);
+  assert.equal(trackedWindowState.sortableVideosSortedByRemainingTime, true);
   assert.equal(trackedWindowState.sortSummary.counts.tracked, 3);
-  assert.equal(trackedWindowState.sortSummary.counts.ready, 2);
-  assert.equal(trackedWindowState.sortSummary.order.allSortableVideosReady, true);
-  assert.equal(trackedWindowState.sortSummary.order.sortableVideosSortedByTime, true);
-  assert.deepEqual(trackedWindowState.targetOrder, [2, 3]);
+  assert.equal(trackedWindowState.sortSummary.counts.sortReady, 2);
+  assert.equal(trackedWindowState.sortSummary.order.allSortableVideosSortReady, true);
+  assert.equal(trackedWindowState.sortSummary.order.sortableVideosSortedByRemainingTime, true);
+  assert.deepEqual(trackedWindowState.targetSortableVideoOrder, [2, 3]);
 });

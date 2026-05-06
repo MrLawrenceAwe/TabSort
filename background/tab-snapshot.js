@@ -1,4 +1,4 @@
-import { cloneSortSummary, createEmptySortSummary } from '../shared/sort-summary.js';
+import { cloneSortSummary, createEmptySortSummary } from '../shared/sort-summary-model.js';
 import { logDebug } from '../shared/log.js';
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { setSnapshotSignature, trackedWindowState } from './tracked-window-state.js';
@@ -21,9 +21,9 @@ export function buildTabSnapshot() {
 
   return {
     tabRecordsById,
-    targetOrder: [...trackedWindowState.targetOrder],
+    targetSortableVideoOrder: [...trackedWindowState.targetSortableVideoOrder],
     visibleOrder: [...trackedWindowState.visibleOrder],
-    sortableVideosSortedByTime: trackedWindowState.sortableVideosSortedByTime,
+    sortableVideosSortedByRemainingTime: trackedWindowState.sortableVideosSortedByRemainingTime,
     sortSummary: cloneSortSummary(trackedWindowState.sortSummary || createEmptySortSummary()),
   };
 }

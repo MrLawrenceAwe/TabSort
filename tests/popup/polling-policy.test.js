@@ -16,7 +16,7 @@ function makeRecord(overrides = {}) {
   return {
     id: 1,
     status: TAB_STATES.UNSUSPENDED,
-    isLiveStream: false,
+    isLiveNow: false,
     isActiveTab: false,
     isHidden: false,
     pageRuntimeReady: true,
