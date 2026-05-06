@@ -1,7 +1,7 @@
 import { isValidWindowId } from '../shared/guards.js';
 import { loadSortOptions } from '../shared/storage.js';
 import { hasReadyRemainingTime } from './sort-readiness.js';
-import { trackedWindowState, setWindowId } from './tracked-window-store.js';
+import { trackedWindowState, setWindowId } from './tracked-window-state.js';
 import { buildNonYoutubeOrder, buildYoutubeTabOrder } from './sort-strategy.js';
 import { listWindowTabs, moveTabsInOrder } from './chrome-tabs.js';
 

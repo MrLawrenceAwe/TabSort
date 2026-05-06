@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES } from '../../shared/tab-states.js';
-import { trackedWindowState } from '../../background/tracked-window-store.js';
+import { trackedWindowState } from '../../background/tracked-window-state.js';
 import { refreshTabPlaybackState } from '../../background/tab-playback-sync.js';
 import { syncWindowTabRecords } from '../../background/tab-record-sync.js';
 import {

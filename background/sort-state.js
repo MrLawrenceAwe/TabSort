@@ -1,7 +1,7 @@
 import { broadcastSnapshotUpdate } from './tab-snapshot.js';
 import { deriveSortPlan } from './sorting/sort-plan.js';
 import { deriveSortSummary } from './sorting/derive-sort-summary.js';
-import { applySortState, trackedWindowState } from './tracked-window-store.js';
+import { applySortState, trackedWindowState } from './tracked-window-state.js';
 
 function deriveSortState(records) {
   const sortPlan = deriveSortPlan(records);

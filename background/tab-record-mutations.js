@@ -1,6 +1,6 @@
 import { TAB_STATES } from '../shared/tab-states.js';
 import { recomputeSortState } from './sort-state.js';
-import { getCurrentTimeMs, removeTabRecordFromState } from './tracked-window-store.js';
+import { getCurrentTimeMs, removeTabRecordFromState } from './tracked-window-state.js';
 
 export function clearTabRemainingTime(record) {
   if (record?.videoDetails && record.videoDetails.remainingTime != null) {
