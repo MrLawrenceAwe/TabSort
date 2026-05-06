@@ -7,13 +7,13 @@ import { createMediaReadinessTracker } from './media-readiness.js';
 import { createTitleObserver } from './title-observer.js';
 import { handleCollectVideoMetricsMessage } from './video-metrics.js';
 
-const runtimeConfig = {
+const pageSessionConfig = {
   mediaReadyStateThreshold: MEDIA_READY_STATE_THRESHOLD,
   isFiniteNumber,
   inferIsLiveNow,
 };
 
-function createRuntimeState() {
+function createPageSessionState() {
   return {
     initialized: false,
     videoMountObserver: null,
@@ -22,7 +22,7 @@ function createRuntimeState() {
     observedTitleElement: null,
     lastKnownTitleText: null,
     observedPageUrl: null,
-    runtimeReadyUrl: null,
+    lastRuntimeReadyPageUrl: null,
     mediaReadyUrl: null,
     lastMediaReadyVideoElement: null,
     lastMediaReadyFingerprint: null,
@@ -33,15 +33,15 @@ function createRuntimeState() {
   };
 }
 
-export function shouldSendPageRuntimeReady(currentUrl, lastReadyUrl, { force = false } = {}) {
+export function shouldSendPageRuntimeReadySignal(currentUrl, lastReadyUrl, { force = false } = {}) {
   return Boolean(currentUrl) && (force || currentUrl !== lastReadyUrl);
 }
 
 export function createPageRuntimeSession({
-  config = runtimeConfig,
+  config = pageSessionConfig,
   environment = globalThis,
 } = {}) {
-  const state = createRuntimeState();
+  const state = createPageSessionState();
 
   const getDocument = () => environment.document ?? globalThis.document;
   const getWindow = () => environment.window ?? globalThis.window;
@@ -54,12 +54,12 @@ export function createPageRuntimeSession({
     console.warn(`[TabSort] ${context}: ${message}`);
   }
 
-  function hasRuntime() {
+  function hasExtensionRuntime() {
     return Boolean(getChrome()?.runtime?.id);
   }
 
-  function trySendRuntimeMessage(payload, context) {
-    if (!hasRuntime()) return false;
+  function sendExtensionMessage(payload, context) {
+    if (!hasExtensionRuntime()) return false;
     try {
       getChrome().runtime.sendMessage(payload);
       return true;
@@ -119,7 +119,7 @@ export function createPageRuntimeSession({
     try {
       const details = collectPageDetails();
       if (details.title || details.lengthSeconds != null || details.isLive) {
-        trySendRuntimeMessage(
+        sendExtensionMessage(
           createRuntimeMessage(RUNTIME_MESSAGE_TYPES.PAGE_VIDEO_DETAILS, { details }),
           'page video details',
         );
@@ -131,9 +131,13 @@ export function createPageRuntimeSession({
 
   function sendPageRuntimeReady({ force = false } = {}) {
     const currentUrl = getCurrentPageUrl();
-    if (!shouldSendPageRuntimeReady(currentUrl, state.runtimeReadyUrl, { force })) return;
-    state.runtimeReadyUrl = currentUrl;
-    trySendRuntimeMessage(
+    if (
+      !shouldSendPageRuntimeReadySignal(currentUrl, state.lastRuntimeReadyPageUrl, { force })
+    ) {
+      return;
+    }
+    state.lastRuntimeReadyPageUrl = currentUrl;
+    sendExtensionMessage(
       createRuntimeMessage(RUNTIME_MESSAGE_TYPES.PAGE_RUNTIME_READY),
       'page runtime ready',
     );
@@ -146,7 +150,7 @@ export function createPageRuntimeSession({
     getCurrentPageUrl,
     getDocument,
     getMutationObserver,
-    trySendRuntimeMessage,
+    sendExtensionMessage,
     doesVideoDurationMatchPage,
   });
   const titleObserver = createTitleObserver({
@@ -178,7 +182,7 @@ export function createPageRuntimeSession({
     if (currentUrl && currentUrl !== state.observedPageUrl) {
       disposeObservers();
       state.observedPageUrl = currentUrl;
-      state.runtimeReadyUrl = null;
+      state.lastRuntimeReadyPageUrl = null;
       state.mediaReadyUrl = null;
     } else if (!state.observedPageUrl && currentUrl) {
       state.observedPageUrl = currentUrl;
@@ -199,7 +203,7 @@ export function createPageRuntimeSession({
     disposeObservers();
     disposeListeners();
     state.observedPageUrl = null;
-    state.runtimeReadyUrl = null;
+    state.lastRuntimeReadyPageUrl = null;
     state.mediaReadyUrl = null;
     state.lastMediaReadyVideoElement = null;
     state.lastMediaReadyFingerprint = null;
@@ -210,7 +214,7 @@ export function createPageRuntimeSession({
     if (state.initialized) return;
     state.initialized = true;
 
-    if (!hasRuntime()) return;
+    if (!hasExtensionRuntime()) return;
 
     const runtimeWindow = getWindow();
     const runtimeDocument = getDocument();
@@ -249,7 +253,7 @@ export function createPageRuntimeSession({
 
     addWindowEventListener(runtimeWindow, 'pagehide', () => {
       disposeObservers();
-      state.runtimeReadyUrl = null;
+      state.lastRuntimeReadyPageUrl = null;
       state.mediaReadyUrl = null;
       state.lastMediaReadyVideoElement = null;
       state.lastMediaReadyFingerprint = null;

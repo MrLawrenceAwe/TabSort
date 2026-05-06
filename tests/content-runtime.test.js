@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import {
   createPageRuntimeSession,
-  shouldSendPageRuntimeReady,
+  shouldSendPageRuntimeReadySignal,
 } from '../content/youtube/page-runtime.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 
@@ -147,20 +147,20 @@ function resetGlobals() {
   installRuntimeTestDom.runtimeMessageListeners = new Set();
 }
 
-test('shouldSendPageRuntimeReady allows first-load, force-refresh, and URL-change signals', () => {
+test('shouldSendPageRuntimeReadySignal allows first-load, force-refresh, and URL-change signals', () => {
   assert.equal(
-    shouldSendPageRuntimeReady('https://www.youtube.com/watch?v=one', null),
+    shouldSendPageRuntimeReadySignal('https://www.youtube.com/watch?v=one', null),
     true,
   );
   assert.equal(
-    shouldSendPageRuntimeReady(
+    shouldSendPageRuntimeReadySignal(
       'https://www.youtube.com/watch?v=one',
       'https://www.youtube.com/watch?v=one',
     ),
     false,
   );
   assert.equal(
-    shouldSendPageRuntimeReady(
+    shouldSendPageRuntimeReadySignal(
       'https://www.youtube.com/watch?v=one',
       'https://www.youtube.com/watch?v=one',
       { force: true },
@@ -168,7 +168,7 @@ test('shouldSendPageRuntimeReady allows first-load, force-refresh, and URL-chang
     true,
   );
   assert.equal(
-    shouldSendPageRuntimeReady(
+    shouldSendPageRuntimeReadySignal(
       'https://www.youtube.com/watch?v=two',
       'https://www.youtube.com/watch?v=one',
     ),

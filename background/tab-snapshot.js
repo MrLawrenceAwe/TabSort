@@ -23,7 +23,7 @@ export function buildTabSnapshot() {
     tabRecordsById,
     targetOrder: [...trackedWindowState.targetOrder],
     visibleOrder: [...trackedWindowState.visibleOrder],
-    allSortableVodTabsSorted: trackedWindowState.allSortableVodTabsSorted,
+    sortableVideosSortedByTime: trackedWindowState.sortableVideosSortedByTime,
     sortSummary: cloneSortSummary(trackedWindowState.sortSummary || createEmptySortSummary()),
   };
 }

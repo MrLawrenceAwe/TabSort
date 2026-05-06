@@ -6,7 +6,7 @@ function createTrackedWindowStateShape() {
     tabRecordsById: {},
     targetOrder: [],
     visibleOrder: [],
-    allSortableVodTabsSorted: false,
+    sortableVideosSortedByTime: false,
     sortSummary: createEmptySortSummary(),
     windowId: null,
     snapshotSignature: null,
@@ -67,12 +67,12 @@ export function isSyncCurrent(syncToken) {
 export function applySortState({
   visibleOrder = [],
   targetOrder = [],
-  allSortableVodTabsSorted = false,
+  sortableVideosSortedByTime = false,
   sortSummary = createEmptySortSummary(),
 } = {}) {
   trackedWindowState.targetOrder = [...targetOrder];
   trackedWindowState.visibleOrder = [...visibleOrder];
-  trackedWindowState.allSortableVodTabsSorted = Boolean(allSortableVodTabsSorted);
+  trackedWindowState.sortableVideosSortedByTime = Boolean(sortableVideosSortedByTime);
   trackedWindowState.sortSummary = cloneSortSummary(sortSummary);
 }
 

@@ -8,7 +8,7 @@ export const RUNTIME_MESSAGE_TYPES = Object.freeze({
   PAGE_VIDEO_DETAILS: 'pageVideoDetails',
   PING: 'ping',
   RELOAD_TAB: 'reloadTab',
-  SORT_WINDOW_TABS: 'sortWindowTabs',
+  REORDER_WINDOW_TABS: 'reorderWindowTabs',
   SYNC_TRACKED_TABS: 'syncTrackedTabs',
   TAB_SNAPSHOT_UPDATED: 'tabSnapshotUpdated',
 });

@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { TAB_STATES } from '../shared/tab-states.js';
 import { trackedWindowState } from '../background/tracked-window-state.js';
-import { reloadTab } from '../background/message-router.js';
+import { reloadTab } from '../background/tab-command-handlers.js';
 import {
   ensureChromeApi,
   makeTabRecord,

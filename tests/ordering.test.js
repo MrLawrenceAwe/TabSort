@@ -23,7 +23,7 @@ test('orders known remaining-time tabs before unknown tabs', () => {
 
   assert.deepEqual(trackedWindowState.targetOrder, [3, 1, 2]);
   assert.deepEqual(trackedWindowState.visibleOrder, [1, 2, 3]);
-  assert.equal(trackedWindowState.allSortableVodTabsSorted, false);
+  assert.equal(trackedWindowState.sortableVideosSortedByTime, false);
 });
 
 test('marks window as sorted only when all actionable tabs are known and ordered', () => {
@@ -35,9 +35,9 @@ test('marks window as sorted only when all actionable tabs are known and ordered
 
   recomputeSortState();
 
-  assert.equal(trackedWindowState.allSortableVodTabsSorted, true);
-  assert.equal(trackedWindowState.sortSummary.order.allSortableVodDurationsKnown, true);
-  assert.equal(trackedWindowState.sortSummary.order.allSortableVodTabsSorted, true);
+  assert.equal(trackedWindowState.sortableVideosSortedByTime, true);
+  assert.equal(trackedWindowState.sortSummary.order.allSortableVideosReady, true);
+  assert.equal(trackedWindowState.sortSummary.order.sortableVideosSortedByTime, true);
   assert.equal(trackedWindowState.sortSummary.readyTabs.outOfOrder, false);
 });
 
@@ -88,11 +88,11 @@ test('live tabs do not block sorted readiness for VOD tabs with known remaining 
 
   recomputeSortState();
 
-  assert.equal(trackedWindowState.allSortableVodTabsSorted, true);
+  assert.equal(trackedWindowState.sortableVideosSortedByTime, true);
   assert.equal(trackedWindowState.sortSummary.counts.tracked, 3);
   assert.equal(trackedWindowState.sortSummary.counts.ready, 2);
-  assert.equal(trackedWindowState.sortSummary.order.allSortableVodDurationsKnown, true);
-  assert.equal(trackedWindowState.sortSummary.order.allSortableVodTabsSorted, true);
+  assert.equal(trackedWindowState.sortSummary.order.allSortableVideosReady, true);
+  assert.equal(trackedWindowState.sortSummary.order.sortableVideosSortedByTime, true);
   assert.deepEqual(trackedWindowState.targetOrder, [1, 2]);
 });
 
@@ -119,10 +119,10 @@ test('pinned tracked tabs count toward popup totals without affecting sort summa
 
   recomputeSortState();
 
-  assert.equal(trackedWindowState.allSortableVodTabsSorted, true);
+  assert.equal(trackedWindowState.sortableVideosSortedByTime, true);
   assert.equal(trackedWindowState.sortSummary.counts.tracked, 3);
   assert.equal(trackedWindowState.sortSummary.counts.ready, 2);
-  assert.equal(trackedWindowState.sortSummary.order.allSortableVodDurationsKnown, true);
-  assert.equal(trackedWindowState.sortSummary.order.allSortableVodTabsSorted, true);
+  assert.equal(trackedWindowState.sortSummary.order.allSortableVideosReady, true);
+  assert.equal(trackedWindowState.sortSummary.order.sortableVideosSortedByTime, true);
   assert.deepEqual(trackedWindowState.targetOrder, [2, 3]);
 });
