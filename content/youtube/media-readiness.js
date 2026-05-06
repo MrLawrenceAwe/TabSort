@@ -8,7 +8,7 @@ export function createMediaReadinessTracker({
   getCurrentPageUrl,
   getDocument,
   getMutationObserver,
-  trySendRuntimeMessage,
+  sendExtensionMessage,
   doesVideoDurationMatchPage,
 }) {
   function isCurrentPageMediaReady() {
@@ -65,7 +65,7 @@ export function createMediaReadinessTracker({
       state.mediaReadyUrl = getCurrentPageUrl();
       state.lastMediaReadyVideoElement = video;
       state.lastMediaReadyFingerprint = getVideoFingerprint(video);
-      trySendRuntimeMessage(
+      sendExtensionMessage(
         createRuntimeMessage(RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY),
         'page media ready',
       );

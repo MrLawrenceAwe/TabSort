@@ -8,6 +8,21 @@ import {
 } from './view.js';
 import { renderTabRow } from './tab-row-view.js';
 
+export function derivePopupSnapshotViewState(snapshot) {
+  const sortSummary = cloneSortSummary(snapshot?.sortSummary);
+  const snapshotSaysSorted = snapshot?.sortableVideosSortedByTime === true;
+  const sortableVideosSortedByTime =
+    sortSummary.order.sortableVideosSortedByTime ||
+    (snapshotSaysSorted &&
+      sortSummary.order.allSortableVideosReady &&
+      !sortSummary.readyTabs.outOfOrder);
+
+  return {
+    sortSummary,
+    sortableVideosSortedByTime,
+  };
+}
+
 export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
   if (!snapshot) return;
   setErrorMessage('');
@@ -18,20 +33,14 @@ export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
 
   const tabRecords = snapshot.tabRecordsById || {};
   const visibleOrder = snapshot.visibleOrder || [];
-  const sortSummary = cloneSortSummary(snapshot.sortSummary);
-  const backgroundSortedFlag = snapshot.allSortableVodTabsSorted === true;
-  const shouldUseSortedView =
-    sortSummary.order.allSortableVodTabsSorted ||
-    (backgroundSortedFlag &&
-      sortSummary.order.allSortableVodDurationsKnown &&
-      !sortSummary.readyTabs.outOfOrder);
+  const { sortSummary, sortableVideosSortedByTime } = derivePopupSnapshotViewState(snapshot);
 
   updateViewState({
-    allSortableVodTabsSorted: shouldUseSortedView,
+    sortableVideosSortedByTime,
     sortSummary,
   });
 
-  setSecondaryColumnsVisible(!shouldUseSortedView);
+  setSecondaryColumnsVisible(!sortableVideosSortedByTime);
 
   const rowFragment = document.createDocumentFragment();
   for (const tabId of visibleOrder) {
@@ -43,12 +52,12 @@ export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
       isRemainingTimeStale: Boolean(tabRecord.isRemainingTimeStale),
     };
     if (normalizedRecord.isRemainingTimeStale) row.classList.add('stale-remaining-row');
-    renderTabRow(row, normalizedRecord, shouldUseSortedView, postRuntimeMessage);
+    renderTabRow(row, normalizedRecord, sortableVideosSortedByTime, postRuntimeMessage);
     rowFragment.appendChild(row);
   }
   tbody.replaceChildren(rowFragment);
 
-  if (sortSummary.order.allSortableVodDurationsKnown && !shouldUseSortedView) {
+  if (sortSummary.order.allSortableVideosReady && !sortableVideosSortedByTime) {
     addClassToDataRows(table, 'all-ready-row');
   }
 

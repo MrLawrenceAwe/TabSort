@@ -2,7 +2,7 @@ import { createEmptySortSummary } from '../shared/sort-summary.js';
 
 export const viewState = {
   sortSummary: createEmptySortSummary(),
-  allSortableVodTabsSorted: false,
+  sortableVideosSortedByTime: false,
   activeWindowId: null,
 };
 
@@ -33,7 +33,7 @@ export function resetView() {
   domCache.tabStatusColumn = null;
   domCache.initialized = false;
   viewState.sortSummary = createEmptySortSummary();
-  viewState.allSortableVodTabsSorted = false;
+  viewState.sortableVideosSortedByTime = false;
   viewState.activeWindowId = null;
 }
 
@@ -70,7 +70,7 @@ function updateStatus(statusElement) {
   if (!statusElement) return;
   const trackedTabCount = viewState.sortSummary.counts.tracked;
   const readyTabCount = viewState.sortSummary.counts.ready;
-  if (!viewState.allSortableVodTabsSorted) {
+  if (!viewState.sortableVideosSortedByTime) {
     statusElement.classList.toggle('hide', trackedTabCount <= 1);
     statusElement.textContent = `${readyTabCount}/${trackedTabCount} ready for sort.`;
     return;
@@ -80,7 +80,7 @@ function updateStatus(statusElement) {
 
 function updateSortedBadge(sortedBadgeElement) {
   if (!sortedBadgeElement) return;
-  sortedBadgeElement.classList.toggle('hide', !viewState.allSortableVodTabsSorted);
+  sortedBadgeElement.classList.toggle('hide', !viewState.sortableVideosSortedByTime);
 }
 
 export function getEmptyStateMessage(tabCount) {
@@ -158,7 +158,7 @@ export function renderView() {
   const readySubsetNeedsSorting = readySubsetExists && (!readyTabs.contiguous || !readyTabs.atFront);
   const shouldShowSort =
     counts.ready >= 2 &&
-    !viewState.allSortableVodTabsSorted &&
+    !viewState.sortableVideosSortedByTime &&
     (readyTabs.outOfOrder || readySubsetNeedsSorting);
 
   setOptionToggleVisibility(shouldShowSort);
@@ -168,7 +168,7 @@ export function renderView() {
   updateSortButton(sortButton, shouldShowSort);
   updateEmptyState(emptyStateElement);
 
-  if (viewState.allSortableVodTabsSorted && table) {
+  if (viewState.sortableVideosSortedByTime && table) {
     clearReadyRows(table);
   }
 }

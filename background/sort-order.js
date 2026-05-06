@@ -1,0 +1,77 @@
+import { isFiniteNumber } from '../shared/guards.js';
+import { hasReadyRemainingTime } from './sort-readiness.js';
+
+export function areTabIdListsEqual(a, b) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (String(a[i]) !== String(b[i])) return false;
+  }
+  return true;
+}
+
+export function deriveTabIdOrder(records) {
+  const resolveIndex = (record) =>
+    (isFiniteNumber(record?.index) ? record.index : Number.MAX_SAFE_INTEGER);
+  return records
+    .slice()
+    .sort((a, b) => {
+      const indexDelta = resolveIndex(a) - resolveIndex(b);
+      if (indexDelta !== 0) return indexDelta;
+      return a.id - b.id;
+    })
+    .map((record) => record.id);
+}
+
+function buildRemainingTimeEntries(records) {
+  return records.map((record) => ({
+    id: record.id,
+    remainingTime: hasReadyRemainingTime(record)
+      ? record.videoDetails?.remainingTime ?? null
+      : null,
+  }));
+}
+
+function buildTargetSortOrder(knownEntries, unknownEntries, currentOrder) {
+  const sortedKnownIds = knownEntries
+    .slice()
+    .sort((a, b) => a.remainingTime - b.remainingTime)
+    .map((entry) => entry.id);
+
+  const unknownIds = new Set(unknownEntries.map((entry) => entry.id));
+  const unknownIdsInCurrentOrder = currentOrder.filter((id) => unknownIds.has(id));
+
+  return [...sortedKnownIds, ...unknownIdsInCurrentOrder];
+}
+
+function isRecordSortableByRemainingTime(record) {
+  return !record?.isLiveStream;
+}
+
+export function deriveSortOrder(records) {
+  const visibleOrder = deriveTabIdOrder(records);
+  const movableRecords = records.filter((record) => !record.pinned);
+  const sortableRecords = movableRecords.filter(isRecordSortableByRemainingTime);
+  const sortableOrder = deriveTabIdOrder(sortableRecords);
+  const remainingTimeEntries = buildRemainingTimeEntries(sortableRecords);
+  const knownRemainingEntries = remainingTimeEntries.filter((entry) => entry.remainingTime !== null);
+  const unknownRemainingEntries = remainingTimeEntries.filter((entry) => entry.remainingTime === null);
+  const targetOrder = buildTargetSortOrder(
+    knownRemainingEntries,
+    unknownRemainingEntries,
+    sortableOrder,
+  );
+  const allSortableVideosReady = unknownRemainingEntries.length === 0;
+  const alreadySorted =
+    sortableOrder.length > 0 &&
+    sortableOrder.length === targetOrder.length &&
+    sortableOrder.every((id, index) => id === targetOrder[index]);
+
+  return {
+    visibleOrder,
+    targetOrder,
+    sortableRecords,
+    sortableOrder,
+    allSortableVideosReady,
+    sortableVideosSortedByTime: allSortableVideosReady && alreadySorted,
+  };
+}

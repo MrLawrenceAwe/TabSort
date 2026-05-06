@@ -10,7 +10,7 @@ import {
   shouldPollSnapshot,
   shouldRetrySnapshotPoll,
 } from './snapshot-poller.js';
-import { renderSnapshot } from './snapshot-view.js';
+import { renderSnapshot } from './snapshot-renderer.js';
 import {
   initializeView,
   renderView,
@@ -109,7 +109,7 @@ export async function initializePopupController() {
   const sortButton = document.getElementById('sortButton');
   if (sortButton) {
     sortButton.addEventListener('click', () =>
-      runtimeClient.postRuntimeMessage(RUNTIME_MESSAGE_TYPES.SORT_WINDOW_TABS),
+      runtimeClient.postRuntimeMessage(RUNTIME_MESSAGE_TYPES.REORDER_WINDOW_TABS),
     );
   }
 
