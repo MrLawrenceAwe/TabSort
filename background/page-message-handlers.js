@@ -2,13 +2,14 @@ import { isFiniteNumber } from '../shared/guards.js';
 import { ensureTabRecord } from './tab-record.js';
 import { markTabRecordVideoChanged, removeTabRecord } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { trackedWindowState, setWindowId } from './tracked-window-state.js';
-import { refreshTabPlaybackState } from './tab-playback-sync.js';
+import { refreshTabPlaybackMetrics } from './tab-playback-metrics.js';
+import { windowSessionState } from './window-session-state.js';
+import { setWindowId } from './window-session-store.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function isSenderInTrackedWindow(windowId) {
-  if (trackedWindowState.windowId == null) return true;
-  return typeof windowId === 'number' && windowId === trackedWindowState.windowId;
+  if (windowSessionState.windowId == null) return true;
+  return typeof windowId === 'number' && windowId === windowSessionState.windowId;
 }
 
 function removeTabRecordWhenSenderLeavesVideoPage(tabId) {
@@ -52,7 +53,7 @@ export async function handlePageMediaReady(_message, sender) {
   setWindowId(windowId);
   const record = ensureTabRecord(tabId, windowId);
   record.pageMediaReady = true;
-  await refreshTabPlaybackState(tabId);
+  await refreshTabPlaybackMetrics(tabId);
 }
 
 export async function handlePageVideoDetails(message, sender) {

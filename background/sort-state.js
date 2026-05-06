@@ -1,7 +1,8 @@
 import { broadcastSnapshotUpdate } from './tab-snapshot.js';
 import { deriveSortPlan } from './sorting/sort-plan.js';
 import { deriveSortSummary } from './sorting/derive-sort-summary.js';
-import { applySortState, trackedWindowState } from './tracked-window-state.js';
+import { windowSessionState } from './window-session-state.js';
+import { applySortState } from './window-session-store.js';
 
 function deriveSortState(records) {
   const sortPlan = deriveSortPlan(records);
@@ -35,7 +36,7 @@ function applyDerivedSortState({
 }
 
 export function recomputeSortState() {
-  const records = Object.values(trackedWindowState.tabRecordsById);
+  const records = Object.values(windowSessionState.tabRecordsById);
   const derivedState = deriveSortState(records);
   applyDerivedSortState(derivedState);
 }

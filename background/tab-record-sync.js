@@ -3,14 +3,14 @@ import { isValidWindowId } from '../shared/guards.js';
 import { getTabState, listWindowTabs } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
 import { createTabRecord } from './tab-record.js';
+import { windowSessionState } from './window-session-state.js';
 import {
   beginSync,
   isSyncCurrent,
-  trackedWindowState,
   getCurrentTimeMs,
   replaceTabRecords,
   setWindowId,
-} from './tracked-window-state.js';
+} from './window-session-store.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function syncLoadingTimestamp(record, previousStatus, nextStatus) {
@@ -43,13 +43,13 @@ export async function syncWindowTabRecords(windowId, options = {}) {
 
   if (
     isValidWindowId(resolvedWindowId) &&
-    isValidWindowId(trackedWindowState.windowId) &&
-    resolvedWindowId !== trackedWindowState.windowId
+    isValidWindowId(windowSessionState.windowId) &&
+    resolvedWindowId !== windowSessionState.windowId
   ) {
     return;
   }
 
-  const previousTabRecords = trackedWindowState.tabRecordsById;
+  const previousTabRecords = windowSessionState.tabRecordsById;
   const nextTabRecords = {};
 
   for (const tab of tabs) {

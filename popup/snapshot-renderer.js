@@ -1,11 +1,11 @@
 import { cloneSortSummary } from '../shared/sort-summary.js';
 import {
   addClassToDataRows,
-  renderPopupChrome,
+  renderPopupShell,
   setSecondaryColumnsVisible,
-} from './popup-layout.js';
-import { setErrorMessage } from './popup-dom.js';
-import { applyPopupUiState } from './popup-ui-state.js';
+} from './layout.js';
+import { setErrorMessage } from './dom.js';
+import { applyPopupState } from './state.js';
 import { renderTabRow } from './tab-row-view.js';
 
 export function deriveSnapshotUiState(snapshot) {
@@ -35,7 +35,7 @@ export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
   const visibleTabIds = snapshot.visibleTabIds || [];
   const { sortSummary, currentOrderMatchesTarget } = deriveSnapshotUiState(snapshot);
 
-  applyPopupUiState({
+  applyPopupState({
     currentOrderMatchesTarget,
     sortSummary,
   });
@@ -61,5 +61,5 @@ export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
     addClassToDataRows(table, 'all-sort-ready-row');
   }
 
-  renderPopupChrome();
+  renderPopupShell();
 }

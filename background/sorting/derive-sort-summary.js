@@ -11,7 +11,7 @@ export function deriveSortSummary({ trackedRecords, sortableRecords, currentSort
   const trackedTabCount = trackedRecords.length;
   const sortableTabCount = sortableRecords.length;
 
-  let backgroundTabsHaveStaleRemainingTime = false;
+  let inactiveTabsHaveStaleRemainingTime = false;
   let sortReadyTabCount = 0;
   let sortReadyTabsAreContiguous = true;
   let sortReadyTabsAreAtFront = true;
@@ -31,7 +31,7 @@ export function deriveSortSummary({ trackedRecords, sortableRecords, currentSort
     orderedIdsWithRecords.push(tabId);
 
     if (record.isRemainingTimeStale && (!record.isActiveTab || record.isHidden)) {
-      backgroundTabsHaveStaleRemainingTime = true;
+      inactiveTabsHaveStaleRemainingTime = true;
     }
 
     const isReady = hasReadyRemainingTime(record);
@@ -81,8 +81,8 @@ export function deriveSortSummary({ trackedRecords, sortableRecords, currentSort
       atFront: sortReadyTabsAreAtFront,
       outOfOrder: sortReadyTabsAreOutOfOrder,
     },
-    backgroundTabs: {
-      haveStaleRemainingTime: backgroundTabsHaveStaleRemainingTime,
+    inactiveTabs: {
+      hasStaleRemainingTime: inactiveTabsHaveStaleRemainingTime,
     },
     order: {
       allSortableTabsReady,

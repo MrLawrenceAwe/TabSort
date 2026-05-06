@@ -1,7 +1,8 @@
 import { cloneSortSummary, createEmptySortSummary } from '../shared/sort-summary.js';
 import { logDebug } from '../shared/log.js';
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
-import { setSnapshotSignature, trackedWindowState } from './tracked-window-state.js';
+import { windowSessionState } from './window-session-state.js';
+import { setSnapshotSignature } from './window-session-store.js';
 
 function cloneTabRecord(record) {
   if (!record || typeof record !== 'object') return record;
@@ -13,7 +14,7 @@ function cloneTabRecord(record) {
 
 export function buildTabSnapshot() {
   const tabRecordsById = Object.fromEntries(
-    Object.entries(trackedWindowState.tabRecordsById).map(([id, record]) => [
+    Object.entries(windowSessionState.tabRecordsById).map(([id, record]) => [
       id,
       cloneTabRecord(record),
     ]),
@@ -21,10 +22,10 @@ export function buildTabSnapshot() {
 
   return {
     tabRecordsById,
-    targetSortableTabIds: [...trackedWindowState.targetSortableTabIds],
-    visibleTabIds: [...trackedWindowState.visibleTabIds],
-    currentOrderMatchesTarget: trackedWindowState.currentOrderMatchesTarget,
-    sortSummary: cloneSortSummary(trackedWindowState.sortSummary || createEmptySortSummary()),
+    targetSortableTabIds: [...windowSessionState.targetSortableTabIds],
+    visibleTabIds: [...windowSessionState.visibleTabIds],
+    currentOrderMatchesTarget: windowSessionState.currentOrderMatchesTarget,
+    sortSummary: cloneSortSummary(windowSessionState.sortSummary || createEmptySortSummary()),
   };
 }
 
@@ -32,7 +33,7 @@ export function broadcastSnapshotUpdate({ force = false } = {}) {
   try {
     const snapshot = buildTabSnapshot();
     const signature = JSON.stringify(snapshot);
-    if (!force && signature === trackedWindowState.snapshotSignature) return;
+    if (!force && signature === windowSessionState.snapshotSignature) return;
     setSnapshotSignature(signature);
 
     chrome.runtime.sendMessage(

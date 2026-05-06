@@ -5,7 +5,8 @@ import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { getTab, sendMessageToTab } from './chrome-tabs.js';
 import { markTabRecordStale } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { trackedWindowState, setWindowId } from './tracked-window-state.js';
+import { windowSessionState } from './window-session-state.js';
+import { setWindowId } from './window-session-store.js';
 import { getYoutubeVideoIdentity, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 const MEDIA_DURATION_SYNC_TOLERANCE_SECONDS = 2;
@@ -111,17 +112,17 @@ function applyRemainingTimeMetrics(record, videoLengthSeconds, currentTimeSecond
 }
 
 async function loadTabRecordContext(tabId) {
-  const initialRecord = trackedWindowState.tabRecordsById[tabId];
+  const initialRecord = windowSessionState.tabRecordsById[tabId];
   if (!initialRecord || initialRecord.status !== TAB_STATES.UNSUSPENDED) {
     return null;
   }
 
   const tab = await getTab(tabId);
-  const record = trackedWindowState.tabRecordsById[tabId];
+  const record = windowSessionState.tabRecordsById[tabId];
   if (!record || record.status !== TAB_STATES.UNSUSPENDED) {
     return null;
   }
-  if (trackedWindowState.windowId != null && tab.windowId !== trackedWindowState.windowId) {
+  if (windowSessionState.windowId != null && tab.windowId !== windowSessionState.windowId) {
     return null;
   }
   if (tab.windowId != null) {
@@ -137,7 +138,7 @@ async function loadTabRecordContext(tabId) {
   return { record, tab };
 }
 
-export async function refreshTabPlaybackState(tabId) {
+export async function refreshTabPlaybackMetrics(tabId) {
   try {
     const initialContext = await loadTabRecordContext(tabId);
     if (!initialContext) return;
@@ -210,6 +211,6 @@ export async function refreshTabPlaybackState(tabId) {
     applyRemainingTimeMetrics(record, videoLengthSeconds, currentTimeSeconds, playbackRate);
     recomputeSortState();
   } catch (error) {
-    logDebug(`refreshTabPlaybackState failed for ${tabId}`, error);
+    logDebug(`refreshTabPlaybackMetrics failed for ${tabId}`, error);
   }
 }

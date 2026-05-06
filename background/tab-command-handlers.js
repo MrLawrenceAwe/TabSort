@@ -3,8 +3,9 @@ import { logDebug } from '../shared/log.js';
 import { buildTabSnapshot } from './tab-snapshot.js';
 import { markTabRecordReloading } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { listTabIds, trackedWindowState, setWindowId } from './tracked-window-state.js';
-import { refreshTabPlaybackState } from './tab-playback-sync.js';
+import { refreshTabPlaybackMetrics } from './tab-playback-metrics.js';
+import { windowSessionState } from './window-session-state.js';
+import { listTabIds, setWindowId } from './window-session-store.js';
 import { syncWindowTabRecords } from './tab-record-sync.js';
 import { reorderWindowTabs } from './tab-reorder.js';
 
@@ -39,7 +40,7 @@ export async function reloadTab(message) {
     logDebug(`tabs.reload failed for ${tabId}`, error);
   }
   if (!didReload) return;
-  const record = trackedWindowState.tabRecordsById[tabId];
+  const record = windowSessionState.tabRecordsById[tabId];
   if (!record) return;
 
   markTabRecordReloading(record);
@@ -53,14 +54,14 @@ export async function syncWindowTabs(message) {
 export async function getWindowSnapshot(message) {
   await syncWindowTabRecords(message.windowId, getTrackedWindowOptions(message.windowId));
   const ids = listTabIds();
-  await Promise.all(ids.map(refreshTabPlaybackState));
+  await Promise.all(ids.map(refreshTabPlaybackMetrics));
   return buildTabSnapshot();
 }
 
 export async function applyTabSortOrder(message) {
   const targetWindowId = isValidWindowId(message.windowId)
     ? message.windowId
-    : trackedWindowState.windowId;
+    : windowSessionState.windowId;
   if (isValidWindowId(targetWindowId)) {
     setWindowId(targetWindowId, { force: true });
   }

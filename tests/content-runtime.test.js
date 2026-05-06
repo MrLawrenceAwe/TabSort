@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  createYoutubePageRuntime,
+  createYoutubePageSession,
   shouldSendPageRuntimeReadySignal,
-} from '../content/youtube/youtube-page-runtime.js';
+} from '../content/youtube/youtube-page-session.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 
 class FakeMutationObserver {
@@ -179,7 +179,7 @@ test('shouldSendPageRuntimeReadySignal allows first-load, force-refresh, and URL
 test(
   'page runtime session re-sends pageRuntimeReady after yt-navigate-finish changes the page URL',
   () => {
-    const runtime = createYoutubePageRuntime();
+    const runtime = createYoutubePageSession();
     try {
       const { windowTarget, updatePage } = installRuntimeTestDom();
 
@@ -216,7 +216,7 @@ test(
 test(
   'page runtime session waits for fresh media evidence before re-sending pageMediaReady on SPA navigation',
   () => {
-    const runtime = createYoutubePageRuntime();
+    const runtime = createYoutubePageSession();
     try {
       const { windowTarget, updatePage, video } = installRuntimeTestDom();
 
@@ -256,7 +256,7 @@ test(
 );
 
 test('page runtime session reset removes listeners before a second bootstrap', () => {
-  const runtime = createYoutubePageRuntime();
+  const runtime = createYoutubePageSession();
   try {
     const { getRuntimeMessageListenerCount, windowTarget } = installRuntimeTestDom();
 
