@@ -6,9 +6,9 @@ import { buildNonYoutubeOrder, buildYoutubeTabOrder } from './sort-strategy.js';
 import { listWindowTabs, moveTabsInOrder } from './chrome-tabs.js';
 
 export async function reorderWindowTabs(windowId = trackedWindowState.windowId) {
-  const targetSortableVideoOrder = trackedWindowState.targetSortableVideoOrder.slice();
+  const targetSortableTabIds = trackedWindowState.targetSortableTabIds.slice();
 
-  const readyTabIds = targetSortableVideoOrder.filter((tabId) => {
+  const readyTabIds = targetSortableTabIds.filter((tabId) => {
     const record = trackedWindowState.tabRecordsById[tabId];
     return hasReadyRemainingTime(record);
   });
@@ -26,7 +26,7 @@ export async function reorderWindowTabs(windowId = trackedWindowState.windowId) 
   const pinnedCount = tabsByIndex.filter((tab) => tab?.pinned).length;
   const unpinnedTabs = tabsByIndex.filter((tab) => tab && !tab.pinned);
 
-  const youtubeOrder = buildYoutubeTabOrder(unpinnedTabs, targetSortableVideoOrder);
+  const youtubeOrder = buildYoutubeTabOrder(unpinnedTabs, targetSortableTabIds);
   const nonYoutubeOrder = buildNonYoutubeOrder(
     unpinnedTabs,
     Boolean(options.groupNonYoutubeTabsByDomain),

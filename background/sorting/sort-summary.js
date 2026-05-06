@@ -1,8 +1,8 @@
-import { createEmptySortSummary } from '../shared/sort-summary-model.js';
+import { createEmptySortSummary } from '../../shared/sort-summary-model.js';
 import { areTabIdListsEqual } from './sort-plan.js';
-import { hasReadyRemainingTime } from './sort-readiness.js';
+import { hasReadyRemainingTime } from '../sort-readiness.js';
 
-export function deriveSortSummary({ trackedRecords, sortableRecords, sortableOrder }) {
+export function deriveSortSummary({ trackedRecords, sortableRecords, currentSortableTabIds }) {
   if (!Array.isArray(trackedRecords) || trackedRecords.length === 0) {
     return createEmptySortSummary();
   }
@@ -25,7 +25,7 @@ export function deriveSortSummary({ trackedRecords, sortableRecords, sortableOrd
   let encounteredNonReadyBeforeReady = false;
   let gapAfterReady = false;
 
-  for (const tabId of sortableOrder) {
+  for (const tabId of currentSortableTabIds) {
     const record = recordMap.get(tabId);
     if (!record) continue;
     orderedIdsWithRecords.push(tabId);
@@ -67,9 +67,9 @@ export function deriveSortSummary({ trackedRecords, sortableRecords, sortableOrd
     );
   }
 
-  const allSortableVideosSortReady = sortableTabCount > 1 && sortReadyTabCount === sortableTabCount;
-  const sortableVideosSortedByRemainingTime =
-    allSortableVideosSortReady && areTabIdListsEqual(orderedIdsWithRecords, sortReadyIdsByRemainingTime);
+  const allSortableTabsReady = sortableTabCount > 1 && sortReadyTabCount === sortableTabCount;
+  const currentOrderMatchesTarget =
+    allSortableTabsReady && areTabIdListsEqual(orderedIdsWithRecords, sortReadyIdsByRemainingTime);
 
   return {
     counts: {
@@ -85,8 +85,8 @@ export function deriveSortSummary({ trackedRecords, sortableRecords, sortableOrd
       haveStaleRemainingTime: backgroundTabsHaveStaleRemainingTime,
     },
     order: {
-      allSortableVideosSortReady,
-      sortableVideosSortedByRemainingTime,
+      allSortableTabsReady,
+      currentOrderMatchesTarget,
     },
   };
 }

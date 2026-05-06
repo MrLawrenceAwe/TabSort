@@ -1,6 +1,6 @@
 import { broadcastSnapshotUpdate } from './tab-snapshot.js';
-import { deriveSortPlan } from './sort-plan.js';
-import { deriveSortSummary } from './derive-sort-summary.js';
+import { deriveSortPlan } from './sorting/sort-plan.js';
+import { deriveSortSummary } from './sorting/sort-summary.js';
 import { applySortState, trackedWindowState } from './tracked-window-state.js';
 
 function deriveSortState(records) {
@@ -8,27 +8,27 @@ function deriveSortState(records) {
   const sortSummary = deriveSortSummary({
     trackedRecords: records,
     sortableRecords: sortPlan.sortableRecords,
-    sortableOrder: sortPlan.sortableOrder,
+    currentSortableTabIds: sortPlan.currentSortableTabIds,
   });
 
   return {
-    visibleOrder: sortPlan.visibleOrder,
-    targetSortableVideoOrder: sortPlan.targetSortableVideoOrder,
-    sortableVideosSortedByRemainingTime: sortPlan.sortableVideosSortedByRemainingTime,
+    visibleTabIds: sortPlan.visibleTabIds,
+    targetSortableTabIds: sortPlan.targetSortableTabIds,
+    currentOrderMatchesTarget: sortPlan.currentOrderMatchesTarget,
     sortSummary,
   };
 }
 
 function applyDerivedSortState({
-  visibleOrder,
-  targetSortableVideoOrder,
-  sortableVideosSortedByRemainingTime,
+  visibleTabIds,
+  targetSortableTabIds,
+  currentOrderMatchesTarget,
   sortSummary,
 }) {
   applySortState({
-    targetSortableVideoOrder,
-    visibleOrder,
-    sortableVideosSortedByRemainingTime,
+    targetSortableTabIds,
+    visibleTabIds,
+    currentOrderMatchesTarget,
     sortSummary,
   });
   broadcastSnapshotUpdate();

@@ -13,10 +13,10 @@ import {
 import { renderSnapshot } from './snapshot-renderer.js';
 import {
   initializeView,
-  renderView,
+  renderPopupChrome,
   setActiveWindowId,
   setErrorMessage,
-  viewState,
+  popupUiState,
 } from './view.js';
 import { startThemeSync } from './theme.js';
 
@@ -27,7 +27,7 @@ const SNAPSHOT_POLL_DELAY_MS = 1000;
 let isControllerActive = false;
 
 const runtimeClient = createRuntimeClient({
-  getActiveWindowId: () => viewState.activeWindowId,
+  getActiveWindowId: () => popupUiState.activeWindowId,
   setActiveWindowId,
 });
 const snapshotClient = createSnapshotClient({
@@ -76,7 +76,7 @@ async function initializeSortOptions() {
 export async function initializePopupController() {
   isControllerActive = true;
   initializeView();
-  renderView();
+  renderPopupChrome();
   setErrorMessage('');
 
   await runWithPopupErrorLogging(runtimeClient.syncActiveWindow, 'Failed to refresh active context');

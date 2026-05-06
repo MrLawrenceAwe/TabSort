@@ -1,5 +1,5 @@
-import { isFiniteNumber } from '../shared/guards.js';
-import { hasReadyRemainingTime } from './sort-readiness.js';
+import { isFiniteNumber } from '../../shared/guards.js';
+import { hasReadyRemainingTime } from '../sort-readiness.js';
 
 export function areTabIdListsEqual(a, b) {
   if (a.length !== b.length) return false;
@@ -31,14 +31,14 @@ function buildRemainingTimeEntries(records) {
   }));
 }
 
-function buildTargetSortOrder(knownEntries, unknownEntries, currentOrder) {
+function buildTargetSortableTabIds(knownEntries, unknownEntries, currentSortableTabIds) {
   const sortedKnownIds = knownEntries
     .slice()
     .sort((a, b) => a.remainingTime - b.remainingTime)
     .map((entry) => entry.id);
 
   const unknownIds = new Set(unknownEntries.map((entry) => entry.id));
-  const unknownIdsInCurrentOrder = currentOrder.filter((id) => unknownIds.has(id));
+  const unknownIdsInCurrentOrder = currentSortableTabIds.filter((id) => unknownIds.has(id));
 
   return [...sortedKnownIds, ...unknownIdsInCurrentOrder];
 }
@@ -48,30 +48,30 @@ function isRecordSortableByRemainingTime(record) {
 }
 
 export function deriveSortPlan(records) {
-  const visibleOrder = deriveTabIdOrder(records);
+  const visibleTabIds = deriveTabIdOrder(records);
   const movableRecords = records.filter((record) => !record.pinned);
   const sortableRecords = movableRecords.filter(isRecordSortableByRemainingTime);
-  const sortableOrder = deriveTabIdOrder(sortableRecords);
+  const currentSortableTabIds = deriveTabIdOrder(sortableRecords);
   const remainingTimeEntries = buildRemainingTimeEntries(sortableRecords);
   const knownRemainingEntries = remainingTimeEntries.filter((entry) => entry.remainingTime !== null);
   const unknownRemainingEntries = remainingTimeEntries.filter((entry) => entry.remainingTime === null);
-  const targetSortableVideoOrder = buildTargetSortOrder(
+  const targetSortableTabIds = buildTargetSortableTabIds(
     knownRemainingEntries,
     unknownRemainingEntries,
-    sortableOrder,
+    currentSortableTabIds,
   );
-  const allSortableVideosSortReady = unknownRemainingEntries.length === 0;
-  const alreadySorted =
-    sortableOrder.length > 0 &&
-    sortableOrder.length === targetSortableVideoOrder.length &&
-    sortableOrder.every((id, index) => id === targetSortableVideoOrder[index]);
+  const allSortableTabsReady = unknownRemainingEntries.length === 0;
+  const currentSortableOrderMatchesTarget =
+    currentSortableTabIds.length > 0 &&
+    currentSortableTabIds.length === targetSortableTabIds.length &&
+    currentSortableTabIds.every((id, index) => id === targetSortableTabIds[index]);
 
   return {
-    visibleOrder,
-    targetSortableVideoOrder,
+    visibleTabIds,
+    targetSortableTabIds,
     sortableRecords,
-    sortableOrder,
-    allSortableVideosSortReady,
-    sortableVideosSortedByRemainingTime: allSortableVideosSortReady && alreadySorted,
+    currentSortableTabIds,
+    allSortableTabsReady,
+    currentOrderMatchesTarget: allSortableTabsReady && currentSortableOrderMatchesTarget,
   };
 }

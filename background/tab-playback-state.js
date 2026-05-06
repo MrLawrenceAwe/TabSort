@@ -58,6 +58,58 @@ function hasMediaDurationMismatch(metricsPayload, record, resolvedLengthSeconds)
   );
 }
 
+function shouldIgnoreStaleMetricsPayload({ payloadUrl, requestedUrl, currentTabUrl }) {
+  if (payloadUrl && currentTabUrl && !areEquivalentVideoUrls(payloadUrl, currentTabUrl)) {
+    return true;
+  }
+
+  return (
+    !payloadUrl &&
+    requestedUrl &&
+    currentTabUrl &&
+    !areEquivalentVideoUrls(requestedUrl, currentTabUrl)
+  );
+}
+
+function applyLivePlaybackMetrics(record, videoLengthSeconds) {
+  record.videoDetails.lengthSeconds = isFiniteNumber(videoLengthSeconds) ? videoLengthSeconds : null;
+  record.videoDetails.remainingTime = null;
+  record.isRemainingTimeStale = false;
+}
+
+function applyMissingLengthMetrics(record) {
+  record.videoDetails.lengthSeconds = null;
+  record.videoDetails.remainingTime = null;
+  record.isRemainingTimeStale = !record.pageMediaReady;
+}
+
+function applyDurationMismatchMetrics(record, videoLengthSeconds) {
+  record.pageMediaReady = false;
+  record.videoDetails.remainingTime = videoLengthSeconds;
+  record.isRemainingTimeStale = true;
+}
+
+function applyPendingMediaMetrics(record, videoLengthSeconds) {
+  record.videoDetails.remainingTime = videoLengthSeconds;
+  record.isRemainingTimeStale = true;
+}
+
+function applyRemainingTimeMetrics(record, videoLengthSeconds, currentTimeSeconds, playbackRate) {
+  if (isFiniteNumber(currentTimeSeconds)) {
+    const remainingSeconds = Math.max(
+      0,
+      (videoLengthSeconds - currentTimeSeconds) /
+        (isFiniteNumber(playbackRate) && playbackRate > 0 ? playbackRate : 1),
+    );
+    record.videoDetails.remainingTime = remainingSeconds;
+    record.isRemainingTimeStale = false;
+    return;
+  }
+
+  record.videoDetails.remainingTime = videoLengthSeconds;
+  record.isRemainingTimeStale = true;
+}
+
 async function loadTabRecordContext(tabId) {
   const initialRecord = trackedWindowState.tabRecordsById[tabId];
   if (!initialRecord || initialRecord.status !== TAB_STATES.UNSUSPENDED) {
@@ -109,15 +161,7 @@ export async function refreshTabPlaybackState(tabId) {
     const currentTabUrl = tab.url || record.url || null;
     const payloadUrl =
       typeof metricsPayload.url === 'string' && metricsPayload.url ? metricsPayload.url : null;
-    if (payloadUrl && currentTabUrl && !areEquivalentVideoUrls(payloadUrl, currentTabUrl)) {
-      return;
-    }
-    if (
-      !payloadUrl &&
-      requestedUrl &&
-      currentTabUrl &&
-      !areEquivalentVideoUrls(requestedUrl, currentTabUrl)
-    ) {
+    if (shouldIgnoreStaleMetricsPayload({ payloadUrl, requestedUrl, currentTabUrl })) {
       return;
     }
 
@@ -138,9 +182,7 @@ export async function refreshTabPlaybackState(tabId) {
     const playbackRate = Number(metricsPayload.playbackRate ?? 1);
 
     if (record.isLiveNow) {
-      record.videoDetails.lengthSeconds = isFiniteNumber(videoLengthSeconds) ? videoLengthSeconds : null;
-      record.videoDetails.remainingTime = null;
-      record.isRemainingTimeStale = false;
+      applyLivePlaybackMetrics(record, videoLengthSeconds);
       recomputeSortState();
       return;
     }
@@ -148,41 +190,24 @@ export async function refreshTabPlaybackState(tabId) {
     if (isFiniteNumber(videoLengthSeconds)) {
       record.videoDetails.lengthSeconds = videoLengthSeconds;
     } else {
-      record.videoDetails.lengthSeconds = null;
-      record.videoDetails.remainingTime = null;
-      record.isRemainingTimeStale = !record.pageMediaReady;
+      applyMissingLengthMetrics(record);
       recomputeSortState();
       return;
     }
 
     if (hasMediaDurationMismatch(metricsPayload, record, videoLengthSeconds)) {
-      record.pageMediaReady = false;
-      record.videoDetails.remainingTime = videoLengthSeconds;
-      record.isRemainingTimeStale = true;
+      applyDurationMismatchMetrics(record, videoLengthSeconds);
       recomputeSortState();
       return;
     }
 
     if (!record.pageMediaReady) {
-      record.videoDetails.remainingTime = videoLengthSeconds;
-      record.isRemainingTimeStale = true;
+      applyPendingMediaMetrics(record, videoLengthSeconds);
       recomputeSortState();
       return;
     }
 
-    if (isFiniteNumber(currentTimeSeconds)) {
-      const remainingSeconds = Math.max(
-        0,
-        (videoLengthSeconds - currentTimeSeconds) /
-          (isFiniteNumber(playbackRate) && playbackRate > 0 ? playbackRate : 1),
-      );
-      record.videoDetails.remainingTime = remainingSeconds;
-      record.isRemainingTimeStale = false;
-    } else {
-      record.videoDetails.remainingTime = videoLengthSeconds;
-      record.isRemainingTimeStale = true;
-    }
-
+    applyRemainingTimeMetrics(record, videoLengthSeconds, currentTimeSeconds, playbackRate);
     recomputeSortState();
   } catch (error) {
     logDebug(`refreshTabPlaybackState failed for ${tabId}`, error);

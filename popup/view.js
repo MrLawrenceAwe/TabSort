@@ -1,8 +1,8 @@
 import { createEmptySortSummary } from '../shared/sort-summary-model.js';
 
-export const viewState = {
+export const popupUiState = {
   sortSummary: createEmptySortSummary(),
-  sortableVideosSortedByRemainingTime: false,
+  currentOrderMatchesTarget: false,
   activeWindowId: null,
 };
 
@@ -32,17 +32,17 @@ export function resetView() {
   domCache.actionRequiredColumn = null;
   domCache.tabStatusColumn = null;
   domCache.initialized = false;
-  viewState.sortSummary = createEmptySortSummary();
-  viewState.sortableVideosSortedByRemainingTime = false;
-  viewState.activeWindowId = null;
+  popupUiState.sortSummary = createEmptySortSummary();
+  popupUiState.currentOrderMatchesTarget = false;
+  popupUiState.activeWindowId = null;
 }
 
 export function setActiveWindowId(windowId) {
-  viewState.activeWindowId = typeof windowId === 'number' ? windowId : null;
+  popupUiState.activeWindowId = typeof windowId === 'number' ? windowId : null;
 }
 
-export function updateViewState(updates = {}) {
-  Object.assign(viewState, updates);
+export function applyPopupUiState(updates = {}) {
+  Object.assign(popupUiState, updates);
 }
 
 export function initializeView(rootDocument = globalThis.document) {
@@ -68,9 +68,9 @@ function getCachedElement(key) {
 
 function updateStatus(statusElement) {
   if (!statusElement) return;
-  const trackedTabCount = viewState.sortSummary.counts.tracked;
-  const sortReadyTabCount = viewState.sortSummary.counts.sortReady;
-  if (!viewState.sortableVideosSortedByRemainingTime) {
+  const trackedTabCount = popupUiState.sortSummary.counts.tracked;
+  const sortReadyTabCount = popupUiState.sortSummary.counts.sortReady;
+  if (!popupUiState.currentOrderMatchesTarget) {
     statusElement.classList.toggle('hide', trackedTabCount <= 1);
     statusElement.textContent = `${sortReadyTabCount}/${trackedTabCount} ready for sort.`;
     return;
@@ -80,7 +80,7 @@ function updateStatus(statusElement) {
 
 function updateSortedBadge(sortedBadgeElement) {
   if (!sortedBadgeElement) return;
-  sortedBadgeElement.classList.toggle('hide', !viewState.sortableVideosSortedByRemainingTime);
+  sortedBadgeElement.classList.toggle('hide', !popupUiState.currentOrderMatchesTarget);
 }
 
 export function getEmptyStateMessage(tabCount) {
@@ -95,7 +95,7 @@ export function getEmptyStateMessage(tabCount) {
 
 function updateEmptyState(emptyStateElement) {
   if (!emptyStateElement) return;
-  const message = getEmptyStateMessage(viewState.sortSummary.counts.tracked);
+  const message = getEmptyStateMessage(popupUiState.sortSummary.counts.tracked);
   emptyStateElement.textContent = message;
   emptyStateElement.classList.toggle('hide', !message);
 }
@@ -116,7 +116,7 @@ function updateSortButton(sortButton, shouldShowSort) {
   if (!sortButton) return;
   sortButton.classList.toggle('hide', !shouldShowSort);
   if (shouldShowSort) {
-    const { sortReady, tracked } = viewState.sortSummary.counts;
+    const { sortReady, tracked } = popupUiState.sortSummary.counts;
     sortButton.classList.toggle('all-tabs-ready', sortReady === tracked);
     sortButton.textContent = getSortButtonText(sortReady, tracked);
     return;
@@ -146,20 +146,20 @@ function setOptionToggleVisibility(visible) {
   });
 }
 
-export function renderView() {
+export function renderPopupChrome() {
   const emptyStateElement = getCachedElement('emptyStateElement');
   const statusElement = getCachedElement('statusElement');
   const sortButton = getCachedElement('sortButton');
   const sortedBadgeElement = getCachedElement('sortedBadgeElement');
   const table = getCachedElement('table');
-  const { counts, sortReadyTabs } = viewState.sortSummary;
+  const { counts, sortReadyTabs } = popupUiState.sortSummary;
 
   const sortReadySubsetExists = counts.sortReady >= 2 && counts.sortReady < counts.tracked;
   const sortReadySubsetNeedsSorting =
     sortReadySubsetExists && (!sortReadyTabs.contiguous || !sortReadyTabs.atFront);
   const shouldShowSort =
     counts.sortReady >= 2 &&
-    !viewState.sortableVideosSortedByRemainingTime &&
+    !popupUiState.currentOrderMatchesTarget &&
     (sortReadyTabs.outOfOrder || sortReadySubsetNeedsSorting);
 
   setOptionToggleVisibility(shouldShowSort);
@@ -169,7 +169,7 @@ export function renderView() {
   updateSortButton(sortButton, shouldShowSort);
   updateEmptyState(emptyStateElement);
 
-  if (viewState.sortableVideosSortedByRemainingTime && table) {
+  if (popupUiState.currentOrderMatchesTarget && table) {
     clearReadyRows(table);
   }
 }

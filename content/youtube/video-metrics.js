@@ -1,5 +1,5 @@
 import { RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
-import { getPrimaryVideoElement } from './video-details.js';
+import { getPrimaryVideoElement } from './media-elements.js';
 
 export function collectVideoMetrics({
   config,
