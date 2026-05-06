@@ -1,7 +1,7 @@
 import { cloneSortSummary, createEmptySortSummary } from '../shared/sort-summary.js';
 import { logDebug } from '../shared/log.js';
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
-import { setSnapshotSignature, trackedWindowState } from './tracked-window-store.js';
+import { setSnapshotSignature, trackedWindowState } from './tracked-window-state.js';
 
 function cloneTabRecord(record) {
   if (!record || typeof record !== 'object') return record;

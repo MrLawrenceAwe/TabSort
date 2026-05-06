@@ -3,7 +3,7 @@ import {
   addClassToDataRows,
   renderPopupChrome,
   setSecondaryColumnsVisible,
-} from './popup-chrome.js';
+} from './popup-layout.js';
 import { setErrorMessage } from './popup-dom.js';
 import { applyPopupUiState } from './popup-ui-state.js';
 import { renderTabRow } from './tab-row-view.js';

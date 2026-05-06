@@ -13,7 +13,7 @@ import {
 import { renderSnapshot } from './snapshot-renderer.js';
 import {
   renderPopupChrome,
-} from './popup-chrome.js';
+} from './popup-layout.js';
 import { initializePopupDom, setErrorMessage } from './popup-dom.js';
 import { popupUiState, setActiveWindowId } from './popup-ui-state.js';
 import { startThemeSync } from './theme.js';

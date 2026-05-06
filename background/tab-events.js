@@ -2,7 +2,7 @@ import { isFiniteNumber, isValidWindowId } from '../shared/guards.js';
 import { logDebug, logWarn, withErrorLogging } from '../shared/log.js';
 import { getTab } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
-import { canManageWindow, trackedWindowState, removeTabRecordFromState } from './tracked-window-store.js';
+import { canManageWindow, trackedWindowState, removeTabRecordFromState } from './tracked-window-state.js';
 import { refreshTabPlaybackState } from './tab-playback-sync.js';
 import { syncWindowTabRecords } from './tab-record-sync.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';

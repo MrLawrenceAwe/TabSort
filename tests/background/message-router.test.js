@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { trackedWindowState } from '../../background/tracked-window-store.js';
+import { trackedWindowState } from '../../background/tracked-window-state.js';
 import {
-  markPageMediaReady,
-  markPageRuntimeReady,
-  applyPageVideoDetails,
+  handlePageMediaReady,
+  handlePageRuntimeReady,
+  handlePageVideoDetails,
 } from '../../background/page-message-handlers.js';
 import {
   ensureChromeApi,
@@ -15,10 +15,10 @@ import {
 
 ensureChromeApi();
 
-test('applyPageVideoDetails does not create records for non-watch YouTube pages', async () => {
+test('handlePageVideoDetails does not create records for non-watch YouTube pages', async () => {
   resetTrackedWindowState(1);
 
-  await applyPageVideoDetails(
+  await handlePageVideoDetails(
     {
       details: {
         url: 'https://www.youtube.com/',
@@ -39,7 +39,7 @@ test('applyPageVideoDetails does not create records for non-watch YouTube pages'
   assert.deepEqual(trackedWindowState.targetSortableTabIds, []);
 });
 
-test('applyPageVideoDetails removes tracked rows when tab leaves watch/shorts', async () => {
+test('handlePageVideoDetails removes tracked rows when tab leaves watch/shorts', async () => {
   resetTrackedWindowState(1);
   trackedWindowState.tabRecordsById = {
     7: createTabRecordFixture(7, {
@@ -50,7 +50,7 @@ test('applyPageVideoDetails removes tracked rows when tab leaves watch/shorts', 
   trackedWindowState.visibleTabIds = [7];
   trackedWindowState.targetSortableTabIds = [7];
 
-  await applyPageVideoDetails(
+  await handlePageVideoDetails(
     {
       details: {
         url: 'https://www.youtube.com/results?search_query=music',
@@ -71,7 +71,7 @@ test('applyPageVideoDetails removes tracked rows when tab leaves watch/shorts', 
   assert.deepEqual(trackedWindowState.targetSortableTabIds, []);
 });
 
-test('markPageRuntimeReady removes tracked rows when a SPA tab leaves watch/shorts', async () => {
+test('handlePageRuntimeReady removes tracked rows when a SPA tab leaves watch/shorts', async () => {
   resetTrackedWindowState(1);
   trackedWindowState.tabRecordsById = {
     7: createTabRecordFixture(7, {
@@ -82,7 +82,7 @@ test('markPageRuntimeReady removes tracked rows when a SPA tab leaves watch/shor
   trackedWindowState.visibleTabIds = [7];
   trackedWindowState.targetSortableTabIds = [7];
 
-  await markPageRuntimeReady(
+  await handlePageRuntimeReady(
     {},
     {
       tab: {
@@ -98,7 +98,7 @@ test('markPageRuntimeReady removes tracked rows when a SPA tab leaves watch/shor
   assert.deepEqual(trackedWindowState.targetSortableTabIds, []);
 });
 
-test('markPageRuntimeReady marks the runtime ready without collecting metrics', async () => {
+test('handlePageRuntimeReady marks the runtime ready without collecting metrics', async () => {
   resetTrackedWindowState(1);
   globalThis.chrome.tabs = {
     get() {
@@ -109,7 +109,7 @@ test('markPageRuntimeReady marks the runtime ready without collecting metrics', 
     },
   };
 
-  await markPageRuntimeReady(
+  await handlePageRuntimeReady(
     {},
     {
       tab: {
@@ -129,7 +129,7 @@ test('markPageRuntimeReady marks the runtime ready without collecting metrics', 
   assert.equal(record.isRemainingTimeStale, true);
 });
 
-test('markPageMediaReady removes tracked rows when a stale event arrives off watch/shorts', async () => {
+test('handlePageMediaReady removes tracked rows when a stale event arrives off watch/shorts', async () => {
   resetTrackedWindowState(1);
   trackedWindowState.tabRecordsById = {
     7: createTabRecordFixture(7, {
@@ -148,7 +148,7 @@ test('markPageMediaReady removes tracked rows when a stale event arrives off wat
     },
   };
 
-  await markPageMediaReady(
+  await handlePageMediaReady(
     {},
     {
       tab: {
@@ -164,7 +164,7 @@ test('markPageMediaReady removes tracked rows when a stale event arrives off wat
   assert.deepEqual(trackedWindowState.targetSortableTabIds, []);
 });
 
-test('applyPageVideoDetails resets carried remaining time on watch-to-watch SPA navigation', async () => {
+test('handlePageVideoDetails resets carried remaining time on watch-to-watch SPA navigation', async () => {
   resetTrackedWindowState(1);
   trackedWindowState.tabRecordsById = {
     7: createTabRecordFixture(7, {
@@ -175,7 +175,7 @@ test('applyPageVideoDetails resets carried remaining time on watch-to-watch SPA 
     }),
   };
 
-  await applyPageVideoDetails(
+  await handlePageVideoDetails(
     {
       details: {
         url: 'https://www.youtube.com/watch?v=new',
@@ -202,7 +202,7 @@ test('applyPageVideoDetails resets carried remaining time on watch-to-watch SPA 
   assert.equal(record.isRemainingTimeStale, true);
 });
 
-test('applyPageVideoDetails preserves ready state when the title changes for the same watch URL', async () => {
+test('handlePageVideoDetails preserves ready state when the title changes for the same watch URL', async () => {
   resetTrackedWindowState(1);
   trackedWindowState.tabRecordsById = {
     7: createTabRecordFixture(7, {
@@ -213,7 +213,7 @@ test('applyPageVideoDetails preserves ready state when the title changes for the
     }),
   };
 
-  await applyPageVideoDetails(
+  await handlePageVideoDetails(
     {
       details: {
         url: 'https://www.youtube.com/watch?v=new',
@@ -240,7 +240,7 @@ test('applyPageVideoDetails preserves ready state when the title changes for the
   assert.equal(record.isRemainingTimeStale, false);
 });
 
-test('applyPageVideoDetails preserves ready state when only watch URL parameters change', async () => {
+test('handlePageVideoDetails preserves ready state when only watch URL parameters change', async () => {
   resetTrackedWindowState(1);
   trackedWindowState.tabRecordsById = {
     7: createTabRecordFixture(7, {
@@ -251,7 +251,7 @@ test('applyPageVideoDetails preserves ready state when only watch URL parameters
     }),
   };
 
-  await applyPageVideoDetails(
+  await handlePageVideoDetails(
     {
       details: {
         url: 'https://www.youtube.com/watch?v=new&list=abc123&index=10',

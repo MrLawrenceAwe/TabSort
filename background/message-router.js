@@ -7,9 +7,9 @@ import {
   syncWindowTabs,
 } from './tab-command-handlers.js';
 import {
-  applyPageVideoDetails,
-  markPageMediaReady,
-  markPageRuntimeReady,
+  handlePageVideoDetails,
+  handlePageMediaReady,
+  handlePageRuntimeReady,
 } from './page-message-handlers.js';
 
 function createAsyncResponder(sendResponse) {
@@ -40,9 +40,9 @@ function createMessageHandlers(message, sender) {
       const level = message.level === 'error' ? 'error' : 'log';
       console[level](`[Popup] ${message.text}`);
     },
-    [RUNTIME_MESSAGE_TYPES.PAGE_RUNTIME_READY]: () => markPageRuntimeReady(message, sender),
-    [RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY]: () => markPageMediaReady(message, sender),
-    [RUNTIME_MESSAGE_TYPES.PAGE_VIDEO_DETAILS]: () => applyPageVideoDetails(message, sender),
+    [RUNTIME_MESSAGE_TYPES.PAGE_RUNTIME_READY]: () => handlePageRuntimeReady(message, sender),
+    [RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY]: () => handlePageMediaReady(message, sender),
+    [RUNTIME_MESSAGE_TYPES.PAGE_VIDEO_DETAILS]: () => handlePageVideoDetails(message, sender),
   };
 }
 

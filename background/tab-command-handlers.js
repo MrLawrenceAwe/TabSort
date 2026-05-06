@@ -3,7 +3,7 @@ import { logDebug } from '../shared/log.js';
 import { buildTabSnapshot } from './tab-snapshot.js';
 import { markTabRecordReloading } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { listTabIds, trackedWindowState, setWindowId } from './tracked-window-store.js';
+import { listTabIds, trackedWindowState, setWindowId } from './tracked-window-state.js';
 import { refreshTabPlaybackState } from './tab-playback-sync.js';
 import { syncWindowTabRecords } from './tab-record-sync.js';
 import { reorderWindowTabs } from './tab-reorder.js';
