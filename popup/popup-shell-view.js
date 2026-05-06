@@ -23,7 +23,7 @@ export function getEmptyStateMessage(tabCount) {
     return 'Open YouTube watch or shorts tabs in this window to sort them.';
   }
   if (tabCount === 1) {
-    return 'Open at least one more YouTube video tab in this window to sort them.';
+    return 'Open at least 2 YouTube video tab in this window to sort them.';
   }
   return '';
 }
