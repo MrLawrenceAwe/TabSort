@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { shouldRetrySnapshotPoll } from '../../popup/popup-bootstrap.js';
+import { shouldRetrySnapshotPoll } from '../../popup/popup-entry.js';
 import { TAB_STATES } from '../../shared/tab-states.js';
 import { LOADING_GRACE_MS, RECENTLY_UNSUSPENDED_MS } from '../../popup/polling-config.js';
 import {
   shouldPollRecord,
   shouldPollSnapshot,
-} from '../../popup/popup-bootstrap.js';
+} from '../../popup/popup-entry.js';
 
 const NOW_MS = 100_000;
 const fakeNow = () => NOW_MS;

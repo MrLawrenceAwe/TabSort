@@ -30,9 +30,9 @@
     "web_accessible_resources": [
       {
         "resources": [
-          "content/youtube/youtube-content-runtime.js",
-          "content/youtube/content-runtime-state.js",
-          "content/youtube/content-runtime-messaging.js",
+          "content/youtube/page-runtime.js",
+          "content/youtube/runtime-state.js",
+          "content/youtube/messaging.js",
           "content/youtube/media-readiness.js",
           "content/youtube/media-elements.js",
           "content/youtube/video-details.js",
@@ -40,7 +40,6 @@
           "content/youtube/live-status.js",
           "content/youtube/title-observer.js",
           "content/youtube/video-metrics.js",
-          "content/youtube/media-config.js",
           "shared/guards.js",
           "shared/messages.js"
         ],

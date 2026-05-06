@@ -3,13 +3,12 @@ import { ensureTabRecord } from './tab-record.js';
 import { markTabRecordVideoChanged, removeTabRecord } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
 import { refreshTabPlaybackMetrics } from './tab-playback-sync.js';
-import { windowSessionState } from './window-session.js';
-import { setWindowId } from './window-session-store.js';
+import { setTrackedWindowId, trackedWindowState } from './window-state.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function isSenderInTrackedWindow(windowId) {
-  if (windowSessionState.windowId == null) return true;
-  return typeof windowId === 'number' && windowId === windowSessionState.windowId;
+  if (trackedWindowState.windowId == null) return true;
+  return typeof windowId === 'number' && windowId === trackedWindowState.windowId;
 }
 
 function removeTabRecordWhenSenderLeavesVideoPage(tabId) {
@@ -26,7 +25,7 @@ export async function handlePageRuntimeReady(_message, sender) {
     removeTabRecordWhenSenderLeavesVideoPage(tabId);
     return;
   }
-  setWindowId(windowId);
+  setTrackedWindowId(windowId);
 
   const record = ensureTabRecord(tabId, windowId, {
     url: sender?.tab?.url ?? null,
@@ -50,7 +49,7 @@ export async function handlePageMediaReady(_message, sender) {
     removeTabRecordWhenSenderLeavesVideoPage(tabId);
     return;
   }
-  setWindowId(windowId);
+  setTrackedWindowId(windowId);
   const record = ensureTabRecord(tabId, windowId);
   record.pageMediaReady = true;
   await refreshTabPlaybackMetrics(tabId);
@@ -61,7 +60,7 @@ export async function handlePageVideoDetails(message, sender) {
   const windowId = sender?.tab?.windowId;
   const details = message.details || {};
   if (!isSenderInTrackedWindow(windowId)) return;
-  setWindowId(windowId);
+  setTrackedWindowId(windowId);
   if (!isFiniteNumber(tabId)) return;
 
   const detailUrl = details.url || sender?.tab?.url;

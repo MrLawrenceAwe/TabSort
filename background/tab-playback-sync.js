@@ -6,27 +6,26 @@ import { getTab, sendMessageToTab } from './chrome-tabs.js';
 import { derivePlaybackMetricUpdate } from './playback-metric-update.js';
 import { resetTabRecordState } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { windowSessionState } from './window-session.js';
-import { setWindowId } from './window-session-store.js';
+import { setTrackedWindowId, trackedWindowState } from './window-state.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 
 async function loadTabRecordContext(tabId) {
-  const initialRecord = windowSessionState.tabRecordsById[tabId];
+  const initialRecord = trackedWindowState.tabRecordsById[tabId];
   if (!initialRecord || initialRecord.status !== TAB_STATES.UNSUSPENDED) {
     return null;
   }
 
   const tab = await getTab(tabId);
-  const record = windowSessionState.tabRecordsById[tabId];
+  const record = trackedWindowState.tabRecordsById[tabId];
   if (!record || record.status !== TAB_STATES.UNSUSPENDED) {
     return null;
   }
-  if (windowSessionState.windowId != null && tab.windowId !== windowSessionState.windowId) {
+  if (trackedWindowState.windowId != null && tab.windowId !== trackedWindowState.windowId) {
     return null;
   }
   if (tab.windowId != null) {
     record.windowId = tab.windowId;
-    setWindowId(tab.windowId);
+    setTrackedWindowId(tab.windowId);
   }
   record.isActiveTab = Boolean(tab.active);
   record.isHidden = Boolean(tab.hidden);

@@ -47,7 +47,7 @@ function isRecordSortableByRemainingTime(record) {
   return !record?.isLiveNow;
 }
 
-export function deriveRemainingTimePlan(records) {
+export function deriveSortOrder(records) {
   const visibleTabIds = deriveTabIdOrder(records);
   const movableRecords = records.filter((record) => !record.pinned);
   const sortableRecords = movableRecords.filter(isRecordSortableByRemainingTime);
@@ -75,3 +75,5 @@ export function deriveRemainingTimePlan(records) {
     currentOrderMatchesTarget: allSortableTabsReady && currentSortableOrderMatchesTarget,
   };
 }
+
+export const deriveRemainingTimePlan = deriveSortOrder;

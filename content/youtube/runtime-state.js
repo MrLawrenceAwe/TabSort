@@ -1,14 +1,15 @@
-import { MEDIA_READY_STATE_THRESHOLD } from './media-config.js';
 import { inferIsLiveNow } from './live-status.js';
 import { isFiniteNumber } from '../../shared/guards.js';
 
-export const youtubeContentRuntimeConfig = {
-  mediaReadyStateThreshold: MEDIA_READY_STATE_THRESHOLD,
+const DEFAULT_MEDIA_READY_STATE_THRESHOLD = 2;
+
+export const pageRuntimeConfig = {
+  mediaReadyStateThreshold: DEFAULT_MEDIA_READY_STATE_THRESHOLD,
   isFiniteNumber,
   inferIsLiveNow,
 };
 
-export function createContentRuntimeState() {
+export function createRuntimeState() {
   return {
     initialized: false,
     videoMountObserver: null,

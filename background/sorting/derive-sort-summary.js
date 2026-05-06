@@ -1,5 +1,5 @@
 import { createEmptySortSummary } from '../../shared/sort-summary.js';
-import { areTabIdListsEqual } from './derive-remaining-time-plan.js';
+import { areTabIdListsEqual } from './derive-sort-order.js';
 import { hasReadyRemainingTime } from '../sort-readiness.js';
 
 export function deriveSortSummary({ trackedRecords, sortableRecords, currentSortableTabIds }) {

@@ -1,19 +1,19 @@
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
-import { createContentRuntimeMessaging } from './content-runtime-messaging.js';
+import { createRuntimeMessaging } from './messaging.js';
 import {
-  createContentRuntimeState,
+  createRuntimeState,
+  pageRuntimeConfig,
   shouldSendPageRuntimeReadySignal,
-  youtubeContentRuntimeConfig,
-} from './content-runtime-state.js';
+} from './runtime-state.js';
 import { createMediaReadinessTracker } from './media-readiness.js';
 import { createTitleObserver } from './title-observer.js';
 import { handleCollectVideoMetricsMessage } from './video-metrics.js';
 
-export function createYoutubePageRuntime({
-  config = youtubeContentRuntimeConfig,
+export function createPageRuntime({
+  config = pageRuntimeConfig,
   environment = globalThis,
 } = {}) {
-  const state = createContentRuntimeState();
+  const state = createRuntimeState();
 
   const getDocument = () => environment.document ?? globalThis.document;
   const getWindow = () => environment.window ?? globalThis.window;
@@ -27,7 +27,7 @@ export function createYoutubePageRuntime({
     logContentError,
     publishPageVideoDetails,
     sendExtensionMessage,
-  } = createContentRuntimeMessaging({
+  } = createRuntimeMessaging({
     config,
     environment,
     getChrome,
@@ -206,12 +206,12 @@ export function createYoutubePageRuntime({
   };
 }
 
-const defaultYoutubePageRuntime = createYoutubePageRuntime();
+const defaultPageRuntime = createPageRuntime();
 
 export function resetRuntimeStateForTests() {
-  defaultYoutubePageRuntime.reset();
+  defaultPageRuntime.reset();
 }
 
-export function bootstrapYoutubePageRuntime() {
-  defaultYoutubePageRuntime.bootstrap();
+export function bootstrapPageRuntime() {
+  defaultPageRuntime.bootstrap();
 }

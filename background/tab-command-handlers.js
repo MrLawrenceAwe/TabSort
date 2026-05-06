@@ -3,17 +3,16 @@ import { logDebug } from '../shared/log.js';
 import { buildTabSnapshot } from './tab-snapshot.js';
 import { markTabRecordReloading } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { reorderWindowTabs } from './sorting/apply-window-tab-order.js';
+import { reorderWindowTabs } from './sorting/reorder-window-tabs.js';
 import { refreshTabPlaybackMetrics } from './tab-playback-sync.js';
-import { windowSessionState } from './window-session.js';
-import { listTabIds, setWindowId } from './window-session-store.js';
+import { listTabIds, setTrackedWindowId, trackedWindowState } from './window-state.js';
 import { syncWindowTabRecords } from './tab-record-sync.js';
 
 export async function activateTab(message) {
   const tabId = message.tabId;
   if (!isFiniteNumber(tabId)) return;
   if (isValidWindowId(message.windowId)) {
-    setWindowId(message.windowId, { force: true });
+    setTrackedWindowId(message.windowId, { force: true });
   }
   try {
     await chrome.tabs.update(tabId, { active: true });
@@ -26,7 +25,7 @@ export async function reloadTab(message) {
   const tabId = message.tabId;
   if (!isFiniteNumber(tabId)) return;
   if (isValidWindowId(message.windowId)) {
-    setWindowId(message.windowId, { force: true });
+    setTrackedWindowId(message.windowId, { force: true });
   }
   let didReload = false;
   try {
@@ -36,7 +35,7 @@ export async function reloadTab(message) {
     logDebug(`tabs.reload failed for ${tabId}`, error);
   }
   if (!didReload) return;
-  const record = windowSessionState.tabRecordsById[tabId];
+  const record = trackedWindowState.tabRecordsById[tabId];
   if (!record) return;
 
   markTabRecordReloading(record);
@@ -63,9 +62,9 @@ export async function getWindowSnapshot(message) {
 export async function applyTabSortOrder(message) {
   const targetWindowId = isValidWindowId(message.windowId)
     ? message.windowId
-    : windowSessionState.windowId;
+    : trackedWindowState.windowId;
   if (isValidWindowId(targetWindowId)) {
-    setWindowId(targetWindowId, { force: true });
+    setTrackedWindowId(targetWindowId, { force: true });
   }
   await reorderWindowTabs(targetWindowId);
   await syncWindowTabRecords(

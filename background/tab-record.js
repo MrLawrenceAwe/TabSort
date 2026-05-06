@@ -1,6 +1,6 @@
 import { isFiniteNumber } from '../shared/guards.js';
-import { windowSessionState } from './window-session.js';
-import { writeTabRecord } from './window-session-store.js';
+import { windowSessionState } from './window-state.js';
+import { writeTabRecord } from './window-state.js';
 
 const FALLBACK_TAB_INDEX = Number.MAX_SAFE_INTEGER;
 

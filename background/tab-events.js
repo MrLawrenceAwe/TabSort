@@ -3,8 +3,8 @@ import { logDebug, logWarn, withErrorLogging } from '../shared/log.js';
 import { getTab } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
 import { refreshTabPlaybackMetrics } from './tab-playback-sync.js';
-import { windowSessionState } from './window-session.js';
-import { canManageWindow, removeTabRecordFromState } from './window-session-store.js';
+import { windowSessionState } from './window-state.js';
+import { canManageWindow, removeTabRecordFromState } from './window-state.js';
 import { syncWindowTabRecords } from './tab-record-sync.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 

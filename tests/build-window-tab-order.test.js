@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   buildNonYoutubeOrder,
   buildYoutubeTabOrder,
-} from '../background/sorting/build-window-tab-order.js';
+} from '../background/sorting/build-tab-order.js';
 
 test('buildYoutubeTabOrder keeps tracked video tabs in requested order then appends other YouTube tabs', () => {
   const unpinnedTabs = [
