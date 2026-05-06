@@ -10,16 +10,10 @@ import { renderTabRow } from './tab-row-view.js';
 
 export function deriveSnapshotUiState(snapshot) {
   const sortSummary = cloneSortSummary(snapshot?.sortSummary);
-  const snapshotSaysOrderMatchesTarget = snapshot?.currentOrderMatchesTarget === true;
-  const currentOrderMatchesTarget =
-    sortSummary.order.currentOrderMatchesTarget ||
-    (snapshotSaysOrderMatchesTarget &&
-      sortSummary.order.allSortableTabsReady &&
-      !sortSummary.sortReadyTabs.outOfOrder);
 
   return {
     sortSummary,
-    currentOrderMatchesTarget,
+    currentOrderMatchesTarget: snapshot?.currentOrderMatchesTarget === true,
   };
 }
 

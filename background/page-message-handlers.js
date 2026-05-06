@@ -1,6 +1,10 @@
 import { isFiniteNumber } from '../shared/guards.js';
 import { ensureTabRecord } from './tab-record.js';
-import { markTabRecordVideoChanged, removeTabRecord } from './tab-record-mutations.js';
+import {
+  applyPageRuntimeReady,
+  applyPageVideoDetails,
+  removeTabRecord,
+} from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
 import { refreshTabPlaybackMetrics } from './playback-metrics-refresher.js';
 import { setTrackedWindowId, trackedWindowState } from './window-state.js';
@@ -37,10 +41,7 @@ export async function handlePageRuntimeReady(_message, sender) {
     isActiveTab: sender?.tab?.active,
     isHidden: sender?.tab?.hidden,
   });
-  record.pageRuntimeReady = true;
-  if (videoChanged) {
-    record.pageMediaReady = false;
-  }
+  applyPageRuntimeReady(record, { urlChanged: videoChanged });
   recomputeSortState();
   return { type: 'pageRuntimeAck' };
 }
@@ -76,26 +77,6 @@ export async function handlePageVideoDetails(message, sender) {
 
   const record = ensureTabRecord(tabId, windowId, { url: detailUrl });
   const urlChanged = hasYoutubeVideoIdentityChanged(record.url, detailUrl);
-  if (urlChanged) {
-    markTabRecordVideoChanged(record);
-  }
-  if (details.url) record.url = details.url;
-  record.videoDetails = record.videoDetails || {};
-  if (details.title) record.videoDetails.title = details.title;
-  if (typeof details.isLive === 'boolean') record.isLiveNow = details.isLive;
-
-  if (isFiniteNumber(details.lengthSeconds)) {
-    record.videoDetails.lengthSeconds = details.lengthSeconds;
-    if (!record.isLiveNow && record.videoDetails.remainingTime == null) {
-      record.videoDetails.remainingTime = details.lengthSeconds;
-      record.isRemainingTimeStale = true;
-    }
-  }
-
-  if (record.isLiveNow) {
-    record.videoDetails.remainingTime = null;
-    record.isRemainingTimeStale = false;
-  }
-
+  applyPageVideoDetails(record, details, { urlChanged });
   recomputeSortState();
 }

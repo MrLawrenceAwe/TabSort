@@ -4,7 +4,7 @@ import { logDebug } from '../shared/log.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { getTab, sendMessageToTab } from './chrome-tabs.js';
 import { derivePlaybackMetricUpdate } from './playback-metric-update.js';
-import { resetTabRecordState } from './tab-record-mutations.js';
+import { applyPlaybackMetricUpdate, resetTabRecordState } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
 import { setTrackedWindowId, trackedWindowState } from './window-state.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
@@ -67,19 +67,7 @@ export async function refreshTabPlaybackMetrics(tabId) {
       return;
     }
 
-    record.pageRuntimeReady = playbackUpdate.pageRuntimeReady;
-    record.pageMediaReady = playbackUpdate.pageMediaReady;
-    record.videoDetails = record.videoDetails || {};
-
-    if (playbackUpdate.nextTitle || playbackUpdate.nextUrl || currentTabUrl) {
-      if (playbackUpdate.nextTitle) record.videoDetails.title = playbackUpdate.nextTitle;
-      record.url = playbackUpdate.nextUrl || currentTabUrl;
-    }
-
-    record.isLiveNow = Boolean(playbackUpdate.isLiveNow);
-    record.videoDetails.lengthSeconds = playbackUpdate.resolvedLengthSeconds;
-    record.videoDetails.remainingTime = playbackUpdate.remainingTime;
-    record.isRemainingTimeStale = playbackUpdate.isRemainingTimeStale;
+    applyPlaybackMetricUpdate(record, playbackUpdate, currentTabUrl);
     recomputeSortState();
   } catch (error) {
     logDebug(`refreshTabPlaybackMetrics failed for ${tabId}`, error);
