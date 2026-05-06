@@ -3,7 +3,7 @@ import { isValidWindowId } from '../shared/guards.js';
 
 export const getCurrentTimeMs = () => Date.now();
 
-export function createTrackedWindowState() {
+function createTrackedWindowState() {
   return {
     tabRecordsById: {},
     targetSortableTabIds: [],
@@ -38,10 +38,6 @@ export function writeTabRecord(tabId, record) {
 
 export function listTabIds() {
   return Object.keys(trackedWindowState.tabRecordsById).map(Number);
-}
-
-export function readTabRecord(tabId) {
-  return trackedWindowState.tabRecordsById[tabId];
 }
 
 export function removeTabRecordFromState(tabId) {

@@ -8,7 +8,7 @@ import { setErrorMessage } from './popup-elements.js';
 import { applyPopupState } from './popup-store.js';
 import { renderTabRow } from './tab-row-view.js';
 
-export function deriveSnapshotUiState(snapshot) {
+function deriveSnapshotUiState(snapshot) {
   const sortSummary = cloneSortSummary(snapshot?.sortSummary);
 
   return {

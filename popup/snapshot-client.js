@@ -2,7 +2,7 @@ import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export function isValidSnapshot(snapshot) {
+function isValidSnapshot(snapshot) {
   return snapshot && typeof snapshot === 'object' && 'tabRecordsById' in snapshot;
 }
 

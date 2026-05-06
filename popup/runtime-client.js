@@ -1,5 +1,4 @@
-import { POPUP_LOG_LEVELS } from '../shared/log-levels.js';
-import { toErrorMessage } from '../shared/log.js';
+import { POPUP_LOG_LEVELS, toErrorMessage } from '../shared/log.js';
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 
 export function createRuntimeClient({

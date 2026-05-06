@@ -1,6 +1,5 @@
 import { inferIsLiveNow } from './live-status.js';
-import { isFiniteNumber } from '../../shared/guards.js';
-import { MEDIA_DURATION_SYNC_TOLERANCE_SECONDS } from '../../shared/media-policy.js';
+import { MEDIA_DURATION_SYNC_TOLERANCE_SECONDS, isFiniteNumber } from '../../shared/guards.js';
 
 const DEFAULT_MEDIA_READY_STATE_THRESHOLD = 2;
 

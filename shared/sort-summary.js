@@ -1,4 +1,4 @@
-export const EMPTY_SORT_SUMMARY = Object.freeze({
+const EMPTY_SORT_SUMMARY = Object.freeze({
   counts: Object.freeze({
     tracked: 0,
     sortReady: 0,

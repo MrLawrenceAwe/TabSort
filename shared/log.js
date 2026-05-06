@@ -1,3 +1,8 @@
+export const POPUP_LOG_LEVELS = Object.freeze({
+  ERROR: 'error',
+  LOG: 'log',
+});
+
 export function toErrorMessage(error) {
   return error instanceof Error ? error.message : String(error);
 }
@@ -13,10 +18,6 @@ export function logDebug(context, detail) {
 
 export function logWarn(context, detail) {
   log('warn', context, detail);
-}
-
-export function logError(context, detail) {
-  log('error', context, detail);
 }
 
 export function logListenerError(label, error) {

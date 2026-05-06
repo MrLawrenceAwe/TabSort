@@ -209,10 +209,6 @@ export function createYoutubePageController({
 
 const defaultYoutubePageController = createYoutubePageController();
 
-export function resetYoutubePageControllerForTests() {
-  defaultYoutubePageController.reset();
-}
-
 export function bootstrapYoutubePageController() {
   defaultYoutubePageController.bootstrap();
 }

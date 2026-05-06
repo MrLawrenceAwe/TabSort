@@ -14,7 +14,7 @@ export async function moveTabsInOrder(tabIds, startIndex = 0) {
   }
 }
 
-export function queryTabs(query) {
+function queryTabs(query) {
   return new Promise((resolve) => {
     try {
       chrome.tabs.query(query, (tabs) => {

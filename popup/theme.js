@@ -23,7 +23,7 @@ function getPreferredTheme() {
   }
 }
 
-export function applyTheme(theme) {
+function applyTheme(theme) {
   const normalizedTheme = normalizeTheme(theme);
   const root = document.documentElement;
   const body = document.body;
