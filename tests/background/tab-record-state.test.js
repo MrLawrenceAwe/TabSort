@@ -167,7 +167,7 @@ test(
     assert.equal(record.pageRuntimeReady, false);
     assert.equal(record.pageMediaReady, false);
     assert.equal(record.videoDetails, null);
-    assert.equal(record.isLiveStream, false);
+    assert.equal(record.isLiveNow, false);
     assert.equal(record.isRemainingTimeStale, true);
   },
 );
@@ -230,7 +230,7 @@ test(
       }),
     };
     trackedWindowState.visibleOrder = [1];
-    trackedWindowState.targetOrder = [1];
+    trackedWindowState.targetSortableVideoOrder = [1];
 
     globalThis.chrome.tabs.query = (query, callback) => {
       globalThis.chrome.runtime.lastError =
@@ -243,7 +243,7 @@ test(
 
     assert.deepEqual(Object.keys(trackedWindowState.tabRecordsById), ['1']);
     assert.deepEqual(trackedWindowState.visibleOrder, [1]);
-    assert.deepEqual(trackedWindowState.targetOrder, [1]);
+    assert.deepEqual(trackedWindowState.targetSortableVideoOrder, [1]);
     assert.equal(trackedWindowState.tabRecordsById[1].videoDetails.remainingTime, 90);
   },
 );

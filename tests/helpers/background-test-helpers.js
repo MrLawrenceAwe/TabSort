@@ -1,5 +1,5 @@
 import { TAB_STATES } from '../../shared/tab-states.js';
-import { createEmptySortSummary } from '../../shared/sort-summary.js';
+import { createEmptySortSummary } from '../../shared/sort-summary-model.js';
 import {
   applySortState,
   resetTrackedWindowState as resetBackgroundTrackedWindowState,
@@ -36,7 +36,7 @@ export function makeTabRecord(id = 1, overrides = {}) {
     status: TAB_STATES.UNSUSPENDED,
     pageRuntimeReady: true,
     pageMediaReady: true,
-    isLiveStream: false,
+    isLiveNow: false,
     isActiveTab: false,
     isHidden: false,
     videoDetails: { title: `Video ${id}`, remainingTime: null, lengthSeconds: null },

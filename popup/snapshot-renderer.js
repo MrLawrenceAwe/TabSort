@@ -1,4 +1,4 @@
-import { cloneSortSummary } from '../shared/sort-summary.js';
+import { cloneSortSummary } from '../shared/sort-summary-model.js';
 import {
   addClassToDataRows,
   renderView,
@@ -10,16 +10,16 @@ import { renderTabRow } from './tab-row-view.js';
 
 export function derivePopupSnapshotViewState(snapshot) {
   const sortSummary = cloneSortSummary(snapshot?.sortSummary);
-  const snapshotSaysSorted = snapshot?.sortableVideosSortedByTime === true;
-  const sortableVideosSortedByTime =
-    sortSummary.order.sortableVideosSortedByTime ||
+  const snapshotSaysSorted = snapshot?.sortableVideosSortedByRemainingTime === true;
+  const sortableVideosSortedByRemainingTime =
+    sortSummary.order.sortableVideosSortedByRemainingTime ||
     (snapshotSaysSorted &&
-      sortSummary.order.allSortableVideosReady &&
-      !sortSummary.readyTabs.outOfOrder);
+      sortSummary.order.allSortableVideosSortReady &&
+      !sortSummary.sortReadyTabs.outOfOrder);
 
   return {
     sortSummary,
-    sortableVideosSortedByTime,
+    sortableVideosSortedByRemainingTime,
   };
 }
 
@@ -33,14 +33,14 @@ export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
 
   const tabRecords = snapshot.tabRecordsById || {};
   const visibleOrder = snapshot.visibleOrder || [];
-  const { sortSummary, sortableVideosSortedByTime } = derivePopupSnapshotViewState(snapshot);
+  const { sortSummary, sortableVideosSortedByRemainingTime } = derivePopupSnapshotViewState(snapshot);
 
   updateViewState({
-    sortableVideosSortedByTime,
+    sortableVideosSortedByRemainingTime,
     sortSummary,
   });
 
-  setSecondaryColumnsVisible(!sortableVideosSortedByTime);
+  setSecondaryColumnsVisible(!sortableVideosSortedByRemainingTime);
 
   const rowFragment = document.createDocumentFragment();
   for (const tabId of visibleOrder) {
@@ -52,13 +52,13 @@ export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
       isRemainingTimeStale: Boolean(tabRecord.isRemainingTimeStale),
     };
     if (normalizedRecord.isRemainingTimeStale) row.classList.add('stale-remaining-row');
-    renderTabRow(row, normalizedRecord, sortableVideosSortedByTime, postRuntimeMessage);
+    renderTabRow(row, normalizedRecord, sortableVideosSortedByRemainingTime, postRuntimeMessage);
     rowFragment.appendChild(row);
   }
   tbody.replaceChildren(rowFragment);
 
-  if (sortSummary.order.allSortableVideosReady && !sortableVideosSortedByTime) {
-    addClassToDataRows(table, 'all-ready-row');
+  if (sortSummary.order.allSortableVideosSortReady && !sortableVideosSortedByRemainingTime) {
+    addClassToDataRows(table, 'all-sort-ready-row');
   }
 
   renderView();

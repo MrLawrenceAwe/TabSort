@@ -22,7 +22,7 @@ export function markTabRecordStale(
 
   if (resetRuntimeReady) record.pageRuntimeReady = false;
   if (resetMediaReady) record.pageMediaReady = false;
-  if (resetLiveStream) record.isLiveStream = false;
+  if (resetLiveStream) record.isLiveNow = false;
 
   if (clearVideoDetails) {
     record.videoDetails = null;

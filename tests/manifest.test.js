@@ -22,7 +22,7 @@ test('manifest exposes dynamically imported content modules to YouTube pages', (
 	  assert.deepEqual(youtubeEntry.resources, [
 	    'content/youtube/page-runtime.js',
 	    'content/youtube/media-readiness.js',
-	    'content/youtube/metadata.js',
+	    'content/youtube/video-details.js',
 	    'content/youtube/live-status.js',
 	    'content/youtube/title-observer.js',
 	    'content/youtube/video-metrics.js',

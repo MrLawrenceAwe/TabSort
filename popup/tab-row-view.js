@@ -29,7 +29,7 @@ export function renderTabRow(row, tabRecord, isSortedView, postRuntimeMessage) {
 
   const remaining = tabRecord?.videoDetails?.remainingTime;
   const hasRemainingTime = isFiniteNumber(remaining) && !tabRecord.isRemainingTimeStale;
-  if (hasRemainingTime && !isSortedView) row.classList.add('ready-row');
+  if (hasRemainingTime && !isSortedView) row.classList.add('sort-ready-row');
 }
 
 function insertInfoCells(row, record, sortedView, userAction) {
@@ -90,7 +90,7 @@ function createActionLink(text, actionType, tabId, postRuntimeMessage) {
 }
 
 export function formatRemainingStatus(record, requiredAction = determineUserAction(record)) {
-  if (record.isLiveStream) return 'Live Stream';
+  if (record.isLiveNow) return 'Live Stream';
 
   const remaining = record?.videoDetails?.remainingTime;
   const hasRemainingTime = isFiniteNumber(remaining);
