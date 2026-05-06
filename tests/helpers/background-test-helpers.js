@@ -1,9 +1,9 @@
 import { TAB_STATES } from '../../shared/tab-states.js';
-import { createEmptySortSummary } from '../../shared/sort-summary-model.js';
+import { createEmptySortSummary } from '../../shared/sort-summary.js';
 import {
   applySortState,
   resetTrackedWindowState as resetBackgroundTrackedWindowState,
-} from '../../background/tracked-window-state.js';
+} from '../../background/tracked-window-store.js';
 import { createTabRecord } from '../../background/tab-record.js';
 
 export function ensureChromeApi({ tabs = false } = {}) {
@@ -28,7 +28,7 @@ export function resetTrackedWindowState(windowId = null) {
   applySortState({ sortSummary: createEmptySortSummary() });
 }
 
-export function makeTabRecord(id = 1, overrides = {}) {
+export function createTabRecordFixture(id = 1, overrides = {}) {
   return createTabRecord(id, 1, {
     url: `https://www.youtube.com/watch?v=${id}`,
     index: 0,

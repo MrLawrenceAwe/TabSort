@@ -1,11 +1,11 @@
-import { cloneSortSummary } from '../shared/sort-summary-model.js';
+import { cloneSortSummary } from '../shared/sort-summary.js';
 import {
   addClassToDataRows,
   renderPopupChrome,
-  setErrorMessage,
   setSecondaryColumnsVisible,
-  applyPopupUiState,
-} from './view.js';
+} from './popup-chrome.js';
+import { setErrorMessage } from './popup-dom.js';
+import { applyPopupUiState } from './popup-ui-state.js';
 import { renderTabRow } from './tab-row-view.js';
 
 export function deriveSnapshotUiState(snapshot) {

@@ -2,8 +2,8 @@ import { isFiniteNumber } from '../shared/guards.js';
 import { ensureTabRecord } from './tab-record.js';
 import { markTabRecordVideoChanged, removeTabRecord } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { trackedWindowState, setWindowId } from './tracked-window-state.js';
-import { refreshTabPlaybackState } from './tab-playback-state.js';
+import { trackedWindowState, setWindowId } from './tracked-window-store.js';
+import { refreshTabPlaybackState } from './tab-playback-sync.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function isSenderInTrackedWindow(windowId) {

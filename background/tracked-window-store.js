@@ -1,4 +1,4 @@
-import { cloneSortSummary, createEmptySortSummary } from '../shared/sort-summary-model.js';
+import { cloneSortSummary, createEmptySortSummary } from '../shared/sort-summary.js';
 import { isValidWindowId } from '../shared/guards.js';
 
 function createTrackedWindowStateShape() {

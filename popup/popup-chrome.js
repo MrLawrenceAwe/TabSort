@@ -1,70 +1,5 @@
-import { createEmptySortSummary } from '../shared/sort-summary-model.js';
-
-export const popupUiState = {
-  sortSummary: createEmptySortSummary(),
-  currentOrderMatchesTarget: false,
-  activeWindowId: null,
-};
-
-const domCache = {
-  errorElement: null,
-  emptyStateElement: null,
-  statusElement: null,
-  sortButton: null,
-  sortedBadgeElement: null,
-  table: null,
-  actionRequiredColumn: null,
-  tabStatusColumn: null,
-  initialized: false,
-};
-
-function getRootDocument(rootDocument) {
-  return rootDocument ?? globalThis.document;
-}
-
-export function resetView() {
-  domCache.errorElement = null;
-  domCache.emptyStateElement = null;
-  domCache.statusElement = null;
-  domCache.sortButton = null;
-  domCache.sortedBadgeElement = null;
-  domCache.table = null;
-  domCache.actionRequiredColumn = null;
-  domCache.tabStatusColumn = null;
-  domCache.initialized = false;
-  popupUiState.sortSummary = createEmptySortSummary();
-  popupUiState.currentOrderMatchesTarget = false;
-  popupUiState.activeWindowId = null;
-}
-
-export function setActiveWindowId(windowId) {
-  popupUiState.activeWindowId = typeof windowId === 'number' ? windowId : null;
-}
-
-export function applyPopupUiState(updates = {}) {
-  Object.assign(popupUiState, updates);
-}
-
-export function initializeView(rootDocument = globalThis.document) {
-  if (domCache.initialized) return;
-  const runtimeDocument = getRootDocument(rootDocument);
-  if (!runtimeDocument) return;
-
-  domCache.errorElement = runtimeDocument.getElementById('popupError');
-  domCache.emptyStateElement = runtimeDocument.getElementById('emptyState');
-  domCache.statusElement = runtimeDocument.getElementById('videoTabsReadyStatus');
-  domCache.sortButton = runtimeDocument.getElementById('sortButton');
-  domCache.sortedBadgeElement = runtimeDocument.getElementById('tabsSorted');
-  domCache.table = runtimeDocument.getElementById('infoTable');
-  domCache.actionRequiredColumn = runtimeDocument.querySelector('.action-required');
-  domCache.tabStatusColumn = runtimeDocument.querySelector('.tab-status');
-  domCache.initialized = true;
-}
-
-function getCachedElement(key) {
-  if (!domCache.initialized) initializeView();
-  return domCache[key];
-}
+import { popupUiState } from './popup-ui-state.js';
+import { getPopupDocument, getPopupElement } from './popup-dom.js';
 
 function updateStatus(statusElement) {
   if (!statusElement) return;
@@ -100,14 +35,6 @@ function updateEmptyState(emptyStateElement) {
   emptyStateElement.classList.toggle('hide', !message);
 }
 
-export function setErrorMessage(message = '') {
-  const errorElement = getCachedElement('errorElement');
-  if (!errorElement) return;
-  const nextMessage = typeof message === 'string' ? message.trim() : '';
-  errorElement.textContent = nextMessage;
-  errorElement.classList.toggle('hide', !nextMessage);
-}
-
 export function getSortButtonText(sortReadyTabCount, totalTabCount) {
   return sortReadyTabCount === totalTabCount ? 'Sort All Tabs' : 'Move Ready Tabs First';
 }
@@ -131,15 +58,15 @@ function clearReadyRows(table) {
 }
 
 export function setSecondaryColumnsVisible(visible) {
-  const actionRequired = getCachedElement('actionRequiredColumn');
-  const tabStatus = getCachedElement('tabStatusColumn');
+  const actionRequired = getPopupElement('actionRequiredColumn');
+  const tabStatus = getPopupElement('tabStatusColumn');
   const method = visible ? 'remove' : 'add';
   actionRequired?.classList[method]('hide');
   tabStatus?.classList[method]('hide');
 }
 
 function setOptionToggleVisibility(visible) {
-  const runtimeDocument = getRootDocument();
+  const runtimeDocument = getPopupDocument();
   if (!runtimeDocument?.querySelectorAll) return;
   runtimeDocument.querySelectorAll('.option-toggle').forEach((toggle) => {
     toggle.classList?.toggle('hide', !visible);
@@ -147,11 +74,11 @@ function setOptionToggleVisibility(visible) {
 }
 
 export function renderPopupChrome() {
-  const emptyStateElement = getCachedElement('emptyStateElement');
-  const statusElement = getCachedElement('statusElement');
-  const sortButton = getCachedElement('sortButton');
-  const sortedBadgeElement = getCachedElement('sortedBadgeElement');
-  const table = getCachedElement('table');
+  const emptyStateElement = getPopupElement('emptyStateElement');
+  const statusElement = getPopupElement('statusElement');
+  const sortButton = getPopupElement('sortButton');
+  const sortedBadgeElement = getPopupElement('sortedBadgeElement');
+  const table = getPopupElement('table');
   const { counts, sortReadyTabs } = popupUiState.sortSummary;
 
   const sortReadySubsetExists = counts.sortReady >= 2 && counts.sortReady < counts.tracked;
