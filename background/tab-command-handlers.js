@@ -4,9 +4,9 @@ import { buildTabSnapshot } from './tab-snapshot.js';
 import { markTabRecordReloading } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
 import { reorderWindowTabs } from './sorting/apply-window-tab-order.js';
-import { refreshTabPlaybackMetrics } from './tab-playback-metrics.js';
+import { refreshTabPlaybackMetrics } from './tab-playback-sync.js';
 import { windowSessionState } from './window-session.js';
-import { listTabIds, setWindowId } from './window-session-actions.js';
+import { listTabIds, setWindowId } from './window-session-store.js';
 import { syncWindowTabRecords } from './tab-record-sync.js';
 
 export async function activateTab(message) {

@@ -1,10 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import {
-  createYoutubePageRuntime,
-  shouldSendPageRuntimeReadySignal,
-} from '../content/youtube/page-runtime.js';
+import { createYoutubePageRuntime } from '../content/youtube/youtube-content-runtime.js';
+import { shouldSendPageRuntimeReadySignal } from '../content/youtube/content-runtime-state.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 
 class FakeMutationObserver {

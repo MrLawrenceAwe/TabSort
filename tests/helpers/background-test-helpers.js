@@ -3,7 +3,7 @@ import { createEmptySortSummary } from '../../shared/sort-summary.js';
 import {
   applySortState,
   resetWindowSessionState,
-} from '../../background/window-session-actions.js';
+} from '../../background/window-session-store.js';
 import { createTabRecord } from '../../background/tab-record.js';
 
 export function ensureChromeApi({ tabs = false } = {}) {

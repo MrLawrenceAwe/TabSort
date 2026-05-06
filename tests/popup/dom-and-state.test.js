@@ -5,8 +5,8 @@ import {
   initializePopupDom,
   resetPopupDom,
   setErrorMessage,
-} from '../../popup/dom.js';
-import { popupState, resetPopupState } from '../../popup/state.js';
+} from '../../popup/popup-elements.js';
+import { popupState, resetPopupState } from '../../popup/popup-store.js';
 
 function createFakeElement() {
   return {

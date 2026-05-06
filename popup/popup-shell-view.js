@@ -1,5 +1,5 @@
-import { getPopupDocument, getPopupElement } from './dom.js';
-import { popupState } from './state.js';
+import { getPopupDocument, getPopupElement } from './popup-elements.js';
+import { popupState } from './popup-store.js';
 
 function updateStatus(statusElement) {
   if (!statusElement) return;
