@@ -27,15 +27,20 @@ export async function handlePageRuntimeReady(_message, sender) {
   }
   setTrackedWindowId(windowId);
 
+  const previousRecord = trackedWindowState.tabRecordsById[tabId];
+  const senderUrl = sender?.tab?.url ?? null;
+  const videoChanged = hasYoutubeVideoIdentityChanged(previousRecord?.url, senderUrl);
   const record = ensureTabRecord(tabId, windowId, {
-    url: sender?.tab?.url ?? null,
+    url: senderUrl,
     index: sender?.tab?.index,
     pinned: sender?.tab?.pinned,
     isActiveTab: sender?.tab?.active,
     isHidden: sender?.tab?.hidden,
   });
   record.pageRuntimeReady = true;
-  record.pageMediaReady = false;
+  if (videoChanged) {
+    record.pageMediaReady = false;
+  }
   recomputeSortState();
   return { type: 'pageRuntimeAck' };
 }

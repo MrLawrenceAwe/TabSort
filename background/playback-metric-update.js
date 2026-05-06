@@ -93,12 +93,15 @@ export function derivePlaybackMetricUpdate({
   const playbackRate = Number(metricsPayload.playbackRate ?? 1);
   const isLiveNow =
     metricsPayload.isLive === true ? true : metricsPayload.isLive === false ? false : record.isLiveNow;
+  const previousMediaStillApplies =
+    record.pageMediaReady === true &&
+    areEquivalentVideoUrls(record.url, payloadUrl || currentTabUrl || requestedUrl);
 
   const update = {
     nextUrl: payloadUrl || currentTabUrl || null,
     nextTitle: typeof metricsPayload.title === 'string' ? metricsPayload.title : null,
     pageRuntimeReady: true,
-    pageMediaReady: metricsPayload.pageMediaReady === true,
+    pageMediaReady: metricsPayload.pageMediaReady === true || previousMediaStillApplies,
     isLiveNow,
     resolvedLengthSeconds: isFiniteNumber(resolvedLengthSeconds) ? resolvedLengthSeconds : null,
     remainingTime: null,
