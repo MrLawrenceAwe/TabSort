@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { getEmptyStateMessage, getSortButtonText } from '../../popup/view.js';
+import { getEmptyStateMessage, getSortButtonText } from '../../popup/popup-chrome.js';
 
 test('getEmptyStateMessage explains when no tracked tabs are available', () => {
   assert.equal(

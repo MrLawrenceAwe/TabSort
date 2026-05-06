@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  initializeView,
-  resetView,
+  initializePopupDom,
+  resetPopupDom,
   setErrorMessage,
-  popupUiState,
-} from '../../popup/view.js';
+} from '../../popup/popup-dom.js';
+import { popupUiState, resetPopupUiState } from '../../popup/popup-ui-state.js';
 
 function createFakeElement() {
   return {
@@ -48,6 +48,7 @@ function createFakeDocument() {
 }
 
 test('popup view model keeps sort summary flags available for view decisions', () => {
+  resetPopupUiState();
   popupUiState.sortSummary.backgroundTabs.haveStaleRemainingTime = true;
   assert.equal(popupUiState.sortSummary.backgroundTabs.haveStaleRemainingTime, true);
 });
@@ -56,13 +57,14 @@ test('popup view can reset cached DOM references before reinitializing with a ne
   const firstDocument = createFakeDocument();
   const secondDocument = createFakeDocument();
 
-  resetView();
-  initializeView(firstDocument);
+  resetPopupDom();
+  resetPopupUiState();
+  initializePopupDom(firstDocument);
   setErrorMessage('First error');
   assert.equal(firstDocument.elements.get('popupError').textContent, 'First error');
 
-  resetView();
-  initializeView(secondDocument);
+  resetPopupDom();
+  initializePopupDom(secondDocument);
   setErrorMessage('Second error');
 
   assert.equal(firstDocument.elements.get('popupError').textContent, 'First error');

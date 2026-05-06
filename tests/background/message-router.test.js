@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { trackedWindowState } from '../../background/tracked-window-state.js';
+import { trackedWindowState } from '../../background/tracked-window-store.js';
 import {
   markPageMediaReady,
   markPageRuntimeReady,
@@ -9,7 +9,7 @@ import {
 } from '../../background/page-message-handlers.js';
 import {
   ensureChromeApi,
-  makeTabRecord,
+  createTabRecordFixture,
   resetTrackedWindowState,
 } from '../helpers/background-test-helpers.js';
 
@@ -42,7 +42,7 @@ test('applyPageVideoDetails does not create records for non-watch YouTube pages'
 test('applyPageVideoDetails removes tracked rows when tab leaves watch/shorts', async () => {
   resetTrackedWindowState(1);
   trackedWindowState.tabRecordsById = {
-    7: makeTabRecord(7, {
+    7: createTabRecordFixture(7, {
       videoDetails: { title: 'Video 7', remainingTime: 25, lengthSeconds: 100 },
       isRemainingTimeStale: false,
     }),
@@ -74,7 +74,7 @@ test('applyPageVideoDetails removes tracked rows when tab leaves watch/shorts', 
 test('markPageRuntimeReady removes tracked rows when a SPA tab leaves watch/shorts', async () => {
   resetTrackedWindowState(1);
   trackedWindowState.tabRecordsById = {
-    7: makeTabRecord(7, {
+    7: createTabRecordFixture(7, {
       videoDetails: { title: 'Video 7', remainingTime: 25, lengthSeconds: 100 },
       isRemainingTimeStale: false,
     }),
@@ -132,7 +132,7 @@ test('markPageRuntimeReady marks the runtime ready without collecting metrics', 
 test('markPageMediaReady removes tracked rows when a stale event arrives off watch/shorts', async () => {
   resetTrackedWindowState(1);
   trackedWindowState.tabRecordsById = {
-    7: makeTabRecord(7, {
+    7: createTabRecordFixture(7, {
       videoDetails: { title: 'Video 7', remainingTime: 25, lengthSeconds: 100 },
       isRemainingTimeStale: false,
     }),
@@ -167,7 +167,7 @@ test('markPageMediaReady removes tracked rows when a stale event arrives off wat
 test('applyPageVideoDetails resets carried remaining time on watch-to-watch SPA navigation', async () => {
   resetTrackedWindowState(1);
   trackedWindowState.tabRecordsById = {
-    7: makeTabRecord(7, {
+    7: createTabRecordFixture(7, {
       url: 'https://www.youtube.com/watch?v=old',
       pageRuntimeReady: true,
       videoDetails: { title: 'Old Video', remainingTime: 25, lengthSeconds: 100 },
@@ -205,7 +205,7 @@ test('applyPageVideoDetails resets carried remaining time on watch-to-watch SPA 
 test('applyPageVideoDetails preserves ready state when the title changes for the same watch URL', async () => {
   resetTrackedWindowState(1);
   trackedWindowState.tabRecordsById = {
-    7: makeTabRecord(7, {
+    7: createTabRecordFixture(7, {
       url: 'https://www.youtube.com/watch?v=new',
       pageMediaReady: true,
       videoDetails: { title: 'Old Video', remainingTime: 3365, lengthSeconds: 3365 },
@@ -243,7 +243,7 @@ test('applyPageVideoDetails preserves ready state when the title changes for the
 test('applyPageVideoDetails preserves ready state when only watch URL parameters change', async () => {
   resetTrackedWindowState(1);
   trackedWindowState.tabRecordsById = {
-    7: makeTabRecord(7, {
+    7: createTabRecordFixture(7, {
       url: 'https://www.youtube.com/watch?v=new',
       pageMediaReady: true,
       videoDetails: { title: 'Video', remainingTime: 120, lengthSeconds: 300 },

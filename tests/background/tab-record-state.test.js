@@ -2,12 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES } from '../../shared/tab-states.js';
-import { trackedWindowState } from '../../background/tracked-window-state.js';
-import { refreshTabPlaybackState } from '../../background/tab-playback-state.js';
+import { trackedWindowState } from '../../background/tracked-window-store.js';
+import { refreshTabPlaybackState } from '../../background/tab-playback-sync.js';
 import { syncWindowTabRecords } from '../../background/tab-record-sync.js';
 import {
   ensureChromeApi,
-  makeTabRecord,
+  createTabRecordFixture,
   resetTrackedWindowState,
 } from '../helpers/background-test-helpers.js';
 
@@ -18,7 +18,7 @@ test(
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
-    const initialRecord = makeTabRecord(1, { pageRuntimeReady: false });
+    const initialRecord = createTabRecordFixture(1, { pageRuntimeReady: false });
     trackedWindowState.tabRecordsById = { 1: initialRecord };
 
     globalThis.chrome.tabs.get = (_tabId, callback) => {
@@ -50,7 +50,7 @@ test(
 
     const refreshPromise = refreshTabPlaybackState(1);
 
-    const replacementRecord = makeTabRecord(1, { pageRuntimeReady: false });
+    const replacementRecord = createTabRecordFixture(1, { pageRuntimeReady: false });
     trackedWindowState.tabRecordsById = { 1: replacementRecord };
 
     await refreshPromise;
@@ -99,7 +99,7 @@ test(
   async () => {
     resetTrackedWindowState();
     trackedWindowState.tabRecordsById = {
-      1: makeTabRecord(1, {
+      1: createTabRecordFixture(1, {
         status: TAB_STATES.SUSPENDED,
         unsuspendedTimestamp: null,
       }),
@@ -135,7 +135,7 @@ test(
   async () => {
     resetTrackedWindowState();
     trackedWindowState.tabRecordsById = {
-      1: makeTabRecord(1, {
+      1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
         pageMediaReady: true,
         pageRuntimeReady: true,
@@ -178,7 +178,7 @@ test(
   async () => {
     resetTrackedWindowState();
     trackedWindowState.tabRecordsById = {
-      1: makeTabRecord(1, {
+      1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=same',
         pageMediaReady: true,
         pageRuntimeReady: true,
@@ -224,7 +224,7 @@ test(
   async () => {
     resetTrackedWindowState(1);
     trackedWindowState.tabRecordsById = {
-      1: makeTabRecord(1, {
+      1: createTabRecordFixture(1, {
         videoDetails: { title: 'Video 1', remainingTime: 90, lengthSeconds: 120 },
         isRemainingTimeStale: false,
       }),
@@ -254,7 +254,7 @@ test(
   async () => {
     resetTrackedWindowState();
     trackedWindowState.tabRecordsById = {
-      1: makeTabRecord(1, {
+      1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
         videoDetails: { title: 'Old Video', remainingTime: 45, lengthSeconds: 120 },
         isRemainingTimeStale: false,
@@ -302,7 +302,7 @@ test(
   async () => {
     resetTrackedWindowState();
     trackedWindowState.tabRecordsById = {
-      1: makeTabRecord(1, {
+      1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
         pageRuntimeReady: false,
         pageMediaReady: false,
@@ -344,7 +344,7 @@ test(
 
     const refreshPromise = refreshTabPlaybackState(1);
 
-    trackedWindowState.tabRecordsById[1] = makeTabRecord(1, {
+    trackedWindowState.tabRecordsById[1] = createTabRecordFixture(1, {
       url: 'https://www.youtube.com/watch?v=new',
       pageRuntimeReady: false,
       pageMediaReady: false,
@@ -369,7 +369,7 @@ test(
   async () => {
     resetTrackedWindowState();
     trackedWindowState.tabRecordsById = {
-      1: makeTabRecord(1, {
+      1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=new',
         pageRuntimeReady: true,
         pageMediaReady: false,
@@ -418,7 +418,7 @@ test(
   async () => {
     resetTrackedWindowState();
     trackedWindowState.tabRecordsById = {
-      1: makeTabRecord(1, {
+      1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=previous',
         pageRuntimeReady: true,
         pageMediaReady: true,

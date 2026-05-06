@@ -1,4 +1,4 @@
-import { createEmptySortSummary } from '../../shared/sort-summary-model.js';
+import { createEmptySortSummary } from '../../shared/sort-summary.js';
 import { areTabIdListsEqual } from './sort-plan.js';
 import { hasReadyRemainingTime } from '../sort-readiness.js';
 

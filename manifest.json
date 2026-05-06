@@ -30,7 +30,7 @@
     "web_accessible_resources": [
       {
         "resources": [
-          "content/youtube/page-runtime.js",
+          "content/youtube/page-runtime-session.js",
           "content/youtube/media-readiness.js",
           "content/youtube/media-elements.js",
           "content/youtube/video-details.js",

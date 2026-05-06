@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { trackedWindowState } from '../background/tracked-window-state.js';
+import { trackedWindowState } from '../background/tracked-window-store.js';
 import { recomputeSortState } from '../background/sort-state.js';
 import {
   ensureChromeApi,
-  makeTabRecord,
+  createTabRecordFixture,
   resetTrackedWindowState,
 } from './helpers/background-test-helpers.js';
 
@@ -14,9 +14,9 @@ ensureChromeApi();
 test('orders known remaining-time tabs before unknown tabs', () => {
   resetTrackedWindowState();
   trackedWindowState.tabRecordsById = {
-    1: makeTabRecord(1, { index: 0, videoDetails: { remainingTime: 50 }, isRemainingTimeStale: false }),
-    2: makeTabRecord(2, { index: 1, videoDetails: { remainingTime: null }, isRemainingTimeStale: true }),
-    3: makeTabRecord(3, { index: 2, videoDetails: { remainingTime: 10 }, isRemainingTimeStale: false }),
+    1: createTabRecordFixture(1, { index: 0, videoDetails: { remainingTime: 50 }, isRemainingTimeStale: false }),
+    2: createTabRecordFixture(2, { index: 1, videoDetails: { remainingTime: null }, isRemainingTimeStale: true }),
+    3: createTabRecordFixture(3, { index: 2, videoDetails: { remainingTime: 10 }, isRemainingTimeStale: false }),
   };
 
   recomputeSortState();
@@ -29,8 +29,8 @@ test('orders known remaining-time tabs before unknown tabs', () => {
 test('marks window as sorted only when all actionable tabs are known and ordered', () => {
   resetTrackedWindowState();
   trackedWindowState.tabRecordsById = {
-    1: makeTabRecord(1, { index: 0, videoDetails: { remainingTime: 5 }, isRemainingTimeStale: false }),
-    2: makeTabRecord(2, { index: 1, videoDetails: { remainingTime: 20 }, isRemainingTimeStale: false }),
+    1: createTabRecordFixture(1, { index: 0, videoDetails: { remainingTime: 5 }, isRemainingTimeStale: false }),
+    2: createTabRecordFixture(2, { index: 1, videoDetails: { remainingTime: 20 }, isRemainingTimeStale: false }),
   };
 
   recomputeSortState();
@@ -44,10 +44,10 @@ test('marks window as sorted only when all actionable tabs are known and ordered
 test('derives sort summary metrics for non-contiguous and out-of-order ready subsets', () => {
   resetTrackedWindowState();
   trackedWindowState.tabRecordsById = {
-    1: makeTabRecord(1, { index: 0, isRemainingTimeStale: true, isActiveTab: false, isHidden: true }),
-    2: makeTabRecord(2, { index: 1, videoDetails: { remainingTime: 20 }, isRemainingTimeStale: false }),
-    3: makeTabRecord(3, { index: 2, isRemainingTimeStale: true }),
-    4: makeTabRecord(4, { index: 3, videoDetails: { remainingTime: 10 }, isRemainingTimeStale: false }),
+    1: createTabRecordFixture(1, { index: 0, isRemainingTimeStale: true, isActiveTab: false, isHidden: true }),
+    2: createTabRecordFixture(2, { index: 1, videoDetails: { remainingTime: 20 }, isRemainingTimeStale: false }),
+    3: createTabRecordFixture(3, { index: 2, isRemainingTimeStale: true }),
+    4: createTabRecordFixture(4, { index: 3, videoDetails: { remainingTime: 10 }, isRemainingTimeStale: false }),
   };
 
   recomputeSortState();
@@ -62,9 +62,9 @@ test('derives sort summary metrics for non-contiguous and out-of-order ready sub
 test('handles records without a finite index deterministically', () => {
   resetTrackedWindowState();
   trackedWindowState.tabRecordsById = {
-    1: makeTabRecord(1, { index: 0, videoDetails: { remainingTime: 8 }, isRemainingTimeStale: false }),
-    2: makeTabRecord(2, { index: undefined, videoDetails: { remainingTime: 4 }, isRemainingTimeStale: false }),
-    3: makeTabRecord(3, { index: undefined, videoDetails: { remainingTime: 2 }, isRemainingTimeStale: false }),
+    1: createTabRecordFixture(1, { index: 0, videoDetails: { remainingTime: 8 }, isRemainingTimeStale: false }),
+    2: createTabRecordFixture(2, { index: undefined, videoDetails: { remainingTime: 4 }, isRemainingTimeStale: false }),
+    3: createTabRecordFixture(3, { index: undefined, videoDetails: { remainingTime: 2 }, isRemainingTimeStale: false }),
   };
 
   recomputeSortState();
@@ -76,9 +76,9 @@ test('handles records without a finite index deterministically', () => {
 test('live tabs do not block sorted readiness for VOD tabs with known remaining times', () => {
   resetTrackedWindowState();
   trackedWindowState.tabRecordsById = {
-    1: makeTabRecord(1, { index: 0, videoDetails: { remainingTime: 5 }, isRemainingTimeStale: false }),
-    2: makeTabRecord(2, { index: 1, videoDetails: { remainingTime: 15 }, isRemainingTimeStale: false }),
-    3: makeTabRecord(3, {
+    1: createTabRecordFixture(1, { index: 0, videoDetails: { remainingTime: 5 }, isRemainingTimeStale: false }),
+    2: createTabRecordFixture(2, { index: 1, videoDetails: { remainingTime: 15 }, isRemainingTimeStale: false }),
+    3: createTabRecordFixture(3, {
       index: 2,
       isLiveNow: true,
       videoDetails: { remainingTime: null },
@@ -99,18 +99,18 @@ test('live tabs do not block sorted readiness for VOD tabs with known remaining 
 test('pinned tracked tabs count toward popup totals without affecting sort summary', () => {
   resetTrackedWindowState();
   trackedWindowState.tabRecordsById = {
-    1: makeTabRecord(1, {
+    1: createTabRecordFixture(1, {
       index: 0,
       pinned: true,
       videoDetails: { remainingTime: 30 },
       isRemainingTimeStale: false,
     }),
-    2: makeTabRecord(2, {
+    2: createTabRecordFixture(2, {
       index: 1,
       videoDetails: { remainingTime: 5 },
       isRemainingTimeStale: false,
     }),
-    3: makeTabRecord(3, {
+    3: createTabRecordFixture(3, {
       index: 2,
       videoDetails: { remainingTime: 15 },
       isRemainingTimeStale: false,

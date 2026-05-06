@@ -7,8 +7,8 @@ import {
   trackedWindowState,
   resetTrackedWindowState as resetBackgroundTrackedWindowState,
   setWindowId,
-} from './tracked-window-state.js';
-import { refreshTabPlaybackState } from './tab-playback-state.js';
+} from './tracked-window-store.js';
+import { refreshTabPlaybackState } from './tab-playback-sync.js';
 import { syncWindowTabRecords } from './tab-record-sync.js';
 
 const MIN_REFRESH_INTERVAL_MINUTES = 1;

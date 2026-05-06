@@ -12,12 +12,10 @@ import {
 } from './snapshot-poller.js';
 import { renderSnapshot } from './snapshot-renderer.js';
 import {
-  initializeView,
   renderPopupChrome,
-  setActiveWindowId,
-  setErrorMessage,
-  popupUiState,
-} from './view.js';
+} from './popup-chrome.js';
+import { initializePopupDom, setErrorMessage } from './popup-dom.js';
+import { popupUiState, setActiveWindowId } from './popup-ui-state.js';
 import { startThemeSync } from './theme.js';
 
 const SNAPSHOT_RETRY_DELAY_MS = 150;
@@ -75,7 +73,7 @@ async function initializeSortOptions() {
 
 export async function initializePopupController() {
   isControllerActive = true;
-  initializeView();
+  initializePopupDom();
   renderPopupChrome();
   setErrorMessage('');
 

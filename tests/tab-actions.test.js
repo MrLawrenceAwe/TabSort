@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES } from '../shared/tab-states.js';
-import { trackedWindowState } from '../background/tracked-window-state.js';
+import { trackedWindowState } from '../background/tracked-window-store.js';
 import { reloadTab } from '../background/tab-command-handlers.js';
 import {
   ensureChromeApi,
-  makeTabRecord,
+  createTabRecordFixture,
   resetTrackedWindowState,
 } from './helpers/background-test-helpers.js';
 
@@ -15,7 +15,7 @@ ensureChromeApi({ tabs: true });
 test('reloadTab does not mutate record state when chrome.tabs.reload fails', { concurrency: false }, async () => {
   resetTrackedWindowState();
   trackedWindowState.tabRecordsById = {
-    1: makeTabRecord(1, { videoDetails: { remainingTime: 100 }, isRemainingTimeStale: false }),
+    1: createTabRecordFixture(1, { videoDetails: { remainingTime: 100 }, isRemainingTimeStale: false }),
   };
   const before = JSON.parse(JSON.stringify(trackedWindowState.tabRecordsById[1]));
 
@@ -31,7 +31,7 @@ test('reloadTab does not mutate record state when chrome.tabs.reload fails', { c
 test('reloadTab marks record loading only after successful reload call', { concurrency: false }, async () => {
   resetTrackedWindowState();
   trackedWindowState.tabRecordsById = {
-    1: makeTabRecord(1, { videoDetails: { remainingTime: 100 }, isRemainingTimeStale: false }),
+    1: createTabRecordFixture(1, { videoDetails: { remainingTime: 100 }, isRemainingTimeStale: false }),
   };
 
   globalThis.chrome.tabs.reload = async () => {};

@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   createPageRuntimeSession,
   shouldSendPageRuntimeReadySignal,
-} from '../content/youtube/page-runtime.js';
+} from '../content/youtube/page-runtime-session.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 
 class FakeMutationObserver {

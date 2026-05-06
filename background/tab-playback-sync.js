@@ -5,7 +5,7 @@ import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { getTab, sendMessageToTab } from './chrome-tabs.js';
 import { markTabRecordStale } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { trackedWindowState, setWindowId } from './tracked-window-state.js';
+import { trackedWindowState, setWindowId } from './tracked-window-store.js';
 import { getYoutubeVideoIdentity, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 const MEDIA_DURATION_SYNC_TOLERANCE_SECONDS = 2;
