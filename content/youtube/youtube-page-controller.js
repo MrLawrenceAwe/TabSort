@@ -1,19 +1,19 @@
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import { createRuntimeMessaging } from './messaging.js';
 import {
-  createRuntimeState,
-  pageRuntimeConfig,
-  shouldSendPageRuntimeReadySignal,
-} from './runtime-state.js';
+  createYoutubePageControllerState,
+  shouldSendPageReadySignal,
+  youtubePageControllerConfig,
+} from './youtube-page-controller-state.js';
 import { createMediaReadinessTracker } from './media-readiness.js';
 import { createTitleObserver } from './title-observer.js';
 import { handleCollectVideoMetricsMessage } from './video-metrics.js';
 
-export function createPageRuntime({
-  config = pageRuntimeConfig,
+export function createYoutubePageController({
+  config = youtubePageControllerConfig,
   environment = globalThis,
 } = {}) {
-  const state = createRuntimeState();
+  const state = createYoutubePageControllerState();
 
   const getDocument = () => environment.document ?? globalThis.document;
   const getWindow = () => environment.window ?? globalThis.window;
@@ -68,11 +68,9 @@ export function createPageRuntime({
     return Math.abs(video.duration - details.lengthSeconds) <= 2;
   }
 
-  function sendPageRuntimeReady({ force = false } = {}) {
+  function dispatchPageReadySignal({ force = false } = {}) {
     const currentUrl = getCurrentPageUrl();
-    if (
-      !shouldSendPageRuntimeReadySignal(currentUrl, state.lastReadyUrl, { force })
-    ) {
+    if (!shouldSendPageReadySignal(currentUrl, state.lastReadyUrl, { force })) {
       return;
     }
     state.lastReadyUrl = currentUrl;
@@ -131,7 +129,7 @@ export function createPageRuntime({
   function refreshPageState({ includeReadySignal = false, forceReadySignal = false } = {}) {
     syncPageRuntime();
     if (includeReadySignal) {
-      sendPageRuntimeReady({ force: forceReadySignal });
+      dispatchPageReadySignal({ force: forceReadySignal });
     }
     publishPageVideoDetails();
     mediaReadiness.watchForVideoMount();
@@ -206,12 +204,12 @@ export function createPageRuntime({
   };
 }
 
-const defaultPageRuntime = createPageRuntime();
+const defaultYoutubePageController = createYoutubePageController();
 
-export function resetRuntimeStateForTests() {
-  defaultPageRuntime.reset();
+export function resetYoutubePageControllerForTests() {
+  defaultYoutubePageController.reset();
 }
 
-export function bootstrapPageRuntime() {
-  defaultPageRuntime.bootstrap();
+export function bootstrapYoutubePageController() {
+  defaultYoutubePageController.bootstrap();
 }

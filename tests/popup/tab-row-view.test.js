@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES } from '../../shared/tab-states.js';
-import { RECENTLY_UNSUSPENDED_MS, LOADING_GRACE_MS } from '../../popup/polling-config.js';
+import { RECENTLY_UNSUSPENDED_MS, LOADING_GRACE_MS } from '../../popup/tab-action-policy.js';
 import { determineUserAction, USER_ACTIONS } from '../../popup/tab-action-policy.js';
 import { formatRemainingStatus } from '../../popup/tab-row-view.js';
 

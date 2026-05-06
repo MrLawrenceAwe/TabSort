@@ -1,6 +1,8 @@
 import { TAB_STATES } from '../shared/tab-states.js';
 import { isFiniteNumber } from '../shared/guards.js';
-import { LOADING_GRACE_MS, RECENTLY_UNSUSPENDED_MS } from './polling-config.js';
+
+export const RECENTLY_UNSUSPENDED_MS = 5000;
+export const LOADING_GRACE_MS = 5000;
 
 export const USER_ACTIONS = {
   RELOAD_TAB: 'reloadTab',

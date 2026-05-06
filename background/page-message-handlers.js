@@ -2,7 +2,7 @@ import { isFiniteNumber } from '../shared/guards.js';
 import { ensureTabRecord } from './tab-record.js';
 import { markTabRecordVideoChanged, removeTabRecord } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { refreshTabPlaybackMetrics } from './tab-playback-sync.js';
+import { refreshTabPlaybackMetrics } from './playback-metrics-refresher.js';
 import { setTrackedWindowId, trackedWindowState } from './window-state.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 

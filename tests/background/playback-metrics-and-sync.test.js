@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES } from '../../shared/tab-states.js';
-import { windowSessionState } from '../../background/window-state.js';
-import { refreshTabPlaybackMetrics } from '../../background/tab-playback-sync.js';
-import { syncWindowTabRecords } from '../../background/tab-record-sync.js';
+import { trackedWindowState } from '../../background/window-state.js';
+import { refreshTabPlaybackMetrics } from '../../background/playback-metrics-refresher.js';
+import { reconcileWindowTabRecords } from '../../background/tab-record-reconciler.js';
 import {
   ensureChromeApi,
   createTabRecordFixture,
@@ -19,7 +19,7 @@ test(
   async () => {
     resetTrackedWindowState();
     const initialRecord = createTabRecordFixture(1, { pageRuntimeReady: false });
-    windowSessionState.tabRecordsById = { 1: initialRecord };
+    trackedWindowState.tabRecordsById = { 1: initialRecord };
 
     globalThis.chrome.tabs.get = (_tabId, callback) => {
       setTimeout(() => {
@@ -51,11 +51,11 @@ test(
     const refreshPromise = refreshTabPlaybackMetrics(1);
 
     const replacementRecord = createTabRecordFixture(1, { pageRuntimeReady: false });
-    windowSessionState.tabRecordsById = { 1: replacementRecord };
+    trackedWindowState.tabRecordsById = { 1: replacementRecord };
 
     await refreshPromise;
 
-    assert.equal(windowSessionState.tabRecordsById[1], replacementRecord);
+    assert.equal(trackedWindowState.tabRecordsById[1], replacementRecord);
     assert.equal(replacementRecord.pageRuntimeReady, true);
     assert.equal(replacementRecord.videoDetails.lengthSeconds, 120);
     assert.equal(replacementRecord.videoDetails.remainingTime, 100);
@@ -64,7 +64,7 @@ test(
 );
 
 test(
-  'syncWindowTabRecords does not mark already-open unsuspended tabs as recently unsuspended on initial rehydrate',
+  'reconcileWindowTabRecords does not mark already-open unsuspended tabs as recently unsuspended on initial rehydrate',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
@@ -85,20 +85,20 @@ test(
       ]);
     };
 
-    await syncWindowTabRecords(1, { force: true });
+    await reconcileWindowTabRecords(1, { force: true });
 
-    const record = windowSessionState.tabRecordsById[1];
+    const record = trackedWindowState.tabRecordsById[1];
     assert.equal(record.status, TAB_STATES.UNSUSPENDED);
     assert.equal(record.unsuspendedTimestamp, null);
   },
 );
 
 test(
-  'syncWindowTabRecords keeps the recent unsuspend grace for real suspended-to-unsuspended transitions',
+  'reconcileWindowTabRecords keeps the recent unsuspend grace for real suspended-to-unsuspended transitions',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
-    windowSessionState.tabRecordsById = {
+    trackedWindowState.tabRecordsById = {
       1: createTabRecordFixture(1, {
         status: TAB_STATES.SUSPENDED,
         unsuspendedTimestamp: null,
@@ -121,20 +121,20 @@ test(
       ]);
     };
 
-    await syncWindowTabRecords(1, { force: true });
+    await reconcileWindowTabRecords(1, { force: true });
 
-    const record = windowSessionState.tabRecordsById[1];
+    const record = trackedWindowState.tabRecordsById[1];
     assert.equal(record.status, TAB_STATES.UNSUSPENDED);
     assert.equal(typeof record.unsuspendedTimestamp, 'number');
   },
 );
 
 test(
-  'syncWindowTabRecords resets runtime readiness when a tracked tab navigates to a new video URL',
+  'reconcileWindowTabRecords resets runtime readiness when a tracked tab navigates to a new video URL',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
-    windowSessionState.tabRecordsById = {
+    trackedWindowState.tabRecordsById = {
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
         pageMediaReady: true,
@@ -160,9 +160,9 @@ test(
       ]);
     };
 
-    await syncWindowTabRecords(1, { force: true });
+    await reconcileWindowTabRecords(1, { force: true });
 
-    const record = windowSessionState.tabRecordsById[1];
+    const record = trackedWindowState.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
     assert.equal(record.pageRuntimeReady, false);
     assert.equal(record.pageMediaReady, false);
@@ -173,11 +173,11 @@ test(
 );
 
 test(
-  'syncWindowTabRecords preserves readiness when only watch URL parameters change',
+  'reconcileWindowTabRecords preserves readiness when only watch URL parameters change',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
-    windowSessionState.tabRecordsById = {
+    trackedWindowState.tabRecordsById = {
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=same',
         pageMediaReady: true,
@@ -203,9 +203,9 @@ test(
       ]);
     };
 
-    await syncWindowTabRecords(1, { force: true });
+    await reconcileWindowTabRecords(1, { force: true });
 
-    const record = windowSessionState.tabRecordsById[1];
+    const record = trackedWindowState.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=same&list=abc123&index=10');
     assert.equal(record.pageRuntimeReady, true);
     assert.equal(record.pageMediaReady, true);
@@ -219,18 +219,18 @@ test(
 );
 
 test(
-  'syncWindowTabRecords preserves tracked state when the primary tab query fails',
+  'reconcileWindowTabRecords preserves tracked state when the primary tab query fails',
   { concurrency: false },
   async () => {
     resetTrackedWindowState(1);
-    windowSessionState.tabRecordsById = {
+    trackedWindowState.tabRecordsById = {
       1: createTabRecordFixture(1, {
         videoDetails: { title: 'Video 1', remainingTime: 90, lengthSeconds: 120 },
         isRemainingTimeStale: false,
       }),
     };
-    windowSessionState.visibleTabIds = [1];
-    windowSessionState.targetSortableTabIds = [1];
+    trackedWindowState.visibleTabIds = [1];
+    trackedWindowState.targetSortableTabIds = [1];
 
     globalThis.chrome.tabs.query = (query, callback) => {
       globalThis.chrome.runtime.lastError =
@@ -239,12 +239,12 @@ test(
       globalThis.chrome.runtime.lastError = null;
     };
 
-    await syncWindowTabRecords(1, { force: true });
+    await reconcileWindowTabRecords(1, { force: true });
 
-    assert.deepEqual(Object.keys(windowSessionState.tabRecordsById), ['1']);
-    assert.deepEqual(windowSessionState.visibleTabIds, [1]);
-    assert.deepEqual(windowSessionState.targetSortableTabIds, [1]);
-    assert.equal(windowSessionState.tabRecordsById[1].videoDetails.remainingTime, 90);
+    assert.deepEqual(Object.keys(trackedWindowState.tabRecordsById), ['1']);
+    assert.deepEqual(trackedWindowState.visibleTabIds, [1]);
+    assert.deepEqual(trackedWindowState.targetSortableTabIds, [1]);
+    assert.equal(trackedWindowState.tabRecordsById[1].videoDetails.remainingTime, 90);
   },
 );
 
@@ -253,7 +253,7 @@ test(
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
-    windowSessionState.tabRecordsById = {
+    trackedWindowState.tabRecordsById = {
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
         videoDetails: { title: 'Old Video', remainingTime: 45, lengthSeconds: 120 },
@@ -287,7 +287,7 @@ test(
 
     await refreshTabPlaybackMetrics(1);
 
-    const record = windowSessionState.tabRecordsById[1];
+    const record = trackedWindowState.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
     assert.equal(record.videoDetails.title, 'New Video');
     assert.equal(record.videoDetails.lengthSeconds, 400);
@@ -301,7 +301,7 @@ test(
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
-    windowSessionState.tabRecordsById = {
+    trackedWindowState.tabRecordsById = {
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
         pageRuntimeReady: false,
@@ -344,7 +344,7 @@ test(
 
     const refreshPromise = refreshTabPlaybackMetrics(1);
 
-    windowSessionState.tabRecordsById[1] = createTabRecordFixture(1, {
+    trackedWindowState.tabRecordsById[1] = createTabRecordFixture(1, {
       url: 'https://www.youtube.com/watch?v=new',
       pageRuntimeReady: false,
       pageMediaReady: false,
@@ -354,7 +354,7 @@ test(
 
     await refreshPromise;
 
-    const record = windowSessionState.tabRecordsById[1];
+    const record = trackedWindowState.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
     assert.equal(record.videoDetails, null);
     assert.equal(record.pageRuntimeReady, false);
@@ -368,7 +368,7 @@ test(
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
-    windowSessionState.tabRecordsById = {
+    trackedWindowState.tabRecordsById = {
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=new',
         pageRuntimeReady: true,
@@ -403,7 +403,7 @@ test(
 
     await refreshTabPlaybackMetrics(1);
 
-    const record = windowSessionState.tabRecordsById[1];
+    const record = trackedWindowState.tabRecordsById[1];
     assert.equal(record.pageRuntimeReady, true);
     assert.equal(record.pageMediaReady, false);
     assert.equal(record.videoDetails.lengthSeconds, 400);
@@ -417,7 +417,7 @@ test(
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
-    windowSessionState.tabRecordsById = {
+    trackedWindowState.tabRecordsById = {
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=previous',
         pageRuntimeReady: true,
@@ -457,7 +457,7 @@ test(
 
     await refreshTabPlaybackMetrics(1);
 
-    const record = windowSessionState.tabRecordsById[1];
+    const record = trackedWindowState.tabRecordsById[1];
     assert.equal(record.pageRuntimeReady, true);
     assert.equal(record.pageMediaReady, false);
     assert.equal(record.videoDetails.lengthSeconds, 3364);

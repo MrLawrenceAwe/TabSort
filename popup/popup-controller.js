@@ -1,5 +1,5 @@
 import { POPUP_LOG_LEVELS } from '../shared/log-levels.js';
-import { toErrorMessage } from '../shared/errors.js';
+import { toErrorMessage } from '../shared/log.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { loadSortOptions, saveSortOptions } from '../shared/storage.js';
 import { createRuntimeClient } from './runtime-client.js';

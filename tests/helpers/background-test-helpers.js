@@ -2,7 +2,7 @@ import { TAB_STATES } from '../../shared/tab-states.js';
 import { createEmptySortSummary } from '../../shared/sort-summary.js';
 import {
   applySortState,
-  resetWindowSessionState,
+  resetTrackedWindowState as resetTrackedBackgroundWindowState,
 } from '../../background/window-state.js';
 import { createTabRecord } from '../../background/tab-record.js';
 
@@ -24,7 +24,7 @@ export function ensureChromeApi({ tabs = false } = {}) {
 }
 
 export function resetTrackedWindowState(windowId = null) {
-  resetWindowSessionState({ windowId });
+  resetTrackedBackgroundWindowState({ windowId });
   applySortState({ sortSummary: createEmptySortSummary() });
 }
 
