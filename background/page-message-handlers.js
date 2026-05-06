@@ -2,9 +2,9 @@ import { isFiniteNumber } from '../shared/guards.js';
 import { ensureTabRecord } from './tab-record.js';
 import { markTabRecordVideoChanged, removeTabRecord } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { refreshTabPlaybackMetrics } from './tab-playback-metrics.js';
+import { refreshTabPlaybackMetrics } from './tab-playback-sync.js';
 import { windowSessionState } from './window-session.js';
-import { setWindowId } from './window-session-actions.js';
+import { setWindowId } from './window-session-store.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function isSenderInTrackedWindow(windowId) {

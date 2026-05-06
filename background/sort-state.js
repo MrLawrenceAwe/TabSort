@@ -2,7 +2,7 @@ import { broadcastSnapshotUpdate } from './tab-snapshot.js';
 import { deriveRemainingTimePlan } from './sorting/derive-remaining-time-plan.js';
 import { deriveSortSummary } from './sorting/derive-sort-summary.js';
 import { windowSessionState } from './window-session.js';
-import { applySortState } from './window-session-actions.js';
+import { applySortState } from './window-session-store.js';
 
 function deriveSortState(records) {
   const sortPlan = deriveRemainingTimePlan(records);

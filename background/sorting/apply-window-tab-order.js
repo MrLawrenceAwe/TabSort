@@ -3,7 +3,7 @@ import { loadSortOptions } from '../../shared/storage.js';
 import { hasReadyRemainingTime } from '../sort-readiness.js';
 import { listWindowTabs, moveTabsInOrder } from '../chrome-tabs.js';
 import { windowSessionState } from '../window-session.js';
-import { setWindowId } from '../window-session-actions.js';
+import { setWindowId } from '../window-session-store.js';
 import { buildNonYoutubeOrder, buildYoutubeTabOrder } from './build-window-tab-order.js';
 
 export async function reorderWindowTabs(windowId = windowSessionState.windowId) {

@@ -10,7 +10,7 @@ import {
   getCurrentTimeMs,
   replaceTabRecords,
   setWindowId,
-} from './window-session-actions.js';
+} from './window-session-store.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function syncLoadingTimestamp(record, previousStatus, nextStatus) {

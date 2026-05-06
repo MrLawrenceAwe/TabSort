@@ -7,8 +7,8 @@ import {
   listTabIds,
   resetWindowSessionState,
   setWindowId,
-} from './window-session-actions.js';
-import { refreshTabPlaybackMetrics } from './tab-playback-metrics.js';
+} from './window-session-store.js';
+import { refreshTabPlaybackMetrics } from './tab-playback-sync.js';
 import { syncWindowTabRecords } from './tab-record-sync.js';
 
 const MIN_REFRESH_INTERVAL_MINUTES = 1;

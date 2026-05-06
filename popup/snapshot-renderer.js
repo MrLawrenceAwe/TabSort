@@ -3,9 +3,9 @@ import {
   addClassToDataRows,
   renderPopupShell,
   setSecondaryColumnsVisible,
-} from './layout.js';
-import { setErrorMessage } from './dom.js';
-import { applyPopupState } from './state.js';
+} from './popup-shell-view.js';
+import { setErrorMessage } from './popup-elements.js';
+import { applyPopupState } from './popup-store.js';
 import { renderTabRow } from './tab-row-view.js';
 
 export function deriveSnapshotUiState(snapshot) {

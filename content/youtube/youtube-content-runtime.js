@@ -1,85 +1,38 @@
-import { MEDIA_READY_STATE_THRESHOLD } from './media-config.js';
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
-import { inferIsLiveNow } from './live-status.js';
-import { isFiniteNumber } from '../../shared/guards.js';
-import { collectPageVideoDetails } from './video-details.js';
+import { createContentRuntimeMessaging } from './content-runtime-messaging.js';
+import {
+  createContentRuntimeState,
+  shouldSendPageRuntimeReadySignal,
+  youtubeContentRuntimeConfig,
+} from './content-runtime-state.js';
 import { createMediaReadinessTracker } from './media-readiness.js';
 import { createTitleObserver } from './title-observer.js';
 import { handleCollectVideoMetricsMessage } from './video-metrics.js';
 
-const pageRuntimeConfig = {
-  mediaReadyStateThreshold: MEDIA_READY_STATE_THRESHOLD,
-  isFiniteNumber,
-  inferIsLiveNow,
-};
-
-function createPageRuntimeState() {
-  return {
-    initialized: false,
-    videoMountObserver: null,
-    titleElementObserver: null,
-    titleTextObserver: null,
-    observedTitleElement: null,
-    lastKnownTitleText: null,
-    observedPageUrl: null,
-    lastReadyUrl: null,
-    mediaReadyUrl: null,
-    lastReadyVideo: null,
-    lastMediaReadyFingerprint: null,
-    mediaReadyListenerVideo: null,
-    mediaReadyListenerCleanup: null,
-    cleanupFns: [],
-    runtimeMessageListener: null,
-  };
-}
-
-export function shouldSendPageRuntimeReadySignal(currentUrl, lastReadyUrl, { force = false } = {}) {
-  return Boolean(currentUrl) && (force || currentUrl !== lastReadyUrl);
-}
-
 export function createYoutubePageRuntime({
-  config = pageRuntimeConfig,
+  config = youtubeContentRuntimeConfig,
   environment = globalThis,
 } = {}) {
-  const state = createPageRuntimeState();
+  const state = createContentRuntimeState();
 
   const getDocument = () => environment.document ?? globalThis.document;
   const getWindow = () => environment.window ?? globalThis.window;
   const getLocation = () => environment.location ?? globalThis.location;
   const getChrome = () => environment.chrome ?? globalThis.chrome;
   const getMutationObserver = () => environment.MutationObserver ?? globalThis.MutationObserver;
-
-  function logContentError(context, error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[TabSort] ${context}: ${message}`);
-  }
-
-  function hasExtensionRuntime() {
-    return Boolean(getChrome()?.runtime?.id);
-  }
-
-  function sendExtensionMessage(payload, context) {
-    if (!hasExtensionRuntime()) return false;
-    try {
-      getChrome().runtime.sendMessage(payload);
-      return true;
-    } catch (error) {
-      if (context) logContentError(`Sending ${context}`, error);
-      return false;
-    }
-  }
-
-  function getCurrentPageUrl() {
-    return getLocation()?.href || '';
-  }
-
-  function collectPageDetails() {
-    return collectPageVideoDetails({
-      environment,
-      inferIsLiveNow: config.inferIsLiveNow,
-      logContentError,
-    });
-  }
+  const {
+    collectPageDetails,
+    getCurrentPageUrl,
+    hasExtensionRuntime,
+    logContentError,
+    publishPageVideoDetails,
+    sendExtensionMessage,
+  } = createContentRuntimeMessaging({
+    config,
+    environment,
+    getChrome,
+    getLocation,
+  });
 
   function registerCleanup(cleanup) {
     if (typeof cleanup !== 'function') return;
@@ -113,20 +66,6 @@ export function createYoutubePageRuntime({
       return true;
     }
     return Math.abs(video.duration - details.lengthSeconds) <= 2;
-  }
-
-  function publishPageVideoDetails() {
-    try {
-      const details = collectPageDetails();
-      if (details.title || details.lengthSeconds != null || details.isLive) {
-        sendExtensionMessage(
-          createRuntimeMessage(RUNTIME_MESSAGE_TYPES.PAGE_VIDEO_DETAILS, { details }),
-          'page video details',
-        );
-      }
-    } catch (error) {
-      logContentError('Sending page video details', error);
-    }
   }
 
   function sendPageRuntimeReady({ force = false } = {}) {

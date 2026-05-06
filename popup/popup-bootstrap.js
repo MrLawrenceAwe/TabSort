@@ -11,9 +11,9 @@ import {
   shouldRetrySnapshotPoll,
 } from './snapshot-poller.js';
 import { renderSnapshot } from './snapshot-renderer.js';
-import { renderPopupShell } from './layout.js';
-import { initializePopupDom, setErrorMessage } from './dom.js';
-import { popupState, setActiveWindowId } from './state.js';
+import { renderPopupShell } from './popup-shell-view.js';
+import { initializePopupDom, setErrorMessage } from './popup-elements.js';
+import { popupState, setActiveWindowId } from './popup-store.js';
 import { startThemeSync } from './theme.js';
 
 const SNAPSHOT_RETRY_DELAY_MS = 150;
