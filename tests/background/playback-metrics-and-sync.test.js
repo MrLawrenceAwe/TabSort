@@ -172,6 +172,7 @@ test(
     assert.equal(record.videoDetails, null);
     assert.equal(record.isLiveNow, false);
     assert.equal(record.isRemainingTimeStale, true);
+    assert.equal(typeof record.transitionStartedAt, 'number');
   },
 );
 
@@ -438,6 +439,7 @@ test(
     const record = trackedWindowState.tabRecordsById[1];
     assert.equal(record.pageRuntimeReady, true);
     assert.equal(record.pageMediaReady, false);
+    assert.equal(typeof record.mediaWaitStartedAt, 'number');
     assert.equal(record.videoDetails.lengthSeconds, 400);
     assert.equal(record.videoDetails.remainingTime, 400);
     assert.equal(record.isRemainingTimeStale, true);
@@ -492,6 +494,7 @@ test(
     const record = trackedWindowState.tabRecordsById[1];
     assert.equal(record.pageRuntimeReady, true);
     assert.equal(record.pageMediaReady, false);
+    assert.equal(typeof record.mediaWaitStartedAt, 'number');
     assert.equal(record.videoDetails.lengthSeconds, 3364);
     assert.equal(record.videoDetails.remainingTime, 3364);
     assert.equal(record.isRemainingTimeStale, true);

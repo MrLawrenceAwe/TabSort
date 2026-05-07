@@ -44,27 +44,13 @@ function insertInfoCells(row, record, sortedView, userAction) {
 
 function insertUserActionCell(row, record, action, postRuntimeMessage) {
   const cell = row.insertCell(1);
-  if (action === USER_ACTIONS.NONE) {
-    cell.textContent = '—';
-    return;
-  }
-
-  if (action === USER_ACTIONS.FOCUS_THEN_RELOAD) {
-    const focus = createActionLink(
-      getUserActionLabel(USER_ACTIONS.FOCUS_TAB),
-      MESSAGE_ACTIONS.ACTIVATE_TAB,
-      record.id,
-      postRuntimeMessage,
-    );
-    const reload = createActionLink(
-      getUserActionLabel(USER_ACTIONS.RELOAD_TAB),
-      MESSAGE_ACTIONS.RELOAD_TAB,
-      record.id,
-      postRuntimeMessage,
-    );
-    cell.appendChild(focus);
-    cell.appendChild(document.createTextNode('/'));
-    cell.appendChild(reload);
+  if (
+    action === USER_ACTIONS.NONE ||
+    action === USER_ACTIONS.WAIT_FOR_LOAD ||
+    action === USER_ACTIONS.WAIT_FOR_VIDEO_DATA
+  ) {
+    cell.textContent =
+      action === USER_ACTIONS.NONE ? '—' : getUserActionLabel(action);
     return;
   }
 

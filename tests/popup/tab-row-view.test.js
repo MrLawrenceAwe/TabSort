@@ -2,9 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES } from '../../shared/tab-states.js';
-import { RECENTLY_UNSUSPENDED_MS, LOADING_GRACE_MS } from '../../popup/tab-action-policy.js';
+import {
+  RECENTLY_UNSUSPENDED_MS,
+  RECENT_WATCH_TRANSITION_MS,
+  MEDIA_WAIT_GRACE_MS,
+  LOADING_GRACE_MS,
+} from '../../popup/tab-action-policy.js';
 import { determineUserAction, USER_ACTIONS } from '../../popup/tab-action-policy.js';
-import { formatRemainingStatus } from '../../popup/tab-row-view.js';
+import { formatRemainingStatus, renderTabRow } from '../../popup/tab-row-view.js';
 
 function makeRecord(overrides = {}) {
   return {
@@ -14,6 +19,7 @@ function makeRecord(overrides = {}) {
     isActiveTab: false,
     isHidden: false,
     pageRuntimeReady: true,
+    pageMediaReady: true,
     isRemainingTimeStale: false,
     unsuspendedTimestamp: null,
     videoDetails: { remainingTime: null },
@@ -43,6 +49,51 @@ test('recently unsuspended rows avoid contradictory stale guidance', () => {
   assert.equal(formatRemainingStatus(record), 'unavailable');
 });
 
+test('recent watch URL transitions avoid reload guidance while runtime can catch up', () => {
+  const activeRecord = makeRecord({
+    isActiveTab: true,
+    isRemainingTimeStale: true,
+    pageRuntimeReady: false,
+    pageMediaReady: false,
+    transitionStartedAt: Date.now(),
+    videoDetails: null,
+  });
+  const inactiveRecord = makeRecord({
+    isActiveTab: false,
+    isRemainingTimeStale: true,
+    pageRuntimeReady: false,
+    pageMediaReady: false,
+    transitionStartedAt: Date.now(),
+    videoDetails: null,
+  });
+
+  assert.equal(determineUserAction(activeRecord), USER_ACTIONS.NONE);
+  assert.equal(determineUserAction(inactiveRecord), USER_ACTIONS.NONE);
+  assert.equal(formatRemainingStatus(activeRecord), 'unavailable');
+});
+
+test('stalled watch URL transitions eventually ask for the useful action', () => {
+  const activeRecord = makeRecord({
+    isActiveTab: true,
+    isRemainingTimeStale: true,
+    pageRuntimeReady: false,
+    pageMediaReady: false,
+    transitionStartedAt: Date.now() - (RECENT_WATCH_TRANSITION_MS + 1000),
+    videoDetails: null,
+  });
+  const inactiveRecord = makeRecord({
+    isActiveTab: false,
+    isRemainingTimeStale: true,
+    pageRuntimeReady: false,
+    pageMediaReady: false,
+    transitionStartedAt: Date.now() - (RECENT_WATCH_TRANSITION_MS + 1000),
+    videoDetails: null,
+  });
+
+  assert.equal(determineUserAction(activeRecord), USER_ACTIONS.RELOAD_TAB);
+  assert.equal(determineUserAction(inactiveRecord), USER_ACTIONS.RELOAD_TAB);
+});
+
 test('stale rows with remaining time can still request a focused tab when appropriate', () => {
   const record = makeRecord({
     isRemainingTimeStale: true,
@@ -70,4 +121,131 @@ test('loading rows switch from waiting to focus after the loading grace period',
 
   assert.equal(determineUserAction(recentLoadingRecord), USER_ACTIONS.WAIT_FOR_LOAD);
   assert.equal(determineUserAction(stalledLoadingRecord), USER_ACTIONS.FOCUS_TAB);
+});
+
+test('active loading rows switch from waiting to reload after the loading grace period', () => {
+  const activeStalledLoadingRecord = makeRecord({
+    status: TAB_STATES.LOADING,
+    isActiveTab: true,
+    pageRuntimeReady: false,
+    loadingStartedAt: Date.now() - (LOADING_GRACE_MS + 1000),
+  });
+
+  assert.equal(determineUserAction(activeStalledLoadingRecord), USER_ACTIONS.RELOAD_TAB);
+});
+
+test('active watch rows wait through video data mismatches instead of asking for reload', () => {
+  const activeAdRecord = makeRecord({
+    isActiveTab: true,
+    pageRuntimeReady: true,
+    pageMediaReady: false,
+    isRemainingTimeStale: true,
+    mediaWaitStartedAt: Date.now() - (MEDIA_WAIT_GRACE_MS - 1000),
+    videoDetails: { remainingTime: 45143, lengthSeconds: 45143 },
+  });
+
+  assert.equal(determineUserAction(activeAdRecord), USER_ACTIONS.WAIT_FOR_VIDEO_DATA);
+  assert.equal(formatRemainingStatus(activeAdRecord), 'unavailable');
+});
+
+test('active watch rows eventually ask for reload when video data stays stuck', () => {
+  const activeStalledMediaRecord = makeRecord({
+    isActiveTab: true,
+    pageRuntimeReady: true,
+    pageMediaReady: false,
+    isRemainingTimeStale: true,
+    mediaWaitStartedAt: Date.now() - (MEDIA_WAIT_GRACE_MS + 1000),
+    videoDetails: { remainingTime: 45143, lengthSeconds: 45143 },
+  });
+
+  assert.equal(determineUserAction(activeStalledMediaRecord), USER_ACTIONS.RELOAD_TAB);
+});
+
+test('background unsuspended rows ask the user to view before reloading for missing time', () => {
+  const record = makeRecord({
+    isActiveTab: false,
+    pageRuntimeReady: true,
+    videoDetails: { remainingTime: null },
+  });
+
+  assert.equal(determineUserAction(record), USER_ACTIONS.VIEW_TAB_TO_LOAD_TIME);
+});
+
+function createFakeDocument() {
+  return {
+    createElement(tagName) {
+      return {
+        tagName,
+        href: '',
+        classList: { add() {} },
+        textContent: '',
+        addEventListener() {},
+      };
+    },
+    createTextNode(textContent) {
+      return { textContent };
+    },
+  };
+}
+
+function createFakeRow() {
+  return {
+    cells: [],
+    classList: { add() {} },
+    insertCell(index) {
+      const cell = {
+        children: [],
+        textContent: '',
+        appendChild(child) {
+          this.children.push(child);
+          return child;
+        },
+      };
+      const insertAt = index == null ? this.cells.length : index;
+      this.cells.splice(insertAt, 0, cell);
+      return cell;
+    },
+  };
+}
+
+test('wait rows render passive text instead of clickable actions', () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = createFakeDocument();
+  try {
+    const cases = [
+      [
+        'Wait for tab to load',
+        makeRecord({
+          status: TAB_STATES.LOADING,
+          pageRuntimeReady: false,
+          pageMediaReady: false,
+          loadingStartedAt: Date.now() - (LOADING_GRACE_MS - 1000),
+        }),
+      ],
+      [
+        'Wait for video data',
+        makeRecord({
+          isActiveTab: true,
+          pageRuntimeReady: true,
+          pageMediaReady: false,
+          isRemainingTimeStale: true,
+          mediaWaitStartedAt: Date.now() - (MEDIA_WAIT_GRACE_MS - 1000),
+          videoDetails: { remainingTime: 45143, lengthSeconds: 45143 },
+        }),
+      ],
+    ];
+
+    for (const [label, record] of cases) {
+      const row = createFakeRow();
+
+      renderTabRow(row, record, false, () => {
+        throw new Error('wait action should not post messages');
+      });
+
+      assert.equal(row.cells[1].textContent, label);
+      assert.equal(row.cells[1].children.length, 0);
+    }
+  } finally {
+    globalThis.document = previousDocument;
+  }
 });

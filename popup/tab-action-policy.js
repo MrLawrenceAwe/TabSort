@@ -2,13 +2,16 @@ import { TAB_STATES } from '../shared/tab-states.js';
 import { isFiniteNumber } from '../shared/guards.js';
 
 export const RECENTLY_UNSUSPENDED_MS = 5000;
+export const RECENT_WATCH_TRANSITION_MS = 5000;
+export const MEDIA_WAIT_GRACE_MS = 15000;
 export const LOADING_GRACE_MS = 5000;
 
 export const USER_ACTIONS = {
   RELOAD_TAB: 'reloadTab',
   FOCUS_TAB: 'focusTab',
   WAIT_FOR_LOAD: 'waitForLoad',
-  FOCUS_THEN_RELOAD: 'focusThenReload',
+  WAIT_FOR_VIDEO_DATA: 'waitForVideoData',
+  VIEW_TAB_TO_LOAD_TIME: 'viewTabToLoadTime',
   VIEW_TAB_TO_REFRESH_TIME: 'viewTabToRefreshTime',
   NONE: 'none',
 };
@@ -17,17 +20,52 @@ const USER_ACTION_LABELS = {
   [USER_ACTIONS.RELOAD_TAB]: 'Reload tab',
   [USER_ACTIONS.FOCUS_TAB]: 'Focus tab',
   [USER_ACTIONS.WAIT_FOR_LOAD]: 'Wait for tab to load',
-  [USER_ACTIONS.FOCUS_THEN_RELOAD]: 'Focus tab/Reload tab',
+  [USER_ACTIONS.WAIT_FOR_VIDEO_DATA]: 'Wait for video data',
+  [USER_ACTIONS.VIEW_TAB_TO_LOAD_TIME]: 'View tab to load time',
   [USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME]: 'View tab to refresh time',
   [USER_ACTIONS.NONE]: '',
 };
 
-function determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended, nowMs) {
+function isRecentTimestamp(timestamp, nowMs, graceMs) {
+  return typeof timestamp === 'number' && nowMs - timestamp < graceMs;
+}
+
+function hasRecentWatchTransition(tabRecord, nowMs) {
+  return isRecentTimestamp(
+    tabRecord.transitionStartedAt,
+    nowMs,
+    RECENT_WATCH_TRANSITION_MS,
+  );
+}
+
+function isRecentlyUnsuspended(tabRecord, nowMs) {
+  return isRecentTimestamp(
+    tabRecord.unsuspendedTimestamp,
+    nowMs,
+    RECENTLY_UNSUSPENDED_MS,
+  );
+}
+
+function canMediaStillSettle(tabRecord, nowMs) {
+  return isRecentTimestamp(tabRecord.mediaWaitStartedAt, nowMs, MEDIA_WAIT_GRACE_MS);
+}
+
+function determineActionForMissingRemainingTime(tabRecord, transitionCanSettle, nowMs) {
   switch (tabRecord.status) {
     case TAB_STATES.UNSUSPENDED:
-      if (recentlyUnsuspended) return USER_ACTIONS.NONE;
-      if (tabRecord.isActiveTab || !tabRecord.pageRuntimeReady) return USER_ACTIONS.RELOAD_TAB;
-      return USER_ACTIONS.FOCUS_THEN_RELOAD;
+      if (tabRecord.isActiveTab) {
+        if (tabRecord.pageRuntimeReady && !tabRecord.pageMediaReady) {
+          return canMediaStillSettle(tabRecord, nowMs)
+            ? USER_ACTIONS.WAIT_FOR_VIDEO_DATA
+            : USER_ACTIONS.RELOAD_TAB;
+        }
+        return transitionCanSettle && !tabRecord.pageRuntimeReady
+          ? USER_ACTIONS.NONE
+          : USER_ACTIONS.RELOAD_TAB;
+      }
+      if (transitionCanSettle && !tabRecord.pageRuntimeReady) return USER_ACTIONS.NONE;
+      if (!tabRecord.pageRuntimeReady) return USER_ACTIONS.RELOAD_TAB;
+      return USER_ACTIONS.VIEW_TAB_TO_LOAD_TIME;
     case TAB_STATES.SUSPENDED:
       return USER_ACTIONS.FOCUS_TAB;
     case TAB_STATES.LOADING:
@@ -35,7 +73,7 @@ function determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended, 
         typeof tabRecord.loadingStartedAt === 'number' &&
         nowMs - tabRecord.loadingStartedAt >= LOADING_GRACE_MS
       ) {
-        return USER_ACTIONS.FOCUS_TAB;
+        return tabRecord.isActiveTab ? USER_ACTIONS.RELOAD_TAB : USER_ACTIONS.FOCUS_TAB;
       }
       return USER_ACTIONS.WAIT_FOR_LOAD;
     default:
@@ -50,17 +88,16 @@ export function determineUserAction(tabRecord, { now = Date.now } = {}) {
 
   const nowMs = now();
   const hasRemainingTime = isFiniteNumber(tabRecord?.videoDetails?.remainingTime);
-  const recentlyUnsuspended =
-    tabRecord.unsuspendedTimestamp &&
-    nowMs - tabRecord.unsuspendedTimestamp < RECENTLY_UNSUSPENDED_MS;
+  const transitionCanSettle =
+    isRecentlyUnsuspended(tabRecord, nowMs) || hasRecentWatchTransition(tabRecord, nowMs);
 
   if (!hasRemainingTime) {
-    return determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended, nowMs);
+    return determineActionForMissingRemainingTime(tabRecord, transitionCanSettle, nowMs);
   }
 
   if (tabRecord?.isRemainingTimeStale) {
     if (!tabRecord.pageRuntimeReady || tabRecord.isActiveTab) {
-      return determineActionForMissingRemainingTime(tabRecord, recentlyUnsuspended, nowMs);
+      return determineActionForMissingRemainingTime(tabRecord, transitionCanSettle, nowMs);
     }
     return USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME;
   }

@@ -3,7 +3,12 @@ import test from 'node:test';
 
 import { shouldRetrySnapshotPoll } from '../../popup/popup-controller.js';
 import { TAB_STATES } from '../../shared/tab-states.js';
-import { LOADING_GRACE_MS, RECENTLY_UNSUSPENDED_MS } from '../../popup/tab-action-policy.js';
+import {
+  LOADING_GRACE_MS,
+  MEDIA_WAIT_GRACE_MS,
+  RECENTLY_UNSUSPENDED_MS,
+  RECENT_WATCH_TRANSITION_MS,
+} from '../../popup/tab-action-policy.js';
 import {
   shouldPollRecord,
   shouldPollSnapshot,
@@ -20,6 +25,7 @@ function makeRecord(overrides = {}) {
     isActiveTab: false,
     isHidden: false,
     pageRuntimeReady: true,
+    pageMediaReady: true,
     isRemainingTimeStale: false,
     unsuspendedTimestamp: null,
     loadingStartedAt: null,
@@ -56,6 +62,58 @@ test('shouldPollRecord polls loading tabs during the loading grace window', () =
   });
 
   assert.equal(shouldPollRecord(record, { now: fakeNow }), true);
+});
+
+test('shouldPollRecord polls active stale watch tabs while video data can self-resolve', () => {
+  const record = makeRecord({
+    isActiveTab: true,
+    pageRuntimeReady: true,
+    pageMediaReady: false,
+    isRemainingTimeStale: true,
+    mediaWaitStartedAt: NOW_MS - (MEDIA_WAIT_GRACE_MS - 1000),
+    videoDetails: { remainingTime: 45143, lengthSeconds: 45143 },
+  });
+
+  assert.equal(shouldPollRecord(record, { now: fakeNow }), true);
+});
+
+test('shouldPollRecord stops polling active stale watch tabs when media stays stuck', () => {
+  const record = makeRecord({
+    isActiveTab: true,
+    pageRuntimeReady: true,
+    pageMediaReady: false,
+    isRemainingTimeStale: true,
+    mediaWaitStartedAt: NOW_MS - (MEDIA_WAIT_GRACE_MS + 1000),
+    videoDetails: { remainingTime: 45143, lengthSeconds: 45143 },
+  });
+
+  assert.equal(shouldPollRecord(record, { now: fakeNow }), false);
+});
+
+test('shouldPollRecord polls recent watch URL transitions before asking for reload', () => {
+  const record = makeRecord({
+    isActiveTab: true,
+    pageRuntimeReady: false,
+    pageMediaReady: false,
+    isRemainingTimeStale: true,
+    transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS - 1000),
+    videoDetails: null,
+  });
+
+  assert.equal(shouldPollRecord(record, { now: fakeNow }), true);
+});
+
+test('shouldPollRecord stops polling stalled watch URL transitions', () => {
+  const record = makeRecord({
+    isActiveTab: true,
+    pageRuntimeReady: false,
+    pageMediaReady: false,
+    isRemainingTimeStale: true,
+    transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS + 1000),
+    videoDetails: null,
+  });
+
+  assert.equal(shouldPollRecord(record, { now: fakeNow }), false);
 });
 
 test('shouldPollSnapshot polls only when at least one tracked tab can self-resolve', () => {

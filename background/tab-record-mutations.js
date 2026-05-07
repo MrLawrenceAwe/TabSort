@@ -15,6 +15,7 @@ export function markTabRecordMetricsUnavailable(record) {
 
   record.pageRuntimeReady = false;
   record.pageMediaReady = false;
+  record.mediaWaitStartedAt = null;
   clearTabRemainingTime(record);
   record.isRemainingTimeStale = true;
 }
@@ -24,15 +25,17 @@ function markTabRecordVideoChanged(record) {
 
   record.pageRuntimeReady = false;
   record.pageMediaReady = false;
+  record.mediaWaitStartedAt = null;
   record.isLiveNow = false;
   record.videoDetails = null;
   record.isRemainingTimeStale = true;
 }
 
-function markTabRecordRuntimeReadyAfterVideoChange(record) {
+function markTabRecordRuntimeReadyAfterVideoChange(record, timestamp) {
   if (!record) return;
 
   record.pageMediaReady = false;
+  record.mediaWaitStartedAt = timestamp;
   record.isLiveNow = false;
   record.videoDetails = null;
   record.isRemainingTimeStale = true;
@@ -55,6 +58,7 @@ export function createRecordFromTabSnapshot(
 ) {
   const isUnsuspended = nextStatus === TAB_STATES.UNSUSPENDED;
   const statusChanged = previousRecord.status && previousRecord.status !== nextStatus;
+  const timestamp = getCurrentTimeMs();
 
   const record = createTabRecord(tab.id, tab.windowId, {
     url: tab.url,
@@ -71,6 +75,8 @@ export function createRecordFromTabSnapshot(
     videoDetails: urlChanged ? null : previousRecord.videoDetails || null,
     loadingStartedAt: previousRecord.loadingStartedAt ?? null,
     unsuspendedTimestamp: previousRecord.unsuspendedTimestamp || null,
+    transitionStartedAt: previousRecord.transitionStartedAt || null,
+    mediaWaitStartedAt: urlChanged ? null : previousRecord.mediaWaitStartedAt ?? null,
     isRemainingTimeStale:
       !isUnsuspended ||
       Boolean(previousRecord.isRemainingTimeStale) ||
@@ -80,7 +86,7 @@ export function createRecordFromTabSnapshot(
 
   if (nextStatus === TAB_STATES.LOADING) {
     if (previousRecord.status !== TAB_STATES.LOADING || typeof record.loadingStartedAt !== 'number') {
-      record.loadingStartedAt = getCurrentTimeMs();
+      record.loadingStartedAt = timestamp;
     }
   } else {
     record.loadingStartedAt = null;
@@ -91,7 +97,10 @@ export function createRecordFromTabSnapshot(
       previousRecord.status === TAB_STATES.LOADING) &&
     nextStatus === TAB_STATES.UNSUSPENDED
   ) {
-    record.unsuspendedTimestamp = getCurrentTimeMs();
+    record.unsuspendedTimestamp = timestamp;
+    record.transitionStartedAt = timestamp;
+  } else if (urlChanged) {
+    record.transitionStartedAt = timestamp;
   }
 
   if ((!isUnsuspended || urlChanged) && record.videoDetails) {
@@ -103,12 +112,18 @@ export function createRecordFromTabSnapshot(
 
 export function applyPageRuntimeReady(record, { urlChanged = false, url = null } = {}) {
   if (!record) return;
+  const timestamp = getCurrentTimeMs();
   if (urlChanged) {
-    markTabRecordRuntimeReadyAfterVideoChange(record);
+    markTabRecordRuntimeReadyAfterVideoChange(record, timestamp);
   }
   if (url) record.url = url;
   record.pageRuntimeReady = true;
-  if (urlChanged) record.pageMediaReady = false;
+  if (urlChanged) {
+    record.pageMediaReady = false;
+  }
+  if (!record.pageMediaReady && typeof record.mediaWaitStartedAt !== 'number') {
+    record.mediaWaitStartedAt = timestamp;
+  }
 }
 
 export function applyPageVideoDetails(record, details = {}, { urlChanged = false } = {}) {
@@ -130,6 +145,7 @@ export function applyPageVideoDetails(record, details = {}, { urlChanged = false
   if (record.isLiveNow) {
     clearTabRemainingTime(record);
     record.isRemainingTimeStale = false;
+    record.mediaWaitStartedAt = null;
   }
 }
 
@@ -138,6 +154,11 @@ export function applyPlaybackMetricUpdate(record, playbackUpdate, currentTabUrl)
 
   record.pageRuntimeReady = playbackUpdate.pageRuntimeReady;
   record.pageMediaReady = playbackUpdate.pageMediaReady;
+  if (record.pageMediaReady) {
+    record.mediaWaitStartedAt = null;
+  } else if (record.pageRuntimeReady && typeof record.mediaWaitStartedAt !== 'number') {
+    record.mediaWaitStartedAt = getCurrentTimeMs();
+  }
   record.videoDetails = record.videoDetails || {};
 
   if (playbackUpdate.nextTitle || playbackUpdate.nextUrl || currentTabUrl) {

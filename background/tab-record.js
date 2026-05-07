@@ -25,6 +25,8 @@ export function createTabRecord(tabId, windowId, defaults = {}) {
     videoDetails: cloneVideoDetails(defaults.videoDetails),
     loadingStartedAt: defaults.loadingStartedAt ?? null,
     unsuspendedTimestamp: defaults.unsuspendedTimestamp ?? null,
+    transitionStartedAt: defaults.transitionStartedAt ?? null,
+    mediaWaitStartedAt: defaults.mediaWaitStartedAt ?? null,
     isRemainingTimeStale:
       defaults.isRemainingTimeStale == null ? true : Boolean(defaults.isRemainingTimeStale),
   };

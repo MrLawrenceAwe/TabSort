@@ -59,6 +59,7 @@ export async function handlePageMediaReady(_message, sender) {
   setTrackedWindowId(windowId);
   const record = ensureTabRecord(tabId, windowId);
   record.pageMediaReady = true;
+  record.mediaWaitStartedAt = null;
   await refreshTabPlaybackMetrics(tabId);
 }
 
