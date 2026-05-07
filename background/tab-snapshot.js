@@ -1,8 +1,7 @@
-import { cloneSortSummary, createEmptySortSummary } from '../shared/sort-summary.js';
+import { cloneSortSummary } from '../shared/sort-summary.js';
 import { logDebug } from '../shared/log.js';
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
-import { trackedWindowState } from './window-state.js';
-import { setSnapshotSignature } from './window-state.js';
+import { setSnapshotSignature, trackedWindowState } from './window-state.js';
 
 function cloneTabRecord(record) {
   if (!record || typeof record !== 'object') return record;
@@ -25,7 +24,7 @@ export function buildTabSnapshot() {
     targetSortableTabIds: [...trackedWindowState.targetSortableTabIds],
     visibleTabIds: [...trackedWindowState.visibleTabIds],
     currentOrderMatchesTarget: trackedWindowState.currentOrderMatchesTarget,
-    sortSummary: cloneSortSummary(trackedWindowState.sortSummary || createEmptySortSummary()),
+    sortSummary: cloneSortSummary(trackedWindowState.sortSummary),
   };
 }
 

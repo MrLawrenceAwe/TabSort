@@ -39,11 +39,7 @@ const snapshotPoller = createSnapshotPoller({
   isAppActive: () => isPopupActive,
   loadSnapshot: snapshotClient.loadSnapshot,
   logPopupError: runtimeClient.logPopupError,
-  onSnapshot: (snapshot) => {
-    renderSnapshot(snapshot, {
-      postRuntimeMessage: runtimeClient.postRuntimeMessage,
-    });
-  },
+  onSnapshot: renderAndScheduleSnapshot,
 });
 
 async function runWithPopupErrorLogging(task, context) {
@@ -68,23 +64,24 @@ async function initializeSortOptions() {
   }
 }
 
-async function loadInitialSnapshot() {
-  const snapshot = await snapshotClient.loadSnapshot();
-  if (!snapshot) return;
+function renderAndScheduleSnapshot(snapshot) {
   renderSnapshot(snapshot, {
     postRuntimeMessage: runtimeClient.postRuntimeMessage,
   });
   snapshotPoller.scheduleIfNeeded(snapshot);
 }
 
+async function loadInitialSnapshot() {
+  const snapshot = await snapshotClient.loadSnapshot();
+  if (!snapshot) return;
+  renderAndScheduleSnapshot(snapshot);
+}
+
 function createSnapshotMessageListener() {
   return (message) => {
     if (message?.type === RUNTIME_MESSAGE_TYPES.TAB_SNAPSHOT_UPDATED && message.payload) {
       Promise.resolve().then(() => {
-        renderSnapshot(message.payload, {
-          postRuntimeMessage: runtimeClient.postRuntimeMessage,
-        });
-        snapshotPoller.scheduleIfNeeded(message.payload);
+        renderAndScheduleSnapshot(message.payload);
       }).catch((error) => {
         runtimeClient.logPopupError('Failed to render incoming snapshot', error);
       });

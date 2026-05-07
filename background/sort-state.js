@@ -19,23 +19,9 @@ function deriveSortState(records) {
   };
 }
 
-function applyDerivedSortState({
-  visibleTabIds,
-  targetSortableTabIds,
-  currentOrderMatchesTarget,
-  sortSummary,
-}) {
-  applySortState({
-    targetSortableTabIds,
-    visibleTabIds,
-    currentOrderMatchesTarget,
-    sortSummary,
-  });
-  broadcastSnapshotUpdate();
-}
-
 export function recomputeSortState() {
   const records = Object.values(trackedWindowState.tabRecordsById);
   const derivedState = deriveSortState(records);
-  applyDerivedSortState(derivedState);
+  applySortState(derivedState);
+  broadcastSnapshotUpdate();
 }
