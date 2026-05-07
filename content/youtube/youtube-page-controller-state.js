@@ -25,6 +25,8 @@ export function createYoutubePageControllerState() {
     lastMediaReadyFingerprint: null,
     mediaReadyListenerVideo: null,
     mediaReadyListenerCleanup: null,
+    videoMountCheckScheduled: false,
+    videoMountCheckToken: 0,
     cleanupFns: [],
     runtimeMessageListener: null,
   };

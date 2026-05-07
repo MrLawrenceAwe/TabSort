@@ -44,6 +44,42 @@ export function createMediaReadinessTracker({
     state.mediaReadyListenerCleanup = null;
   }
 
+  function nodeMayContainVideo(node) {
+    if (!node || node.nodeType !== 1) return false;
+    if (String(node.tagName || '').toLowerCase() === 'video') return true;
+    return Boolean(node.querySelector?.('video'));
+  }
+
+  function mutationsMayContainVideo(mutations = []) {
+    if (!Array.isArray(mutations) || mutations.length === 0) return true;
+    return mutations.some((mutation) => {
+      if (nodeMayContainVideo(mutation.target)) return true;
+      return Array.from(mutation.addedNodes || []).some(nodeMayContainVideo);
+    });
+  }
+
+  function requestVideoMountCheck() {
+    if (state.videoMountCheckScheduled) return;
+    state.videoMountCheckScheduled = true;
+    state.videoMountCheckToken += 1;
+    const scheduledToken = state.videoMountCheckToken;
+    const runtimeWindow = environment.window ?? globalThis.window;
+    const schedule =
+      typeof runtimeWindow?.requestAnimationFrame === 'function'
+        ? runtimeWindow.requestAnimationFrame.bind(runtimeWindow)
+        : (callback) => setTimeout(callback, 0);
+
+    schedule(() => {
+      if (scheduledToken !== state.videoMountCheckToken) return;
+      state.videoMountCheckScheduled = false;
+      attachVideoReadyListener();
+      if (isCurrentPageMediaReady() && state.videoMountObserver) {
+        state.videoMountObserver.disconnect();
+        state.videoMountObserver = null;
+      }
+    });
+  }
+
   function attachVideoReadyListener() {
     const video = getPrimaryVideoElement(environment);
     if (!video) return false;
@@ -111,12 +147,9 @@ export function createMediaReadinessTracker({
     if (!MutationObserverCtor || !runtimeDocument?.documentElement) return;
 
     if (!state.videoMountObserver) {
-      state.videoMountObserver = new MutationObserverCtor(() => {
-        attachVideoReadyListener();
-        if (isCurrentPageMediaReady()) {
-          state.videoMountObserver.disconnect();
-          state.videoMountObserver = null;
-        }
+      state.videoMountObserver = new MutationObserverCtor((mutations) => {
+        if (!mutationsMayContainVideo(mutations)) return;
+        requestVideoMountCheck();
       });
       state.videoMountObserver.observe(runtimeDocument.documentElement, {
         childList: true,
@@ -134,6 +167,8 @@ export function createMediaReadinessTracker({
 
   function disposeMediaObservers() {
     clearMediaReadyListener();
+    state.videoMountCheckScheduled = false;
+    state.videoMountCheckToken += 1;
     if (state.videoMountObserver) {
       state.videoMountObserver.disconnect();
       state.videoMountObserver = null;

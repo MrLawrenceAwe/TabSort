@@ -7,7 +7,7 @@ import {
   resetTrackedWindowState,
   setTrackedWindowId,
 } from './window-state.js';
-import { refreshTabPlaybackMetrics } from './playback-metrics-refresher.js';
+import { refreshTabPlaybackMetricsBatch } from './playback-metrics-refresher.js';
 import { reconcileWindowTabRecords } from './tab-record-reconciler.js';
 
 const REFRESH_ALARM_NAME = 'refreshRemaining';
@@ -45,7 +45,7 @@ async function syncInitialWindowState() {
 
   const ids = listTabIds();
   if (ids.length) {
-    await Promise.all(ids.map(refreshTabPlaybackMetrics));
+    await refreshTabPlaybackMetricsBatch(ids);
   }
 }
 
@@ -83,7 +83,7 @@ export function initializeWindowLifecycle() {
       if (alarm.name !== REFRESH_ALARM_NAME) return;
       await reconcileWindowTabRecords(trackedWindowState.windowId, { force: true });
       const ids = listTabIds();
-      await Promise.all(ids.map(refreshTabPlaybackMetrics));
+      await refreshTabPlaybackMetricsBatch(ids);
     }),
   );
 

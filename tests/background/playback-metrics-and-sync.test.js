@@ -3,8 +3,12 @@ import test from 'node:test';
 
 import { TAB_STATES } from '../../shared/tab-states.js';
 import { trackedWindowState } from '../../background/window-state.js';
-import { refreshTabPlaybackMetrics } from '../../background/playback-metrics-refresher.js';
+import {
+  refreshTabPlaybackMetrics,
+  refreshTabPlaybackMetricsBatch,
+} from '../../background/playback-metrics-refresher.js';
 import { reconcileWindowTabRecords } from '../../background/tab-record-reconciler.js';
+import { getWindowSnapshot } from '../../background/tab-command-handlers.js';
 import {
   ensureChromeApi,
   createTabRecordFixture,
@@ -498,5 +502,133 @@ test(
     assert.equal(record.videoDetails.lengthSeconds, 3364);
     assert.equal(record.videoDetails.remainingTime, 3364);
     assert.equal(record.isRemainingTimeStale, true);
+  },
+);
+
+test(
+  'refreshTabPlaybackMetricsBatch recomputes and broadcasts once for multiple updates',
+  { concurrency: false },
+  async () => {
+    resetTrackedWindowState();
+    setTrackedTabRecords({
+      1: createTabRecordFixture(1),
+      2: createTabRecordFixture(2),
+      3: createTabRecordFixture(3),
+    });
+
+    globalThis.chrome.tabs.get = (tabId, callback) => {
+      callback({
+        id: tabId,
+        windowId: 1,
+        url: `https://www.youtube.com/watch?v=${tabId}`,
+        active: false,
+        hidden: false,
+      });
+    };
+    globalThis.chrome.tabs.sendMessage = (tabId, _payload, callback) => {
+      callback({
+        title: `Video ${tabId}`,
+        url: `https://www.youtube.com/watch?v=${tabId}`,
+        pageMediaReady: true,
+        lengthSeconds: 120,
+        currentTime: tabId * 10,
+        playbackRate: 1,
+        paused: false,
+        isLive: false,
+      });
+    };
+
+    let broadcastCount = 0;
+    globalThis.chrome.runtime.sendMessage = (_message, callback) => {
+      broadcastCount += 1;
+      callback?.();
+    };
+
+    const changed = await refreshTabPlaybackMetricsBatch([1, 2, 3], { concurrency: 2 });
+
+    assert.equal(changed, true);
+    assert.equal(broadcastCount, 1);
+    assert.equal(trackedWindowState.tabRecordsById[1].videoDetails.remainingTime, 110);
+    assert.equal(trackedWindowState.tabRecordsById[2].videoDetails.remainingTime, 100);
+    assert.equal(trackedWindowState.tabRecordsById[3].videoDetails.remainingTime, 90);
+  },
+);
+
+test(
+  'getWindowSnapshot refreshes only records whose metrics can self-resolve',
+  { concurrency: false },
+  async () => {
+    resetTrackedWindowState(1);
+    const now = Date.now();
+    setTrackedTabRecords({
+      1: createTabRecordFixture(1, {
+        isActiveTab: true,
+        pageRuntimeReady: true,
+        pageMediaReady: false,
+        mediaWaitStartedAt: now,
+        isRemainingTimeStale: true,
+      }),
+      2: createTabRecordFixture(2, {
+        videoDetails: { title: 'Video 2', remainingTime: 90, lengthSeconds: 120 },
+        isRemainingTimeStale: false,
+      }),
+    });
+
+    globalThis.chrome.tabs.query = (_query, callback) => {
+      callback([
+        {
+          id: 1,
+          windowId: 1,
+          url: 'https://www.youtube.com/watch?v=1',
+          index: 0,
+          pinned: false,
+          status: 'complete',
+          active: true,
+          hidden: false,
+          discarded: false,
+        },
+        {
+          id: 2,
+          windowId: 1,
+          url: 'https://www.youtube.com/watch?v=2',
+          index: 1,
+          pinned: false,
+          status: 'complete',
+          active: false,
+          hidden: false,
+          discarded: false,
+        },
+      ]);
+    };
+    globalThis.chrome.tabs.get = (tabId, callback) => {
+      callback({
+        id: tabId,
+        windowId: 1,
+        url: `https://www.youtube.com/watch?v=${tabId}`,
+        active: tabId === 1,
+        hidden: false,
+      });
+    };
+
+    const refreshedTabIds = [];
+    globalThis.chrome.tabs.sendMessage = (tabId, _payload, callback) => {
+      refreshedTabIds.push(tabId);
+      callback({
+        title: `Video ${tabId}`,
+        url: `https://www.youtube.com/watch?v=${tabId}`,
+        pageMediaReady: true,
+        lengthSeconds: 120,
+        currentTime: 20,
+        playbackRate: 1,
+        paused: false,
+        isLive: false,
+      });
+    };
+
+    const snapshot = await getWindowSnapshot({ windowId: 1 });
+
+    assert.deepEqual(refreshedTabIds, [1]);
+    assert.equal(snapshot.tabRecordsById[1].videoDetails.remainingTime, 100);
+    assert.equal(snapshot.tabRecordsById[2].videoDetails.remainingTime, 90);
   },
 );
