@@ -18,23 +18,6 @@ function updateSortedBadge(sortedBadgeElement) {
   sortedBadgeElement.classList.toggle('hide', !popupState.currentOrderMatchesTarget);
 }
 
-export function getEmptyStateMessage(tabCount) {
-  if (tabCount <= 0) {
-    return 'Open YouTube watch or shorts tabs in this window to sort them.';
-  }
-  if (tabCount === 1) {
-    return 'Open at least one more YouTube video tab in this window to sort them.';
-  }
-  return '';
-}
-
-function updateEmptyState(emptyStateElement) {
-  if (!emptyStateElement) return;
-  const message = getEmptyStateMessage(popupState.sortSummary.counts.tracked);
-  emptyStateElement.textContent = message;
-  emptyStateElement.classList.toggle('hide', !message);
-}
-
 export function getSortButtonText(sortReadyTabCount, totalTabCount) {
   return sortReadyTabCount === totalTabCount ? 'Sort All Tabs' : 'Move Ready Tabs First';
 }
@@ -74,7 +57,6 @@ function setOptionToggleVisibility(visible) {
 }
 
 export function renderPopupShell() {
-  const emptyStateElement = getPopupElement('emptyStateElement');
   const statusElement = getPopupElement('statusElement');
   const sortButton = getPopupElement('sortButton');
   const sortedBadgeElement = getPopupElement('sortedBadgeElement');
@@ -94,7 +76,6 @@ export function renderPopupShell() {
   updateStatus(statusElement);
   updateSortedBadge(sortedBadgeElement);
   updateSortButton(sortButton, shouldShowSort);
-  updateEmptyState(emptyStateElement);
 
   if (popupState.currentOrderMatchesTarget && table) {
     clearReadyRows(table);

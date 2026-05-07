@@ -168,13 +168,6 @@ h2 {
     color: var(--stale-row-text);
 }
 
-.empty-state {
-    margin-top: 12px;
-    color: var(--status-text-color);
-    font-size: 13px;
-    line-height: 1.5;
-}
-
 .option-toggle {
     display: flex;
     align-items: center;
