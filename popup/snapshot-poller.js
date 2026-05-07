@@ -8,7 +8,7 @@ export function shouldPollRecord(record, { now = Date.now } = {}) {
   if (
     record.status === TAB_STATES.UNSUSPENDED &&
     record.isRemainingTimeStale &&
-    userAction === USER_ACTIONS.NONE
+    (userAction === USER_ACTIONS.NONE || userAction === USER_ACTIONS.WAIT_FOR_VIDEO_DATA)
   ) {
     return true;
   }

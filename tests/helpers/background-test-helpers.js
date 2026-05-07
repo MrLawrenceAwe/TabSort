@@ -63,6 +63,8 @@ export function createTabRecordFixture(id = 1, overrides = {}) {
     videoDetails: { title: `Video ${id}`, remainingTime: null, lengthSeconds: null },
     loadingStartedAt: null,
     unsuspendedTimestamp: null,
+    transitionStartedAt: null,
+    mediaWaitStartedAt: null,
     isRemainingTimeStale: true,
     ...overrides,
   });
