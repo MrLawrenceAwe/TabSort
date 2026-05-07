@@ -1,7 +1,6 @@
 function createEmptyPopupElements() {
   return {
     errorElement: null,
-    emptyStateElement: null,
     statusElement: null,
     sortButton: null,
     sortedBadgeElement: null,
@@ -32,7 +31,6 @@ export function initializePopupDom(rootDocument = globalThis.document) {
 
   rootPopupDocument = runtimeDocument;
   popupElements.errorElement = runtimeDocument.getElementById('popupError');
-  popupElements.emptyStateElement = runtimeDocument.getElementById('emptyState');
   popupElements.statusElement = runtimeDocument.getElementById('videoTabsReadyStatus');
   popupElements.sortButton = runtimeDocument.getElementById('sortButton');
   popupElements.sortedBadgeElement = runtimeDocument.getElementById('tabsSorted');

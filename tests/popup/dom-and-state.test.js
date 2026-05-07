@@ -23,7 +23,6 @@ function createFakeElement() {
 function createFakeDocument() {
   const elements = new Map([
     ['popupError', createFakeElement()],
-    ['emptyState', createFakeElement()],
     ['videoTabsReadyStatus', createFakeElement()],
     ['sortButton', createFakeElement()],
     ['tabsSorted', createFakeElement()],
