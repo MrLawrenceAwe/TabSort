@@ -130,6 +130,46 @@ test('handlePageRuntimeReady marks the runtime ready without collecting metrics'
   assert.equal(record.isRemainingTimeStale, true);
 });
 
+test('handlePageRuntimeReady clears stale sort data on watch-to-watch SPA navigation', async () => {
+  resetTrackedWindowState(1);
+  trackedWindowState.tabRecordsById = {
+    7: createTabRecordFixture(7, {
+      url: 'https://www.youtube.com/watch?v=old',
+      pageRuntimeReady: true,
+      pageMediaReady: true,
+      videoDetails: { title: 'Old Video', remainingTime: 25, lengthSeconds: 100 },
+      isRemainingTimeStale: false,
+    }),
+  };
+  trackedWindowState.visibleTabIds = [7];
+  trackedWindowState.targetSortableTabIds = [7];
+
+  await handlePageRuntimeReady(
+    {},
+    {
+      tab: {
+        id: 7,
+        windowId: 1,
+        url: 'https://www.youtube.com/watch?v=new',
+        index: 0,
+        pinned: false,
+        active: false,
+        hidden: false,
+      },
+    },
+  );
+
+  const record = trackedWindowState.tabRecordsById[7];
+  assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
+  assert.equal(record.pageRuntimeReady, true);
+  assert.equal(record.pageMediaReady, false);
+  assert.equal(record.videoDetails, null);
+  assert.equal(record.isLiveNow, false);
+  assert.equal(record.isRemainingTimeStale, true);
+  assert.deepEqual(trackedWindowState.targetSortableTabIds, [7]);
+  assert.equal(trackedWindowState.currentOrderMatchesTarget, false);
+});
+
 test('handlePageMediaReady removes tracked rows when a stale event arrives off watch/shorts', async () => {
   resetTrackedWindowState(1);
   trackedWindowState.tabRecordsById = {

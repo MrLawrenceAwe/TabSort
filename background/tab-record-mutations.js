@@ -105,8 +105,16 @@ export function createRecordFromTabSnapshot(
   return record;
 }
 
-export function applyPageRuntimeReady(record, { urlChanged = false } = {}) {
+export function applyPageRuntimeReady(record, { urlChanged = false, url = null } = {}) {
   if (!record) return;
+  if (urlChanged) {
+    resetTabRecordState(record, {
+      clearVideoDetails: true,
+      resetLiveStream: true,
+      resetRuntimeReady: false,
+    });
+  }
+  if (url) record.url = url;
   record.pageRuntimeReady = true;
   if (urlChanged) record.pageMediaReady = false;
 }
