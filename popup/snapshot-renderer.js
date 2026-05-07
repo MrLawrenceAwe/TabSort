@@ -8,15 +8,6 @@ import { setErrorMessage } from './popup-elements.js';
 import { applyPopupState } from './popup-store.js';
 import { renderTabRow } from './tab-row-view.js';
 
-function deriveSnapshotUiState(snapshot) {
-  const sortSummary = cloneSortSummary(snapshot?.sortSummary);
-
-  return {
-    sortSummary,
-    currentOrderMatchesTarget: snapshot?.currentOrderMatchesTarget === true,
-  };
-}
-
 export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
   if (!snapshot) return;
   setErrorMessage('');
@@ -27,7 +18,8 @@ export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
 
   const tabRecords = snapshot.tabRecordsById || {};
   const visibleTabIds = snapshot.visibleTabIds || [];
-  const { sortSummary, currentOrderMatchesTarget } = deriveSnapshotUiState(snapshot);
+  const sortSummary = cloneSortSummary(snapshot.sortSummary);
+  const currentOrderMatchesTarget = snapshot.currentOrderMatchesTarget === true;
 
   applyPopupState({
     currentOrderMatchesTarget,

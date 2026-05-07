@@ -143,10 +143,7 @@ export function createYoutubePageController({
     disposeObservers();
     disposeListeners();
     state.observedPageUrl = null;
-    state.lastReadyUrl = null;
-    state.mediaReadyUrl = null;
-    state.lastReadyVideo = null;
-    state.lastMediaReadyFingerprint = null;
+    state.lastReadyUrl = state.mediaReadyUrl = state.lastReadyVideo = state.lastMediaReadyFingerprint = null;
     state.initialized = false;
   }
 
@@ -193,10 +190,7 @@ export function createYoutubePageController({
 
     addWindowEventListener(runtimeWindow, 'pagehide', () => {
       disposeObservers();
-      state.lastReadyUrl = null;
-      state.mediaReadyUrl = null;
-      state.lastReadyVideo = null;
-      state.lastMediaReadyFingerprint = null;
+      state.lastReadyUrl = state.mediaReadyUrl = state.lastReadyVideo = state.lastMediaReadyFingerprint = null;
     });
   }
 
