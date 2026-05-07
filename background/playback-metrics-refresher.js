@@ -1,26 +1,29 @@
 import { TAB_STATES } from '../shared/tab-states.js';
-import { isFiniteNumber } from '../shared/guards.js';
 import { logDebug } from '../shared/log.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { getTab, sendMessageToTab } from './chrome-tabs.js';
 import { derivePlaybackMetricUpdate } from './playback-metric-update.js';
-import { applyPlaybackMetricUpdate, resetTabRecordState } from './tab-record-mutations.js';
+import {
+  applyPlaybackMetricUpdate,
+  markTabRecordMetricsUnavailable,
+} from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { setTrackedWindowId, trackedWindowState } from './window-state.js';
+import { getTabRecord, getTrackedWindowId, setTrackedWindowId } from './window-state.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 
 async function loadTabRecordContext(tabId) {
-  const initialRecord = trackedWindowState.tabRecordsById[tabId];
+  const initialRecord = getTabRecord(tabId);
   if (!initialRecord || initialRecord.status !== TAB_STATES.UNSUSPENDED) {
     return null;
   }
 
   const tab = await getTab(tabId);
-  const record = trackedWindowState.tabRecordsById[tabId];
+  const record = getTabRecord(tabId);
   if (!record || record.status !== TAB_STATES.UNSUSPENDED) {
     return null;
   }
-  if (trackedWindowState.windowId != null && tab.windowId !== trackedWindowState.windowId) {
+  const trackedWindowId = getTrackedWindowId();
+  if (trackedWindowId != null && tab.windowId !== trackedWindowId) {
     return null;
   }
   if (tab.windowId != null) {
@@ -50,7 +53,7 @@ export async function refreshTabPlaybackMetrics(tabId) {
     const { record, tab } = currentContext;
 
     if (!result || result.ok !== true) {
-      resetTabRecordState(record);
+      markTabRecordMetricsUnavailable(record);
       recomputeSortState();
       return;
     }

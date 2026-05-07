@@ -50,7 +50,7 @@ function extractInitialPlayerResponse(source) {
           try {
             parsedResult = JSON.parse(jsonText);
             parsedSuccessfully = true;
-          } catch (error) {
+          } catch (_error) {
             // Ignore parse errors from partial or invalid matches and continue.
           }
           break;

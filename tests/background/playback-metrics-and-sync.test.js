@@ -9,6 +9,9 @@ import {
   ensureChromeApi,
   createTabRecordFixture,
   resetTrackedWindowState,
+  setTrackedTabRecords,
+  setTrackedTabRecord,
+  setTrackedSortState,
 } from '../helpers/background-test-helpers.js';
 
 ensureChromeApi({ tabs: true });
@@ -19,7 +22,7 @@ test(
   async () => {
     resetTrackedWindowState();
     const initialRecord = createTabRecordFixture(1, { pageRuntimeReady: false });
-    trackedWindowState.tabRecordsById = { 1: initialRecord };
+    setTrackedTabRecords({ 1: initialRecord });
 
     globalThis.chrome.tabs.get = (_tabId, callback) => {
       setTimeout(() => {
@@ -51,7 +54,7 @@ test(
     const refreshPromise = refreshTabPlaybackMetrics(1);
 
     const replacementRecord = createTabRecordFixture(1, { pageRuntimeReady: false });
-    trackedWindowState.tabRecordsById = { 1: replacementRecord };
+    setTrackedTabRecords({ 1: replacementRecord });
 
     await refreshPromise;
 
@@ -98,12 +101,12 @@ test(
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
-    trackedWindowState.tabRecordsById = {
+    setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         status: TAB_STATES.SUSPENDED,
         unsuspendedTimestamp: null,
       }),
-    };
+    });
 
     globalThis.chrome.tabs.query = (_query, callback) => {
       callback([
@@ -134,7 +137,7 @@ test(
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
-    trackedWindowState.tabRecordsById = {
+    setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
         pageMediaReady: true,
@@ -142,7 +145,7 @@ test(
         videoDetails: { title: 'Old Video', remainingTime: 45, lengthSeconds: 120 },
         isRemainingTimeStale: false,
       }),
-    };
+    });
 
     globalThis.chrome.tabs.query = (_query, callback) => {
       callback([
@@ -177,7 +180,7 @@ test(
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
-    trackedWindowState.tabRecordsById = {
+    setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=same',
         pageMediaReady: true,
@@ -185,7 +188,7 @@ test(
         videoDetails: { title: 'Same Video', remainingTime: 45, lengthSeconds: 120 },
         isRemainingTimeStale: false,
       }),
-    };
+    });
 
     globalThis.chrome.tabs.query = (_query, callback) => {
       callback([
@@ -223,14 +226,14 @@ test(
   { concurrency: false },
   async () => {
     resetTrackedWindowState(1);
-    trackedWindowState.tabRecordsById = {
+    setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         videoDetails: { title: 'Video 1', remainingTime: 90, lengthSeconds: 120 },
         isRemainingTimeStale: false,
       }),
-    };
-    trackedWindowState.visibleTabIds = [1];
-    trackedWindowState.targetSortableTabIds = [1];
+    });
+    setTrackedSortState({ visibleTabIds: [1] });
+    setTrackedSortState({ targetSortableTabIds: [1] });
 
     globalThis.chrome.tabs.query = (query, callback) => {
       globalThis.chrome.runtime.lastError =
@@ -253,14 +256,14 @@ test(
   { concurrency: false },
   async () => {
     resetTrackedWindowState(1);
-    trackedWindowState.tabRecordsById = {
+    setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         videoDetails: { title: 'Window 1 Video', remainingTime: 90, lengthSeconds: 120 },
         isRemainingTimeStale: false,
       }),
-    };
-    trackedWindowState.visibleTabIds = [1];
-    trackedWindowState.targetSortableTabIds = [1];
+    });
+    setTrackedSortState({ visibleTabIds: [1] });
+    setTrackedSortState({ targetSortableTabIds: [1] });
 
     globalThis.chrome.tabs.query = (_query, callback) => {
       globalThis.chrome.runtime.lastError = new Error('query failed');
@@ -282,14 +285,14 @@ test(
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
-    trackedWindowState.tabRecordsById = {
+    setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
         videoDetails: { title: 'Old Video', remainingTime: 45, lengthSeconds: 120 },
         isRemainingTimeStale: false,
         pageRuntimeReady: false,
       }),
-    };
+    });
 
     globalThis.chrome.tabs.get = (_tabId, callback) => {
       callback({
@@ -330,14 +333,14 @@ test(
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
-    trackedWindowState.tabRecordsById = {
+    setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
         pageRuntimeReady: false,
         pageMediaReady: false,
         videoDetails: null,
       }),
-    };
+    });
 
     let getCallCount = 0;
     globalThis.chrome.tabs.get = (_tabId, callback) => {
@@ -373,13 +376,13 @@ test(
 
     const refreshPromise = refreshTabPlaybackMetrics(1);
 
-    trackedWindowState.tabRecordsById[1] = createTabRecordFixture(1, {
+    setTrackedTabRecord(1, createTabRecordFixture(1, {
       url: 'https://www.youtube.com/watch?v=new',
       pageRuntimeReady: false,
       pageMediaReady: false,
       videoDetails: null,
       isRemainingTimeStale: true,
-    });
+    }));
 
     await refreshPromise;
 
@@ -397,7 +400,7 @@ test(
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
-    trackedWindowState.tabRecordsById = {
+    setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=new',
         pageRuntimeReady: true,
@@ -405,7 +408,7 @@ test(
         videoDetails: { title: 'New Video', remainingTime: null, lengthSeconds: null },
         isRemainingTimeStale: true,
       }),
-    };
+    });
 
     globalThis.chrome.tabs.get = (_tabId, callback) => {
       callback({
@@ -446,7 +449,7 @@ test(
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
-    trackedWindowState.tabRecordsById = {
+    setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=previous',
         pageRuntimeReady: true,
@@ -458,7 +461,7 @@ test(
         },
         isRemainingTimeStale: false,
       }),
-    };
+    });
 
     globalThis.chrome.tabs.get = (_tabId, callback) => {
       callback({
