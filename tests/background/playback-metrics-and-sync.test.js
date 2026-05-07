@@ -249,6 +249,35 @@ test(
 );
 
 test(
+  'reconcileWindowTabRecords does not switch tracked windows when a forced tab query fails',
+  { concurrency: false },
+  async () => {
+    resetTrackedWindowState(1);
+    trackedWindowState.tabRecordsById = {
+      1: createTabRecordFixture(1, {
+        videoDetails: { title: 'Window 1 Video', remainingTime: 90, lengthSeconds: 120 },
+        isRemainingTimeStale: false,
+      }),
+    };
+    trackedWindowState.visibleTabIds = [1];
+    trackedWindowState.targetSortableTabIds = [1];
+
+    globalThis.chrome.tabs.query = (_query, callback) => {
+      globalThis.chrome.runtime.lastError = new Error('query failed');
+      callback([]);
+      globalThis.chrome.runtime.lastError = null;
+    };
+
+    await reconcileWindowTabRecords(2, { force: true });
+
+    assert.equal(trackedWindowState.windowId, 1);
+    assert.deepEqual(Object.keys(trackedWindowState.tabRecordsById), ['1']);
+    assert.deepEqual(trackedWindowState.visibleTabIds, [1]);
+    assert.deepEqual(trackedWindowState.targetSortableTabIds, [1]);
+  },
+);
+
+test(
   'refreshTabPlaybackMetrics updates the stored URL when collected metrics come from a new watch page',
   { concurrency: false },
   async () => {

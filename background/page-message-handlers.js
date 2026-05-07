@@ -41,7 +41,7 @@ export async function handlePageRuntimeReady(_message, sender) {
     isActiveTab: sender?.tab?.active,
     isHidden: sender?.tab?.hidden,
   });
-  applyPageRuntimeReady(record, { urlChanged: videoChanged });
+  applyPageRuntimeReady(record, { urlChanged: videoChanged, url: senderUrl });
   recomputeSortState();
   return { type: 'pageRuntimeAck' };
 }

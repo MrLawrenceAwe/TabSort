@@ -11,13 +11,23 @@ import {
 } from './window-state.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
+function resolveWindowIdForQuery(windowId, { force = false } = {}) {
+  const currentWindowId = isValidWindowId(trackedWindowState.windowId)
+    ? trackedWindowState.windowId
+    : null;
+  if (isValidWindowId(windowId) && (force || currentWindowId == null)) return windowId;
+  if (force && windowId == null) return null;
+  return currentWindowId;
+}
+
 export async function reconcileWindowTabRecords(windowId, options = {}) {
   const syncToken = beginSync();
-  const resolvedWindowId = setTrackedWindowId(windowId, options);
+  const resolvedWindowId = resolveWindowIdForQuery(windowId, options);
   const tabs = await listWindowTabs(resolvedWindowId);
   if (!isSyncCurrent(syncToken)) return;
   if (!Array.isArray(tabs)) return;
   if (resolvedWindowId == null && tabs.length === 0) return;
+  setTrackedWindowId(resolvedWindowId, options);
 
   if (
     isValidWindowId(resolvedWindowId) &&
