@@ -2,7 +2,10 @@ import { TAB_STATES } from '../../shared/tab-states.js';
 import { createEmptySortSummary } from '../../shared/sort-summary.js';
 import {
   applySortState,
+  replaceTabRecords,
   resetTrackedWindowState as resetTrackedBackgroundWindowState,
+  trackedWindowState,
+  writeTabRecord,
 } from '../../background/window-state.js';
 import { createTabRecord } from '../../background/tab-record.js';
 
@@ -26,6 +29,24 @@ export function ensureChromeApi({ tabs = false } = {}) {
 export function resetTrackedWindowState(windowId = null) {
   resetTrackedBackgroundWindowState({ windowId });
   applySortState({ sortSummary: createEmptySortSummary() });
+}
+
+export function setTrackedTabRecords(tabRecordsById = {}) {
+  return replaceTabRecords(tabRecordsById);
+}
+
+export function setTrackedSortState(sortState = {}) {
+  applySortState({
+    visibleTabIds: trackedWindowState.visibleTabIds,
+    targetSortableTabIds: trackedWindowState.targetSortableTabIds,
+    currentOrderMatchesTarget: trackedWindowState.currentOrderMatchesTarget,
+    sortSummary: trackedWindowState.sortSummary || createEmptySortSummary(),
+    ...sortState,
+  });
+}
+
+export function setTrackedTabRecord(tabId, record) {
+  return writeTabRecord(tabId, record);
 }
 
 export function createTabRecordFixture(id = 1, overrides = {}) {

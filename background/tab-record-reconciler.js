@@ -2,9 +2,10 @@ import { isValidWindowId } from '../shared/guards.js';
 import { getTabState, listWindowTabs } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
 import { createRecordFromTabSnapshot } from './tab-record-mutations.js';
-import { trackedWindowState } from './window-state.js';
 import {
   beginSync,
+  getTabRecordsById,
+  getTrackedWindowId,
   isSyncCurrent,
   replaceTabRecords,
   setTrackedWindowId,
@@ -12,9 +13,7 @@ import {
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function resolveWindowIdForQuery(windowId, { force = false } = {}) {
-  const currentWindowId = isValidWindowId(trackedWindowState.windowId)
-    ? trackedWindowState.windowId
-    : null;
+  const currentWindowId = getTrackedWindowId();
   if (isValidWindowId(windowId) && (force || currentWindowId == null)) return windowId;
   if (force && windowId == null) return null;
   return currentWindowId;
@@ -31,13 +30,13 @@ export async function reconcileWindowTabRecords(windowId, options = {}) {
 
   if (
     isValidWindowId(resolvedWindowId) &&
-    isValidWindowId(trackedWindowState.windowId) &&
-    resolvedWindowId !== trackedWindowState.windowId
+    isValidWindowId(getTrackedWindowId()) &&
+    resolvedWindowId !== getTrackedWindowId()
   ) {
     return;
   }
 
-  const previousTabRecords = trackedWindowState.tabRecordsById;
+  const previousTabRecords = getTabRecordsById();
   const nextTabRecords = {};
 
   for (const tab of tabs) {

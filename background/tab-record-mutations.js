@@ -10,28 +10,31 @@ function clearTabRemainingTime(record) {
   }
 }
 
-export function resetTabRecordState(
-  record,
-  {
-    clearRemainingTime = true,
-    clearVideoDetails = false,
-    resetLiveStream = false,
-    resetRuntimeReady = true,
-    resetMediaReady = true,
-  } = {},
-) {
+export function markTabRecordMetricsUnavailable(record) {
   if (!record) return;
 
-  if (resetRuntimeReady) record.pageRuntimeReady = false;
-  if (resetMediaReady) record.pageMediaReady = false;
-  if (resetLiveStream) record.isLiveNow = false;
+  record.pageRuntimeReady = false;
+  record.pageMediaReady = false;
+  clearTabRemainingTime(record);
+  record.isRemainingTimeStale = true;
+}
 
-  if (clearVideoDetails) {
-    record.videoDetails = null;
-  } else if (clearRemainingTime) {
-    clearTabRemainingTime(record);
-  }
+function markTabRecordVideoChanged(record) {
+  if (!record) return;
 
+  record.pageRuntimeReady = false;
+  record.pageMediaReady = false;
+  record.isLiveNow = false;
+  record.videoDetails = null;
+  record.isRemainingTimeStale = true;
+}
+
+function markTabRecordRuntimeReadyAfterVideoChange(record) {
+  if (!record) return;
+
+  record.pageMediaReady = false;
+  record.isLiveNow = false;
+  record.videoDetails = null;
   record.isRemainingTimeStale = true;
 }
 
@@ -41,14 +44,7 @@ export function markTabRecordReloading(record) {
   record.status = TAB_STATES.LOADING;
   record.loadingStartedAt = timestamp;
   record.unsuspendedTimestamp = timestamp;
-  resetTabRecordState(record);
-}
-
-function markTabRecordVideoChanged(record) {
-  resetTabRecordState(record, {
-    clearVideoDetails: true,
-    resetLiveStream: true,
-  });
+  markTabRecordMetricsUnavailable(record);
 }
 
 export function createRecordFromTabSnapshot(
@@ -108,11 +104,7 @@ export function createRecordFromTabSnapshot(
 export function applyPageRuntimeReady(record, { urlChanged = false, url = null } = {}) {
   if (!record) return;
   if (urlChanged) {
-    resetTabRecordState(record, {
-      clearVideoDetails: true,
-      resetLiveStream: true,
-      resetRuntimeReady: false,
-    });
+    markTabRecordRuntimeReadyAfterVideoChange(record);
   }
   if (url) record.url = url;
   record.pageRuntimeReady = true;

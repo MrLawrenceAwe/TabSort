@@ -4,6 +4,12 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "check": "npm test && node scripts/check-static.mjs"
+    "lint": "eslint .",
+    "check": "npm test && npm run lint && node scripts/check-static.mjs"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.4",
+    "eslint-plugin-import": "^2.32.0",
+    "globals": "^17.6.0"
   }
 }

@@ -7,12 +7,13 @@ import {
 } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
 import { refreshTabPlaybackMetrics } from './playback-metrics-refresher.js';
-import { setTrackedWindowId, trackedWindowState } from './window-state.js';
+import { getTabRecord, getTrackedWindowId, setTrackedWindowId } from './window-state.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function isSenderInTrackedWindow(windowId) {
-  if (trackedWindowState.windowId == null) return true;
-  return typeof windowId === 'number' && windowId === trackedWindowState.windowId;
+  const trackedWindowId = getTrackedWindowId();
+  if (trackedWindowId == null) return true;
+  return typeof windowId === 'number' && windowId === trackedWindowId;
 }
 
 function removeTabRecordWhenSenderLeavesVideoPage(tabId) {
@@ -31,7 +32,7 @@ export async function handlePageRuntimeReady(_message, sender) {
   }
   setTrackedWindowId(windowId);
 
-  const previousRecord = trackedWindowState.tabRecordsById[tabId];
+  const previousRecord = getTabRecord(tabId);
   const senderUrl = sender?.tab?.url ?? null;
   const videoChanged = hasYoutubeVideoIdentityChanged(previousRecord?.url, senderUrl);
   const record = ensureTabRecord(tabId, windowId, {

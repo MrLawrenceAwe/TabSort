@@ -12,6 +12,8 @@ import {
   ensureChromeApi,
   createTabRecordFixture,
   resetTrackedWindowState,
+  setTrackedTabRecords,
+  setTrackedSortState,
 } from '../helpers/background-test-helpers.js';
 
 ensureChromeApi();
@@ -42,14 +44,14 @@ test('handlePageVideoDetails does not create records for non-watch YouTube pages
 
 test('handlePageVideoDetails removes tracked rows when tab leaves watch/shorts', async () => {
   resetTrackedWindowState(1);
-  trackedWindowState.tabRecordsById = {
+  setTrackedTabRecords({
     7: createTabRecordFixture(7, {
       videoDetails: { title: 'Video 7', remainingTime: 25, lengthSeconds: 100 },
       isRemainingTimeStale: false,
     }),
-  };
-  trackedWindowState.visibleTabIds = [7];
-  trackedWindowState.targetSortableTabIds = [7];
+  });
+  setTrackedSortState({ visibleTabIds: [7] });
+  setTrackedSortState({ targetSortableTabIds: [7] });
 
   await handlePageVideoDetails(
     {
@@ -74,14 +76,14 @@ test('handlePageVideoDetails removes tracked rows when tab leaves watch/shorts',
 
 test('handlePageRuntimeReady removes tracked rows when a SPA tab leaves watch/shorts', async () => {
   resetTrackedWindowState(1);
-  trackedWindowState.tabRecordsById = {
+  setTrackedTabRecords({
     7: createTabRecordFixture(7, {
       videoDetails: { title: 'Video 7', remainingTime: 25, lengthSeconds: 100 },
       isRemainingTimeStale: false,
     }),
-  };
-  trackedWindowState.visibleTabIds = [7];
-  trackedWindowState.targetSortableTabIds = [7];
+  });
+  setTrackedSortState({ visibleTabIds: [7] });
+  setTrackedSortState({ targetSortableTabIds: [7] });
 
   await handlePageRuntimeReady(
     {},
@@ -132,7 +134,7 @@ test('handlePageRuntimeReady marks the runtime ready without collecting metrics'
 
 test('handlePageRuntimeReady clears stale sort data on watch-to-watch SPA navigation', async () => {
   resetTrackedWindowState(1);
-  trackedWindowState.tabRecordsById = {
+  setTrackedTabRecords({
     7: createTabRecordFixture(7, {
       url: 'https://www.youtube.com/watch?v=old',
       pageRuntimeReady: true,
@@ -140,9 +142,9 @@ test('handlePageRuntimeReady clears stale sort data on watch-to-watch SPA naviga
       videoDetails: { title: 'Old Video', remainingTime: 25, lengthSeconds: 100 },
       isRemainingTimeStale: false,
     }),
-  };
-  trackedWindowState.visibleTabIds = [7];
-  trackedWindowState.targetSortableTabIds = [7];
+  });
+  setTrackedSortState({ visibleTabIds: [7] });
+  setTrackedSortState({ targetSortableTabIds: [7] });
 
   await handlePageRuntimeReady(
     {},
@@ -172,14 +174,14 @@ test('handlePageRuntimeReady clears stale sort data on watch-to-watch SPA naviga
 
 test('handlePageMediaReady removes tracked rows when a stale event arrives off watch/shorts', async () => {
   resetTrackedWindowState(1);
-  trackedWindowState.tabRecordsById = {
+  setTrackedTabRecords({
     7: createTabRecordFixture(7, {
       videoDetails: { title: 'Video 7', remainingTime: 25, lengthSeconds: 100 },
       isRemainingTimeStale: false,
     }),
-  };
-  trackedWindowState.visibleTabIds = [7];
-  trackedWindowState.targetSortableTabIds = [7];
+  });
+  setTrackedSortState({ visibleTabIds: [7] });
+  setTrackedSortState({ targetSortableTabIds: [7] });
   globalThis.chrome.tabs = {
     get() {
       throw new Error('tabs.get should not be called for stale non-watch media-ready events');
@@ -207,14 +209,14 @@ test('handlePageMediaReady removes tracked rows when a stale event arrives off w
 
 test('handlePageVideoDetails resets carried remaining time on watch-to-watch SPA navigation', async () => {
   resetTrackedWindowState(1);
-  trackedWindowState.tabRecordsById = {
+  setTrackedTabRecords({
     7: createTabRecordFixture(7, {
       url: 'https://www.youtube.com/watch?v=old',
       pageRuntimeReady: true,
       videoDetails: { title: 'Old Video', remainingTime: 25, lengthSeconds: 100 },
       isRemainingTimeStale: false,
     }),
-  };
+  });
 
   await handlePageVideoDetails(
     {
@@ -245,14 +247,14 @@ test('handlePageVideoDetails resets carried remaining time on watch-to-watch SPA
 
 test('handlePageVideoDetails preserves ready state when the title changes for the same watch URL', async () => {
   resetTrackedWindowState(1);
-  trackedWindowState.tabRecordsById = {
+  setTrackedTabRecords({
     7: createTabRecordFixture(7, {
       url: 'https://www.youtube.com/watch?v=new',
       pageMediaReady: true,
       videoDetails: { title: 'Old Video', remainingTime: 3365, lengthSeconds: 3365 },
       isRemainingTimeStale: false,
     }),
-  };
+  });
 
   await handlePageVideoDetails(
     {
@@ -283,14 +285,14 @@ test('handlePageVideoDetails preserves ready state when the title changes for th
 
 test('handlePageVideoDetails preserves ready state when only watch URL parameters change', async () => {
   resetTrackedWindowState(1);
-  trackedWindowState.tabRecordsById = {
+  setTrackedTabRecords({
     7: createTabRecordFixture(7, {
       url: 'https://www.youtube.com/watch?v=new',
       pageMediaReady: true,
       videoDetails: { title: 'Video', remainingTime: 120, lengthSeconds: 300 },
       isRemainingTimeStale: false,
     }),
-  };
+  });
 
   await handlePageVideoDetails(
     {
@@ -322,7 +324,7 @@ test(
   { concurrency: false },
   async () => {
     resetTrackedWindowState(1);
-    trackedWindowState.tabRecordsById = {
+    setTrackedTabRecords({
       7: createTabRecordFixture(7, {
         url: 'https://www.youtube.com/watch?v=new',
         pageRuntimeReady: true,
@@ -330,7 +332,7 @@ test(
         videoDetails: { title: 'Video', remainingTime: 120, lengthSeconds: 300 },
         isRemainingTimeStale: false,
       }),
-    };
+    });
 
     const sender = {
       tab: {
