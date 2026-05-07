@@ -8,12 +8,18 @@ import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 class FakeMutationObserver {
   constructor(callback) {
     this.callback = callback;
+    FakeMutationObserver.instances.push(this);
   }
 
-  observe() {}
+  observe(target, options) {
+    this.target = target;
+    this.options = options;
+  }
 
   disconnect() {}
 }
+
+FakeMutationObserver.instances = [];
 
 function createEventTarget() {
   const listeners = new Map();
@@ -64,6 +70,8 @@ function installRuntimeTestDom() {
     currentSrc: 'blob:video-one',
   });
   let videos = [video];
+  let querySelectorAllCount = 0;
+  const animationFrameCallbacks = [];
 
   globalThis.MutationObserver = FakeMutationObserver;
   globalThis.location = { href: 'https://www.youtube.com/watch?v=one' };
@@ -72,6 +80,10 @@ function installRuntimeTestDom() {
     innerWidth: 1280,
     innerHeight: 720,
     ytInitialPlayerResponse: null,
+    requestAnimationFrame(callback) {
+      animationFrameCallbacks.push(callback);
+      return animationFrameCallbacks.length;
+    },
   };
   globalThis.document = {
     readyState: 'complete',
@@ -87,6 +99,7 @@ function installRuntimeTestDom() {
       return null;
     },
     querySelectorAll() {
+      querySelectorAllCount += 1;
       return videos;
     },
   };
@@ -127,6 +140,14 @@ function installRuntimeTestDom() {
     replaceVideos(nextVideos) {
       videos = nextVideos;
     },
+    getQuerySelectorAllCount() {
+      return querySelectorAllCount;
+    },
+    flushAnimationFrame() {
+      const callback = animationFrameCallbacks.shift();
+      if (callback) callback();
+    },
+    documentElement,
   };
 }
 
@@ -143,6 +164,7 @@ function resetGlobals() {
   installRuntimeTestDom.messages = [];
   installRuntimeTestDom.onMessageListener = null;
   installRuntimeTestDom.runtimeMessageListeners = new Set();
+  FakeMutationObserver.instances = [];
 }
 
 test('shouldSendPageReadySignal allows first-load, force-refresh, and URL-change signals', () => {
@@ -269,6 +291,47 @@ test('page runtime session reset removes listeners before a second bootstrap', (
     runtime.bootstrap();
     assert.equal(getRuntimeMessageListenerCount(), 1);
     assert.equal(windowTarget.listeners.size, 3);
+  } finally {
+    runtime.reset();
+    resetGlobals();
+  }
+});
+
+test('page runtime throttles video mount scans during mutation bursts', () => {
+  const runtime = createYoutubePageController();
+  try {
+    const dom = installRuntimeTestDom();
+    dom.replaceVideos([]);
+
+    runtime.bootstrap();
+
+    const scanCountAfterBootstrap = dom.getQuerySelectorAllCount();
+    const observer = FakeMutationObserver.instances.find(
+      (instance) => instance.target === dom.documentElement,
+    );
+    assert.ok(observer);
+
+    const addedNode = {
+      nodeType: 1,
+      tagName: 'div',
+      querySelector: (selector) => (selector === 'video' ? {} : null),
+    };
+    observer.callback([{ target: addedNode, addedNodes: [addedNode] }]);
+    observer.callback([{ target: addedNode, addedNodes: [addedNode] }]);
+    observer.callback([{ target: addedNode, addedNodes: [addedNode] }]);
+
+    assert.equal(dom.getQuerySelectorAllCount(), scanCountAfterBootstrap);
+
+    dom.replaceVideos([
+      createFakeVideo({
+        readyState: 3,
+        duration: 120,
+        currentSrc: 'blob:video-one',
+      }),
+    ]);
+    dom.flushAnimationFrame();
+
+    assert.equal(dom.getQuerySelectorAllCount(), scanCountAfterBootstrap + 1);
   } finally {
     runtime.reset();
     resetGlobals();

@@ -11,6 +11,8 @@ import { recomputeSortState } from './sort-state.js';
 import { getTabRecord, getTrackedWindowId, setTrackedWindowId } from './window-state.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 
+const DEFAULT_BATCH_CONCURRENCY = 4;
+
 async function loadTabRecordContext(tabId) {
   const initialRecord = getTabRecord(tabId);
   if (!initialRecord || initialRecord.status !== TAB_STATES.UNSUSPENDED) {
@@ -39,23 +41,23 @@ async function loadTabRecordContext(tabId) {
   return { record, tab };
 }
 
-export async function refreshTabPlaybackMetrics(tabId) {
+export async function refreshTabPlaybackMetrics(tabId, { recompute = true } = {}) {
   try {
     const initialContext = await loadTabRecordContext(tabId);
-    if (!initialContext) return;
+    if (!initialContext) return false;
 
     const requestedUrl = initialContext.tab.url || initialContext.record.url || null;
     const result = await sendMessageToTab(tabId, {
       type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS,
     });
     const currentContext = await loadTabRecordContext(tabId);
-    if (!currentContext) return;
+    if (!currentContext) return false;
     const { record, tab } = currentContext;
 
     if (!result || result.ok !== true) {
       markTabRecordMetricsUnavailable(record);
-      recomputeSortState();
-      return;
+      if (recompute) recomputeSortState();
+      return true;
     }
 
     const metricsPayload = result.data;
@@ -67,12 +69,43 @@ export async function refreshTabPlaybackMetrics(tabId) {
       currentTabUrl,
     });
     if (!playbackUpdate) {
-      return;
+      return false;
     }
 
     applyPlaybackMetricUpdate(record, playbackUpdate, currentTabUrl);
-    recomputeSortState();
+    if (recompute) recomputeSortState();
+    return true;
   } catch (error) {
     logDebug(`refreshTabPlaybackMetrics failed for ${tabId}`, error);
+    return false;
   }
+}
+
+export async function refreshTabPlaybackMetricsBatch(
+  tabIds,
+  { concurrency = DEFAULT_BATCH_CONCURRENCY, shouldRefresh = () => true } = {},
+) {
+  const pendingIds = Array.from(new Set(tabIds)).filter((tabId) => {
+    if (typeof tabId !== 'number') return false;
+    const record = getTabRecord(tabId);
+    return record && shouldRefresh(record);
+  });
+  if (!pendingIds.length) return false;
+
+  let nextIndex = 0;
+  let changed = false;
+  const workerCount = Math.max(1, Math.min(concurrency, pendingIds.length));
+
+  async function runWorker() {
+    while (nextIndex < pendingIds.length) {
+      const tabId = pendingIds[nextIndex];
+      nextIndex += 1;
+      const didChange = await refreshTabPlaybackMetrics(tabId, { recompute: false });
+      changed = changed || didChange;
+    }
+  }
+
+  await Promise.all(Array.from({ length: workerCount }, runWorker));
+  if (changed) recomputeSortState();
+  return changed;
 }
