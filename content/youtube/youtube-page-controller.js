@@ -161,6 +161,8 @@ export function createYoutubePageController({
         environment,
         collectPageDetails,
         isCurrentPageMediaReady: mediaReadiness.isCurrentPageMediaReady,
+        markCurrentPageMediaReadyIfAvailable:
+          mediaReadiness.markCurrentPageMediaReadyIfAvailable,
       });
     addRuntimeMessageListener(state.runtimeMessageListener);
 

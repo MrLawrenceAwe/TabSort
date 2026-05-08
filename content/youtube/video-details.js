@@ -1,3 +1,4 @@
+import { toPositiveFiniteNumber } from '../../shared/guards.js';
 import { parseYouTubeInitialPlayerResponse } from './youtube-player-response.js';
 
 function parseIsoDurationSeconds(isoDuration) {
@@ -28,13 +29,17 @@ export function collectPageVideoDetails({ inferIsLiveNow, logContentError, envir
   const title =
     docTitle || ogTitle || itempropTitle || cleanTitle(playerResponse?.videoDetails?.title) || null;
 
-  let lengthSeconds = parseIsoDurationSeconds(
-    runtimeDocument?.querySelector?.('meta[itemprop="duration"]')?.getAttribute('content'),
+  let lengthSeconds = toPositiveFiniteNumber(
+    parseIsoDurationSeconds(
+      runtimeDocument?.querySelector?.('meta[itemprop="duration"]')?.getAttribute('content'),
+    ),
   );
 
   if (lengthSeconds == null) {
     const responseLengthSeconds = playerResponse?.videoDetails?.lengthSeconds;
-    if (responseLengthSeconds != null) lengthSeconds = Number(responseLengthSeconds);
+    if (responseLengthSeconds != null) {
+      lengthSeconds = toPositiveFiniteNumber(responseLengthSeconds);
+    }
   }
 
   const isLiveBroadcastMeta = runtimeDocument

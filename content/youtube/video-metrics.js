@@ -1,22 +1,42 @@
 import { RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
+import { toFiniteNumber, toPositiveFiniteNumber } from '../../shared/guards.js';
 import { getPrimaryVideoElement } from './media-elements.js';
+
+function getYouTubePlayer(environment = globalThis) {
+  const runtimeDocument = environment.document ?? globalThis.document;
+  return runtimeDocument?.querySelector?.('#movie_player') || null;
+}
+
+function getVideoDurationSeconds(video, player) {
+  return (
+    toPositiveFiniteNumber(video?.duration) ??
+    toPositiveFiniteNumber(player?.getDuration?.())
+  );
+}
+
+function getVideoCurrentTimeSeconds(video, player) {
+  return toFiniteNumber(video?.currentTime) ?? toFiniteNumber(player?.getCurrentTime?.());
+}
 
 export function collectVideoMetrics({
   config,
   environment,
   collectPageDetails,
   isCurrentPageMediaReady,
+  markCurrentPageMediaReadyIfAvailable,
 }) {
   const video = getPrimaryVideoElement(environment);
+  const player = getYouTubePlayer(environment);
   const details = collectPageDetails();
+  markCurrentPageMediaReadyIfAvailable?.({ notify: false });
   return {
     title: details.title || null,
     url: details.url,
     pageMediaReady: isCurrentPageMediaReady(),
     lengthSeconds: config.isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
     isLive: Boolean(details.isLive),
-    duration: video && config.isFiniteNumber(video.duration) ? video.duration : null,
-    currentTime: video && config.isFiniteNumber(video.currentTime) ? video.currentTime : null,
+    duration: getVideoDurationSeconds(video, player),
+    currentTime: getVideoCurrentTimeSeconds(video, player),
     playbackRate:
       video && config.isFiniteNumber(video.playbackRate) && video.playbackRate > 0
         ? video.playbackRate

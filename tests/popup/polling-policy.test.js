@@ -13,6 +13,7 @@ import {
   shouldPollRecord,
   shouldPollSnapshot,
 } from '../../popup/popup-controller.js';
+import { shouldRefreshRecordMetrics } from '../../shared/tab-action-policy.js';
 
 const NOW_MS = 100_000;
 const fakeNow = () => NOW_MS;
@@ -88,6 +89,34 @@ test('shouldPollRecord stops polling active stale watch tabs when media stays st
   });
 
   assert.equal(shouldPollRecord(record, { now: fakeNow }), false);
+});
+
+test('shouldRefreshRecordMetrics still probes active stale tabs after polling grace expires', () => {
+  const record = makeRecord({
+    isActiveTab: true,
+    pageRuntimeReady: false,
+    pageMediaReady: false,
+    isRemainingTimeStale: true,
+    transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS + 1000),
+    videoDetails: null,
+  });
+
+  assert.equal(shouldPollRecord(record, { now: fakeNow }), false);
+  assert.equal(shouldRefreshRecordMetrics(record, { now: fakeNow }), true);
+});
+
+test('shouldRefreshRecordMetrics does not probe hidden stale tabs after polling grace expires', () => {
+  const record = makeRecord({
+    isActiveTab: true,
+    isHidden: true,
+    pageRuntimeReady: false,
+    pageMediaReady: false,
+    isRemainingTimeStale: true,
+    transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS + 1000),
+    videoDetails: null,
+  });
+
+  assert.equal(shouldRefreshRecordMetrics(record, { now: fakeNow }), false);
 });
 
 test('shouldPollRecord polls recent watch URL transitions before asking for reload', () => {

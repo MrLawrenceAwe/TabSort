@@ -3,6 +3,8 @@ import test from 'node:test';
 
 import { createYoutubePageController } from '../content/youtube/youtube-page-controller.js';
 import { shouldSendPageReadySignal } from '../content/youtube/youtube-page-controller-state.js';
+import { collectPageVideoDetails } from '../content/youtube/video-details.js';
+import { inferIsLiveNow } from '../content/youtube/live-status.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 
 class FakeMutationObserver {
@@ -63,6 +65,16 @@ function installRuntimeTestDom() {
   const titleElement = { textContent: 'Video One - YouTube' };
   const headElement = {};
   const documentElement = {};
+  const player = {
+    duration: NaN,
+    currentTime: NaN,
+    getDuration() {
+      return this.duration;
+    },
+    getCurrentTime() {
+      return this.currentTime;
+    },
+  };
   let durationContent = 'PT2M0S';
   const video = createFakeVideo({
     readyState: 3,
@@ -96,6 +108,7 @@ function installRuntimeTestDom() {
       if (selector === 'meta[itemprop="duration"]') {
         return { getAttribute: () => durationContent };
       }
+      if (selector === '#movie_player') return player;
       return null;
     },
     querySelectorAll() {
@@ -137,6 +150,7 @@ function installRuntimeTestDom() {
       durationContent = duration;
     },
     video,
+    player,
     replaceVideos(nextVideos) {
       videos = nextVideos;
     },
@@ -274,6 +288,116 @@ test(
     }
   },
 );
+
+test(
+  'video metric collection self-resolves media readiness when ready events were missed',
+  () => {
+    const runtime = createYoutubePageController();
+    try {
+      const { video } = installRuntimeTestDom();
+      video.readyState = 0;
+      video.duration = NaN;
+
+      runtime.bootstrap();
+
+      const mediaReadyAfterBootstrap = installRuntimeTestDom.messages.filter(
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY,
+      );
+      assert.equal(mediaReadyAfterBootstrap.length, 0);
+
+      video.readyState = 3;
+      video.duration = 120;
+
+      let response = null;
+      installRuntimeTestDom.onMessageListener(
+        { type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS },
+        {},
+        (payload) => {
+          response = payload;
+        },
+      );
+
+      assert.equal(response?.pageMediaReady, true);
+
+      const mediaReadyAfterMetricCollection = installRuntimeTestDom.messages.filter(
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY,
+      );
+      assert.equal(mediaReadyAfterMetricCollection.length, 0);
+    } finally {
+      runtime.reset();
+      resetGlobals();
+    }
+  },
+);
+
+test(
+  'video metric collection falls back to YouTube player duration for archived streams',
+  () => {
+    const runtime = createYoutubePageController();
+    try {
+      const { video, player } = installRuntimeTestDom();
+      video.readyState = 3;
+      video.duration = Infinity;
+      video.currentTime = 0;
+      player.duration = 6211;
+      player.currentTime = 0;
+
+      runtime.bootstrap();
+
+      let response = null;
+      installRuntimeTestDom.onMessageListener(
+        { type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS },
+        {},
+        (payload) => {
+          response = payload;
+        },
+      );
+
+      assert.equal(response?.pageMediaReady, false);
+      assert.equal(response?.duration, 6211);
+      assert.equal(response?.currentTime, 0);
+    } finally {
+      runtime.reset();
+      resetGlobals();
+    }
+  },
+);
+
+test('page video details ignore zero-length YouTube player metadata', () => {
+  const environment = {
+    location: { href: 'https://www.youtube.com/watch?v=archive' },
+    window: {
+      ytInitialPlayerResponse: {
+        videoDetails: {
+          title: 'Archived Stream',
+          lengthSeconds: '0',
+          isLive: false,
+          isLiveContent: false,
+        },
+        playabilityStatus: {},
+      },
+    },
+    document: {
+      title: 'Archived Stream - YouTube',
+      scripts: [],
+      querySelector(selector) {
+        if (selector === 'meta[itemprop="duration"]') {
+          return { getAttribute: () => null };
+        }
+        return null;
+      },
+    },
+  };
+
+  const details = collectPageVideoDetails({
+    inferIsLiveNow,
+    logContentError() {},
+    environment,
+  });
+
+  assert.equal(details.lengthSeconds, null);
+  assert.equal(details.isLive, false);
+});
 
 test('page runtime session reset removes listeners before a second bootstrap', () => {
   const runtime = createYoutubePageController();

@@ -121,7 +121,9 @@ export function shouldPollRecord(record, { now = Date.now } = {}) {
 }
 
 export function shouldRefreshRecordMetrics(record, options = {}) {
-  return shouldPollRecord(record, options) && record.status === TAB_STATES.UNSUSPENDED;
+  if (!record || record.isLiveNow || record.status !== TAB_STATES.UNSUSPENDED) return false;
+  if (shouldPollRecord(record, options)) return true;
+  return Boolean(record.isRemainingTimeStale && record.isActiveTab && !record.isHidden);
 }
 
 export function getUserActionLabel(action) {

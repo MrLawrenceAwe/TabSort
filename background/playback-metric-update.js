@@ -1,4 +1,9 @@
-import { MEDIA_DURATION_SYNC_TOLERANCE_SECONDS, isFiniteNumber } from '../shared/guards.js';
+import {
+  MEDIA_DURATION_SYNC_TOLERANCE_SECONDS,
+  isFiniteNumber,
+  toFiniteNumber,
+  toPositiveFiniteNumber,
+} from '../shared/guards.js';
 import { getYoutubeVideoIdentity } from './youtube-url-utils.js';
 
 function areEquivalentVideoUrls(leftUrl, rightUrl) {
@@ -26,32 +31,30 @@ function shouldIgnoreStaleMetricsPayload({ payloadUrl, requestedUrl, currentTabU
 }
 
 function resolveVideoLengthSeconds(metricsPayload, record) {
-  const pageLengthSeconds = Number(metricsPayload.lengthSeconds ?? NaN);
-  if (isFiniteNumber(pageLengthSeconds)) {
+  const pageLengthSeconds = toPositiveFiniteNumber(metricsPayload.lengthSeconds);
+  if (pageLengthSeconds != null) {
     return pageLengthSeconds;
   }
 
-  const recordedLengthSeconds = Number(record?.videoDetails?.lengthSeconds ?? NaN);
-  if (isFiniteNumber(recordedLengthSeconds)) {
+  const recordedLengthSeconds = toPositiveFiniteNumber(record?.videoDetails?.lengthSeconds);
+  if (recordedLengthSeconds != null) {
     return recordedLengthSeconds;
   }
 
-  return Number(metricsPayload.duration ?? NaN);
+  return toPositiveFiniteNumber(metricsPayload.duration) ?? NaN;
 }
 
 function hasMediaDurationMismatch(metricsPayload, record, resolvedLengthSeconds) {
-  const videoDurationSeconds = Number(metricsPayload.duration ?? NaN);
-  if (!isFiniteNumber(videoDurationSeconds) || !isFiniteNumber(resolvedLengthSeconds)) {
+  const videoDurationSeconds = toFiniteNumber(metricsPayload.duration);
+  if (videoDurationSeconds == null || !isFiniteNumber(resolvedLengthSeconds)) {
     return false;
   }
 
-  const pageLengthSeconds = Number(metricsPayload.lengthSeconds ?? NaN);
-  const recordedLengthSeconds = Number(record?.videoDetails?.lengthSeconds ?? NaN);
-  const authoritativeLengthSeconds = isFiniteNumber(pageLengthSeconds)
-    ? pageLengthSeconds
-    : recordedLengthSeconds;
+  const authoritativeLengthSeconds =
+    toPositiveFiniteNumber(metricsPayload.lengthSeconds) ??
+    toPositiveFiniteNumber(record?.videoDetails?.lengthSeconds);
 
-  if (!isFiniteNumber(authoritativeLengthSeconds)) {
+  if (authoritativeLengthSeconds == null) {
     return false;
   }
 
@@ -59,6 +62,12 @@ function hasMediaDurationMismatch(metricsPayload, record, resolvedLengthSeconds)
     Math.abs(videoDurationSeconds - authoritativeLengthSeconds) >
     MEDIA_DURATION_SYNC_TOLERANCE_SECONDS
   );
+}
+
+function hasUsablePlaybackEvidence(metricsPayload) {
+  const videoDurationSeconds = toPositiveFiniteNumber(metricsPayload.duration);
+  const currentTimeSeconds = toFiniteNumber(metricsPayload.currentTime);
+  return videoDurationSeconds != null && currentTimeSeconds != null;
 }
 
 function deriveRemainingTimeSeconds(resolvedLengthSeconds, currentTimeSeconds, playbackRate) {
@@ -94,12 +103,16 @@ export function derivePlaybackMetricUpdate({
   const previousMediaStillApplies =
     record.pageMediaReady === true &&
     areEquivalentVideoUrls(record.url, payloadUrl || currentTabUrl || requestedUrl);
+  const playbackEvidenceIsUsable = hasUsablePlaybackEvidence(metricsPayload);
 
   const update = {
     nextUrl: payloadUrl || currentTabUrl || null,
     nextTitle: typeof metricsPayload.title === 'string' ? metricsPayload.title : null,
     pageRuntimeReady: true,
-    pageMediaReady: metricsPayload.pageMediaReady === true || previousMediaStillApplies,
+    pageMediaReady:
+      metricsPayload.pageMediaReady === true ||
+      previousMediaStillApplies ||
+      playbackEvidenceIsUsable,
     isLiveNow,
     resolvedLengthSeconds: isFiniteNumber(resolvedLengthSeconds) ? resolvedLengthSeconds : null,
     remainingTime: null,
