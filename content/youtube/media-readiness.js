@@ -36,6 +36,15 @@ export function createMediaReadinessTracker({
     return Boolean(fingerprint) && fingerprint !== state.lastMediaReadyFingerprint;
   }
 
+  function canMarkVideoMediaReady(video, observedFreshMediaEvent = false) {
+    return (
+      video?.readyState >= config.mediaReadyStateThreshold &&
+      config.isFiniteNumber(video.duration) &&
+      hasFreshMediaEvidence(video, observedFreshMediaEvent) &&
+      doesVideoDurationMatchPage(video)
+    );
+  }
+
   function clearMediaReadyListener() {
     if (typeof state.mediaReadyListenerCleanup === 'function') {
       state.mediaReadyListenerCleanup();
@@ -56,6 +65,31 @@ export function createMediaReadinessTracker({
       if (nodeMayContainVideo(mutation.target)) return true;
       return Array.from(mutation.addedNodes || []).some(nodeMayContainVideo);
     });
+  }
+
+  function markMediaReady(video, { notify = true } = {}) {
+    const currentUrl = getCurrentPageUrl();
+    if (!currentUrl) return false;
+    state.mediaReadyUrl = currentUrl;
+    state.lastReadyVideo = video;
+    state.lastMediaReadyFingerprint = getVideoFingerprint(video);
+    if (notify) {
+      sendExtensionMessage(
+        createRuntimeMessage(RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY),
+        'page media ready',
+      );
+    }
+    if (state.mediaReadyListenerVideo === video) {
+      clearMediaReadyListener();
+    }
+    return true;
+  }
+
+  function markCurrentPageMediaReadyIfAvailable({ notify = true } = {}) {
+    if (isCurrentPageMediaReady()) return true;
+    const video = getPrimaryVideoElement(environment);
+    if (!canMarkVideoMediaReady(video)) return false;
+    return markMediaReady(video, { notify });
   }
 
   function requestVideoMountCheck() {
@@ -84,6 +118,7 @@ export function createMediaReadinessTracker({
     const video = getPrimaryVideoElement(environment);
     if (!video) return false;
     if (isCurrentPageMediaReady()) return true;
+    if (canMarkVideoMediaReady(video)) return markMediaReady(video);
     if (state.mediaReadyListenerVideo === video) return true;
 
     clearMediaReadyListener();
@@ -97,24 +132,9 @@ export function createMediaReadinessTracker({
         state.mediaReadyListenerCleanup = null;
       }
     };
-    const send = () => {
-      state.mediaReadyUrl = getCurrentPageUrl();
-      state.lastReadyVideo = video;
-      state.lastMediaReadyFingerprint = getVideoFingerprint(video);
-      sendExtensionMessage(
-        createRuntimeMessage(RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY),
-        'page media ready',
-      );
-      cleanup();
-    };
     const maybeSend = () => {
-      if (
-        video.readyState >= config.mediaReadyStateThreshold &&
-        config.isFiniteNumber(video.duration) &&
-        hasFreshMediaEvidence(video, observedFreshMediaEvent) &&
-        doesVideoDurationMatchPage(video)
-      ) {
-        send();
+      if (canMarkVideoMediaReady(video, observedFreshMediaEvent)) {
+        markMediaReady(video);
         return true;
       }
       return false;
@@ -179,6 +199,7 @@ export function createMediaReadinessTracker({
     disposeMediaObservers,
     getVideoFingerprint,
     isCurrentPageMediaReady,
+    markCurrentPageMediaReadyIfAvailable,
     watchForVideoMount,
   };
 }

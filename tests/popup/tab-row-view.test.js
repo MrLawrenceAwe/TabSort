@@ -189,9 +189,17 @@ function createFakeDocument() {
 }
 
 function createFakeRow() {
+  const classNames = new Set();
   return {
     cells: [],
-    classList: { add() {} },
+    classList: {
+      add(...names) {
+        names.forEach((name) => classNames.add(name));
+      },
+      contains(name) {
+        return classNames.has(name);
+      },
+    },
     insertCell(index) {
       const cell = {
         children: [],
@@ -207,6 +215,24 @@ function createFakeRow() {
     },
   };
 }
+
+test('reload rows receive the reload-required styling hook', () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = createFakeDocument();
+  try {
+    const row = createFakeRow();
+    const record = makeRecord({
+      pageRuntimeReady: false,
+      unsuspendedTimestamp: Date.now() - (RECENTLY_UNSUSPENDED_MS + 1000),
+    });
+
+    renderTabRow(row, record, false, () => {});
+
+    assert.equal(row.classList.contains('reload-required-row'), true);
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
 
 test('wait rows render passive text instead of clickable actions', () => {
   const previousDocument = globalThis.document;

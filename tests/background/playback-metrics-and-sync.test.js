@@ -20,6 +20,39 @@ import {
 
 ensureChromeApi({ tabs: true });
 
+function stubPlaybackMetricsTab({
+  tabId = 1,
+  url = `https://www.youtube.com/watch?v=${tabId}`,
+  active = true,
+  hidden = false,
+  metrics = {},
+} = {}) {
+  globalThis.chrome.tabs.get = (_tabId, callback) => {
+    callback({
+      id: tabId,
+      windowId: 1,
+      url,
+      active,
+      hidden,
+    });
+  };
+
+  globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
+    callback({
+      title: 'Archived Stream',
+      url,
+      pageMediaReady: false,
+      lengthSeconds: null,
+      duration: 6211,
+      currentTime: 0,
+      playbackRate: 1,
+      paused: true,
+      isLive: false,
+      ...metrics,
+    });
+  };
+}
+
 test(
   'refreshTabPlaybackMetrics applies updates to the latest record object after async boundaries',
   { concurrency: false },
@@ -451,6 +484,125 @@ test(
 );
 
 test(
+  'refreshTabPlaybackMetrics self-resolves when playback metrics expose a ready video',
+  { concurrency: false },
+  async () => {
+    resetTrackedWindowState();
+    setTrackedTabRecords({
+      1: createTabRecordFixture(1, {
+        url: 'https://www.youtube.com/watch?v=archive',
+        pageRuntimeReady: true,
+        pageMediaReady: false,
+        videoDetails: { title: 'Archived Stream', remainingTime: null, lengthSeconds: null },
+        isRemainingTimeStale: true,
+      }),
+    });
+
+    stubPlaybackMetricsTab({ url: 'https://www.youtube.com/watch?v=archive' });
+
+    await refreshTabPlaybackMetrics(1);
+
+    const record = trackedWindowState.tabRecordsById[1];
+    assert.equal(record.pageRuntimeReady, true);
+    assert.equal(record.pageMediaReady, true);
+    assert.equal(record.mediaWaitStartedAt, null);
+    assert.equal(record.videoDetails.lengthSeconds, 6211);
+    assert.equal(record.videoDetails.remainingTime, 6211);
+    assert.equal(record.isRemainingTimeStale, false);
+  },
+);
+
+test(
+  'refreshTabPlaybackMetrics ignores stale zero recorded length for archived streams',
+  { concurrency: false },
+  async () => {
+    resetTrackedWindowState();
+    setTrackedTabRecords({
+      1: createTabRecordFixture(1, {
+        url: 'https://www.youtube.com/watch?v=archive',
+        pageRuntimeReady: true,
+        pageMediaReady: false,
+        videoDetails: { title: 'Archived Stream', remainingTime: null, lengthSeconds: 0 },
+        isRemainingTimeStale: true,
+      }),
+    });
+
+    stubPlaybackMetricsTab({ url: 'https://www.youtube.com/watch?v=archive' });
+
+    await refreshTabPlaybackMetrics(1);
+
+    const record = trackedWindowState.tabRecordsById[1];
+    assert.equal(record.pageRuntimeReady, true);
+    assert.equal(record.pageMediaReady, true);
+    assert.equal(record.videoDetails.lengthSeconds, 6211);
+    assert.equal(record.videoDetails.remainingTime, 6211);
+    assert.equal(record.isRemainingTimeStale, false);
+  },
+);
+
+test(
+  'refreshTabPlaybackMetrics ignores zero playback duration when no valid length exists',
+  { concurrency: false },
+  async () => {
+    resetTrackedWindowState();
+    setTrackedTabRecords({
+      1: createTabRecordFixture(1, {
+        url: 'https://www.youtube.com/watch?v=archive',
+        pageRuntimeReady: true,
+        pageMediaReady: false,
+        videoDetails: { title: 'Archived Stream', remainingTime: null, lengthSeconds: 0 },
+        isRemainingTimeStale: true,
+      }),
+    });
+
+    stubPlaybackMetricsTab({
+      url: 'https://www.youtube.com/watch?v=archive',
+      metrics: { duration: 0, currentTime: 0 },
+    });
+
+    await refreshTabPlaybackMetrics(1);
+
+    const record = trackedWindowState.tabRecordsById[1];
+    assert.equal(record.pageRuntimeReady, true);
+    assert.equal(record.pageMediaReady, false);
+    assert.equal(record.videoDetails.lengthSeconds, null);
+    assert.equal(record.videoDetails.remainingTime, null);
+    assert.equal(record.isRemainingTimeStale, true);
+  },
+);
+
+test(
+  'refreshTabPlaybackMetrics does not treat missing current time as playback evidence',
+  { concurrency: false },
+  async () => {
+    resetTrackedWindowState();
+    setTrackedTabRecords({
+      1: createTabRecordFixture(1, {
+        url: 'https://www.youtube.com/watch?v=archive',
+        pageRuntimeReady: true,
+        pageMediaReady: false,
+        videoDetails: { title: 'Archived Stream', remainingTime: null, lengthSeconds: null },
+        isRemainingTimeStale: true,
+      }),
+    });
+
+    stubPlaybackMetricsTab({
+      url: 'https://www.youtube.com/watch?v=archive',
+      metrics: { duration: 6211, currentTime: null },
+    });
+
+    await refreshTabPlaybackMetrics(1);
+
+    const record = trackedWindowState.tabRecordsById[1];
+    assert.equal(record.pageRuntimeReady, true);
+    assert.equal(record.pageMediaReady, false);
+    assert.equal(record.videoDetails.lengthSeconds, 6211);
+    assert.equal(record.videoDetails.remainingTime, 6211);
+    assert.equal(record.isRemainingTimeStale, true);
+  },
+);
+
+test(
   'refreshTabPlaybackMetrics keeps remaining time stale when page metadata and video duration disagree',
   { concurrency: false },
   async () => {
@@ -630,5 +782,72 @@ test(
     assert.deepEqual(refreshedTabIds, [1]);
     assert.equal(snapshot.tabRecordsById[1].videoDetails.remainingTime, 100);
     assert.equal(snapshot.tabRecordsById[2].videoDetails.remainingTime, 90);
+  },
+);
+
+test(
+  'getWindowSnapshot probes active stale tabs even after reload guidance appears',
+  { concurrency: false },
+  async () => {
+    resetTrackedWindowState(1);
+    setTrackedTabRecords({
+      1: createTabRecordFixture(1, {
+        isActiveTab: true,
+        pageRuntimeReady: false,
+        pageMediaReady: false,
+        transitionStartedAt: Date.now() - 10_000,
+        mediaWaitStartedAt: null,
+        isRemainingTimeStale: true,
+        videoDetails: null,
+      }),
+    });
+
+    globalThis.chrome.tabs.query = (_query, callback) => {
+      callback([
+        {
+          id: 1,
+          windowId: 1,
+          url: 'https://www.youtube.com/watch?v=archive',
+          index: 0,
+          pinned: false,
+          status: 'complete',
+          active: true,
+          hidden: false,
+          discarded: false,
+        },
+      ]);
+    };
+    globalThis.chrome.tabs.get = (_tabId, callback) => {
+      callback({
+        id: 1,
+        windowId: 1,
+        url: 'https://www.youtube.com/watch?v=archive',
+        active: true,
+        hidden: false,
+      });
+    };
+
+    const refreshedTabIds = [];
+    globalThis.chrome.tabs.sendMessage = (tabId, _payload, callback) => {
+      refreshedTabIds.push(tabId);
+      callback({
+        title: 'Archived Stream',
+        url: 'https://www.youtube.com/watch?v=archive',
+        pageMediaReady: false,
+        lengthSeconds: null,
+        duration: 6211,
+        currentTime: 0,
+        playbackRate: 1,
+        paused: true,
+        isLive: false,
+      });
+    };
+
+    const snapshot = await getWindowSnapshot({ windowId: 1 });
+
+    assert.deepEqual(refreshedTabIds, [1]);
+    assert.equal(snapshot.tabRecordsById[1].pageMediaReady, true);
+    assert.equal(snapshot.tabRecordsById[1].videoDetails.remainingTime, 6211);
+    assert.equal(snapshot.tabRecordsById[1].isRemainingTimeStale, false);
   },
 );

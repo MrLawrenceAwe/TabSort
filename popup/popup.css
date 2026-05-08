@@ -126,7 +126,8 @@ h2 {
     color: var(--all-sort-ready-row-text) !important;
 }
 
-.stale-remaining-row td {
+.stale-remaining-row td,
+.reload-required-row td {
     background-color: var(--stale-row-background) !important;
     color: var(--stale-row-text) !important;
 }

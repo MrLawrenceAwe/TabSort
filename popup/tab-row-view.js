@@ -23,6 +23,9 @@ export function renderTabRow(row, tabRecord, isSortedView, postRuntimeMessage) {
   row.insertCell(0).textContent = tabRecord.videoDetails?.title ?? tabRecord.url;
 
   const requiredAction = determineUserAction(tabRecord);
+  if (requiredAction === USER_ACTIONS.RELOAD_TAB) {
+    row.classList.add('reload-required-row');
+  }
   if (!isSortedView) insertUserActionCell(row, tabRecord, requiredAction, postRuntimeMessage);
 
   insertInfoCells(row, tabRecord, isSortedView, requiredAction);
