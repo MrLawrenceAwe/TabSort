@@ -1,12 +1,14 @@
 import { isValidWindowId } from '../shared/guards.js';
 import { logDebug, logListenerError, withErrorLogging } from '../shared/log.js';
 import { recomputeSortState } from './sort-state.js';
-import { trackedWindowState } from './window-state.js';
+import { trackedWindowState } from './window-store.js';
 import {
   listTabIds,
-  resetTrackedWindowState,
+} from './window-store-selectors.js';
+import {
+  resetWindowStore,
   setTrackedWindowId,
-} from './window-state.js';
+} from './window-store-mutations.js';
 import { refreshTabPlaybackMetricsBatch } from './playback-metrics-refresher.js';
 import { reconcileWindowTabRecords } from './tab-record-reconciler.js';
 
@@ -34,7 +36,7 @@ const getLastFocusedWindowId = () =>
   });
 
 export function resetTrackedWindow() {
-  resetTrackedWindowState();
+  resetWindowStore();
   recomputeSortState();
 }
 

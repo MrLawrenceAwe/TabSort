@@ -3,14 +3,14 @@ import { MEDIA_DURATION_SYNC_TOLERANCE_SECONDS, isFiniteNumber } from '../../sha
 
 const DEFAULT_MEDIA_READY_STATE_THRESHOLD = 2;
 
-export const youtubePageControllerConfig = {
+export const pageControllerConfig = {
   mediaReadyStateThreshold: DEFAULT_MEDIA_READY_STATE_THRESHOLD,
   mediaDurationSyncToleranceSeconds: MEDIA_DURATION_SYNC_TOLERANCE_SECONDS,
   isFiniteNumber,
   inferIsLiveNow,
 };
 
-export function createYoutubePageControllerState() {
+export function createPageControllerState() {
   return {
     initialized: false,
     videoMountObserver: null,

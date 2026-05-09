@@ -7,8 +7,9 @@ import {
   RECENT_WATCH_TRANSITION_MS,
   MEDIA_WAIT_GRACE_MS,
   LOADING_GRACE_MS,
-} from '../../popup/tab-action-policy.js';
-import { determineUserAction, USER_ACTIONS } from '../../popup/tab-action-policy.js';
+  determineUserAction,
+  USER_ACTIONS,
+} from '../../shared/tab-user-actions.js';
 import { formatRemainingStatus, renderTabRow } from '../../popup/tab-row-view.js';
 
 function makeRecord(overrides = {}) {

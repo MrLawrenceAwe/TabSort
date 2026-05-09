@@ -3,11 +3,13 @@ import { logDebug } from '../shared/log.js';
 import { buildTabSnapshot } from './tab-snapshot.js';
 import { markTabRecordReloading } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { reorderWindowTabs } from './sorting/reorder-window-tabs.js';
+import { applyTabSort } from './apply-tab-sort.js';
 import { refreshTabPlaybackMetricsBatch } from './playback-metrics-refresher.js';
-import { listTabIds, setTrackedWindowId, trackedWindowState } from './window-state.js';
+import { trackedWindowState } from './window-store.js';
+import { listTabIds } from './window-store-selectors.js';
+import { setTrackedWindowId } from './window-store-mutations.js';
 import { reconcileWindowTabRecords } from './tab-record-reconciler.js';
-import { shouldRefreshRecordMetrics } from '../shared/tab-action-policy.js';
+import { shouldRefreshRecordMetrics } from '../shared/tab-refresh-policy.js';
 
 export async function activateTab(message) {
   const tabId = message.tabId;
@@ -67,7 +69,7 @@ export async function applyTabSortOrder(message) {
   if (isValidWindowId(targetWindowId)) {
     setTrackedWindowId(targetWindowId, { force: true });
   }
-  await reorderWindowTabs(targetWindowId);
+  await applyTabSort(targetWindowId);
   await reconcileWindowTabRecords(
     targetWindowId,
     isValidWindowId(targetWindowId) ? { force: true } : undefined,

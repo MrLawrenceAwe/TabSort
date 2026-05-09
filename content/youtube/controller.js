@@ -1,19 +1,19 @@
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import { createRuntimeMessaging } from './messaging.js';
 import {
-  createYoutubePageControllerState,
+  createPageControllerState,
+  pageControllerConfig,
   shouldSendPageReadySignal,
-  youtubePageControllerConfig,
-} from './youtube-page-controller-state.js';
+} from './controller-state.js';
 import { createMediaReadinessTracker } from './media-readiness.js';
 import { createTitleObserver } from './title-observer.js';
 import { handleCollectVideoMetricsMessage } from './video-metrics.js';
 
 export function createYoutubePageController({
-  config = youtubePageControllerConfig,
+  config = pageControllerConfig,
   environment = globalThis,
 } = {}) {
-  const state = createYoutubePageControllerState();
+  const state = createPageControllerState();
 
   const getDocument = () => environment.document ?? globalThis.document;
   const getWindow = () => environment.window ?? globalThis.window;
@@ -143,7 +143,10 @@ export function createYoutubePageController({
     disposeObservers();
     disposeListeners();
     state.observedPageUrl = null;
-    state.lastReadyUrl = state.mediaReadyUrl = state.lastReadyVideo = state.lastMediaReadyFingerprint = null;
+    state.lastReadyUrl = null;
+    state.mediaReadyUrl = null;
+    state.lastReadyVideo = null;
+    state.lastMediaReadyFingerprint = null;
     state.initialized = false;
   }
 
@@ -192,7 +195,10 @@ export function createYoutubePageController({
 
     addWindowEventListener(runtimeWindow, 'pagehide', () => {
       disposeObservers();
-      state.lastReadyUrl = state.mediaReadyUrl = state.lastReadyVideo = state.lastMediaReadyFingerprint = null;
+      state.lastReadyUrl = null;
+      state.mediaReadyUrl = null;
+      state.lastReadyVideo = null;
+      state.lastMediaReadyFingerprint = null;
     });
   }
 

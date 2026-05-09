@@ -56,7 +56,7 @@ function setOptionToggleVisibility(visible) {
   });
 }
 
-export function renderPopupShell() {
+export function syncPopupChrome() {
   const statusElement = getPopupElement('statusElement');
   const sortButton = getPopupElement('sortButton');
   const sortedBadgeElement = getPopupElement('sortedBadgeElement');

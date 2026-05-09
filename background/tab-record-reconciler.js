@@ -3,13 +3,15 @@ import { getTabState, listWindowTabs } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
 import { createRecordFromTabSnapshot } from './tab-record-mutations.js';
 import {
-  beginSync,
   getTabRecordsById,
   getTrackedWindowId,
-  isSyncCurrent,
-  replaceTabRecords,
+} from './window-store-selectors.js';
+import {
+  isSyncTokenCurrent,
+  nextSyncToken,
+  replaceAllTabRecords,
   setTrackedWindowId,
-} from './window-state.js';
+} from './window-store-mutations.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function resolveWindowIdForQuery(windowId, { force = false } = {}) {
@@ -20,10 +22,10 @@ function resolveWindowIdForQuery(windowId, { force = false } = {}) {
 }
 
 export async function reconcileWindowTabRecords(windowId, options = {}) {
-  const syncToken = beginSync();
+  const syncToken = nextSyncToken();
   const resolvedWindowId = resolveWindowIdForQuery(windowId, options);
   const tabs = await listWindowTabs(resolvedWindowId);
-  if (!isSyncCurrent(syncToken)) return;
+  if (!isSyncTokenCurrent(syncToken)) return;
   if (!Array.isArray(tabs)) return;
   if (resolvedWindowId == null && tabs.length === 0) return;
   setTrackedWindowId(resolvedWindowId, options);
@@ -52,7 +54,7 @@ export async function reconcileWindowTabRecords(windowId, options = {}) {
     nextTabRecords[tab.id] = nextTabRecord;
   }
 
-  if (!isSyncCurrent(syncToken)) return;
-  replaceTabRecords(nextTabRecords);
+  if (!isSyncTokenCurrent(syncToken)) return;
+  replaceAllTabRecords(nextTabRecords);
   recomputeSortState();
 }
