@@ -1,9 +1,9 @@
 import { cloneSortSummary } from '../shared/sort-summary.js';
 import {
   addClassToDataRows,
-  renderPopupShell,
+  syncPopupChrome,
   setSecondaryColumnsVisible,
-} from './popup-shell-view.js';
+} from './popup-chrome-view.js';
 import { setErrorMessage } from './popup-elements.js';
 import { applyPopupState } from './popup-store.js';
 import { renderTabRow } from './tab-row-view.js';
@@ -47,5 +47,5 @@ export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
     addClassToDataRows(table, 'all-sort-ready-row');
   }
 
-  renderPopupShell();
+  syncPopupChrome();
 }

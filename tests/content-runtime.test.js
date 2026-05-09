@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { createYoutubePageController } from '../content/youtube/youtube-page-controller.js';
-import { shouldSendPageReadySignal } from '../content/youtube/youtube-page-controller-state.js';
+import { createYoutubePageController } from '../content/youtube/controller.js';
+import { shouldSendPageReadySignal } from '../content/youtube/controller-state.js';
 import { collectPageVideoDetails } from '../content/youtube/video-details.js';
 import { inferIsLiveNow } from '../content/youtube/live-status.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';

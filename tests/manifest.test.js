@@ -15,13 +15,13 @@ test('manifest exposes dynamically imported content modules to YouTube pages', (
 
   const youtubeEntry = resources.find((entry) =>
     Array.isArray(entry?.resources) &&
-    entry.resources.includes('content/youtube/youtube-page-controller.js'),
+    entry.resources.includes('content/youtube/controller.js'),
   );
 
   assert.ok(youtubeEntry, 'missing web_accessible_resources entry for content bootstrap module');
   assert.deepEqual(youtubeEntry.resources, [
-    'content/youtube/youtube-page-controller.js',
-    'content/youtube/youtube-page-controller-state.js',
+    'content/youtube/controller.js',
+    'content/youtube/controller-state.js',
     'content/youtube/messaging.js',
     'content/youtube/media-readiness.js',
     'content/youtube/media-elements.js',

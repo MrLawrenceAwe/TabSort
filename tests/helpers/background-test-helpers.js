@@ -1,12 +1,12 @@
 import { TAB_STATES } from '../../shared/tab-states.js';
 import { createEmptySortSummary } from '../../shared/sort-summary.js';
+import { trackedWindowState } from '../../background/window-store.js';
 import {
-  applySortState,
-  replaceTabRecords,
-  resetTrackedWindowState as resetTrackedBackgroundWindowState,
-  trackedWindowState,
-  writeTabRecord,
-} from '../../background/window-state.js';
+  resetWindowStore,
+  replaceAllTabRecords,
+  setSortState,
+  setTabRecord,
+} from '../../background/window-store-mutations.js';
 import { createTabRecord } from '../../background/tab-record.js';
 
 export function ensureChromeApi({ tabs = false } = {}) {
@@ -27,16 +27,16 @@ export function ensureChromeApi({ tabs = false } = {}) {
 }
 
 export function resetTrackedWindowState(windowId = null) {
-  resetTrackedBackgroundWindowState({ windowId });
-  applySortState({ sortSummary: createEmptySortSummary() });
+  resetWindowStore({ windowId });
+  setSortState({ sortSummary: createEmptySortSummary() });
 }
 
 export function setTrackedTabRecords(tabRecordsById = {}) {
-  return replaceTabRecords(tabRecordsById);
+  return replaceAllTabRecords(tabRecordsById);
 }
 
 export function setTrackedSortState(sortState = {}) {
-  applySortState({
+  setSortState({
     visibleTabIds: trackedWindowState.visibleTabIds,
     targetSortableTabIds: trackedWindowState.targetSortableTabIds,
     currentOrderMatchesTarget: trackedWindowState.currentOrderMatchesTarget,
@@ -46,7 +46,7 @@ export function setTrackedSortState(sortState = {}) {
 }
 
 export function setTrackedTabRecord(tabId, record) {
-  return writeTabRecord(tabId, record);
+  return setTabRecord(tabId, record);
 }
 
 export function createTabRecordFixture(id = 1, overrides = {}) {

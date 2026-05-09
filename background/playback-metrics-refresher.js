@@ -8,7 +8,8 @@ import {
   markTabRecordMetricsUnavailable,
 } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { getTabRecord, getTrackedWindowId, setTrackedWindowId } from './window-state.js';
+import { getTabRecord, getTrackedWindowId } from './window-store-selectors.js';
+import { setTrackedWindowId } from './window-store-mutations.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 
 const DEFAULT_BATCH_CONCURRENCY = 4;

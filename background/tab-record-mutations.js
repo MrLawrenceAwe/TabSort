@@ -2,7 +2,8 @@ import { TAB_STATES } from '../shared/tab-states.js';
 import { isFiniteNumber } from '../shared/guards.js';
 import { createTabRecord } from './tab-record.js';
 import { recomputeSortState } from './sort-state.js';
-import { getCurrentTimeMs, removeTabRecordFromState } from './window-state.js';
+import { getCurrentTimeMs } from './window-store.js';
+import { removeTabRecordFromStore } from './window-store-mutations.js';
 
 function clearTabRemainingTime(record) {
   if (record?.videoDetails && record.videoDetails.remainingTime != null) {
@@ -173,7 +174,7 @@ export function applyPlaybackMetricUpdate(record, playbackUpdate, currentTabUrl)
 }
 
 export function removeTabRecord(tabId) {
-  if (!removeTabRecordFromState(tabId)) return false;
+  if (!removeTabRecordFromStore(tabId)) return false;
   recomputeSortState();
   return true;
 }

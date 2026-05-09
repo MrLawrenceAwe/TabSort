@@ -9,7 +9,7 @@
     let lastError = null;
     for (let attempt = 1; attempt <= MAX_BOOTSTRAP_ATTEMPTS; attempt += 1) {
       try {
-        const module = await import(runtime.getURL('content/youtube/youtube-page-controller.js'));
+        const module = await import(runtime.getURL('content/youtube/controller.js'));
         if (typeof module?.bootstrapYoutubePageController === 'function') {
           module.bootstrapYoutubePageController();
         }

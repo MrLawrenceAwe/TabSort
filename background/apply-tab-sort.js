@@ -1,11 +1,12 @@
-import { isValidWindowId } from '../../shared/guards.js';
-import { loadSortOptions } from '../../shared/storage.js';
-import { hasReadyRemainingTime } from '../sort-readiness.js';
-import { listWindowTabs, moveTabsInOrder } from '../chrome-tabs.js';
-import { setTrackedWindowId, trackedWindowState } from '../window-state.js';
-import { buildNonYoutubeOrder, buildYoutubeTabOrder } from './build-tab-order.js';
+import { isValidWindowId } from '../shared/guards.js';
+import { loadSortOptions } from '../shared/storage.js';
+import { hasReadyRemainingTime } from './sort-readiness.js';
+import { listWindowTabs, moveTabsInOrder } from './chrome-tabs.js';
+import { trackedWindowState } from './window-store.js';
+import { setTrackedWindowId } from './window-store-mutations.js';
+import { buildNonYoutubeOrder, buildYoutubeTabOrder } from './tab-order/build-tab-move-order.js';
 
-export async function reorderWindowTabs(windowId = trackedWindowState.windowId) {
+export async function applyTabSort(windowId = trackedWindowState.windowId) {
   const targetSortableTabIds = trackedWindowState.targetSortableTabIds.slice();
 
   const readyTabIds = targetSortableTabIds.filter((tabId) => {

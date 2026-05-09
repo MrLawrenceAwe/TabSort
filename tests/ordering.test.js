@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { trackedWindowState } from '../background/window-state.js';
+import { trackedWindowState } from '../background/window-store.js';
 import { recomputeSortState } from '../background/sort-state.js';
 import {
   ensureChromeApi,

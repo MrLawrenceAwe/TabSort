@@ -1,4 +1,4 @@
-import { shouldPollRecord } from '../shared/tab-action-policy.js';
+import { shouldPollRecord } from '../shared/tab-refresh-policy.js';
 
 export { shouldPollRecord };
 

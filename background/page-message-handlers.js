@@ -7,7 +7,8 @@ import {
 } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
 import { refreshTabPlaybackMetrics } from './playback-metrics-refresher.js';
-import { getTabRecord, getTrackedWindowId, setTrackedWindowId } from './window-state.js';
+import { getTabRecord, getTrackedWindowId } from './window-store-selectors.js';
+import { setTrackedWindowId } from './window-store-mutations.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function isSenderInTrackedWindow(windowId) {

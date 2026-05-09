@@ -8,12 +8,12 @@ import {
   MEDIA_WAIT_GRACE_MS,
   RECENTLY_UNSUSPENDED_MS,
   RECENT_WATCH_TRANSITION_MS,
-} from '../../popup/tab-action-policy.js';
+} from '../../shared/tab-user-actions.js';
 import {
   shouldPollRecord,
   shouldPollSnapshot,
 } from '../../popup/popup-controller.js';
-import { shouldRefreshRecordMetrics } from '../../shared/tab-action-policy.js';
+import { shouldRefreshRecordMetrics } from '../../shared/tab-refresh-policy.js';
 
 const NOW_MS = 100_000;
 const fakeNow = () => NOW_MS;

@@ -1,10 +1,11 @@
 import { broadcastSnapshotUpdate } from './tab-snapshot.js';
-import { deriveSortOrder } from './sorting/derive-sort-order.js';
-import { deriveSortSummary } from './sorting/derive-sort-summary.js';
-import { applySortState, listTabRecords } from './window-state.js';
+import { deriveSortPlan } from './tab-order/derive-sort-plan.js';
+import { deriveSortSummary } from './tab-order/derive-sort-summary.js';
+import { listTabRecords } from './window-store-selectors.js';
+import { setSortState } from './window-store-mutations.js';
 
 function deriveSortState(records) {
-  const sortPlan = deriveSortOrder(records);
+  const sortPlan = deriveSortPlan(records);
   const sortSummary = deriveSortSummary({
     trackedRecords: records,
     sortableRecords: sortPlan.sortableRecords,
@@ -22,6 +23,6 @@ function deriveSortState(records) {
 export function recomputeSortState() {
   const records = listTabRecords();
   const derivedState = deriveSortState(records);
-  applySortState(derivedState);
+  setSortState(derivedState);
   broadcastSnapshotUpdate();
 }

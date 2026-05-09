@@ -1,6 +1,6 @@
 import { createEmptySortSummary } from '../../shared/sort-summary.js';
-import { areTabIdListsEqual } from './derive-sort-order.js';
 import { hasReadyRemainingTime } from '../sort-readiness.js';
+import { areTabIdListsEqual } from './derive-sort-plan.js';
 
 export function deriveSortSummary({ trackedRecords, sortableRecords, currentSortableTabIds }) {
   if (!Array.isArray(trackedRecords) || trackedRecords.length === 0) {
