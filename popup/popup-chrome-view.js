@@ -19,7 +19,7 @@ function updateSortedBadge(sortedBadgeElement) {
 }
 
 export function getSortButtonText(sortReadyTabCount, totalTabCount) {
-  return sortReadyTabCount === totalTabCount ? 'Sort All Tabs' : 'Move Ready Tabs First';
+  return sortReadyTabCount === totalTabCount ? 'Sort All Tabs' : 'Move Ready Tabs';
 }
 
 function updateSortButton(sortButton, shouldShowSort) {
