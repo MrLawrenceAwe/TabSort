@@ -22,19 +22,29 @@ function removeTabRecordWhenSenderLeavesVideoPage(tabId) {
   return removeTabRecord(tabId);
 }
 
-export async function handlePageRuntimeReady(_message, sender) {
+function resolveVideoPageSender(sender, { url } = {}) {
   const tabId = sender?.tab?.id;
   const windowId = sender?.tab?.windowId;
-  if (!isSenderInTrackedWindow(windowId)) return;
-  if (!isFiniteNumber(tabId)) return;
-  if (!isWatchOrShortsPage(sender?.tab?.url)) {
+  const pageUrl = url || sender?.tab?.url;
+
+  if (!isSenderInTrackedWindow(windowId)) return null;
+  if (!isFiniteNumber(tabId)) return null;
+  if (!isWatchOrShortsPage(pageUrl)) {
     removeTabRecordWhenSenderLeavesVideoPage(tabId);
-    return;
+    return null;
   }
+
+  return { tabId, windowId, url: pageUrl };
+}
+
+export async function handlePageRuntimeReady(_message, sender) {
+  const pageSender = resolveVideoPageSender(sender);
+  if (!pageSender) return;
+  const { tabId, windowId } = pageSender;
   setTrackedWindowId(windowId);
 
   const previousRecord = getTabRecord(tabId);
-  const senderUrl = sender?.tab?.url ?? null;
+  const senderUrl = pageSender.url ?? null;
   const videoChanged = hasYoutubeVideoIdentityChanged(previousRecord?.url, senderUrl);
   const record = ensureTabRecord(tabId, windowId, {
     url: senderUrl,
@@ -49,14 +59,9 @@ export async function handlePageRuntimeReady(_message, sender) {
 }
 
 export async function handlePageMediaReady(_message, sender) {
-  const tabId = sender?.tab?.id;
-  const windowId = sender?.tab?.windowId;
-  if (!isSenderInTrackedWindow(windowId)) return;
-  if (!isFiniteNumber(tabId)) return;
-  if (!isWatchOrShortsPage(sender?.tab?.url)) {
-    removeTabRecordWhenSenderLeavesVideoPage(tabId);
-    return;
-  }
+  const pageSender = resolveVideoPageSender(sender);
+  if (!pageSender) return;
+  const { tabId, windowId } = pageSender;
   setTrackedWindowId(windowId);
   const record = ensureTabRecord(tabId, windowId);
   record.pageMediaReady = true;
@@ -65,19 +70,12 @@ export async function handlePageMediaReady(_message, sender) {
 }
 
 export async function handlePageVideoDetails(message, sender) {
-  const tabId = sender?.tab?.id;
-  const windowId = sender?.tab?.windowId;
   const details = message.details || {};
-  if (!isSenderInTrackedWindow(windowId)) return;
+  const pageSender = resolveVideoPageSender(sender, { url: details.url });
+  if (!pageSender) return;
+  const { tabId, windowId, url: detailUrl } = pageSender;
+
   setTrackedWindowId(windowId);
-  if (!isFiniteNumber(tabId)) return;
-
-  const detailUrl = details.url || sender?.tab?.url;
-  if (!isWatchOrShortsPage(detailUrl)) {
-    removeTabRecordWhenSenderLeavesVideoPage(tabId);
-    return;
-  }
-
   const record = ensureTabRecord(tabId, windowId, { url: detailUrl });
   const urlChanged = hasYoutubeVideoIdentityChanged(record.url, detailUrl);
   applyPageVideoDetails(record, details, { urlChanged });

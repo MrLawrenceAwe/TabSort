@@ -1,57 +1,21 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { TAB_STATES } from '../../shared/tab-states.js';
 import { trackedWindowState } from '../../background/window-store.js';
 import {
   refreshTabPlaybackMetrics,
   refreshTabPlaybackMetricsBatch,
 } from '../../background/playback-metrics-refresher.js';
-import { reconcileWindowTabRecords } from '../../background/tab-record-reconciler.js';
-import { getWindowSnapshot } from '../../background/tab-command-handlers.js';
 import {
   ensureChromeApi,
   createTabRecordFixture,
   resetTrackedWindowState,
   setTrackedTabRecords,
   setTrackedTabRecord,
-  setTrackedSortState,
+  stubChromeTabMetrics,
 } from '../helpers/background-test-helpers.js';
 
 ensureChromeApi({ tabs: true });
-
-function stubPlaybackMetricsTab({
-  tabId = 1,
-  url = `https://www.youtube.com/watch?v=${tabId}`,
-  active = true,
-  hidden = false,
-  metrics = {},
-} = {}) {
-  globalThis.chrome.tabs.get = (_tabId, callback) => {
-    callback({
-      id: tabId,
-      windowId: 1,
-      url,
-      active,
-      hidden,
-    });
-  };
-
-  globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
-    callback({
-      title: 'Archived Stream',
-      url,
-      pageMediaReady: false,
-      lengthSeconds: null,
-      duration: 6211,
-      currentTime: 0,
-      playbackRate: 1,
-      paused: true,
-      isLive: false,
-      ...metrics,
-    });
-  };
-}
 
 test(
   'refreshTabPlaybackMetrics applies updates to the latest record object after async boundaries',
@@ -100,221 +64,6 @@ test(
     assert.equal(replacementRecord.videoDetails.lengthSeconds, 120);
     assert.equal(replacementRecord.videoDetails.remainingTime, 100);
     assert.equal(replacementRecord.isRemainingTimeStale, false);
-  },
-);
-
-test(
-  'reconcileWindowTabRecords does not mark already-open unsuspended tabs as recently unsuspended on initial rehydrate',
-  { concurrency: false },
-  async () => {
-    resetTrackedWindowState();
-
-    globalThis.chrome.tabs.query = (_query, callback) => {
-      callback([
-        {
-          id: 1,
-          windowId: 1,
-          url: 'https://www.youtube.com/watch?v=1',
-          index: 0,
-          pinned: false,
-          status: 'complete',
-          active: false,
-          hidden: false,
-          discarded: false,
-        },
-      ]);
-    };
-
-    await reconcileWindowTabRecords(1, { force: true });
-
-    const record = trackedWindowState.tabRecordsById[1];
-    assert.equal(record.status, TAB_STATES.UNSUSPENDED);
-    assert.equal(record.unsuspendedTimestamp, null);
-  },
-);
-
-test(
-  'reconcileWindowTabRecords keeps the recent unsuspend grace for real suspended-to-unsuspended transitions',
-  { concurrency: false },
-  async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
-      1: createTabRecordFixture(1, {
-        status: TAB_STATES.SUSPENDED,
-        unsuspendedTimestamp: null,
-      }),
-    });
-
-    globalThis.chrome.tabs.query = (_query, callback) => {
-      callback([
-        {
-          id: 1,
-          windowId: 1,
-          url: 'https://www.youtube.com/watch?v=1',
-          index: 0,
-          pinned: false,
-          status: 'complete',
-          active: false,
-          hidden: false,
-          discarded: false,
-        },
-      ]);
-    };
-
-    await reconcileWindowTabRecords(1, { force: true });
-
-    const record = trackedWindowState.tabRecordsById[1];
-    assert.equal(record.status, TAB_STATES.UNSUSPENDED);
-    assert.equal(typeof record.unsuspendedTimestamp, 'number');
-  },
-);
-
-test(
-  'reconcileWindowTabRecords resets runtime readiness when a tracked tab navigates to a new video URL',
-  { concurrency: false },
-  async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
-      1: createTabRecordFixture(1, {
-        url: 'https://www.youtube.com/watch?v=old',
-        pageMediaReady: true,
-        pageRuntimeReady: true,
-        videoDetails: { title: 'Old Video', remainingTime: 45, lengthSeconds: 120 },
-        isRemainingTimeStale: false,
-      }),
-    });
-
-    globalThis.chrome.tabs.query = (_query, callback) => {
-      callback([
-        {
-          id: 1,
-          windowId: 1,
-          url: 'https://www.youtube.com/watch?v=new',
-          index: 0,
-          pinned: false,
-          status: 'complete',
-          active: false,
-          hidden: false,
-          discarded: false,
-        },
-      ]);
-    };
-
-    await reconcileWindowTabRecords(1, { force: true });
-
-    const record = trackedWindowState.tabRecordsById[1];
-    assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
-    assert.equal(record.pageRuntimeReady, false);
-    assert.equal(record.pageMediaReady, false);
-    assert.equal(record.videoDetails, null);
-    assert.equal(record.isLiveNow, false);
-    assert.equal(record.isRemainingTimeStale, true);
-    assert.equal(typeof record.transitionStartedAt, 'number');
-  },
-);
-
-test(
-  'reconcileWindowTabRecords preserves readiness when only watch URL parameters change',
-  { concurrency: false },
-  async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
-      1: createTabRecordFixture(1, {
-        url: 'https://www.youtube.com/watch?v=same',
-        pageMediaReady: true,
-        pageRuntimeReady: true,
-        videoDetails: { title: 'Same Video', remainingTime: 45, lengthSeconds: 120 },
-        isRemainingTimeStale: false,
-      }),
-    });
-
-    globalThis.chrome.tabs.query = (_query, callback) => {
-      callback([
-        {
-          id: 1,
-          windowId: 1,
-          url: 'https://www.youtube.com/watch?v=same&list=abc123&index=10',
-          index: 0,
-          pinned: false,
-          status: 'complete',
-          active: false,
-          hidden: false,
-          discarded: false,
-        },
-      ]);
-    };
-
-    await reconcileWindowTabRecords(1, { force: true });
-
-    const record = trackedWindowState.tabRecordsById[1];
-    assert.equal(record.url, 'https://www.youtube.com/watch?v=same&list=abc123&index=10');
-    assert.equal(record.pageRuntimeReady, true);
-    assert.equal(record.pageMediaReady, true);
-    assert.deepEqual(record.videoDetails, {
-      title: 'Same Video',
-      remainingTime: 45,
-      lengthSeconds: 120,
-    });
-    assert.equal(record.isRemainingTimeStale, false);
-  },
-);
-
-test(
-  'reconcileWindowTabRecords preserves tracked state when the primary tab query fails',
-  { concurrency: false },
-  async () => {
-    resetTrackedWindowState(1);
-    setTrackedTabRecords({
-      1: createTabRecordFixture(1, {
-        videoDetails: { title: 'Video 1', remainingTime: 90, lengthSeconds: 120 },
-        isRemainingTimeStale: false,
-      }),
-    });
-    setTrackedSortState({ visibleTabIds: [1] });
-    setTrackedSortState({ targetSortableTabIds: [1] });
-
-    globalThis.chrome.tabs.query = (query, callback) => {
-      globalThis.chrome.runtime.lastError =
-        query.hidden === true ? null : new Error('query failed');
-      callback([]);
-      globalThis.chrome.runtime.lastError = null;
-    };
-
-    await reconcileWindowTabRecords(1, { force: true });
-
-    assert.deepEqual(Object.keys(trackedWindowState.tabRecordsById), ['1']);
-    assert.deepEqual(trackedWindowState.visibleTabIds, [1]);
-    assert.deepEqual(trackedWindowState.targetSortableTabIds, [1]);
-    assert.equal(trackedWindowState.tabRecordsById[1].videoDetails.remainingTime, 90);
-  },
-);
-
-test(
-  'reconcileWindowTabRecords does not switch tracked windows when a forced tab query fails',
-  { concurrency: false },
-  async () => {
-    resetTrackedWindowState(1);
-    setTrackedTabRecords({
-      1: createTabRecordFixture(1, {
-        videoDetails: { title: 'Window 1 Video', remainingTime: 90, lengthSeconds: 120 },
-        isRemainingTimeStale: false,
-      }),
-    });
-    setTrackedSortState({ visibleTabIds: [1] });
-    setTrackedSortState({ targetSortableTabIds: [1] });
-
-    globalThis.chrome.tabs.query = (_query, callback) => {
-      globalThis.chrome.runtime.lastError = new Error('query failed');
-      callback([]);
-      globalThis.chrome.runtime.lastError = null;
-    };
-
-    await reconcileWindowTabRecords(2, { force: true });
-
-    assert.equal(trackedWindowState.windowId, 1);
-    assert.deepEqual(Object.keys(trackedWindowState.tabRecordsById), ['1']);
-    assert.deepEqual(trackedWindowState.visibleTabIds, [1]);
-    assert.deepEqual(trackedWindowState.targetSortableTabIds, [1]);
   },
 );
 
@@ -498,7 +247,7 @@ test(
       }),
     });
 
-    stubPlaybackMetricsTab({ url: 'https://www.youtube.com/watch?v=archive' });
+    stubChromeTabMetrics({ url: 'https://www.youtube.com/watch?v=archive' });
 
     await refreshTabPlaybackMetrics(1);
 
@@ -527,7 +276,7 @@ test(
       }),
     });
 
-    stubPlaybackMetricsTab({ url: 'https://www.youtube.com/watch?v=archive' });
+    stubChromeTabMetrics({ url: 'https://www.youtube.com/watch?v=archive' });
 
     await refreshTabPlaybackMetrics(1);
 
@@ -555,7 +304,7 @@ test(
       }),
     });
 
-    stubPlaybackMetricsTab({
+    stubChromeTabMetrics({
       url: 'https://www.youtube.com/watch?v=archive',
       metrics: { duration: 0, currentTime: 0 },
     });
@@ -586,7 +335,7 @@ test(
       }),
     });
 
-    stubPlaybackMetricsTab({
+    stubChromeTabMetrics({
       url: 'https://www.youtube.com/watch?v=archive',
       metrics: { duration: 6211, currentTime: null },
     });
@@ -703,151 +452,5 @@ test(
     assert.equal(trackedWindowState.tabRecordsById[1].videoDetails.remainingTime, 110);
     assert.equal(trackedWindowState.tabRecordsById[2].videoDetails.remainingTime, 100);
     assert.equal(trackedWindowState.tabRecordsById[3].videoDetails.remainingTime, 90);
-  },
-);
-
-test(
-  'getWindowSnapshot refreshes only records whose metrics can self-resolve',
-  { concurrency: false },
-  async () => {
-    resetTrackedWindowState(1);
-    const now = Date.now();
-    setTrackedTabRecords({
-      1: createTabRecordFixture(1, {
-        isActiveTab: true,
-        pageRuntimeReady: true,
-        pageMediaReady: false,
-        mediaWaitStartedAt: now,
-        isRemainingTimeStale: true,
-      }),
-      2: createTabRecordFixture(2, {
-        videoDetails: { title: 'Video 2', remainingTime: 90, lengthSeconds: 120 },
-        isRemainingTimeStale: false,
-      }),
-    });
-
-    globalThis.chrome.tabs.query = (_query, callback) => {
-      callback([
-        {
-          id: 1,
-          windowId: 1,
-          url: 'https://www.youtube.com/watch?v=1',
-          index: 0,
-          pinned: false,
-          status: 'complete',
-          active: true,
-          hidden: false,
-          discarded: false,
-        },
-        {
-          id: 2,
-          windowId: 1,
-          url: 'https://www.youtube.com/watch?v=2',
-          index: 1,
-          pinned: false,
-          status: 'complete',
-          active: false,
-          hidden: false,
-          discarded: false,
-        },
-      ]);
-    };
-    globalThis.chrome.tabs.get = (tabId, callback) => {
-      callback({
-        id: tabId,
-        windowId: 1,
-        url: `https://www.youtube.com/watch?v=${tabId}`,
-        active: tabId === 1,
-        hidden: false,
-      });
-    };
-
-    const refreshedTabIds = [];
-    globalThis.chrome.tabs.sendMessage = (tabId, _payload, callback) => {
-      refreshedTabIds.push(tabId);
-      callback({
-        title: `Video ${tabId}`,
-        url: `https://www.youtube.com/watch?v=${tabId}`,
-        pageMediaReady: true,
-        lengthSeconds: 120,
-        currentTime: 20,
-        playbackRate: 1,
-        paused: false,
-        isLive: false,
-      });
-    };
-
-    const snapshot = await getWindowSnapshot({ windowId: 1 });
-
-    assert.deepEqual(refreshedTabIds, [1]);
-    assert.equal(snapshot.tabRecordsById[1].videoDetails.remainingTime, 100);
-    assert.equal(snapshot.tabRecordsById[2].videoDetails.remainingTime, 90);
-  },
-);
-
-test(
-  'getWindowSnapshot probes active stale tabs even after reload guidance appears',
-  { concurrency: false },
-  async () => {
-    resetTrackedWindowState(1);
-    setTrackedTabRecords({
-      1: createTabRecordFixture(1, {
-        isActiveTab: true,
-        pageRuntimeReady: false,
-        pageMediaReady: false,
-        transitionStartedAt: Date.now() - 10_000,
-        mediaWaitStartedAt: null,
-        isRemainingTimeStale: true,
-        videoDetails: null,
-      }),
-    });
-
-    globalThis.chrome.tabs.query = (_query, callback) => {
-      callback([
-        {
-          id: 1,
-          windowId: 1,
-          url: 'https://www.youtube.com/watch?v=archive',
-          index: 0,
-          pinned: false,
-          status: 'complete',
-          active: true,
-          hidden: false,
-          discarded: false,
-        },
-      ]);
-    };
-    globalThis.chrome.tabs.get = (_tabId, callback) => {
-      callback({
-        id: 1,
-        windowId: 1,
-        url: 'https://www.youtube.com/watch?v=archive',
-        active: true,
-        hidden: false,
-      });
-    };
-
-    const refreshedTabIds = [];
-    globalThis.chrome.tabs.sendMessage = (tabId, _payload, callback) => {
-      refreshedTabIds.push(tabId);
-      callback({
-        title: 'Archived Stream',
-        url: 'https://www.youtube.com/watch?v=archive',
-        pageMediaReady: false,
-        lengthSeconds: null,
-        duration: 6211,
-        currentTime: 0,
-        playbackRate: 1,
-        paused: true,
-        isLive: false,
-      });
-    };
-
-    const snapshot = await getWindowSnapshot({ windowId: 1 });
-
-    assert.deepEqual(refreshedTabIds, [1]);
-    assert.equal(snapshot.tabRecordsById[1].pageMediaReady, true);
-    assert.equal(snapshot.tabRecordsById[1].videoDetails.remainingTime, 6211);
-    assert.equal(snapshot.tabRecordsById[1].isRemainingTimeStale, false);
   },
 );
