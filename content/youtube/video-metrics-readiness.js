@@ -1,7 +1,7 @@
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import { getPrimaryVideoElement } from './media-elements.js';
 
-export function createMediaReadinessTracker({
+export function createVideoMetricsReadinessTracker({
   config,
   environment,
   state,
@@ -11,9 +11,9 @@ export function createMediaReadinessTracker({
   sendExtensionMessage,
   doesVideoDurationMatchPage,
 }) {
-  function isCurrentVideoElementReady() {
+  function isCurrentVideoMetricsReady() {
     const currentUrl = getCurrentPageUrl();
-    return Boolean(currentUrl) && currentUrl === state.mediaReadyPageUrl;
+    return Boolean(currentUrl) && currentUrl === state.metricsReadyPageUrl;
   }
 
   function getVideoFingerprint(video) {
@@ -30,13 +30,13 @@ export function createMediaReadinessTracker({
 
   function hasFreshMediaEvidence(video, observedFreshMediaEvent) {
     if (observedFreshMediaEvent) return true;
-    if (!state.lastReadyVideo) return true;
-    if (video !== state.lastReadyVideo) return true;
+    if (!state.lastMetricsReadyVideo) return true;
+    if (video !== state.lastMetricsReadyVideo) return true;
     const fingerprint = getVideoFingerprint(video);
-    return Boolean(fingerprint) && fingerprint !== state.lastMediaReadyFingerprint;
+    return Boolean(fingerprint) && fingerprint !== state.lastMetricsReadyFingerprint;
   }
 
-  function canMarkVideoElementReady(video, observedFreshMediaEvent = false) {
+  function canMarkVideoMetricsReady(video, observedFreshMediaEvent = false) {
     return (
       video?.readyState >= config.mediaReadyStateThreshold &&
       config.isFiniteNumber(video.duration) &&
@@ -45,12 +45,12 @@ export function createMediaReadinessTracker({
     );
   }
 
-  function clearMediaReadyListener() {
-    if (typeof state.mediaReadyListenerCleanup === 'function') {
-      state.mediaReadyListenerCleanup();
+  function clearVideoMetricsReadyListener() {
+    if (typeof state.videoMetricsReadyListenerCleanup === 'function') {
+      state.videoMetricsReadyListenerCleanup();
     }
-    state.mediaReadyListenerVideo = null;
-    state.mediaReadyListenerCleanup = null;
+    state.videoMetricsReadyListenerVideo = null;
+    state.videoMetricsReadyListenerCleanup = null;
   }
 
   function nodeMayContainVideo(node) {
@@ -67,29 +67,29 @@ export function createMediaReadinessTracker({
     });
   }
 
-  function markVideoElementReady(video, { notify = true } = {}) {
+  function markVideoMetricsReady(video, { notify = true } = {}) {
     const currentUrl = getCurrentPageUrl();
     if (!currentUrl) return false;
-    state.mediaReadyPageUrl = currentUrl;
-    state.lastReadyVideo = video;
-    state.lastMediaReadyFingerprint = getVideoFingerprint(video);
+    state.metricsReadyPageUrl = currentUrl;
+    state.lastMetricsReadyVideo = video;
+    state.lastMetricsReadyFingerprint = getVideoFingerprint(video);
     if (notify) {
       sendExtensionMessage(
         createRuntimeMessage(RUNTIME_MESSAGE_TYPES.VIDEO_ELEMENT_READY),
         'video element ready',
       );
     }
-    if (state.mediaReadyListenerVideo === video) {
-      clearMediaReadyListener();
+    if (state.videoMetricsReadyListenerVideo === video) {
+      clearVideoMetricsReadyListener();
     }
     return true;
   }
 
-  function markCurrentVideoElementReadyIfAvailable({ notify = true } = {}) {
-    if (isCurrentVideoElementReady()) return true;
+  function markCurrentVideoMetricsReadyIfAvailable({ notify = true } = {}) {
+    if (isCurrentVideoMetricsReady()) return true;
     const video = getPrimaryVideoElement(environment);
-    if (!canMarkVideoElementReady(video)) return false;
-    return markVideoElementReady(video, { notify });
+    if (!canMarkVideoMetricsReady(video)) return false;
+    return markVideoMetricsReady(video, { notify });
   }
 
   function requestVideoMountCheck() {
@@ -106,35 +106,35 @@ export function createMediaReadinessTracker({
     schedule(() => {
       if (scheduledToken !== state.videoMountCheckToken) return;
       state.videoMountCheckScheduled = false;
-      attachVideoReadyListener();
-      if (isCurrentVideoElementReady() && state.videoMountObserver) {
+      attachVideoMetricsReadyListener();
+      if (isCurrentVideoMetricsReady() && state.videoMountObserver) {
         state.videoMountObserver.disconnect();
         state.videoMountObserver = null;
       }
     });
   }
 
-  function attachVideoReadyListener() {
+  function attachVideoMetricsReadyListener() {
     const video = getPrimaryVideoElement(environment);
     if (!video) return false;
-    if (isCurrentVideoElementReady()) return true;
-    if (canMarkVideoElementReady(video)) return markVideoElementReady(video);
-    if (state.mediaReadyListenerVideo === video) return true;
+    if (isCurrentVideoMetricsReady()) return true;
+    if (canMarkVideoMetricsReady(video)) return markVideoMetricsReady(video);
+    if (state.videoMetricsReadyListenerVideo === video) return true;
 
-    clearMediaReadyListener();
+    clearVideoMetricsReadyListener();
 
     const events = ['loadedmetadata', 'loadeddata', 'durationchange', 'canplay'];
     let observedFreshMediaEvent = false;
     const cleanup = () => {
       events.forEach((eventName) => video.removeEventListener(eventName, onAny));
-      if (state.mediaReadyListenerVideo === video) {
-        state.mediaReadyListenerVideo = null;
-        state.mediaReadyListenerCleanup = null;
+      if (state.videoMetricsReadyListenerVideo === video) {
+        state.videoMetricsReadyListenerVideo = null;
+        state.videoMetricsReadyListenerCleanup = null;
       }
     };
     const maybeSend = () => {
-      if (canMarkVideoElementReady(video, observedFreshMediaEvent)) {
-        markVideoElementReady(video);
+      if (canMarkVideoMetricsReady(video, observedFreshMediaEvent)) {
+        markVideoMetricsReady(video);
         return true;
       }
       return false;
@@ -147,14 +147,14 @@ export function createMediaReadinessTracker({
     if (maybeSend()) return true;
 
     events.forEach((eventName) => video.addEventListener(eventName, onAny));
-    state.mediaReadyListenerVideo = video;
-    state.mediaReadyListenerCleanup = cleanup;
+    state.videoMetricsReadyListenerVideo = video;
+    state.videoMetricsReadyListenerCleanup = cleanup;
     return true;
   }
 
   function watchForVideoMount() {
-    attachVideoReadyListener();
-    if (isCurrentVideoElementReady()) {
+    attachVideoMetricsReadyListener();
+    if (isCurrentVideoMetricsReady()) {
       if (state.videoMountObserver) {
         state.videoMountObserver.disconnect();
         state.videoMountObserver = null;
@@ -178,15 +178,15 @@ export function createMediaReadinessTracker({
       return;
     }
 
-    attachVideoReadyListener();
-    if (isCurrentVideoElementReady()) {
+    attachVideoMetricsReadyListener();
+    if (isCurrentVideoMetricsReady()) {
       state.videoMountObserver.disconnect();
       state.videoMountObserver = null;
     }
   }
 
-  function disposeMediaObservers() {
-    clearMediaReadyListener();
+  function disposeVideoMetricsReadinessObservers() {
+    clearVideoMetricsReadyListener();
     state.videoMountCheckScheduled = false;
     state.videoMountCheckToken += 1;
     if (state.videoMountObserver) {
@@ -196,10 +196,10 @@ export function createMediaReadinessTracker({
   }
 
   return {
-    disposeMediaObservers,
+    disposeVideoMetricsReadinessObservers,
     getVideoFingerprint,
-    isCurrentVideoElementReady,
-    markCurrentVideoElementReadyIfAvailable,
+    isCurrentVideoMetricsReady,
+    markCurrentVideoMetricsReadyIfAvailable,
     watchForVideoMount,
   };
 }

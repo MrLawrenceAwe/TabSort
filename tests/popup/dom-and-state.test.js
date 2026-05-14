@@ -26,7 +26,7 @@ function createFakeDocument() {
     ['videoTabsReadyStatus', createFakeElement()],
     ['sortButton', createFakeElement()],
     ['tabsSorted', createFakeElement()],
-    ['infoTable', createFakeElement()],
+    ['videoTabsTable', createFakeElement()],
   ]);
 
   return {

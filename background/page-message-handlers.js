@@ -4,15 +4,11 @@ import {
   applyContentScriptReady,
   applyVideoDetailsFromPage,
   markMediaElementObserved,
-} from './tab-record-lifecycle.js';
+} from './tab-video-state.js';
 import { recomputeSortState } from './sort-state.js';
 import { collectPlaybackMetrics } from './collect-playback-metrics.js';
-import {
-  getTabRecord,
-  getTrackedWindowId,
-  deleteTabRecord,
-  setTrackedWindowId,
-} from './tracked-window-store.js';
+import { deleteTabRecord, getTabRecord } from './tracked-tab-record-store.js';
+import { getTrackedWindowId, setTrackedWindowId } from './tracked-window-session.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function isSenderInTrackedWindow(windowId) {

@@ -1,8 +1,8 @@
 import { getCurrentTimeMs } from './tracked-window-store.js';
 import {
   markMediaElementObserved,
-  resetMediaReadiness,
-} from './tab-record-lifecycle.js';
+  resetVideoMetricsReadiness,
+} from './tab-video-state.js';
 
 export function applyPlaybackStateUpdate(record, playbackUpdate, currentTabUrl) {
   if (!record || !playbackUpdate) return;
@@ -11,7 +11,7 @@ export function applyPlaybackStateUpdate(record, playbackUpdate, currentTabUrl) 
   if (playbackUpdate.mediaElementObserved) {
     markMediaElementObserved(record);
   } else {
-    resetMediaReadiness(record, { videoWaitStartedAt: record.videoWaitStartedAt });
+    resetVideoMetricsReadiness(record, { videoWaitStartedAt: record.videoWaitStartedAt });
     if (record.contentScriptReported && typeof record.videoWaitStartedAt !== 'number') {
       record.videoWaitStartedAt = getCurrentTimeMs();
     }

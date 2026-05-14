@@ -9,7 +9,7 @@ import {
   LOADING_GRACE_MS,
   determineTabGuidance,
   TAB_GUIDANCE,
-} from '../../shared/tab-resolution-guidance.js';
+} from '../../shared/tab-readiness/action-guidance.js';
 import { formatRemainingStatus, renderTabRow } from '../../popup/tab-row-view.js';
 
 function makeRecord(overrides = {}) {

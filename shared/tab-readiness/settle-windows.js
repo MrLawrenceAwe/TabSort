@@ -1,4 +1,4 @@
-import { isFiniteNumber } from './guards.js';
+import { isFiniteNumber } from '../guards.js';
 
 export const RECENTLY_UNSUSPENDED_MS = 5000;
 export const RECENT_WATCH_TRANSITION_MS = 5000;

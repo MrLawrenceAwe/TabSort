@@ -1,7 +1,7 @@
 import { TAB_STATES } from '../../shared/tab-states.js';
 import { createEmptySortSummary } from '../../shared/sort-summary.js';
 import {
-  trackedWindowSnapshot,
+  trackedWindowStateView,
   resetTrackedWindowStore,
   replaceAllTabRecords,
   setSortState,
@@ -74,6 +74,65 @@ export function stubChromeTabGet({
   };
 }
 
+export function createPlaybackMetricsFixture({
+  tabId = 1,
+  title = `Video ${tabId}`,
+  url = `https://www.youtube.com/watch?v=${tabId}`,
+  mediaElementObserved = true,
+  lengthSeconds = 120,
+  currentTime = 20,
+  playbackRate = 1,
+  paused = false,
+  isLive = false,
+  ...overrides
+} = {}) {
+  return {
+    title,
+    url,
+    mediaElementObserved,
+    lengthSeconds,
+    currentTime,
+    playbackRate,
+    paused,
+    isLive,
+    ...overrides,
+  };
+}
+
+export function createChromeTabGetFixture({
+  tabId = 1,
+  windowId = 1,
+  url = `https://www.youtube.com/watch?v=${tabId}`,
+  active = false,
+  hidden = false,
+} = {}) {
+  return { id: tabId, windowId, url, active, hidden };
+}
+
+export function stubChromeTabGetSequence(tabs, { async = false } = {}) {
+  const responses = tabs.map((tab) => createChromeTabGetFixture(tab));
+  let nextIndex = 0;
+  globalThis.chrome.tabs.get = (_tabId, callback) => {
+    const response = responses[Math.min(nextIndex, responses.length - 1)];
+    nextIndex += 1;
+    if (async) {
+      setTimeout(() => callback(response), 0);
+      return;
+    }
+    callback(response);
+  };
+}
+
+export function stubChromeTabMetricPayload(payload, { async = false } = {}) {
+  globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
+    if (async) {
+      setTimeout(() => callback(payload), 0);
+      return;
+    }
+    callback(payload);
+  };
+}
+
 export function stubChromeTabMetrics({
   tabId = 1,
   windowId = 1,
@@ -85,7 +144,8 @@ export function stubChromeTabMetrics({
   stubChromeTabGet({ tabId, windowId, url, active, hidden });
 
   globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
-    callback({
+    callback(createPlaybackMetricsFixture({
+      tabId,
       title: 'Archived Stream',
       url,
       mediaElementObserved: false,
@@ -96,7 +156,7 @@ export function stubChromeTabMetrics({
       paused: true,
       isLive: false,
       ...metrics,
-    });
+    }));
   };
 }
 
@@ -111,10 +171,10 @@ export function setTrackedTabRecords(tabRecordsById = {}) {
 
 export function setTrackedSortState(sortState = {}) {
   setSortState({
-    trackedTabIdsInWindowOrder: trackedWindowSnapshot.trackedTabIdsInWindowOrder,
-    targetVideoTabOrder: trackedWindowSnapshot.targetVideoTabOrder,
-    allEligibleVideosSorted: trackedWindowSnapshot.allEligibleVideosSorted,
-    sortSummary: trackedWindowSnapshot.sortSummary || createEmptySortSummary(),
+    trackedTabIdsInWindowOrder: trackedWindowStateView.trackedTabIdsInWindowOrder,
+    targetVideoTabOrder: trackedWindowStateView.targetVideoTabOrder,
+    allEligibleVideosSorted: trackedWindowStateView.allEligibleVideosSorted,
+    sortSummary: trackedWindowStateView.sortSummary || createEmptySortSummary(),
     ...sortState,
   });
 }

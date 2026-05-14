@@ -12,7 +12,7 @@ export function renderTabList(snapshot, { postRuntimeMessage } = {}) {
   if (!snapshot) return;
   setErrorMessage('');
 
-  const table = document.getElementById('infoTable');
+  const table = document.getElementById('videoTabsTable');
   if (!table) return;
   const tbody = table.tBodies[0] ?? table.createTBody();
 

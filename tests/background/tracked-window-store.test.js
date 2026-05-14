@@ -5,7 +5,7 @@ import {
   getWritableTabRecord,
   getTabRecord,
   getTabRecordsById,
-  trackedWindowSnapshot,
+  trackedWindowStateView,
 } from '../../background/tracked-window-store.js';
 import {
   createTabRecordFixture,
@@ -22,7 +22,7 @@ test('public tracked window store access returns defensive copies', () => {
     }),
   });
 
-  trackedWindowSnapshot.tabRecordsById[1].videoDetails.remainingTime = 1;
+  trackedWindowStateView.tabRecordsById[1].videoDetails.remainingTime = 1;
   getTabRecordsById()[1].videoDetails.remainingTime = 2;
   getTabRecord(1).videoDetails.remainingTime = 3;
 
@@ -40,5 +40,5 @@ test('writable tracked window store access is explicit for write paths', () => {
 
   getWritableTabRecord(1).videoDetails.remainingTime = 4;
 
-  assert.equal(trackedWindowSnapshot.tabRecordsById[1].videoDetails.remainingTime, 4);
+  assert.equal(trackedWindowStateView.tabRecordsById[1].videoDetails.remainingTime, 4);
 });

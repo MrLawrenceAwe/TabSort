@@ -7,7 +7,7 @@ import {
   MEDIA_WAIT_GRACE_MS,
   RECENTLY_UNSUSPENDED_MS,
   RECENT_WATCH_TRANSITION_MS,
-} from '../../shared/tab-resolution-guidance.js';
+} from '../../shared/tab-readiness/action-guidance.js';
 import {
   shouldPollSnapshot,
   shouldRetrySnapshotLoad,
@@ -15,7 +15,7 @@ import {
 import {
   shouldPollRecord,
   shouldRefreshRecordMetrics,
-} from '../../shared/metrics-refresh-policy.js';
+} from '../../shared/tab-readiness/refresh-policy.js';
 
 const NOW_MS = 100_000;
 const fakeNow = () => NOW_MS;

@@ -1,4 +1,4 @@
-import { TAB_STATES } from './tab-states.js';
+import { TAB_STATES } from '../tab-states.js';
 import {
   LOADING_GRACE_MS,
   MEDIA_WAIT_GRACE_MS,
@@ -7,7 +7,7 @@ import {
   canMediaStillSettle,
   canWatchTransitionStillSettle,
   hasRemainingTime,
-} from './tab-resolution-state.js';
+} from './settle-windows.js';
 
 export {
   LOADING_GRACE_MS,
