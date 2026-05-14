@@ -46,15 +46,15 @@ async function runWithPopupErrorLogging(task, context) {
   }
 }
 
-async function initializeSortOptions() {
+async function initializePopupPreferences() {
   startThemeSync();
   const options = await loadSortOptions();
-  const sortOtherTabsToggle = document.getElementById('groupNonYoutubeTabsToggle');
+  const groupOtherTabsByDomainToggle = document.getElementById('groupNonYoutubeTabsToggle');
 
-  if (sortOtherTabsToggle) {
-    sortOtherTabsToggle.checked = Boolean(options.groupNonYoutubeTabsByDomain);
-    sortOtherTabsToggle.addEventListener('change', () => {
-      saveSortOptions({ groupNonYoutubeTabsByDomain: sortOtherTabsToggle.checked });
+  if (groupOtherTabsByDomainToggle) {
+    groupOtherTabsByDomainToggle.checked = Boolean(options.groupNonYoutubeTabsByDomain);
+    groupOtherTabsByDomainToggle.addEventListener('change', () => {
+      saveSortOptions({ groupNonYoutubeTabsByDomain: groupOtherTabsByDomainToggle.checked });
     });
   }
 }
@@ -109,7 +109,7 @@ export async function initializePopup() {
   setErrorMessage('');
 
   await runWithPopupErrorLogging(runtimeClient.syncActiveWindow, 'Failed to refresh active context');
-  await runWithPopupErrorLogging(initializeSortOptions, 'Failed to set up option controls');
+  await runWithPopupErrorLogging(initializePopupPreferences, 'Failed to set up option controls');
   await runWithPopupErrorLogging(loadInitialSnapshot, 'Failed to request initial snapshot');
 
   const messageListener = createSnapshotMessageListener();

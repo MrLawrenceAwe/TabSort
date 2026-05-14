@@ -1,5 +1,5 @@
 import { isFiniteNumber } from '../shared/guards.js';
-import { getMutableTabRecord, setTabRecord } from './window-store.js';
+import { getWritableTabRecord, setTabRecord } from './window-store.js';
 
 const FALLBACK_TAB_INDEX = Number.MAX_SAFE_INTEGER;
 
@@ -37,7 +37,7 @@ export function ensureTabRecord(tabId, windowId, defaults = {}) {
     return undefined;
   }
 
-  let record = getMutableTabRecord(tabId);
+  let record = getWritableTabRecord(tabId);
 
   if (!record) {
     record = createTabRecord(tabId, windowId, defaults);

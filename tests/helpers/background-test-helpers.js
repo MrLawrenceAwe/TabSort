@@ -1,7 +1,7 @@
 import { TAB_STATES } from '../../shared/tab-states.js';
 import { createEmptySortSummary } from '../../shared/sort-summary.js';
 import {
-  readonlyTrackedWindowState,
+  trackedWindowSnapshot,
   resetWindowStore,
   replaceAllTabRecords,
   setSortState,
@@ -111,10 +111,10 @@ export function setTrackedTabRecords(tabRecordsById = {}) {
 
 export function setTrackedSortState(sortState = {}) {
   setSortState({
-    visibleTabIds: readonlyTrackedWindowState.visibleTabIds,
-    targetVideoOrder: readonlyTrackedWindowState.targetVideoOrder,
-    currentOrderMatchesTarget: readonlyTrackedWindowState.currentOrderMatchesTarget,
-    sortSummary: readonlyTrackedWindowState.sortSummary || createEmptySortSummary(),
+    visibleTabIds: trackedWindowSnapshot.visibleTabIds,
+    plannedVideoTabIds: trackedWindowSnapshot.plannedVideoTabIds,
+    readyTabsAlreadySorted: trackedWindowSnapshot.readyTabsAlreadySorted,
+    sortSummary: trackedWindowSnapshot.sortSummary || createEmptySortSummary(),
     ...sortState,
   });
 }

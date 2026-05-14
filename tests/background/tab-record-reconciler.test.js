@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES } from '../../shared/tab-states.js';
-import { readonlyTrackedWindowState } from '../../background/window-store.js';
+import { trackedWindowSnapshot } from '../../background/window-store.js';
 import { reconcileWindowTabRecords } from '../../background/tab-record-reconciler.js';
 import {
   ensureChromeApi,
@@ -27,7 +27,7 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    const record = readonlyTrackedWindowState.tabRecordsById[1];
+    const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.status, TAB_STATES.UNSUSPENDED);
     assert.equal(record.unsuspendedTimestamp, null);
   },
@@ -49,7 +49,7 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    const record = readonlyTrackedWindowState.tabRecordsById[1];
+    const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.status, TAB_STATES.UNSUSPENDED);
     assert.equal(typeof record.unsuspendedTimestamp, 'number');
   },
@@ -74,7 +74,7 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    const record = readonlyTrackedWindowState.tabRecordsById[1];
+    const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
     assert.equal(record.contentScriptReported, false);
     assert.equal(record.mediaElementObserved, false);
@@ -108,7 +108,7 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    const record = readonlyTrackedWindowState.tabRecordsById[1];
+    const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=same&list=abc123&index=10');
     assert.equal(record.contentScriptReported, true);
     assert.equal(record.mediaElementObserved, true);
@@ -133,7 +133,7 @@ test(
       }),
     });
     setTrackedSortState({ visibleTabIds: [1] });
-    setTrackedSortState({ targetVideoOrder: [1] });
+    setTrackedSortState({ plannedVideoTabIds: [1] });
 
     globalThis.chrome.tabs.query = (query, callback) => {
       globalThis.chrome.runtime.lastError =
@@ -144,10 +144,10 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    assert.deepEqual(Object.keys(readonlyTrackedWindowState.tabRecordsById), ['1']);
-    assert.deepEqual(readonlyTrackedWindowState.visibleTabIds, [1]);
-    assert.deepEqual(readonlyTrackedWindowState.targetVideoOrder, [1]);
-    assert.equal(readonlyTrackedWindowState.tabRecordsById[1].videoDetails.remainingTime, 90);
+    assert.deepEqual(Object.keys(trackedWindowSnapshot.tabRecordsById), ['1']);
+    assert.deepEqual(trackedWindowSnapshot.visibleTabIds, [1]);
+    assert.deepEqual(trackedWindowSnapshot.plannedVideoTabIds, [1]);
+    assert.equal(trackedWindowSnapshot.tabRecordsById[1].videoDetails.remainingTime, 90);
   },
 );
 
@@ -163,15 +163,15 @@ test(
       }),
     });
     setTrackedSortState({ visibleTabIds: [1] });
-    setTrackedSortState({ targetVideoOrder: [1] });
+    setTrackedSortState({ plannedVideoTabIds: [1] });
 
     stubChromeTabQueryFailure();
 
     await reconcileWindowTabRecords(2, { force: true });
 
-    assert.equal(readonlyTrackedWindowState.windowId, 1);
-    assert.deepEqual(Object.keys(readonlyTrackedWindowState.tabRecordsById), ['1']);
-    assert.deepEqual(readonlyTrackedWindowState.visibleTabIds, [1]);
-    assert.deepEqual(readonlyTrackedWindowState.targetVideoOrder, [1]);
+    assert.equal(trackedWindowSnapshot.windowId, 1);
+    assert.deepEqual(Object.keys(trackedWindowSnapshot.tabRecordsById), ['1']);
+    assert.deepEqual(trackedWindowSnapshot.visibleTabIds, [1]);
+    assert.deepEqual(trackedWindowSnapshot.plannedVideoTabIds, [1]);
   },
 );

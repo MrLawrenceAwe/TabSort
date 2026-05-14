@@ -1,69 +1,75 @@
 import { isFiniteNumber } from '../shared/guards.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import {
-  determineUserAction,
-  getUserActionLabel,
-  USER_ACTIONS,
-} from '../shared/tab-user-actions.js';
+  determineTabGuidance,
+  getTabGuidanceLabel,
+  TAB_GUIDANCE,
+} from '../shared/tab-resolution-guidance.js';
 
-const MESSAGE_ACTIONS = Object.freeze({
+const CLICKABLE_GUIDANCE_MESSAGES = Object.freeze({
   ACTIVATE_TAB: RUNTIME_MESSAGE_TYPES.ACTIVATE_TAB,
   RELOAD_TAB: RUNTIME_MESSAGE_TYPES.RELOAD_TAB,
 });
 
-const COLUMN_CONFIG = Object.freeze({
-  sorted: [
+const ROW_VIEW_COLUMNS = Object.freeze({
+  sortedView: [
     { key: 'remainingStatus', getter: formatRemainingStatus },
     { key: 'index', getter: formatIndex },
   ],
-  unsorted: [
+  planningView: [
     { key: 'remainingStatus', getter: formatRemainingStatus },
     { key: 'index', getter: formatIndex },
     { key: 'status', getter: (record) => record.status },
   ],
 });
 
-export function renderTabRow(row, tabRecord, isSortedView, postRuntimeMessage) {
+export function renderTabRow(row, tabRecord, readyTabsAlreadySorted, postRuntimeMessage) {
   row.insertCell(0).textContent = tabRecord.videoDetails?.title ?? tabRecord.url;
 
-  const requiredAction = determineUserAction(tabRecord);
-  if (requiredAction === USER_ACTIONS.RELOAD_TAB) {
+  const guidance = determineTabGuidance(tabRecord);
+  if (guidance === TAB_GUIDANCE.RELOAD_TAB) {
     row.classList.add('reload-required-row');
   }
-  if (!isSortedView) insertUserActionCell(row, tabRecord, requiredAction, postRuntimeMessage);
+  if (!readyTabsAlreadySorted) {
+    insertGuidanceCell(row, tabRecord, guidance, postRuntimeMessage);
+  }
 
-  insertInfoCells(row, tabRecord, isSortedView, requiredAction);
+  insertInfoCells(row, tabRecord, readyTabsAlreadySorted, guidance);
 
   const remaining = tabRecord?.videoDetails?.remainingTime;
   const hasRemainingTime = isFiniteNumber(remaining) && !tabRecord.remainingTimeStale;
-  if (hasRemainingTime && !isSortedView) row.classList.add('sort-ready-row');
+  if (hasRemainingTime && !readyTabsAlreadySorted) row.classList.add('sort-ready-row');
 }
 
-function insertInfoCells(row, record, sortedView, userAction) {
-  const columns = sortedView ? COLUMN_CONFIG.sorted : COLUMN_CONFIG.unsorted;
+function insertInfoCells(row, record, readyTabsAlreadySorted, guidance) {
+  const columns = readyTabsAlreadySorted
+    ? ROW_VIEW_COLUMNS.sortedView
+    : ROW_VIEW_COLUMNS.planningView;
 
   columns.forEach((column) => {
     const cell = row.insertCell(row.cells.length);
-    const value = column.getter(record, userAction);
-    cell.textContent = sortedView ? value : toDisplayText(value);
+    const value = column.getter(record, guidance);
+    cell.textContent = readyTabsAlreadySorted ? value : toDisplayText(value);
   });
 }
 
-function insertUserActionCell(row, record, action, postRuntimeMessage) {
+function insertGuidanceCell(row, record, guidance, postRuntimeMessage) {
   const cell = row.insertCell(1);
   if (
-    action === USER_ACTIONS.NONE ||
-    action === USER_ACTIONS.WAIT_FOR_LOAD ||
-    action === USER_ACTIONS.WAIT_FOR_VIDEO_DATA
+    guidance === TAB_GUIDANCE.NONE ||
+    guidance === TAB_GUIDANCE.WAIT_FOR_LOAD ||
+    guidance === TAB_GUIDANCE.WAIT_FOR_VIDEO_DATA
   ) {
     cell.textContent =
-      action === USER_ACTIONS.NONE ? '—' : getUserActionLabel(action);
+      guidance === TAB_GUIDANCE.NONE ? '—' : getTabGuidanceLabel(guidance);
     return;
   }
 
   const linkElement = createActionLink(
-    getUserActionLabel(action),
-    action === USER_ACTIONS.RELOAD_TAB ? MESSAGE_ACTIONS.RELOAD_TAB : MESSAGE_ACTIONS.ACTIVATE_TAB,
+    getTabGuidanceLabel(guidance),
+    guidance === TAB_GUIDANCE.RELOAD_TAB
+      ? CLICKABLE_GUIDANCE_MESSAGES.RELOAD_TAB
+      : CLICKABLE_GUIDANCE_MESSAGES.ACTIVATE_TAB,
     record.id,
     postRuntimeMessage,
   );
@@ -82,15 +88,15 @@ function createActionLink(text, actionType, tabId, postRuntimeMessage) {
   return linkElement;
 }
 
-export function formatRemainingStatus(record, requiredAction = determineUserAction(record)) {
+export function formatRemainingStatus(record, requiredAction = determineTabGuidance(record)) {
   if (record.isLiveNow) return 'Live Stream';
 
   const remaining = record?.videoDetails?.remainingTime;
   const hasRemainingTime = isFiniteNumber(remaining);
 
   if (record.remainingTimeStale) {
-    return requiredAction === USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME
-      ? getUserActionLabel(USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME)
+    return requiredAction === TAB_GUIDANCE.VIEW_TAB_TO_REFRESH_TIME
+      ? getTabGuidanceLabel(TAB_GUIDANCE.VIEW_TAB_TO_REFRESH_TIME)
       : 'unavailable';
   }
 
@@ -103,7 +109,7 @@ function formatIndex(record) {
 }
 
 function toDisplayText(value) {
-  return value ? getUserActionLabel(value) || value : '';
+  return value ? getTabGuidanceLabel(value) || value : '';
 }
 
 function formatRemaining(seconds) {

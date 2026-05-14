@@ -1,15 +1,15 @@
 import { cloneSortSummary } from '../shared/sort-summary.js';
 import { logDebug } from '../shared/log.js';
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
-import { readonlyTrackedWindowState, setSnapshotSignature } from './window-store.js';
+import { trackedWindowSnapshot, setSnapshotSignature } from './window-store.js';
 
 export function buildTabSnapshot() {
   return {
-    tabRecordsById: readonlyTrackedWindowState.tabRecordsById,
-    targetVideoOrder: [...readonlyTrackedWindowState.targetVideoOrder],
-    visibleTabIds: [...readonlyTrackedWindowState.visibleTabIds],
-    currentOrderMatchesTarget: readonlyTrackedWindowState.currentOrderMatchesTarget,
-    sortSummary: cloneSortSummary(readonlyTrackedWindowState.sortSummary),
+    tabRecordsById: trackedWindowSnapshot.tabRecordsById,
+    plannedVideoTabIds: [...trackedWindowSnapshot.plannedVideoTabIds],
+    visibleTabIds: [...trackedWindowSnapshot.visibleTabIds],
+    readyTabsAlreadySorted: trackedWindowSnapshot.readyTabsAlreadySorted,
+    sortSummary: cloneSortSummary(trackedWindowSnapshot.sortSummary),
   };
 }
 
@@ -17,7 +17,7 @@ export function broadcastSnapshotUpdate({ force = false } = {}) {
   try {
     const snapshot = buildTabSnapshot();
     const signature = JSON.stringify(snapshot);
-    if (!force && signature === readonlyTrackedWindowState.snapshotSignature) return;
+    if (!force && signature === trackedWindowSnapshot.snapshotSignature) return;
     setSnapshotSignature(signature);
 
     chrome.runtime.sendMessage(

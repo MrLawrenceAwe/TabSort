@@ -8,13 +8,15 @@ function deriveSortState(records) {
   const sortSummary = deriveSortSummary({
     trackedRecords: records,
     eligibleVideoRecords: sortPlan.eligibleVideoRecords,
-    currentEligibleVideoIds: sortPlan.currentEligibleVideoIds,
+    eligibleVideoTabIdsInCurrentOrder: sortPlan.eligibleVideoTabIdsInCurrentOrder,
+    readyVideoTabIdsInCurrentOrder: sortPlan.readyVideoTabIdsInCurrentOrder,
+    readyVideoTabIdsByRemainingTime: sortPlan.readyVideoTabIdsByRemainingTime,
   });
 
   return {
     visibleTabIds: sortPlan.visibleTabIds,
-    targetVideoOrder: sortPlan.targetVideoOrder,
-    currentOrderMatchesTarget: sortPlan.currentOrderMatchesTarget,
+    plannedVideoTabIds: sortPlan.plannedVideoTabIds,
+    readyTabsAlreadySorted: sortPlan.readyTabsAlreadySorted,
     sortSummary,
   };
 }

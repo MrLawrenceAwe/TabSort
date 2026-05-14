@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  getMutableTabRecord,
+  getWritableTabRecord,
   getTabRecord,
   getTabRecordsById,
-  readonlyTrackedWindowState,
+  trackedWindowSnapshot,
 } from '../../background/window-store.js';
 import {
   createTabRecordFixture,
@@ -22,14 +22,14 @@ test('public window store access returns defensive copies', () => {
     }),
   });
 
-  readonlyTrackedWindowState.tabRecordsById[1].videoDetails.remainingTime = 1;
+  trackedWindowSnapshot.tabRecordsById[1].videoDetails.remainingTime = 1;
   getTabRecordsById()[1].videoDetails.remainingTime = 2;
   getTabRecord(1).videoDetails.remainingTime = 3;
 
-  assert.equal(getMutableTabRecord(1).videoDetails.remainingTime, 20);
+  assert.equal(getWritableTabRecord(1).videoDetails.remainingTime, 20);
 });
 
-test('mutable window store access is explicit for write paths', () => {
+test('writable window store access is explicit for write paths', () => {
   resetTrackedWindowState();
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
@@ -38,7 +38,7 @@ test('mutable window store access is explicit for write paths', () => {
     }),
   });
 
-  getMutableTabRecord(1).videoDetails.remainingTime = 4;
+  getWritableTabRecord(1).videoDetails.remainingTime = 4;
 
-  assert.equal(readonlyTrackedWindowState.tabRecordsById[1].videoDetails.remainingTime, 4);
+  assert.equal(trackedWindowSnapshot.tabRecordsById[1].videoDetails.remainingTime, 4);
 });

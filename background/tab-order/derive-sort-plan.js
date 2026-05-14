@@ -31,14 +31,14 @@ function buildRemainingTimeEntries(records) {
   }));
 }
 
-function buildTargetVideoOrder(knownEntries, unknownEntries, currentEligibleVideoIds) {
+function buildPlannedVideoTabIds(knownEntries, unknownEntries, eligibleVideoTabIdsInCurrentOrder) {
   const sortedKnownIds = knownEntries
     .slice()
     .sort((a, b) => a.remainingTime - b.remainingTime)
     .map((entry) => entry.id);
 
   const unknownIds = new Set(unknownEntries.map((entry) => entry.id));
-  const unknownIdsInCurrentOrder = currentEligibleVideoIds.filter((id) => unknownIds.has(id));
+  const unknownIdsInCurrentOrder = eligibleVideoTabIdsInCurrentOrder.filter((id) => unknownIds.has(id));
 
   return [...sortedKnownIds, ...unknownIdsInCurrentOrder];
 }
@@ -51,27 +51,36 @@ export function deriveSortPlan(records) {
   const visibleTabIds = deriveTabIdOrder(records);
   const movableRecords = records.filter((record) => !record.pinned);
   const eligibleVideoRecords = movableRecords.filter(isEligibleVideoRecord);
-  const currentEligibleVideoIds = deriveTabIdOrder(eligibleVideoRecords);
+  const eligibleVideoTabIdsInCurrentOrder = deriveTabIdOrder(eligibleVideoRecords);
   const remainingTimeEntries = buildRemainingTimeEntries(eligibleVideoRecords);
   const knownRemainingEntries = remainingTimeEntries.filter((entry) => entry.remainingTime !== null);
   const unknownRemainingEntries = remainingTimeEntries.filter((entry) => entry.remainingTime === null);
-  const targetVideoOrder = buildTargetVideoOrder(
+  const readyVideoTabIdsInCurrentOrder = eligibleVideoTabIdsInCurrentOrder.filter((tabId) =>
+    knownRemainingEntries.some((entry) => entry.id === tabId),
+  );
+  const readyVideoTabIdsByRemainingTime = knownRemainingEntries
+    .slice()
+    .sort((a, b) => a.remainingTime - b.remainingTime)
+    .map((entry) => entry.id);
+  const plannedVideoTabIds = buildPlannedVideoTabIds(
     knownRemainingEntries,
     unknownRemainingEntries,
-    currentEligibleVideoIds,
+    eligibleVideoTabIdsInCurrentOrder,
   );
   const allEligibleVideosReady = unknownRemainingEntries.length === 0;
-  const currentVideoOrderMatchesTarget =
-    currentEligibleVideoIds.length > 0 &&
-    currentEligibleVideoIds.length === targetVideoOrder.length &&
-    currentEligibleVideoIds.every((id, index) => id === targetVideoOrder[index]);
+  const currentVideoTabOrderMatchesPlan =
+    eligibleVideoTabIdsInCurrentOrder.length > 0 &&
+    eligibleVideoTabIdsInCurrentOrder.length === plannedVideoTabIds.length &&
+    eligibleVideoTabIdsInCurrentOrder.every((id, index) => id === plannedVideoTabIds[index]);
 
   return {
     visibleTabIds,
-    targetVideoOrder,
+    plannedVideoTabIds,
     eligibleVideoRecords,
-    currentEligibleVideoIds,
+    eligibleVideoTabIdsInCurrentOrder,
+    readyVideoTabIdsInCurrentOrder,
+    readyVideoTabIdsByRemainingTime,
     allEligibleVideosReady,
-    currentOrderMatchesTarget: allEligibleVideosReady && currentVideoOrderMatchesTarget,
+    readyTabsAlreadySorted: allEligibleVideosReady && currentVideoTabOrderMatchesPlan,
   };
 }

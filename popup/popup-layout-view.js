@@ -5,7 +5,7 @@ function updateStatus(statusElement) {
   if (!statusElement) return;
   const trackedTabCount = popupState.sortSummary.counts.tracked;
   const sortReadyTabCount = popupState.sortSummary.counts.sortReady;
-  if (!popupState.currentOrderMatchesTarget) {
+  if (!popupState.readyTabsAlreadySorted) {
     statusElement.classList.toggle('hide', trackedTabCount <= 1);
     statusElement.textContent = `${sortReadyTabCount}/${trackedTabCount} ready for sort.`;
     return;
@@ -15,7 +15,7 @@ function updateStatus(statusElement) {
 
 function updateSortedBadge(sortedBadgeElement) {
   if (!sortedBadgeElement) return;
-  sortedBadgeElement.classList.toggle('hide', !popupState.currentOrderMatchesTarget);
+  sortedBadgeElement.classList.toggle('hide', !popupState.readyTabsAlreadySorted);
 }
 
 export function getSortButtonText(sortReadyTabCount, totalTabCount) {
@@ -68,7 +68,7 @@ export function syncPopupLayout() {
     sortReadySubsetExists && (!sortReadyTabs.contiguous || !sortReadyTabs.atFront);
   const shouldShowSort =
     counts.sortReady >= 2 &&
-    !popupState.currentOrderMatchesTarget &&
+    !popupState.readyTabsAlreadySorted &&
     (sortReadyTabs.outOfOrder || sortReadySubsetNeedsSorting);
 
   setOptionToggleVisibility(shouldShowSort);
@@ -77,7 +77,7 @@ export function syncPopupLayout() {
   updateSortedBadge(sortedBadgeElement);
   updateSortButton(sortButton, shouldShowSort);
 
-  if (popupState.currentOrderMatchesTarget && table) {
+  if (popupState.readyTabsAlreadySorted && table) {
     clearReadyRows(table);
   }
 }
