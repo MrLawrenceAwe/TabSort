@@ -6,9 +6,9 @@ import { trackedWindowSnapshot, setTrackedWindowId } from './window-store.js';
 import { buildNonYoutubeOrder, buildYoutubeTabOrder } from './tab-order/build-tab-move-order.js';
 
 export async function applyTabSort(windowId = trackedWindowSnapshot.windowId) {
-  const plannedVideoTabIds = trackedWindowSnapshot.plannedVideoTabIds.slice();
+  const targetVideoTabOrder = trackedWindowSnapshot.targetVideoTabOrder.slice();
 
-  const readyTabIds = plannedVideoTabIds.filter((tabId) => {
+  const readyTabIds = targetVideoTabOrder.filter((tabId) => {
     const record = trackedWindowSnapshot.tabRecordsById[tabId];
     return hasReadyRemainingTime(record);
   });
@@ -26,7 +26,7 @@ export async function applyTabSort(windowId = trackedWindowSnapshot.windowId) {
   const pinnedCount = tabsByIndex.filter((tab) => tab?.pinned).length;
   const unpinnedTabs = tabsByIndex.filter((tab) => tab && !tab.pinned);
 
-  const youtubeOrder = buildYoutubeTabOrder(unpinnedTabs, plannedVideoTabIds);
+  const youtubeOrder = buildYoutubeTabOrder(unpinnedTabs, targetVideoTabOrder);
   const nonYoutubeOrder = buildNonYoutubeOrder(
     unpinnedTabs,
     Boolean(options.groupNonYoutubeTabsByDomain),

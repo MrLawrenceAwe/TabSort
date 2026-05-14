@@ -3,7 +3,7 @@ import { logDebug } from '../shared/log.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { getTab, sendMessageToTab } from './chrome-tabs.js';
 import { derivePlaybackStateUpdate } from './derive-playback-state-update.js';
-import { applyMetricsUnavailable } from './tab-record-lifecycle.js';
+import { applyVideoMetricsUnavailable } from './tab-record-lifecycle.js';
 import { applyPlaybackStateUpdate } from './apply-playback-state-update.js';
 import { recomputeSortState } from './sort-state.js';
 import { getWritableTabRecord, getTrackedWindowId, setTrackedWindowId } from './window-store.js';
@@ -53,7 +53,7 @@ export async function refreshPlaybackState(tabId, { recompute = true } = {}) {
     const { record, tab } = currentContext;
 
     if (!result || result.ok !== true) {
-      applyMetricsUnavailable(record);
+      applyVideoMetricsUnavailable(record);
       if (recompute) recomputeSortState();
       return true;
     }

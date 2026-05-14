@@ -31,8 +31,8 @@
       {
         "resources": [
           "content/youtube/controller.js",
-          "content/youtube/controller-state.js",
-          "content/youtube/messaging.js",
+          "content/youtube/controller-setup.js",
+          "content/youtube/extension-runtime-bridge.js",
           "content/youtube/media-readiness.js",
           "content/youtube/media-elements.js",
           "content/youtube/video-details.js",
@@ -41,6 +41,7 @@
           "content/youtube/title-observer.js",
           "content/youtube/video-metrics.js",
           "shared/guards.js",
+          "shared/media-constants.js",
           "shared/messages.js"
         ],
         "matches": ["*://*.youtube.com/*"]

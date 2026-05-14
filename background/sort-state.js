@@ -14,9 +14,9 @@ function deriveSortState(records) {
   });
 
   return {
-    visibleTabIds: sortPlan.visibleTabIds,
-    plannedVideoTabIds: sortPlan.plannedVideoTabIds,
-    readyTabsAlreadySorted: sortPlan.readyTabsAlreadySorted,
+    trackedTabIdsInWindowOrder: sortPlan.trackedTabIdsInWindowOrder,
+    targetVideoTabOrder: sortPlan.targetVideoTabOrder,
+    eligibleVideosAlreadySorted: sortPlan.eligibleVideosAlreadySorted,
     sortSummary,
   };
 }

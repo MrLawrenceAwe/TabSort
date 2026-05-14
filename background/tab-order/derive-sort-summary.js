@@ -67,7 +67,7 @@ export function deriveSortSummary({
   }
 
   const allEligibleVideosReady = eligibleVideoCount > 1 && sortReadyTabCount === eligibleVideoCount;
-  const readyTabsAlreadySorted =
+  const eligibleVideosAlreadySorted =
     allEligibleVideosReady && areTabIdListsEqual(orderedIdsWithRecords, readyIdsByRemainingTime);
 
   return {
@@ -85,7 +85,7 @@ export function deriveSortSummary({
     },
     order: {
       allEligibleVideosReady,
-      readyTabsAlreadySorted,
+      eligibleVideosAlreadySorted,
     },
   };
 }

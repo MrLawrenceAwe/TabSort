@@ -31,7 +31,7 @@ function buildRemainingTimeEntries(records) {
   }));
 }
 
-function buildPlannedVideoTabIds(knownEntries, unknownEntries, eligibleVideoTabIdsInCurrentOrder) {
+function buildTargetVideoTabOrder(knownEntries, unknownEntries, eligibleVideoTabIdsInCurrentOrder) {
   const sortedKnownIds = knownEntries
     .slice()
     .sort((a, b) => a.remainingTime - b.remainingTime)
@@ -48,7 +48,7 @@ function isEligibleVideoRecord(record) {
 }
 
 export function deriveSortPlan(records) {
-  const visibleTabIds = deriveTabIdOrder(records);
+  const trackedTabIdsInWindowOrder = deriveTabIdOrder(records);
   const movableRecords = records.filter((record) => !record.pinned);
   const eligibleVideoRecords = movableRecords.filter(isEligibleVideoRecord);
   const eligibleVideoTabIdsInCurrentOrder = deriveTabIdOrder(eligibleVideoRecords);
@@ -62,7 +62,7 @@ export function deriveSortPlan(records) {
     .slice()
     .sort((a, b) => a.remainingTime - b.remainingTime)
     .map((entry) => entry.id);
-  const plannedVideoTabIds = buildPlannedVideoTabIds(
+  const targetVideoTabOrder = buildTargetVideoTabOrder(
     knownRemainingEntries,
     unknownRemainingEntries,
     eligibleVideoTabIdsInCurrentOrder,
@@ -70,17 +70,17 @@ export function deriveSortPlan(records) {
   const allEligibleVideosReady = unknownRemainingEntries.length === 0;
   const currentVideoTabOrderMatchesPlan =
     eligibleVideoTabIdsInCurrentOrder.length > 0 &&
-    eligibleVideoTabIdsInCurrentOrder.length === plannedVideoTabIds.length &&
-    eligibleVideoTabIdsInCurrentOrder.every((id, index) => id === plannedVideoTabIds[index]);
+    eligibleVideoTabIdsInCurrentOrder.length === targetVideoTabOrder.length &&
+    eligibleVideoTabIdsInCurrentOrder.every((id, index) => id === targetVideoTabOrder[index]);
 
   return {
-    visibleTabIds,
-    plannedVideoTabIds,
+    trackedTabIdsInWindowOrder,
+    targetVideoTabOrder,
     eligibleVideoRecords,
     eligibleVideoTabIdsInCurrentOrder,
     readyVideoTabIdsInCurrentOrder,
     readyVideoTabIdsByRemainingTime,
     allEligibleVideosReady,
-    readyTabsAlreadySorted: allEligibleVideosReady && currentVideoTabOrderMatchesPlan,
+    eligibleVideosAlreadySorted: allEligibleVideosReady && currentVideoTabOrderMatchesPlan,
   };
 }

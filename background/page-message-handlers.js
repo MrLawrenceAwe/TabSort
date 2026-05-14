@@ -1,9 +1,9 @@
 import { isFiniteNumber } from '../shared/guards.js';
 import { ensureTabRecord } from './tab-record.js';
 import {
-  applyMediaElementReady,
   applyContentScriptReady,
   applyVideoDetailsFromPage,
+  markMediaElementObserved,
 } from './tab-record-lifecycle.js';
 import { recomputeSortState } from './sort-state.js';
 import { refreshPlaybackState } from './refresh-playback-state.js';
@@ -70,7 +70,7 @@ export async function handleVideoElementReady(_message, sender) {
   const { tabId, windowId } = pageSender;
   setTrackedWindowId(windowId);
   const record = ensureTabRecord(tabId, windowId);
-  applyMediaElementReady(record);
+  markMediaElementObserved(record);
   await refreshPlaybackState(tabId);
 }
 

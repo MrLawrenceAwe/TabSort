@@ -17,19 +17,19 @@ export function renderTabList(snapshot, { postRuntimeMessage } = {}) {
   const tbody = table.tBodies[0] ?? table.createTBody();
 
   const tabRecords = snapshot.tabRecordsById || {};
-  const visibleTabIds = snapshot.visibleTabIds || [];
+  const trackedTabIdsInWindowOrder = snapshot.trackedTabIdsInWindowOrder || [];
   const sortSummary = cloneSortSummary(snapshot.sortSummary);
-  const readyTabsAlreadySorted = snapshot.readyTabsAlreadySorted === true;
+  const eligibleVideosAlreadySorted = snapshot.eligibleVideosAlreadySorted === true;
 
   applyPopupState({
-    readyTabsAlreadySorted,
+    eligibleVideosAlreadySorted,
     sortSummary,
   });
 
-  setMetadataColumnsVisible(!readyTabsAlreadySorted);
+  setMetadataColumnsVisible(!eligibleVideosAlreadySorted);
 
   const rowFragment = document.createDocumentFragment();
-  for (const tabId of visibleTabIds) {
+  for (const tabId of trackedTabIdsInWindowOrder) {
     const row = document.createElement('tr');
     const tabRecord = tabRecords[tabId];
     if (!tabRecord) continue;
@@ -38,12 +38,12 @@ export function renderTabList(snapshot, { postRuntimeMessage } = {}) {
       remainingTimeStale: Boolean(tabRecord.remainingTimeStale),
     };
     if (normalizedRecord.remainingTimeStale) row.classList.add('stale-remaining-row');
-    renderTabRow(row, normalizedRecord, readyTabsAlreadySorted, postRuntimeMessage);
+    renderTabRow(row, normalizedRecord, eligibleVideosAlreadySorted, postRuntimeMessage);
     rowFragment.appendChild(row);
   }
   tbody.replaceChildren(rowFragment);
 
-  if (sortSummary.order.allEligibleVideosReady && !readyTabsAlreadySorted) {
+  if (sortSummary.order.allEligibleVideosReady && !eligibleVideosAlreadySorted) {
     addClassToTabRows(table, 'all-sort-ready-row');
   }
 

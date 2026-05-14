@@ -6,9 +6,9 @@ import { trackedWindowSnapshot, setSnapshotSignature } from './window-store.js';
 export function buildTabSnapshot() {
   return {
     tabRecordsById: trackedWindowSnapshot.tabRecordsById,
-    plannedVideoTabIds: [...trackedWindowSnapshot.plannedVideoTabIds],
-    visibleTabIds: [...trackedWindowSnapshot.visibleTabIds],
-    readyTabsAlreadySorted: trackedWindowSnapshot.readyTabsAlreadySorted,
+    targetVideoTabOrder: [...trackedWindowSnapshot.targetVideoTabOrder],
+    trackedTabIdsInWindowOrder: [...trackedWindowSnapshot.trackedTabIdsInWindowOrder],
+    eligibleVideosAlreadySorted: trackedWindowSnapshot.eligibleVideosAlreadySorted,
     sortSummary: cloneSortSummary(trackedWindowSnapshot.sortSummary),
   };
 }

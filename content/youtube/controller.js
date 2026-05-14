@@ -1,11 +1,11 @@
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
-import { createRuntimeMessaging } from './messaging.js';
+import { createExtensionRuntimeBridge } from './extension-runtime-bridge.js';
 import {
-  DEFAULT_PAGE_CONTROLLER_OPTIONS,
+  DEFAULT_PAGE_CONTROLLER_CONFIG,
+  PAGE_CONTROLLER_DEPENDENCIES,
   createPageControllerState,
-  pageControllerDependencies,
   shouldSendContentScriptReadySignal,
-} from './controller-state.js';
+} from './controller-setup.js';
 import { createMediaReadinessTracker } from './media-readiness.js';
 import { createTitleObserver } from './title-observer.js';
 import { handleCollectVideoMetricsMessage } from './video-metrics.js';
@@ -15,8 +15,8 @@ export function createYoutubePageController({
   environment = globalThis,
 } = {}) {
   const controllerConfig = {
-    ...DEFAULT_PAGE_CONTROLLER_OPTIONS,
-    ...pageControllerDependencies,
+    ...DEFAULT_PAGE_CONTROLLER_CONFIG,
+    ...PAGE_CONTROLLER_DEPENDENCIES,
     ...config,
   };
   const state = createPageControllerState();
@@ -34,7 +34,7 @@ export function createYoutubePageController({
     logContentError,
     publishPageVideoDetails,
     sendExtensionMessage,
-  } = createRuntimeMessaging({
+  } = createExtensionRuntimeBridge({
     config: controllerConfig,
     environment,
     getChrome,

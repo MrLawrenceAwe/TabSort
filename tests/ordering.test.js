@@ -22,9 +22,9 @@ test('orders known remaining-time tabs before unknown tabs', () => {
 
   recomputeSortState();
 
-  assert.deepEqual(trackedWindowSnapshot.plannedVideoTabIds, [3, 1, 2]);
-  assert.deepEqual(trackedWindowSnapshot.visibleTabIds, [1, 2, 3]);
-  assert.equal(trackedWindowSnapshot.readyTabsAlreadySorted, false);
+  assert.deepEqual(trackedWindowSnapshot.targetVideoTabOrder, [3, 1, 2]);
+  assert.deepEqual(trackedWindowSnapshot.trackedTabIdsInWindowOrder, [1, 2, 3]);
+  assert.equal(trackedWindowSnapshot.eligibleVideosAlreadySorted, false);
 });
 
 test('marks window as sorted only when all actionable tabs are known and ordered', () => {
@@ -36,9 +36,9 @@ test('marks window as sorted only when all actionable tabs are known and ordered
 
   recomputeSortState();
 
-  assert.equal(trackedWindowSnapshot.readyTabsAlreadySorted, true);
+  assert.equal(trackedWindowSnapshot.eligibleVideosAlreadySorted, true);
   assert.equal(trackedWindowSnapshot.sortSummary.order.allEligibleVideosReady, true);
-  assert.equal(trackedWindowSnapshot.sortSummary.order.readyTabsAlreadySorted, true);
+  assert.equal(trackedWindowSnapshot.sortSummary.order.eligibleVideosAlreadySorted, true);
   assert.equal(trackedWindowSnapshot.sortSummary.sortReadyTabs.outOfOrder, false);
 });
 
@@ -70,8 +70,8 @@ test('handles records without a finite index deterministically', () => {
 
   recomputeSortState();
 
-  assert.deepEqual(trackedWindowSnapshot.visibleTabIds, [1, 2, 3]);
-  assert.deepEqual(trackedWindowSnapshot.plannedVideoTabIds, [3, 2, 1]);
+  assert.deepEqual(trackedWindowSnapshot.trackedTabIdsInWindowOrder, [1, 2, 3]);
+  assert.deepEqual(trackedWindowSnapshot.targetVideoTabOrder, [3, 2, 1]);
 });
 
 test('live tabs do not block sorted readiness for VOD tabs with known remaining times', () => {
@@ -89,12 +89,12 @@ test('live tabs do not block sorted readiness for VOD tabs with known remaining 
 
   recomputeSortState();
 
-  assert.equal(trackedWindowSnapshot.readyTabsAlreadySorted, true);
+  assert.equal(trackedWindowSnapshot.eligibleVideosAlreadySorted, true);
   assert.equal(trackedWindowSnapshot.sortSummary.counts.tracked, 3);
   assert.equal(trackedWindowSnapshot.sortSummary.counts.sortReady, 2);
   assert.equal(trackedWindowSnapshot.sortSummary.order.allEligibleVideosReady, true);
-  assert.equal(trackedWindowSnapshot.sortSummary.order.readyTabsAlreadySorted, true);
-  assert.deepEqual(trackedWindowSnapshot.plannedVideoTabIds, [1, 2]);
+  assert.equal(trackedWindowSnapshot.sortSummary.order.eligibleVideosAlreadySorted, true);
+  assert.deepEqual(trackedWindowSnapshot.targetVideoTabOrder, [1, 2]);
 });
 
 test('pinned tracked tabs count toward popup totals without affecting sort summary', () => {
@@ -120,10 +120,10 @@ test('pinned tracked tabs count toward popup totals without affecting sort summa
 
   recomputeSortState();
 
-  assert.equal(trackedWindowSnapshot.readyTabsAlreadySorted, true);
+  assert.equal(trackedWindowSnapshot.eligibleVideosAlreadySorted, true);
   assert.equal(trackedWindowSnapshot.sortSummary.counts.tracked, 3);
   assert.equal(trackedWindowSnapshot.sortSummary.counts.sortReady, 2);
   assert.equal(trackedWindowSnapshot.sortSummary.order.allEligibleVideosReady, true);
-  assert.equal(trackedWindowSnapshot.sortSummary.order.readyTabsAlreadySorted, true);
-  assert.deepEqual(trackedWindowSnapshot.plannedVideoTabIds, [2, 3]);
+  assert.equal(trackedWindowSnapshot.sortSummary.order.eligibleVideosAlreadySorted, true);
+  assert.deepEqual(trackedWindowSnapshot.targetVideoTabOrder, [2, 3]);
 });
