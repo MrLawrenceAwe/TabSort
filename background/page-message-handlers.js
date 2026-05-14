@@ -1,11 +1,11 @@
 import { isFiniteNumber } from '../shared/guards.js';
 import { ensureTabRecord } from './tab-record.js';
 import {
-  applyPageMediaReady,
-  applyPageRuntimeReady,
+  applyVideoElementReady,
+  applyContentScriptReady,
   applyPageVideoDetails,
-  removeTabRecord,
-} from './tab-record-mutations.js';
+} from './tab-record-lifecycle.js';
+import { removeTabRecord } from './tab-record-removal.js';
 import { recomputeSortState } from './sort-state.js';
 import { refreshTabPlaybackMetrics } from './playback-metrics-refresher.js';
 import { getTabRecord, getTrackedWindowId } from './window-store-selectors.js';
@@ -38,7 +38,7 @@ function resolveVideoPageSender(sender, { url } = {}) {
   return { tabId, windowId, url: pageUrl };
 }
 
-export async function handlePageRuntimeReady(_message, sender) {
+export async function handleContentScriptReady(_message, sender) {
   const pageSender = resolveVideoPageSender(sender);
   if (!pageSender) return;
   const { tabId, windowId } = pageSender;
@@ -54,18 +54,18 @@ export async function handlePageRuntimeReady(_message, sender) {
     isActiveTab: sender?.tab?.active,
     isHidden: sender?.tab?.hidden,
   });
-  applyPageRuntimeReady(record, { urlChanged: videoChanged, url: senderUrl });
+  applyContentScriptReady(record, { urlChanged: videoChanged, url: senderUrl });
   recomputeSortState();
   return { type: 'pageRuntimeAck' };
 }
 
-export async function handlePageMediaReady(_message, sender) {
+export async function handleVideoElementReady(_message, sender) {
   const pageSender = resolveVideoPageSender(sender);
   if (!pageSender) return;
   const { tabId, windowId } = pageSender;
   setTrackedWindowId(windowId);
   const record = ensureTabRecord(tabId, windowId);
-  applyPageMediaReady(record);
+  applyVideoElementReady(record);
   await refreshTabPlaybackMetrics(tabId);
 }
 

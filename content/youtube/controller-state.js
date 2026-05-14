@@ -32,6 +32,6 @@ export function createPageControllerState() {
   };
 }
 
-export function shouldSendPageReadySignal(currentUrl, lastReadyUrl, { force = false } = {}) {
+export function shouldSendContentScriptReadySignal(currentUrl, lastReadyUrl, { force = false } = {}) {
   return Boolean(currentUrl) && (force || currentUrl !== lastReadyUrl);
 }

@@ -2,51 +2,51 @@ import { cloneSortSummary, createEmptySortSummary } from '../shared/sort-summary
 import { isValidWindowId } from '../shared/guards.js';
 import {
   createFreshTrackedWindowStoreState,
-  trackedWindowState,
-  trackedWindowStoreState,
+  readonlyTrackedWindowState,
+  mutableTrackedWindowState,
 } from './window-store.js';
 import { getTrackedWindowId } from './window-store-selectors.js';
 
 export function resetWindowStore({ windowId = null } = {}) {
   const nextState = createFreshTrackedWindowStoreState();
   nextState.windowId = isValidWindowId(windowId) ? windowId : null;
-  Object.assign(trackedWindowStoreState, nextState);
-  return trackedWindowState;
+  Object.assign(mutableTrackedWindowState, nextState);
+  return readonlyTrackedWindowState;
 }
 
 export function replaceAllTabRecords(tabRecordsById = {}) {
-  trackedWindowStoreState.tabRecordsById = { ...tabRecordsById };
-  return trackedWindowStoreState.tabRecordsById;
+  mutableTrackedWindowState.tabRecordsById = { ...tabRecordsById };
+  return mutableTrackedWindowState.tabRecordsById;
 }
 
 export function getMutableTabRecord(tabId) {
-  return trackedWindowStoreState.tabRecordsById[tabId] || null;
+  return mutableTrackedWindowState.tabRecordsById[tabId] || null;
 }
 
 export function setTabRecord(tabId, record) {
   if (typeof tabId !== 'number' || !record) return null;
-  trackedWindowStoreState.tabRecordsById[tabId] = record;
-  return trackedWindowStoreState.tabRecordsById[tabId];
+  mutableTrackedWindowState.tabRecordsById[tabId] = record;
+  return mutableTrackedWindowState.tabRecordsById[tabId];
 }
 
 export function removeTabRecordFromStore(tabId) {
-  if (!trackedWindowStoreState.tabRecordsById[tabId]) return false;
-  delete trackedWindowStoreState.tabRecordsById[tabId];
+  if (!mutableTrackedWindowState.tabRecordsById[tabId]) return false;
+  delete mutableTrackedWindowState.tabRecordsById[tabId];
   return true;
 }
 
 export function setSnapshotSignature(signature = null) {
-  trackedWindowStoreState.snapshotSignature = signature;
-  return trackedWindowStoreState.snapshotSignature;
+  mutableTrackedWindowState.snapshotSignature = signature;
+  return mutableTrackedWindowState.snapshotSignature;
 }
 
 export function nextSyncToken() {
-  trackedWindowStoreState.syncToken += 1;
-  return trackedWindowStoreState.syncToken;
+  mutableTrackedWindowState.syncToken += 1;
+  return mutableTrackedWindowState.syncToken;
 }
 
 export function isSyncTokenCurrent(syncToken) {
-  return syncToken === trackedWindowStoreState.syncToken;
+  return syncToken === mutableTrackedWindowState.syncToken;
 }
 
 export function setSortState({
@@ -55,19 +55,19 @@ export function setSortState({
   currentOrderMatchesTarget = false,
   sortSummary = createEmptySortSummary(),
 } = {}) {
-  trackedWindowStoreState.targetSortableTabIds = [...targetSortableTabIds];
-  trackedWindowStoreState.visibleTabIds = [...visibleTabIds];
-  trackedWindowStoreState.currentOrderMatchesTarget = Boolean(currentOrderMatchesTarget);
-  trackedWindowStoreState.sortSummary = cloneSortSummary(sortSummary);
+  mutableTrackedWindowState.targetSortableTabIds = [...targetSortableTabIds];
+  mutableTrackedWindowState.visibleTabIds = [...visibleTabIds];
+  mutableTrackedWindowState.currentOrderMatchesTarget = Boolean(currentOrderMatchesTarget);
+  mutableTrackedWindowState.sortSummary = cloneSortSummary(sortSummary);
 }
 
 export function setTrackedWindowId(windowId, { force = false } = {}) {
   if (isValidWindowId(windowId)) {
-    if (force || !isValidWindowId(trackedWindowStoreState.windowId)) {
-      trackedWindowStoreState.windowId = windowId;
+    if (force || !isValidWindowId(mutableTrackedWindowState.windowId)) {
+      mutableTrackedWindowState.windowId = windowId;
     }
   } else if (force && windowId == null) {
-    trackedWindowStoreState.windowId = null;
+    mutableTrackedWindowState.windowId = null;
   }
   return getTrackedWindowId();
 }

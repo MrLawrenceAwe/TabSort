@@ -3,10 +3,8 @@ import { logDebug } from '../shared/log.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { getTab, sendMessageToTab } from './chrome-tabs.js';
 import { derivePlaybackMetricUpdate } from './playback-metric-update.js';
-import {
-  applyPlaybackMetricUpdate,
-  markTabRecordMetricsUnavailable,
-} from './tab-record-mutations.js';
+import { markTabRecordMetricsUnavailable } from './tab-record-lifecycle.js';
+import { applyPlaybackMetricUpdate } from './tab-record-playback-update.js';
 import { recomputeSortState } from './sort-state.js';
 import { getTrackedWindowId } from './window-store-selectors.js';
 import { getMutableTabRecord, setTrackedWindowId } from './window-store-mutations.js';

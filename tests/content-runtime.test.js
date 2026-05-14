@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { createYoutubePageController } from '../content/youtube/controller.js';
-import { shouldSendPageReadySignal } from '../content/youtube/controller-state.js';
+import { shouldSendContentScriptReadySignal } from '../content/youtube/controller-state.js';
 import { collectPageVideoDetails } from '../content/youtube/video-details.js';
 import { inferIsLiveNow } from '../content/youtube/live-status.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
@@ -181,20 +181,20 @@ function resetGlobals() {
   FakeMutationObserver.instances = [];
 }
 
-test('shouldSendPageReadySignal allows first-load, force-refresh, and URL-change signals', () => {
+test('shouldSendContentScriptReadySignal allows first-load, force-refresh, and URL-change signals', () => {
   assert.equal(
-    shouldSendPageReadySignal('https://www.youtube.com/watch?v=one', null),
+    shouldSendContentScriptReadySignal('https://www.youtube.com/watch?v=one', null),
     true,
   );
   assert.equal(
-    shouldSendPageReadySignal(
+    shouldSendContentScriptReadySignal(
       'https://www.youtube.com/watch?v=one',
       'https://www.youtube.com/watch?v=one',
     ),
     false,
   );
   assert.equal(
-    shouldSendPageReadySignal(
+    shouldSendContentScriptReadySignal(
       'https://www.youtube.com/watch?v=one',
       'https://www.youtube.com/watch?v=one',
       { force: true },
@@ -202,7 +202,7 @@ test('shouldSendPageReadySignal allows first-load, force-refresh, and URL-change
     true,
   );
   assert.equal(
-    shouldSendPageReadySignal(
+    shouldSendContentScriptReadySignal(
       'https://www.youtube.com/watch?v=two',
       'https://www.youtube.com/watch?v=one',
     ),
@@ -211,7 +211,7 @@ test('shouldSendPageReadySignal allows first-load, force-refresh, and URL-change
 });
 
 test(
-  'page runtime session re-sends pageRuntimeReady after yt-navigate-finish changes the page URL',
+  'content script session re-sends contentScriptReady after yt-navigate-finish changes the page URL',
   () => {
     const runtime = createYoutubePageController();
     try {
@@ -220,7 +220,7 @@ test(
       runtime.bootstrap();
 
       const initialReadySignals = installRuntimeTestDom.messages.filter(
-        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PAGE_RUNTIME_READY,
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.CONTENT_SCRIPT_READY,
       );
       assert.equal(initialReadySignals.length, 1);
 
@@ -232,7 +232,7 @@ test(
       windowTarget.dispatch('yt-navigate-finish');
 
       const readySignalsAfterNavigation = installRuntimeTestDom.messages.filter(
-        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PAGE_RUNTIME_READY,
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.CONTENT_SCRIPT_READY,
       );
       assert.equal(readySignalsAfterNavigation.length, 2);
 
@@ -248,7 +248,7 @@ test(
 );
 
 test(
-  'page runtime session waits for fresh media evidence before re-sending pageMediaReady on SPA navigation',
+  'content script session waits for fresh media evidence before re-sending videoElementReady on SPA navigation',
   () => {
     const runtime = createYoutubePageController();
     try {
@@ -257,7 +257,7 @@ test(
       runtime.bootstrap();
 
       const initialMediaReadySignals = installRuntimeTestDom.messages.filter(
-        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY,
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.VIDEO_ELEMENT_READY,
       );
       assert.equal(initialMediaReadySignals.length, 1);
 
@@ -269,7 +269,7 @@ test(
       windowTarget.dispatch('yt-navigate-finish');
 
       const mediaReadyAfterNavigation = installRuntimeTestDom.messages.filter(
-        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY,
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.VIDEO_ELEMENT_READY,
       );
       assert.equal(mediaReadyAfterNavigation.length, 1);
 
@@ -279,7 +279,7 @@ test(
       video.dispatch('loadedmetadata');
 
       const mediaReadyAfterFreshVideo = installRuntimeTestDom.messages.filter(
-        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY,
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.VIDEO_ELEMENT_READY,
       );
       assert.equal(mediaReadyAfterFreshVideo.length, 2);
     } finally {
@@ -290,7 +290,7 @@ test(
 );
 
 test(
-  'video metric collection self-resolves media readiness when ready events were missed',
+  'video metric collection self-resolves video readiness when ready events were missed',
   () => {
     const runtime = createYoutubePageController();
     try {
@@ -301,7 +301,7 @@ test(
       runtime.bootstrap();
 
       const mediaReadyAfterBootstrap = installRuntimeTestDom.messages.filter(
-        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY,
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.VIDEO_ELEMENT_READY,
       );
       assert.equal(mediaReadyAfterBootstrap.length, 0);
 
@@ -317,10 +317,10 @@ test(
         },
       );
 
-      assert.equal(response?.pageMediaReady, true);
+      assert.equal(response?.videoElementReady, true);
 
       const mediaReadyAfterMetricCollection = installRuntimeTestDom.messages.filter(
-        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY,
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.VIDEO_ELEMENT_READY,
       );
       assert.equal(mediaReadyAfterMetricCollection.length, 0);
     } finally {
@@ -353,7 +353,7 @@ test(
         },
       );
 
-      assert.equal(response?.pageMediaReady, false);
+      assert.equal(response?.videoElementReady, false);
       assert.equal(response?.duration, 6211);
       assert.equal(response?.currentTime, 0);
     } finally {
@@ -399,7 +399,7 @@ test('page video details ignore zero-length YouTube player metadata', () => {
   assert.equal(details.isLive, false);
 });
 
-test('page runtime session reset removes listeners before a second bootstrap', () => {
+test('content script session reset removes listeners before a second bootstrap', () => {
   const runtime = createYoutubePageController();
   try {
     const { getRuntimeMessageListenerCount, windowTarget } = installRuntimeTestDom();
@@ -421,7 +421,7 @@ test('page runtime session reset removes listeners before a second bootstrap', (
   }
 });
 
-test('page runtime throttles video mount scans during mutation bursts', () => {
+test('content script throttles video mount scans during mutation bursts', () => {
   const runtime = createYoutubePageController();
   try {
     const dom = installRuntimeTestDom();

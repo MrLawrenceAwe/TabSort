@@ -29,32 +29,32 @@ function createTrackedWindowStoreState() {
   };
 }
 
-export const trackedWindowStoreState = createTrackedWindowStoreState();
+export const mutableTrackedWindowState = createTrackedWindowStoreState();
 
-export const trackedWindowState = Object.freeze({
+export const readonlyTrackedWindowState = Object.freeze({
   get tabRecordsById() {
-    return cloneTabRecordsById(trackedWindowStoreState.tabRecordsById);
+    return cloneTabRecordsById(mutableTrackedWindowState.tabRecordsById);
   },
   get targetSortableTabIds() {
-    return [...trackedWindowStoreState.targetSortableTabIds];
+    return [...mutableTrackedWindowState.targetSortableTabIds];
   },
   get visibleTabIds() {
-    return [...trackedWindowStoreState.visibleTabIds];
+    return [...mutableTrackedWindowState.visibleTabIds];
   },
   get currentOrderMatchesTarget() {
-    return trackedWindowStoreState.currentOrderMatchesTarget;
+    return mutableTrackedWindowState.currentOrderMatchesTarget;
   },
   get sortSummary() {
-    return cloneSortSummary(trackedWindowStoreState.sortSummary);
+    return cloneSortSummary(mutableTrackedWindowState.sortSummary);
   },
   get windowId() {
-    return trackedWindowStoreState.windowId;
+    return mutableTrackedWindowState.windowId;
   },
   get snapshotSignature() {
-    return trackedWindowStoreState.snapshotSignature;
+    return mutableTrackedWindowState.snapshotSignature;
   },
   get syncToken() {
-    return trackedWindowStoreState.syncToken;
+    return mutableTrackedWindowState.syncToken;
   },
 });
 

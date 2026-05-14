@@ -9,11 +9,13 @@ import {
   RECENT_WATCH_TRANSITION_MS,
 } from '../../shared/tab-user-actions.js';
 import {
-  shouldPollRecord,
   shouldPollSnapshot,
   shouldRetrySnapshotPoll,
 } from '../../popup/snapshot-poller.js';
-import { shouldRefreshRecordMetrics } from '../../shared/tab-refresh-policy.js';
+import {
+  shouldPollRecord,
+  shouldRefreshRecordMetrics,
+} from '../../shared/tab-refresh-policy.js';
 
 const NOW_MS = 100_000;
 const fakeNow = () => NOW_MS;
@@ -25,9 +27,9 @@ function makeRecord(overrides = {}) {
     isLiveNow: false,
     isActiveTab: false,
     isHidden: false,
-    pageRuntimeReady: true,
-    pageMediaReady: true,
-    isRemainingTimeStale: false,
+    contentScriptReady: true,
+    videoElementReady: true,
+    remainingTimeNeedsRefresh: false,
     unsuspendedTimestamp: null,
     loadingStartedAt: null,
     videoDetails: { remainingTime: null },
@@ -37,8 +39,8 @@ function makeRecord(overrides = {}) {
 
 test('shouldPollRecord polls recently unsuspended stale tabs that need no user action yet', () => {
   const record = makeRecord({
-    isRemainingTimeStale: true,
-    pageRuntimeReady: false,
+    remainingTimeNeedsRefresh: true,
+    contentScriptReady: false,
     unsuspendedTimestamp: NOW_MS - (RECENTLY_UNSUSPENDED_MS - 1000),
   });
 
@@ -47,8 +49,8 @@ test('shouldPollRecord polls recently unsuspended stale tabs that need no user a
 
 test('shouldPollRecord does not poll stale tabs once they require a reload', () => {
   const record = makeRecord({
-    isRemainingTimeStale: true,
-    pageRuntimeReady: false,
+    remainingTimeNeedsRefresh: true,
+    contentScriptReady: false,
     unsuspendedTimestamp: NOW_MS - (RECENTLY_UNSUSPENDED_MS + 1000),
   });
 
@@ -58,7 +60,7 @@ test('shouldPollRecord does not poll stale tabs once they require a reload', () 
 test('shouldPollRecord polls loading tabs during the loading grace window', () => {
   const record = makeRecord({
     status: TAB_STATES.LOADING,
-    pageRuntimeReady: false,
+    contentScriptReady: false,
     loadingStartedAt: NOW_MS - (LOADING_GRACE_MS - 1000),
   });
 
@@ -68,10 +70,10 @@ test('shouldPollRecord polls loading tabs during the loading grace window', () =
 test('shouldPollRecord polls active stale watch tabs while video data can self-resolve', () => {
   const record = makeRecord({
     isActiveTab: true,
-    pageRuntimeReady: true,
-    pageMediaReady: false,
-    isRemainingTimeStale: true,
-    mediaWaitStartedAt: NOW_MS - (MEDIA_WAIT_GRACE_MS - 1000),
+    contentScriptReady: true,
+    videoElementReady: false,
+    remainingTimeNeedsRefresh: true,
+    videoWaitStartedAt: NOW_MS - (MEDIA_WAIT_GRACE_MS - 1000),
     videoDetails: { remainingTime: 45143, lengthSeconds: 45143 },
   });
 
@@ -81,10 +83,10 @@ test('shouldPollRecord polls active stale watch tabs while video data can self-r
 test('shouldPollRecord stops polling active stale watch tabs when media stays stuck', () => {
   const record = makeRecord({
     isActiveTab: true,
-    pageRuntimeReady: true,
-    pageMediaReady: false,
-    isRemainingTimeStale: true,
-    mediaWaitStartedAt: NOW_MS - (MEDIA_WAIT_GRACE_MS + 1000),
+    contentScriptReady: true,
+    videoElementReady: false,
+    remainingTimeNeedsRefresh: true,
+    videoWaitStartedAt: NOW_MS - (MEDIA_WAIT_GRACE_MS + 1000),
     videoDetails: { remainingTime: 45143, lengthSeconds: 45143 },
   });
 
@@ -94,9 +96,9 @@ test('shouldPollRecord stops polling active stale watch tabs when media stays st
 test('shouldRefreshRecordMetrics still probes active stale tabs after polling grace expires', () => {
   const record = makeRecord({
     isActiveTab: true,
-    pageRuntimeReady: false,
-    pageMediaReady: false,
-    isRemainingTimeStale: true,
+    contentScriptReady: false,
+    videoElementReady: false,
+    remainingTimeNeedsRefresh: true,
     transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS + 1000),
     videoDetails: null,
   });
@@ -109,9 +111,9 @@ test('shouldRefreshRecordMetrics does not probe hidden stale tabs after polling 
   const record = makeRecord({
     isActiveTab: true,
     isHidden: true,
-    pageRuntimeReady: false,
-    pageMediaReady: false,
-    isRemainingTimeStale: true,
+    contentScriptReady: false,
+    videoElementReady: false,
+    remainingTimeNeedsRefresh: true,
     transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS + 1000),
     videoDetails: null,
   });
@@ -122,9 +124,9 @@ test('shouldRefreshRecordMetrics does not probe hidden stale tabs after polling 
 test('shouldPollRecord polls recent watch URL transitions before asking for reload', () => {
   const record = makeRecord({
     isActiveTab: true,
-    pageRuntimeReady: false,
-    pageMediaReady: false,
-    isRemainingTimeStale: true,
+    contentScriptReady: false,
+    videoElementReady: false,
+    remainingTimeNeedsRefresh: true,
     transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS - 1000),
     videoDetails: null,
   });
@@ -135,9 +137,9 @@ test('shouldPollRecord polls recent watch URL transitions before asking for relo
 test('shouldPollRecord stops polling stalled watch URL transitions', () => {
   const record = makeRecord({
     isActiveTab: true,
-    pageRuntimeReady: false,
-    pageMediaReady: false,
-    isRemainingTimeStale: true,
+    contentScriptReady: false,
+    videoElementReady: false,
+    remainingTimeNeedsRefresh: true,
     transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS + 1000),
     videoDetails: null,
   });
@@ -149,13 +151,13 @@ test('shouldPollSnapshot polls only when at least one tracked tab can self-resol
   const snapshot = {
     tabRecordsById: {
       1: makeRecord({
-        isRemainingTimeStale: true,
-        pageRuntimeReady: false,
+        remainingTimeNeedsRefresh: true,
+        contentScriptReady: false,
         unsuspendedTimestamp: NOW_MS - (RECENTLY_UNSUSPENDED_MS - 1000),
       }),
       2: makeRecord({
-        isRemainingTimeStale: true,
-        pageRuntimeReady: false,
+        remainingTimeNeedsRefresh: true,
+        contentScriptReady: false,
         unsuspendedTimestamp: NOW_MS - (RECENTLY_UNSUSPENDED_MS + 1000),
       }),
     },

@@ -1,23 +1,21 @@
 import { TAB_STATES } from '../shared/tab-states.js';
 import { isFiniteNumber } from '../shared/guards.js';
 import { createTabRecord } from './tab-record.js';
-import { recomputeSortState } from './sort-state.js';
 import { getCurrentTimeMs } from './window-store.js';
-import { removeTabRecordFromStore } from './window-store-mutations.js';
 
-function clearTabRemainingTime(record) {
+export function clearTabRemainingTime(record) {
   if (record?.videoDetails && record.videoDetails.remainingTime != null) {
     record.videoDetails.remainingTime = null;
   }
 }
 
-function markRemainingTimeStale(record) {
-  record.isRemainingTimeStale = true;
+export function markRemainingTimeStale(record) {
+  record.remainingTimeNeedsRefresh = true;
 }
 
-function resetMediaReadiness(record, { mediaWaitStartedAt = null } = {}) {
-  record.pageMediaReady = false;
-  record.mediaWaitStartedAt = mediaWaitStartedAt;
+export function resetVideoReadiness(record, { videoWaitStartedAt = null } = {}) {
+  record.videoElementReady = false;
+  record.videoWaitStartedAt = videoWaitStartedAt;
 }
 
 function resetVideoIdentity(record) {
@@ -26,28 +24,28 @@ function resetVideoIdentity(record) {
   markRemainingTimeStale(record);
 }
 
-function markRecordMediaReady(record) {
-  record.pageMediaReady = true;
-  record.mediaWaitStartedAt = null;
+export function markRecordVideoElementReady(record) {
+  record.videoElementReady = true;
+  record.videoWaitStartedAt = null;
 }
 
-function markRecordMediaUnavailable(record) {
-  record.pageRuntimeReady = false;
-  resetMediaReadiness(record);
+function markRecordVideoUnavailable(record) {
+  record.contentScriptReady = false;
+  resetVideoReadiness(record);
   clearTabRemainingTime(record);
   markRemainingTimeStale(record);
 }
 
-function resetRecordForVideoChange(record, { runtimeReady = false, timestamp = null } = {}) {
-  record.pageRuntimeReady = Boolean(runtimeReady);
-  resetMediaReadiness(record, { mediaWaitStartedAt: timestamp });
+function resetRecordForVideoChange(record, { contentScriptReady = false, timestamp = null } = {}) {
+  record.contentScriptReady = Boolean(contentScriptReady);
+  resetVideoReadiness(record, { videoWaitStartedAt: timestamp });
   resetVideoIdentity(record);
 }
 
 export function markTabRecordMetricsUnavailable(record) {
   if (!record) return;
 
-  markRecordMediaUnavailable(record);
+  markRecordVideoUnavailable(record);
 }
 
 function markTabRecordVideoChanged(record) {
@@ -56,10 +54,10 @@ function markTabRecordVideoChanged(record) {
   resetRecordForVideoChange(record);
 }
 
-function markTabRecordRuntimeReadyAfterVideoChange(record, timestamp) {
+function markTabRecordContentScriptReadyAfterVideoChange(record, timestamp) {
   if (!record) return;
 
-  resetRecordForVideoChange(record, { runtimeReady: true, timestamp });
+  resetRecordForVideoChange(record, { contentScriptReady: true, timestamp });
 }
 
 export function markTabRecordReloading(record) {
@@ -86,10 +84,10 @@ export function createRecordFromTabSnapshot(
     index: tab.index,
     pinned: Boolean(tab.pinned),
     status: nextStatus,
-    pageRuntimeReady:
-      isUnsuspended && !urlChanged ? Boolean(previousRecord.pageRuntimeReady) : false,
-    pageMediaReady:
-      isUnsuspended && !urlChanged ? Boolean(previousRecord.pageMediaReady) : false,
+    contentScriptReady:
+      isUnsuspended && !urlChanged ? Boolean(previousRecord.contentScriptReady) : false,
+    videoElementReady:
+      isUnsuspended && !urlChanged ? Boolean(previousRecord.videoElementReady) : false,
     isLiveNow: urlChanged ? false : Boolean(previousRecord.isLiveNow),
     isActiveTab: Boolean(tab.active),
     isHidden: Boolean(tab.hidden),
@@ -97,10 +95,10 @@ export function createRecordFromTabSnapshot(
     loadingStartedAt: previousRecord.loadingStartedAt ?? null,
     unsuspendedTimestamp: previousRecord.unsuspendedTimestamp || null,
     transitionStartedAt: previousRecord.transitionStartedAt || null,
-    mediaWaitStartedAt: urlChanged ? null : previousRecord.mediaWaitStartedAt ?? null,
-    isRemainingTimeStale:
+    videoWaitStartedAt: urlChanged ? null : previousRecord.videoWaitStartedAt ?? null,
+    remainingTimeNeedsRefresh:
       !isUnsuspended ||
-      Boolean(previousRecord.isRemainingTimeStale) ||
+      Boolean(previousRecord.remainingTimeNeedsRefresh) ||
       statusChanged ||
       urlChanged,
   });
@@ -131,22 +129,22 @@ export function createRecordFromTabSnapshot(
   return record;
 }
 
-export function applyPageRuntimeReady(record, { urlChanged = false, url = null } = {}) {
+export function applyContentScriptReady(record, { urlChanged = false, url = null } = {}) {
   if (!record) return;
   const timestamp = getCurrentTimeMs();
   if (urlChanged) {
-    markTabRecordRuntimeReadyAfterVideoChange(record, timestamp);
+    markTabRecordContentScriptReadyAfterVideoChange(record, timestamp);
   }
   if (url) record.url = url;
-  record.pageRuntimeReady = true;
-  if (!record.pageMediaReady && typeof record.mediaWaitStartedAt !== 'number') {
-    record.mediaWaitStartedAt = timestamp;
+  record.contentScriptReady = true;
+  if (!record.videoElementReady && typeof record.videoWaitStartedAt !== 'number') {
+    record.videoWaitStartedAt = timestamp;
   }
 }
 
-export function applyPageMediaReady(record) {
+export function applyVideoElementReady(record) {
   if (!record) return;
-  markRecordMediaReady(record);
+  markRecordVideoElementReady(record);
 }
 
 export function applyPageVideoDetails(record, details = {}, { urlChanged = false } = {}) {
@@ -161,44 +159,13 @@ export function applyPageVideoDetails(record, details = {}, { urlChanged = false
     record.videoDetails.lengthSeconds = details.lengthSeconds;
     if (!record.isLiveNow && record.videoDetails.remainingTime == null) {
       record.videoDetails.remainingTime = details.lengthSeconds;
-      record.isRemainingTimeStale = true;
+      record.remainingTimeNeedsRefresh = true;
     }
   }
 
   if (record.isLiveNow) {
     clearTabRemainingTime(record);
-    record.isRemainingTimeStale = false;
-    record.mediaWaitStartedAt = null;
+    record.remainingTimeNeedsRefresh = false;
+    record.videoWaitStartedAt = null;
   }
-}
-
-export function applyPlaybackMetricUpdate(record, playbackUpdate, currentTabUrl) {
-  if (!record || !playbackUpdate) return;
-
-  record.pageRuntimeReady = playbackUpdate.pageRuntimeReady;
-  if (playbackUpdate.pageMediaReady) {
-    markRecordMediaReady(record);
-  } else {
-    resetMediaReadiness(record, { mediaWaitStartedAt: record.mediaWaitStartedAt });
-    if (record.pageRuntimeReady && typeof record.mediaWaitStartedAt !== 'number') {
-      record.mediaWaitStartedAt = getCurrentTimeMs();
-    }
-  }
-  record.videoDetails = record.videoDetails || {};
-
-  if (playbackUpdate.nextTitle || playbackUpdate.nextUrl || currentTabUrl) {
-    if (playbackUpdate.nextTitle) record.videoDetails.title = playbackUpdate.nextTitle;
-    record.url = playbackUpdate.nextUrl || currentTabUrl;
-  }
-
-  record.isLiveNow = Boolean(playbackUpdate.isLiveNow);
-  record.videoDetails.lengthSeconds = playbackUpdate.resolvedLengthSeconds;
-  record.videoDetails.remainingTime = playbackUpdate.remainingTime;
-  record.isRemainingTimeStale = playbackUpdate.isRemainingTimeStale;
-}
-
-export function removeTabRecord(tabId) {
-  if (!removeTabRecordFromStore(tabId)) return false;
-  recomputeSortState();
-  return true;
 }

@@ -30,7 +30,7 @@ export function isRecentlyUnsuspended(tabRecord, nowMs) {
 }
 
 export function canMediaStillSettle(tabRecord, nowMs) {
-  return isRecentTimestamp(tabRecord?.mediaWaitStartedAt, nowMs, MEDIA_WAIT_GRACE_MS);
+  return isRecentTimestamp(tabRecord?.videoWaitStartedAt, nowMs, MEDIA_WAIT_GRACE_MS);
 }
 
 export function canLoadingStillSettle(tabRecord, nowMs) {
