@@ -11,35 +11,55 @@ function clearTabRemainingTime(record) {
   }
 }
 
+function markRemainingTimeStale(record) {
+  record.isRemainingTimeStale = true;
+}
+
+function resetMediaReadiness(record, { mediaWaitStartedAt = null } = {}) {
+  record.pageMediaReady = false;
+  record.mediaWaitStartedAt = mediaWaitStartedAt;
+}
+
+function resetVideoIdentity(record) {
+  record.isLiveNow = false;
+  record.videoDetails = null;
+  markRemainingTimeStale(record);
+}
+
+function markRecordMediaReady(record) {
+  record.pageMediaReady = true;
+  record.mediaWaitStartedAt = null;
+}
+
+function markRecordMediaUnavailable(record) {
+  record.pageRuntimeReady = false;
+  resetMediaReadiness(record);
+  clearTabRemainingTime(record);
+  markRemainingTimeStale(record);
+}
+
+function resetRecordForVideoChange(record, { runtimeReady = false, timestamp = null } = {}) {
+  record.pageRuntimeReady = Boolean(runtimeReady);
+  resetMediaReadiness(record, { mediaWaitStartedAt: timestamp });
+  resetVideoIdentity(record);
+}
+
 export function markTabRecordMetricsUnavailable(record) {
   if (!record) return;
 
-  record.pageRuntimeReady = false;
-  record.pageMediaReady = false;
-  record.mediaWaitStartedAt = null;
-  clearTabRemainingTime(record);
-  record.isRemainingTimeStale = true;
+  markRecordMediaUnavailable(record);
 }
 
 function markTabRecordVideoChanged(record) {
   if (!record) return;
 
-  record.pageRuntimeReady = false;
-  record.pageMediaReady = false;
-  record.mediaWaitStartedAt = null;
-  record.isLiveNow = false;
-  record.videoDetails = null;
-  record.isRemainingTimeStale = true;
+  resetRecordForVideoChange(record);
 }
 
 function markTabRecordRuntimeReadyAfterVideoChange(record, timestamp) {
   if (!record) return;
 
-  record.pageMediaReady = false;
-  record.mediaWaitStartedAt = timestamp;
-  record.isLiveNow = false;
-  record.videoDetails = null;
-  record.isRemainingTimeStale = true;
+  resetRecordForVideoChange(record, { runtimeReady: true, timestamp });
 }
 
 export function markTabRecordReloading(record) {
@@ -119,12 +139,14 @@ export function applyPageRuntimeReady(record, { urlChanged = false, url = null }
   }
   if (url) record.url = url;
   record.pageRuntimeReady = true;
-  if (urlChanged) {
-    record.pageMediaReady = false;
-  }
   if (!record.pageMediaReady && typeof record.mediaWaitStartedAt !== 'number') {
     record.mediaWaitStartedAt = timestamp;
   }
+}
+
+export function applyPageMediaReady(record) {
+  if (!record) return;
+  markRecordMediaReady(record);
 }
 
 export function applyPageVideoDetails(record, details = {}, { urlChanged = false } = {}) {
@@ -154,11 +176,13 @@ export function applyPlaybackMetricUpdate(record, playbackUpdate, currentTabUrl)
   if (!record || !playbackUpdate) return;
 
   record.pageRuntimeReady = playbackUpdate.pageRuntimeReady;
-  record.pageMediaReady = playbackUpdate.pageMediaReady;
-  if (record.pageMediaReady) {
-    record.mediaWaitStartedAt = null;
-  } else if (record.pageRuntimeReady && typeof record.mediaWaitStartedAt !== 'number') {
-    record.mediaWaitStartedAt = getCurrentTimeMs();
+  if (playbackUpdate.pageMediaReady) {
+    markRecordMediaReady(record);
+  } else {
+    resetMediaReadiness(record, { mediaWaitStartedAt: record.mediaWaitStartedAt });
+    if (record.pageRuntimeReady && typeof record.mediaWaitStartedAt !== 'number') {
+      record.mediaWaitStartedAt = getCurrentTimeMs();
+    }
   }
   record.videoDetails = record.videoDetails || {};
 
