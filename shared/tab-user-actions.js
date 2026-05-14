@@ -1,10 +1,20 @@
 import { TAB_STATES } from './tab-states.js';
-import { isFiniteNumber } from './guards.js';
+import {
+  LOADING_GRACE_MS,
+  MEDIA_WAIT_GRACE_MS,
+  RECENTLY_UNSUSPENDED_MS,
+  RECENT_WATCH_TRANSITION_MS,
+  canMediaStillSettle,
+  canWatchTransitionStillSettle,
+  hasRemainingTime,
+} from './tab-resolution-state.js';
 
-export const RECENTLY_UNSUSPENDED_MS = 5000;
-export const RECENT_WATCH_TRANSITION_MS = 5000;
-export const MEDIA_WAIT_GRACE_MS = 15000;
-export const LOADING_GRACE_MS = 5000;
+export {
+  LOADING_GRACE_MS,
+  MEDIA_WAIT_GRACE_MS,
+  RECENTLY_UNSUSPENDED_MS,
+  RECENT_WATCH_TRANSITION_MS,
+};
 
 export const USER_ACTIONS = {
   RELOAD_TAB: 'reloadTab',
@@ -25,30 +35,6 @@ const USER_ACTION_LABELS = {
   [USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME]: 'View tab to refresh time',
   [USER_ACTIONS.NONE]: '',
 };
-
-function isRecentTimestamp(timestamp, nowMs, graceMs) {
-  return typeof timestamp === 'number' && nowMs - timestamp < graceMs;
-}
-
-function hasRecentWatchTransition(tabRecord, nowMs) {
-  return isRecentTimestamp(
-    tabRecord.transitionStartedAt,
-    nowMs,
-    RECENT_WATCH_TRANSITION_MS,
-  );
-}
-
-function isRecentlyUnsuspended(tabRecord, nowMs) {
-  return isRecentTimestamp(
-    tabRecord.unsuspendedTimestamp,
-    nowMs,
-    RECENTLY_UNSUSPENDED_MS,
-  );
-}
-
-function canMediaStillSettle(tabRecord, nowMs) {
-  return isRecentTimestamp(tabRecord.mediaWaitStartedAt, nowMs, MEDIA_WAIT_GRACE_MS);
-}
 
 function determineActionForMissingRemainingTime(tabRecord, transitionCanSettle, nowMs) {
   switch (tabRecord.status) {
@@ -87,11 +73,9 @@ export function determineUserAction(tabRecord, { now = Date.now } = {}) {
   }
 
   const nowMs = now();
-  const hasRemainingTime = isFiniteNumber(tabRecord?.videoDetails?.remainingTime);
-  const transitionCanSettle =
-    isRecentlyUnsuspended(tabRecord, nowMs) || hasRecentWatchTransition(tabRecord, nowMs);
+  const transitionCanSettle = canWatchTransitionStillSettle(tabRecord, nowMs);
 
-  if (!hasRemainingTime) {
+  if (!hasRemainingTime(tabRecord)) {
     return determineActionForMissingRemainingTime(tabRecord, transitionCanSettle, nowMs);
   }
 

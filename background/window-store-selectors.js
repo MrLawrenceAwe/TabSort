@@ -1,20 +1,20 @@
 import { isValidWindowId } from '../shared/guards.js';
-import { trackedWindowStoreState } from './window-store.js';
+import { cloneTabRecord, cloneTabRecordsById, trackedWindowStoreState } from './window-store.js';
 
 export function getTrackedWindowId() {
   return isValidWindowId(trackedWindowStoreState.windowId) ? trackedWindowStoreState.windowId : null;
 }
 
 export function getTabRecord(tabId) {
-  return trackedWindowStoreState.tabRecordsById[tabId] || null;
+  return cloneTabRecord(trackedWindowStoreState.tabRecordsById[tabId] || null);
 }
 
 export function getTabRecordsById() {
-  return trackedWindowStoreState.tabRecordsById;
+  return cloneTabRecordsById(trackedWindowStoreState.tabRecordsById);
 }
 
 export function listTabRecords() {
-  return Object.values(trackedWindowStoreState.tabRecordsById);
+  return Object.values(getTabRecordsById());
 }
 
 export function listTabIds() {

@@ -2,6 +2,20 @@ import { cloneSortSummary, createEmptySortSummary } from '../shared/sort-summary
 
 export const getCurrentTimeMs = () => Date.now();
 
+export function cloneTabRecord(record) {
+  if (!record || typeof record !== 'object') return record;
+  return {
+    ...record,
+    videoDetails: record.videoDetails ? { ...record.videoDetails } : null,
+  };
+}
+
+export function cloneTabRecordsById(tabRecordsById = {}) {
+  return Object.fromEntries(
+    Object.entries(tabRecordsById).map(([id, record]) => [id, cloneTabRecord(record)]),
+  );
+}
+
 function createTrackedWindowStoreState() {
   return {
     tabRecordsById: {},
@@ -19,7 +33,7 @@ export const trackedWindowStoreState = createTrackedWindowStoreState();
 
 export const trackedWindowState = Object.freeze({
   get tabRecordsById() {
-    return trackedWindowStoreState.tabRecordsById;
+    return cloneTabRecordsById(trackedWindowStoreState.tabRecordsById);
   },
   get targetSortableTabIds() {
     return [...trackedWindowStoreState.targetSortableTabIds];

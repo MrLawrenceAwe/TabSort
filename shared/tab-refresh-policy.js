@@ -1,19 +1,26 @@
 import { TAB_STATES } from './tab-states.js';
-import { determineUserAction, USER_ACTIONS } from './tab-user-actions.js';
+import {
+  canLoadingStillSettle,
+  canMediaStillSettle,
+  canWatchTransitionStillSettle,
+} from './tab-resolution-state.js';
 
 export function shouldPollRecord(record, { now = Date.now } = {}) {
   if (!record || record.isLiveNow) return false;
 
-  const userAction = determineUserAction(record, { now });
-  if (
-    record.status === TAB_STATES.UNSUSPENDED &&
-    record.isRemainingTimeStale &&
-    (userAction === USER_ACTIONS.NONE || userAction === USER_ACTIONS.WAIT_FOR_VIDEO_DATA)
-  ) {
-    return true;
+  const nowMs = now();
+  if (record.status === TAB_STATES.UNSUSPENDED && record.isRemainingTimeStale) {
+    const waitingForPageRuntime =
+      !record.pageRuntimeReady && canWatchTransitionStillSettle(record, nowMs);
+    const waitingForMedia =
+      record.isActiveTab &&
+      record.pageRuntimeReady &&
+      !record.pageMediaReady &&
+      canMediaStillSettle(record, nowMs);
+    return waitingForPageRuntime || waitingForMedia;
   }
 
-  return record.status === TAB_STATES.LOADING && userAction === USER_ACTIONS.WAIT_FOR_LOAD;
+  return record.status === TAB_STATES.LOADING && canLoadingStillSettle(record, nowMs);
 }
 
 export function shouldRefreshRecordMetrics(record, options = {}) {

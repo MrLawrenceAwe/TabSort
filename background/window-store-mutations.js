@@ -19,6 +19,10 @@ export function replaceAllTabRecords(tabRecordsById = {}) {
   return trackedWindowStoreState.tabRecordsById;
 }
 
+export function getMutableTabRecord(tabId) {
+  return trackedWindowStoreState.tabRecordsById[tabId] || null;
+}
+
 export function setTabRecord(tabId, record) {
   if (typeof tabId !== 'number' || !record) return null;
   trackedWindowStoreState.tabRecordsById[tabId] = record;
