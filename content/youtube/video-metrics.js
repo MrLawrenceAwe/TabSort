@@ -22,17 +22,17 @@ export function collectVideoMetrics({
   config,
   environment,
   collectPageDetails,
-  isCurrentPageMediaReady,
-  markCurrentPageMediaReadyIfAvailable,
+  isCurrentVideoElementReady,
+  markCurrentVideoElementReadyIfAvailable,
 }) {
   const video = getPrimaryVideoElement(environment);
   const player = getYouTubePlayer(environment);
   const details = collectPageDetails();
-  markCurrentPageMediaReadyIfAvailable?.({ notify: false });
+  markCurrentVideoElementReadyIfAvailable?.({ notify: false });
   return {
     title: details.title || null,
     url: details.url,
-    pageMediaReady: isCurrentPageMediaReady(),
+    videoElementReady: isCurrentVideoElementReady(),
     lengthSeconds: config.isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
     isLive: Boolean(details.isLive),
     duration: getVideoDurationSeconds(video, player),

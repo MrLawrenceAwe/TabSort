@@ -3,7 +3,7 @@ import { createRuntimeMessaging } from './messaging.js';
 import {
   createPageControllerState,
   pageControllerConfig,
-  shouldSendPageReadySignal,
+  shouldSendContentScriptReadySignal,
 } from './controller-state.js';
 import { createMediaReadinessTracker } from './media-readiness.js';
 import { createTitleObserver } from './title-observer.js';
@@ -71,15 +71,15 @@ export function createYoutubePageController({
     );
   }
 
-  function dispatchPageReadySignal({ force = false } = {}) {
+  function dispatchContentScriptReadySignal({ force = false } = {}) {
     const currentUrl = getCurrentPageUrl();
-    if (!shouldSendPageReadySignal(currentUrl, state.lastReadyUrl, { force })) {
+    if (!shouldSendContentScriptReadySignal(currentUrl, state.lastReadyUrl, { force })) {
       return;
     }
     state.lastReadyUrl = currentUrl;
     sendExtensionMessage(
-      createRuntimeMessage(RUNTIME_MESSAGE_TYPES.PAGE_RUNTIME_READY),
-      'page runtime ready',
+      createRuntimeMessage(RUNTIME_MESSAGE_TYPES.CONTENT_SCRIPT_READY),
+      'content script ready',
     );
   }
 
@@ -111,13 +111,13 @@ export function createYoutubePageController({
       try {
         cleanup?.();
       } catch (error) {
-        logContentError('Cleaning up page runtime listener', error);
+        logContentError('Cleaning up content script listener', error);
       }
     }
     state.runtimeMessageListener = null;
   }
 
-  function syncPageRuntime() {
+  function syncObservedPageUrl() {
     const currentUrl = getCurrentPageUrl();
     if (currentUrl && currentUrl !== state.observedPageUrl) {
       disposeObservers();
@@ -129,10 +129,10 @@ export function createYoutubePageController({
     }
   }
 
-  function refreshPageState({ includeReadySignal = false, forceReadySignal = false } = {}) {
-    syncPageRuntime();
-    if (includeReadySignal) {
-      dispatchPageReadySignal({ force: forceReadySignal });
+  function refreshPageState({ includeContentScriptReadySignal = false, forceContentScriptReadySignal = false } = {}) {
+    syncObservedPageUrl();
+    if (includeContentScriptReadySignal) {
+      dispatchContentScriptReadySignal({ force: forceContentScriptReadySignal });
     }
     publishPageVideoDetails();
     mediaReadiness.watchForVideoMount();
@@ -163,9 +163,9 @@ export function createYoutubePageController({
         config,
         environment,
         collectPageDetails,
-        isCurrentPageMediaReady: mediaReadiness.isCurrentPageMediaReady,
-        markCurrentPageMediaReadyIfAvailable:
-          mediaReadiness.markCurrentPageMediaReadyIfAvailable,
+        isCurrentVideoElementReady: mediaReadiness.isCurrentVideoElementReady,
+        markCurrentVideoElementReadyIfAvailable:
+          mediaReadiness.markCurrentVideoElementReadyIfAvailable,
       });
     addRuntimeMessageListener(state.runtimeMessageListener);
 
@@ -173,23 +173,23 @@ export function createYoutubePageController({
       runtimeDocument?.readyState === 'complete' ||
       runtimeDocument?.readyState === 'interactive'
     ) {
-      refreshPageState({ includeReadySignal: true });
+      refreshPageState({ includeContentScriptReadySignal: true });
     } else {
       addWindowEventListener(
         runtimeWindow,
         'DOMContentLoaded',
-        () => refreshPageState({ includeReadySignal: true }),
+        () => refreshPageState({ includeContentScriptReadySignal: true }),
         { once: true },
       );
     }
 
     addWindowEventListener(runtimeWindow, 'yt-navigate-finish', () => {
-      refreshPageState({ includeReadySignal: true });
+      refreshPageState({ includeContentScriptReadySignal: true });
     });
 
     addWindowEventListener(runtimeWindow, 'pageshow', (event) => {
       if (event.persisted) {
-        refreshPageState({ includeReadySignal: true, forceReadySignal: true });
+        refreshPageState({ includeContentScriptReadySignal: true, forceContentScriptReadySignal: true });
       }
     });
 

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES } from '../../shared/tab-states.js';
-import { trackedWindowState } from '../../background/window-store.js';
+import { readonlyTrackedWindowState } from '../../background/window-store.js';
 import { reconcileWindowTabRecords } from '../../background/tab-record-reconciler.js';
 import {
   ensureChromeApi,
@@ -27,7 +27,7 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    const record = trackedWindowState.tabRecordsById[1];
+    const record = readonlyTrackedWindowState.tabRecordsById[1];
     assert.equal(record.status, TAB_STATES.UNSUSPENDED);
     assert.equal(record.unsuspendedTimestamp, null);
   },
@@ -49,7 +49,7 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    const record = trackedWindowState.tabRecordsById[1];
+    const record = readonlyTrackedWindowState.tabRecordsById[1];
     assert.equal(record.status, TAB_STATES.UNSUSPENDED);
     assert.equal(typeof record.unsuspendedTimestamp, 'number');
   },
@@ -63,10 +63,10 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
-        pageMediaReady: true,
-        pageRuntimeReady: true,
+        videoElementReady: true,
+        contentScriptReady: true,
         videoDetails: { title: 'Old Video', remainingTime: 45, lengthSeconds: 120 },
-        isRemainingTimeStale: false,
+        remainingTimeNeedsRefresh: false,
       }),
     });
 
@@ -74,13 +74,13 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    const record = trackedWindowState.tabRecordsById[1];
+    const record = readonlyTrackedWindowState.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
-    assert.equal(record.pageRuntimeReady, false);
-    assert.equal(record.pageMediaReady, false);
+    assert.equal(record.contentScriptReady, false);
+    assert.equal(record.videoElementReady, false);
     assert.equal(record.videoDetails, null);
     assert.equal(record.isLiveNow, false);
-    assert.equal(record.isRemainingTimeStale, true);
+    assert.equal(record.remainingTimeNeedsRefresh, true);
     assert.equal(typeof record.transitionStartedAt, 'number');
   },
 );
@@ -93,10 +93,10 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=same',
-        pageMediaReady: true,
-        pageRuntimeReady: true,
+        videoElementReady: true,
+        contentScriptReady: true,
         videoDetails: { title: 'Same Video', remainingTime: 45, lengthSeconds: 120 },
-        isRemainingTimeStale: false,
+        remainingTimeNeedsRefresh: false,
       }),
     });
 
@@ -108,16 +108,16 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    const record = trackedWindowState.tabRecordsById[1];
+    const record = readonlyTrackedWindowState.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=same&list=abc123&index=10');
-    assert.equal(record.pageRuntimeReady, true);
-    assert.equal(record.pageMediaReady, true);
+    assert.equal(record.contentScriptReady, true);
+    assert.equal(record.videoElementReady, true);
     assert.deepEqual(record.videoDetails, {
       title: 'Same Video',
       remainingTime: 45,
       lengthSeconds: 120,
     });
-    assert.equal(record.isRemainingTimeStale, false);
+    assert.equal(record.remainingTimeNeedsRefresh, false);
   },
 );
 
@@ -129,7 +129,7 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         videoDetails: { title: 'Video 1', remainingTime: 90, lengthSeconds: 120 },
-        isRemainingTimeStale: false,
+        remainingTimeNeedsRefresh: false,
       }),
     });
     setTrackedSortState({ visibleTabIds: [1] });
@@ -144,10 +144,10 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    assert.deepEqual(Object.keys(trackedWindowState.tabRecordsById), ['1']);
-    assert.deepEqual(trackedWindowState.visibleTabIds, [1]);
-    assert.deepEqual(trackedWindowState.targetSortableTabIds, [1]);
-    assert.equal(trackedWindowState.tabRecordsById[1].videoDetails.remainingTime, 90);
+    assert.deepEqual(Object.keys(readonlyTrackedWindowState.tabRecordsById), ['1']);
+    assert.deepEqual(readonlyTrackedWindowState.visibleTabIds, [1]);
+    assert.deepEqual(readonlyTrackedWindowState.targetSortableTabIds, [1]);
+    assert.equal(readonlyTrackedWindowState.tabRecordsById[1].videoDetails.remainingTime, 90);
   },
 );
 
@@ -159,7 +159,7 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         videoDetails: { title: 'Window 1 Video', remainingTime: 90, lengthSeconds: 120 },
-        isRemainingTimeStale: false,
+        remainingTimeNeedsRefresh: false,
       }),
     });
     setTrackedSortState({ visibleTabIds: [1] });
@@ -169,9 +169,9 @@ test(
 
     await reconcileWindowTabRecords(2, { force: true });
 
-    assert.equal(trackedWindowState.windowId, 1);
-    assert.deepEqual(Object.keys(trackedWindowState.tabRecordsById), ['1']);
-    assert.deepEqual(trackedWindowState.visibleTabIds, [1]);
-    assert.deepEqual(trackedWindowState.targetSortableTabIds, [1]);
+    assert.equal(readonlyTrackedWindowState.windowId, 1);
+    assert.deepEqual(Object.keys(readonlyTrackedWindowState.tabRecordsById), ['1']);
+    assert.deepEqual(readonlyTrackedWindowState.visibleTabIds, [1]);
+    assert.deepEqual(readonlyTrackedWindowState.targetSortableTabIds, [1]);
   },
 );

@@ -1,7 +1,7 @@
 import { isValidWindowId } from '../shared/guards.js';
 import { logDebug, logListenerError, withErrorLogging } from '../shared/log.js';
 import { recomputeSortState } from './sort-state.js';
-import { trackedWindowState } from './window-store.js';
+import { readonlyTrackedWindowState } from './window-store.js';
 import {
   listTabIds,
 } from './window-store-selectors.js';
@@ -83,7 +83,7 @@ export function initializeWindowLifecycle() {
   chrome.alarms.onAlarm.addListener(
     withErrorLogging('alarms.onAlarm', async (alarm) => {
       if (alarm.name !== REFRESH_ALARM_NAME) return;
-      await reconcileWindowTabRecords(trackedWindowState.windowId, { force: true });
+      await reconcileWindowTabRecords(readonlyTrackedWindowState.windowId, { force: true });
       const ids = listTabIds();
       await refreshTabPlaybackMetricsBatch(ids);
     }),
@@ -91,7 +91,7 @@ export function initializeWindowLifecycle() {
 
   chrome.windows.onRemoved.addListener(
     withErrorLogging('windows.onRemoved', async (windowId) => {
-      if (windowId === trackedWindowState.windowId) {
+      if (windowId === readonlyTrackedWindowState.windowId) {
         resetTrackedWindow();
       }
     }),
@@ -100,7 +100,7 @@ export function initializeWindowLifecycle() {
   chrome.windows.onFocusChanged.addListener(
     withErrorLogging('windows.onFocusChanged', async (windowId) => {
       if (!isValidWindowId(windowId)) return;
-      if (windowId === trackedWindowState.windowId) return;
+      if (windowId === readonlyTrackedWindowState.windowId) return;
       setTrackedWindowId(windowId, { force: true });
       await reconcileWindowTabRecords(windowId, { force: true });
     }),

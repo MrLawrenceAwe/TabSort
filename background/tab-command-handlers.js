@@ -1,11 +1,11 @@
 import { isFiniteNumber, isValidWindowId } from '../shared/guards.js';
 import { logDebug } from '../shared/log.js';
 import { buildTabSnapshot } from './tab-snapshot.js';
-import { markTabRecordReloading } from './tab-record-mutations.js';
+import { markTabRecordReloading } from './tab-record-lifecycle.js';
 import { recomputeSortState } from './sort-state.js';
 import { applyTabSort } from './apply-tab-sort.js';
 import { refreshTabPlaybackMetricsBatch } from './playback-metrics-refresher.js';
-import { trackedWindowState } from './window-store.js';
+import { readonlyTrackedWindowState } from './window-store.js';
 import { listTabIds } from './window-store-selectors.js';
 import { getMutableTabRecord, setTrackedWindowId } from './window-store-mutations.js';
 import { reconcileWindowTabRecords } from './tab-record-reconciler.js';
@@ -65,7 +65,7 @@ export async function getWindowSnapshot(message) {
 export async function applyTabSortOrder(message) {
   const targetWindowId = isValidWindowId(message.windowId)
     ? message.windowId
-    : trackedWindowState.windowId;
+    : readonlyTrackedWindowState.windowId;
   if (isValidWindowId(targetWindowId)) {
     setTrackedWindowId(targetWindowId, { force: true });
   }

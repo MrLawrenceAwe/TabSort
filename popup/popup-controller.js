@@ -5,7 +5,7 @@ import { createRuntimeClient } from './runtime-client.js';
 import { createSnapshotClient } from './snapshot-client.js';
 import { createSnapshotPoller } from './snapshot-poller.js';
 import { renderSnapshot } from './snapshot-renderer.js';
-import { syncPopupChrome } from './popup-chrome-view.js';
+import { syncPopupLayout } from './popup-layout-view.js';
 import { initializePopupDom, setErrorMessage } from './popup-elements.js';
 import { popupState, setActiveWindowId } from './popup-store.js';
 import { startThemeSync } from './theme.js';
@@ -105,7 +105,7 @@ function registerPopupLifecycle(messageListener) {
 export async function initializePopup() {
   isPopupActive = true;
   initializePopupDom();
-  syncPopupChrome();
+  syncPopupLayout();
   setErrorMessage('');
 
   await runWithPopupErrorLogging(runtimeClient.syncActiveWindow, 'Failed to refresh active context');

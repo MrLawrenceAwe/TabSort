@@ -30,7 +30,7 @@ export function deriveSortSummary({ trackedRecords, sortableRecords, currentSort
     if (!record) continue;
     orderedIdsWithRecords.push(tabId);
 
-    if (record.isRemainingTimeStale && (!record.isActiveTab || record.isHidden)) {
+    if (record.remainingTimeNeedsRefresh && (!record.isActiveTab || record.isHidden)) {
       inactiveTabsHaveStaleRemainingTime = true;
     }
 

@@ -35,7 +35,7 @@ export function renderTabRow(row, tabRecord, isSortedView, postRuntimeMessage) {
   insertInfoCells(row, tabRecord, isSortedView, requiredAction);
 
   const remaining = tabRecord?.videoDetails?.remainingTime;
-  const hasRemainingTime = isFiniteNumber(remaining) && !tabRecord.isRemainingTimeStale;
+  const hasRemainingTime = isFiniteNumber(remaining) && !tabRecord.remainingTimeNeedsRefresh;
   if (hasRemainingTime && !isSortedView) row.classList.add('sort-ready-row');
 }
 
@@ -88,7 +88,7 @@ export function formatRemainingStatus(record, requiredAction = determineUserActi
   const remaining = record?.videoDetails?.remainingTime;
   const hasRemainingTime = isFiniteNumber(remaining);
 
-  if (record.isRemainingTimeStale) {
+  if (record.remainingTimeNeedsRefresh) {
     return requiredAction === USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME
       ? getUserActionLabel(USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME)
       : 'unavailable';

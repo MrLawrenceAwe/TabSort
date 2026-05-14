@@ -11,7 +11,7 @@ export function createMediaReadinessTracker({
   sendExtensionMessage,
   doesVideoDurationMatchPage,
 }) {
-  function isCurrentPageMediaReady() {
+  function isCurrentVideoElementReady() {
     const currentUrl = getCurrentPageUrl();
     return Boolean(currentUrl) && currentUrl === state.mediaReadyUrl;
   }
@@ -36,7 +36,7 @@ export function createMediaReadinessTracker({
     return Boolean(fingerprint) && fingerprint !== state.lastMediaReadyFingerprint;
   }
 
-  function canMarkVideoMediaReady(video, observedFreshMediaEvent = false) {
+  function canMarkVideoElementReady(video, observedFreshMediaEvent = false) {
     return (
       video?.readyState >= config.mediaReadyStateThreshold &&
       config.isFiniteNumber(video.duration) &&
@@ -67,7 +67,7 @@ export function createMediaReadinessTracker({
     });
   }
 
-  function markMediaReady(video, { notify = true } = {}) {
+  function markVideoElementReady(video, { notify = true } = {}) {
     const currentUrl = getCurrentPageUrl();
     if (!currentUrl) return false;
     state.mediaReadyUrl = currentUrl;
@@ -75,8 +75,8 @@ export function createMediaReadinessTracker({
     state.lastMediaReadyFingerprint = getVideoFingerprint(video);
     if (notify) {
       sendExtensionMessage(
-        createRuntimeMessage(RUNTIME_MESSAGE_TYPES.PAGE_MEDIA_READY),
-        'page media ready',
+        createRuntimeMessage(RUNTIME_MESSAGE_TYPES.VIDEO_ELEMENT_READY),
+        'video element ready',
       );
     }
     if (state.mediaReadyListenerVideo === video) {
@@ -85,11 +85,11 @@ export function createMediaReadinessTracker({
     return true;
   }
 
-  function markCurrentPageMediaReadyIfAvailable({ notify = true } = {}) {
-    if (isCurrentPageMediaReady()) return true;
+  function markCurrentVideoElementReadyIfAvailable({ notify = true } = {}) {
+    if (isCurrentVideoElementReady()) return true;
     const video = getPrimaryVideoElement(environment);
-    if (!canMarkVideoMediaReady(video)) return false;
-    return markMediaReady(video, { notify });
+    if (!canMarkVideoElementReady(video)) return false;
+    return markVideoElementReady(video, { notify });
   }
 
   function requestVideoMountCheck() {
@@ -107,7 +107,7 @@ export function createMediaReadinessTracker({
       if (scheduledToken !== state.videoMountCheckToken) return;
       state.videoMountCheckScheduled = false;
       attachVideoReadyListener();
-      if (isCurrentPageMediaReady() && state.videoMountObserver) {
+      if (isCurrentVideoElementReady() && state.videoMountObserver) {
         state.videoMountObserver.disconnect();
         state.videoMountObserver = null;
       }
@@ -117,8 +117,8 @@ export function createMediaReadinessTracker({
   function attachVideoReadyListener() {
     const video = getPrimaryVideoElement(environment);
     if (!video) return false;
-    if (isCurrentPageMediaReady()) return true;
-    if (canMarkVideoMediaReady(video)) return markMediaReady(video);
+    if (isCurrentVideoElementReady()) return true;
+    if (canMarkVideoElementReady(video)) return markVideoElementReady(video);
     if (state.mediaReadyListenerVideo === video) return true;
 
     clearMediaReadyListener();
@@ -133,8 +133,8 @@ export function createMediaReadinessTracker({
       }
     };
     const maybeSend = () => {
-      if (canMarkVideoMediaReady(video, observedFreshMediaEvent)) {
-        markMediaReady(video);
+      if (canMarkVideoElementReady(video, observedFreshMediaEvent)) {
+        markVideoElementReady(video);
         return true;
       }
       return false;
@@ -154,7 +154,7 @@ export function createMediaReadinessTracker({
 
   function watchForVideoMount() {
     attachVideoReadyListener();
-    if (isCurrentPageMediaReady()) {
+    if (isCurrentVideoElementReady()) {
       if (state.videoMountObserver) {
         state.videoMountObserver.disconnect();
         state.videoMountObserver = null;
@@ -179,7 +179,7 @@ export function createMediaReadinessTracker({
     }
 
     attachVideoReadyListener();
-    if (isCurrentPageMediaReady()) {
+    if (isCurrentVideoElementReady()) {
       state.videoMountObserver.disconnect();
       state.videoMountObserver = null;
     }
@@ -198,8 +198,8 @@ export function createMediaReadinessTracker({
   return {
     disposeMediaObservers,
     getVideoFingerprint,
-    isCurrentPageMediaReady,
-    markCurrentPageMediaReadyIfAvailable,
+    isCurrentVideoElementReady,
+    markCurrentVideoElementReadyIfAvailable,
     watchForVideoMount,
   };
 }

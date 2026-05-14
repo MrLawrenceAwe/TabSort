@@ -3,7 +3,7 @@ import { logDebug, logWarn, withErrorLogging } from '../shared/log.js';
 import { getTab } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
 import { refreshTabPlaybackMetrics } from './playback-metrics-refresher.js';
-import { trackedWindowState } from './window-store.js';
+import { readonlyTrackedWindowState } from './window-store.js';
 import { canManageWindow } from './window-store-selectors.js';
 import { removeTabRecordFromStore } from './window-store-mutations.js';
 import { reconcileWindowTabRecords } from './tab-record-reconciler.js';
@@ -64,7 +64,7 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
   chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     if (!canManageWindow(removeInfo?.windowId)) return;
     removeTabRecordFromStore(tabId);
-    if (removeInfo?.isWindowClosing && removeInfo.windowId === trackedWindowState.windowId) {
+    if (removeInfo?.isWindowClosing && removeInfo.windowId === readonlyTrackedWindowState.windowId) {
       if (typeof onTrackedWindowClosed === 'function') {
         onTrackedWindowClosed();
       }
@@ -84,8 +84,8 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
           try {
             const tab = await getTab(details.tabId);
             if (
-              trackedWindowState.windowId != null &&
-              tab.windowId !== trackedWindowState.windowId
+              readonlyTrackedWindowState.windowId != null &&
+              tab.windowId !== readonlyTrackedWindowState.windowId
             ) {
               return;
             }
@@ -94,8 +94,8 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
             logDebug(`getTab failed for history update ${details.tabId}`, error);
             return;
           }
-        } else if (trackedWindowState.windowId != null) {
-          windowIdForUpdate = trackedWindowState.windowId;
+        } else if (readonlyTrackedWindowState.windowId != null) {
+          windowIdForUpdate = readonlyTrackedWindowState.windowId;
         }
 
         await reconcileWindowTabRecords(windowIdForUpdate);

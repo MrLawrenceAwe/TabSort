@@ -1,6 +1,6 @@
 import { TAB_STATES } from '../../shared/tab-states.js';
 import { createEmptySortSummary } from '../../shared/sort-summary.js';
-import { trackedWindowState } from '../../background/window-store.js';
+import { readonlyTrackedWindowState } from '../../background/window-store.js';
 import {
   resetWindowStore,
   replaceAllTabRecords,
@@ -88,7 +88,7 @@ export function stubChromeTabMetrics({
     callback({
       title: 'Archived Stream',
       url,
-      pageMediaReady: false,
+      videoElementReady: false,
       lengthSeconds: null,
       duration: 6211,
       currentTime: 0,
@@ -111,10 +111,10 @@ export function setTrackedTabRecords(tabRecordsById = {}) {
 
 export function setTrackedSortState(sortState = {}) {
   setSortState({
-    visibleTabIds: trackedWindowState.visibleTabIds,
-    targetSortableTabIds: trackedWindowState.targetSortableTabIds,
-    currentOrderMatchesTarget: trackedWindowState.currentOrderMatchesTarget,
-    sortSummary: trackedWindowState.sortSummary || createEmptySortSummary(),
+    visibleTabIds: readonlyTrackedWindowState.visibleTabIds,
+    targetSortableTabIds: readonlyTrackedWindowState.targetSortableTabIds,
+    currentOrderMatchesTarget: readonlyTrackedWindowState.currentOrderMatchesTarget,
+    sortSummary: readonlyTrackedWindowState.sortSummary || createEmptySortSummary(),
     ...sortState,
   });
 }
@@ -129,8 +129,8 @@ export function createTabRecordFixture(id = 1, overrides = {}) {
     index: 0,
     pinned: false,
     status: TAB_STATES.UNSUSPENDED,
-    pageRuntimeReady: true,
-    pageMediaReady: true,
+    contentScriptReady: true,
+    videoElementReady: true,
     isLiveNow: false,
     isActiveTab: false,
     isHidden: false,
@@ -138,8 +138,8 @@ export function createTabRecordFixture(id = 1, overrides = {}) {
     loadingStartedAt: null,
     unsuspendedTimestamp: null,
     transitionStartedAt: null,
-    mediaWaitStartedAt: null,
-    isRemainingTimeStale: true,
+    videoWaitStartedAt: null,
+    remainingTimeNeedsRefresh: true,
     ...overrides,
   });
 }

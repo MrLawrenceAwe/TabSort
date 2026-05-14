@@ -101,41 +101,41 @@ export function derivePlaybackMetricUpdate({
   const isLiveNow =
     metricsPayload.isLive === true ? true : metricsPayload.isLive === false ? false : record.isLiveNow;
   const previousMediaStillApplies =
-    record.pageMediaReady === true &&
+    record.videoElementReady === true &&
     areEquivalentVideoUrls(record.url, payloadUrl || currentTabUrl || requestedUrl);
   const playbackEvidenceIsUsable = hasUsablePlaybackEvidence(metricsPayload);
 
   const update = {
     nextUrl: payloadUrl || currentTabUrl || null,
     nextTitle: typeof metricsPayload.title === 'string' ? metricsPayload.title : null,
-    pageRuntimeReady: true,
-    pageMediaReady:
-      metricsPayload.pageMediaReady === true ||
+    contentScriptReady: true,
+    videoElementReady:
+      metricsPayload.videoElementReady === true ||
       previousMediaStillApplies ||
       playbackEvidenceIsUsable,
     isLiveNow,
     resolvedLengthSeconds: isFiniteNumber(resolvedLengthSeconds) ? resolvedLengthSeconds : null,
     remainingTime: null,
-    isRemainingTimeStale: true,
+    remainingTimeNeedsRefresh: true,
   };
 
   if (isLiveNow) {
-    update.isRemainingTimeStale = false;
+    update.remainingTimeNeedsRefresh = false;
     return update;
   }
 
   if (!isFiniteNumber(resolvedLengthSeconds)) {
-    update.isRemainingTimeStale = !update.pageMediaReady;
+    update.remainingTimeNeedsRefresh = !update.videoElementReady;
     return update;
   }
 
   if (hasMediaDurationMismatch(metricsPayload, record, resolvedLengthSeconds)) {
-    update.pageMediaReady = false;
+    update.videoElementReady = false;
     update.remainingTime = resolvedLengthSeconds;
     return update;
   }
 
-  if (!update.pageMediaReady) {
+  if (!update.videoElementReady) {
     update.remainingTime = resolvedLengthSeconds;
     return update;
   }
@@ -145,6 +145,6 @@ export function derivePlaybackMetricUpdate({
     currentTimeSeconds,
     playbackRate,
   );
-  update.isRemainingTimeStale = !isFiniteNumber(currentTimeSeconds);
+  update.remainingTimeNeedsRefresh = !isFiniteNumber(currentTimeSeconds);
   return update;
 }

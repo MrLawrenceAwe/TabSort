@@ -40,7 +40,7 @@ function clearReadyRows(table) {
   }
 }
 
-export function setSecondaryColumnsVisible(visible) {
+export function setMetadataColumnsVisible(visible) {
   const actionRequired = getPopupElement('actionRequiredColumn');
   const tabStatus = getPopupElement('tabStatusColumn');
   const method = visible ? 'remove' : 'add';
@@ -56,7 +56,7 @@ function setOptionToggleVisibility(visible) {
   });
 }
 
-export function syncPopupChrome() {
+export function syncPopupLayout() {
   const statusElement = getPopupElement('statusElement');
   const sortButton = getPopupElement('sortButton');
   const sortedBadgeElement = getPopupElement('sortedBadgeElement');
@@ -82,7 +82,7 @@ export function syncPopupChrome() {
   }
 }
 
-export function addClassToDataRows(table, className) {
+export function addClassToTabRows(table, className) {
   for (let i = 1; i < table.rows.length; i += 1) {
     table.rows[i].classList.add(className);
   }

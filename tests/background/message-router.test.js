@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { trackedWindowState } from '../../background/window-store.js';
+import { readonlyTrackedWindowState } from '../../background/window-store.js';
 import {
-  handlePageMediaReady,
-  handlePageRuntimeReady,
+  handleVideoElementReady,
+  handleContentScriptReady,
   handlePageVideoDetails,
 } from '../../background/page-message-handlers.js';
 import { refreshTabPlaybackMetrics } from '../../background/playback-metrics-refresher.js';
@@ -37,9 +37,9 @@ test('handlePageVideoDetails does not create records for non-watch YouTube pages
     },
   );
 
-  assert.equal(trackedWindowState.tabRecordsById[7], undefined);
-  assert.deepEqual(trackedWindowState.visibleTabIds, []);
-  assert.deepEqual(trackedWindowState.targetSortableTabIds, []);
+  assert.equal(readonlyTrackedWindowState.tabRecordsById[7], undefined);
+  assert.deepEqual(readonlyTrackedWindowState.visibleTabIds, []);
+  assert.deepEqual(readonlyTrackedWindowState.targetSortableTabIds, []);
 });
 
 test('handlePageVideoDetails does not claim a window for non-watch YouTube pages', async () => {
@@ -61,8 +61,8 @@ test('handlePageVideoDetails does not claim a window for non-watch YouTube pages
     },
   );
 
-  assert.equal(trackedWindowState.windowId, null);
-  assert.equal(trackedWindowState.tabRecordsById[7], undefined);
+  assert.equal(readonlyTrackedWindowState.windowId, null);
+  assert.equal(readonlyTrackedWindowState.tabRecordsById[7], undefined);
 });
 
 test('handlePageVideoDetails removes tracked rows when tab leaves watch/shorts', async () => {
@@ -70,7 +70,7 @@ test('handlePageVideoDetails removes tracked rows when tab leaves watch/shorts',
   setTrackedTabRecords({
     7: createTabRecordFixture(7, {
       videoDetails: { title: 'Video 7', remainingTime: 25, lengthSeconds: 100 },
-      isRemainingTimeStale: false,
+      remainingTimeNeedsRefresh: false,
     }),
   });
   setTrackedSortState({ visibleTabIds: [7] });
@@ -92,23 +92,23 @@ test('handlePageVideoDetails removes tracked rows when tab leaves watch/shorts',
     },
   );
 
-  assert.equal(trackedWindowState.tabRecordsById[7], undefined);
-  assert.deepEqual(trackedWindowState.visibleTabIds, []);
-  assert.deepEqual(trackedWindowState.targetSortableTabIds, []);
+  assert.equal(readonlyTrackedWindowState.tabRecordsById[7], undefined);
+  assert.deepEqual(readonlyTrackedWindowState.visibleTabIds, []);
+  assert.deepEqual(readonlyTrackedWindowState.targetSortableTabIds, []);
 });
 
-test('handlePageRuntimeReady removes tracked rows when a SPA tab leaves watch/shorts', async () => {
+test('handleContentScriptReady removes tracked rows when a SPA tab leaves watch/shorts', async () => {
   resetTrackedWindowState(1);
   setTrackedTabRecords({
     7: createTabRecordFixture(7, {
       videoDetails: { title: 'Video 7', remainingTime: 25, lengthSeconds: 100 },
-      isRemainingTimeStale: false,
+      remainingTimeNeedsRefresh: false,
     }),
   });
   setTrackedSortState({ visibleTabIds: [7] });
   setTrackedSortState({ targetSortableTabIds: [7] });
 
-  await handlePageRuntimeReady(
+  await handleContentScriptReady(
     {},
     {
       tab: {
@@ -119,23 +119,23 @@ test('handlePageRuntimeReady removes tracked rows when a SPA tab leaves watch/sh
     },
   );
 
-  assert.equal(trackedWindowState.tabRecordsById[7], undefined);
-  assert.deepEqual(trackedWindowState.visibleTabIds, []);
-  assert.deepEqual(trackedWindowState.targetSortableTabIds, []);
+  assert.equal(readonlyTrackedWindowState.tabRecordsById[7], undefined);
+  assert.deepEqual(readonlyTrackedWindowState.visibleTabIds, []);
+  assert.deepEqual(readonlyTrackedWindowState.targetSortableTabIds, []);
 });
 
-test('handlePageRuntimeReady marks the runtime ready without collecting metrics', async () => {
+test('handleContentScriptReady marks the runtime ready without collecting metrics', async () => {
   resetTrackedWindowState(1);
   globalThis.chrome.tabs = {
     get() {
-      throw new Error('tabs.get should not be called on pageRuntimeReady');
+      throw new Error('tabs.get should not be called on contentScriptReady');
     },
     sendMessage() {
-      throw new Error('tabs.sendMessage should not be called on pageRuntimeReady');
+      throw new Error('tabs.sendMessage should not be called on contentScriptReady');
     },
   };
 
-  await handlePageRuntimeReady(
+  await handleContentScriptReady(
     {},
     {
       tab: {
@@ -146,30 +146,30 @@ test('handlePageRuntimeReady marks the runtime ready without collecting metrics'
     },
   );
 
-  const record = trackedWindowState.tabRecordsById[7];
+  const record = readonlyTrackedWindowState.tabRecordsById[7];
   assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
-  assert.deepEqual(trackedWindowState.visibleTabIds, [7]);
-  assert.deepEqual(trackedWindowState.targetSortableTabIds, [7]);
-  assert.equal(record.pageRuntimeReady, true);
-  assert.equal(record.pageMediaReady, false);
-  assert.equal(record.isRemainingTimeStale, true);
+  assert.deepEqual(readonlyTrackedWindowState.visibleTabIds, [7]);
+  assert.deepEqual(readonlyTrackedWindowState.targetSortableTabIds, [7]);
+  assert.equal(record.contentScriptReady, true);
+  assert.equal(record.videoElementReady, false);
+  assert.equal(record.remainingTimeNeedsRefresh, true);
 });
 
-test('handlePageRuntimeReady clears stale sort data on watch-to-watch SPA navigation', async () => {
+test('handleContentScriptReady clears stale sort data on watch-to-watch SPA navigation', async () => {
   resetTrackedWindowState(1);
   setTrackedTabRecords({
     7: createTabRecordFixture(7, {
       url: 'https://www.youtube.com/watch?v=old',
-      pageRuntimeReady: true,
-      pageMediaReady: true,
+      contentScriptReady: true,
+      videoElementReady: true,
       videoDetails: { title: 'Old Video', remainingTime: 25, lengthSeconds: 100 },
-      isRemainingTimeStale: false,
+      remainingTimeNeedsRefresh: false,
     }),
   });
   setTrackedSortState({ visibleTabIds: [7] });
   setTrackedSortState({ targetSortableTabIds: [7] });
 
-  await handlePageRuntimeReady(
+  await handleContentScriptReady(
     {},
     {
       tab: {
@@ -184,23 +184,23 @@ test('handlePageRuntimeReady clears stale sort data on watch-to-watch SPA naviga
     },
   );
 
-  const record = trackedWindowState.tabRecordsById[7];
+  const record = readonlyTrackedWindowState.tabRecordsById[7];
   assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
-  assert.equal(record.pageRuntimeReady, true);
-  assert.equal(record.pageMediaReady, false);
+  assert.equal(record.contentScriptReady, true);
+  assert.equal(record.videoElementReady, false);
   assert.equal(record.videoDetails, null);
   assert.equal(record.isLiveNow, false);
-  assert.equal(record.isRemainingTimeStale, true);
-  assert.deepEqual(trackedWindowState.targetSortableTabIds, [7]);
-  assert.equal(trackedWindowState.currentOrderMatchesTarget, false);
+  assert.equal(record.remainingTimeNeedsRefresh, true);
+  assert.deepEqual(readonlyTrackedWindowState.targetSortableTabIds, [7]);
+  assert.equal(readonlyTrackedWindowState.currentOrderMatchesTarget, false);
 });
 
-test('handlePageMediaReady removes tracked rows when a stale event arrives off watch/shorts', async () => {
+test('handleVideoElementReady removes tracked rows when a stale event arrives off watch/shorts', async () => {
   resetTrackedWindowState(1);
   setTrackedTabRecords({
     7: createTabRecordFixture(7, {
       videoDetails: { title: 'Video 7', remainingTime: 25, lengthSeconds: 100 },
-      isRemainingTimeStale: false,
+      remainingTimeNeedsRefresh: false,
     }),
   });
   setTrackedSortState({ visibleTabIds: [7] });
@@ -214,7 +214,7 @@ test('handlePageMediaReady removes tracked rows when a stale event arrives off w
     },
   };
 
-  await handlePageMediaReady(
+  await handleVideoElementReady(
     {},
     {
       tab: {
@@ -225,9 +225,9 @@ test('handlePageMediaReady removes tracked rows when a stale event arrives off w
     },
   );
 
-  assert.equal(trackedWindowState.tabRecordsById[7], undefined);
-  assert.deepEqual(trackedWindowState.visibleTabIds, []);
-  assert.deepEqual(trackedWindowState.targetSortableTabIds, []);
+  assert.equal(readonlyTrackedWindowState.tabRecordsById[7], undefined);
+  assert.deepEqual(readonlyTrackedWindowState.visibleTabIds, []);
+  assert.deepEqual(readonlyTrackedWindowState.targetSortableTabIds, []);
 });
 
 test('handlePageVideoDetails resets carried remaining time on watch-to-watch SPA navigation', async () => {
@@ -235,9 +235,9 @@ test('handlePageVideoDetails resets carried remaining time on watch-to-watch SPA
   setTrackedTabRecords({
     7: createTabRecordFixture(7, {
       url: 'https://www.youtube.com/watch?v=old',
-      pageRuntimeReady: true,
+      contentScriptReady: true,
       videoDetails: { title: 'Old Video', remainingTime: 25, lengthSeconds: 100 },
-      isRemainingTimeStale: false,
+      remainingTimeNeedsRefresh: false,
     }),
   });
 
@@ -259,13 +259,13 @@ test('handlePageVideoDetails resets carried remaining time on watch-to-watch SPA
     },
   );
 
-  const record = trackedWindowState.tabRecordsById[7];
+  const record = readonlyTrackedWindowState.tabRecordsById[7];
   assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
-  assert.equal(record.pageRuntimeReady, false);
+  assert.equal(record.contentScriptReady, false);
   assert.equal(record.videoDetails.title, 'New Video');
   assert.equal(record.videoDetails.lengthSeconds, 400);
   assert.equal(record.videoDetails.remainingTime, 400);
-  assert.equal(record.isRemainingTimeStale, true);
+  assert.equal(record.remainingTimeNeedsRefresh, true);
 });
 
 test('handlePageVideoDetails preserves ready state when the title changes for the same watch URL', async () => {
@@ -273,9 +273,9 @@ test('handlePageVideoDetails preserves ready state when the title changes for th
   setTrackedTabRecords({
     7: createTabRecordFixture(7, {
       url: 'https://www.youtube.com/watch?v=new',
-      pageMediaReady: true,
+      videoElementReady: true,
       videoDetails: { title: 'Old Video', remainingTime: 3365, lengthSeconds: 3365 },
-      isRemainingTimeStale: false,
+      remainingTimeNeedsRefresh: false,
     }),
   });
 
@@ -297,13 +297,13 @@ test('handlePageVideoDetails preserves ready state when the title changes for th
     },
   );
 
-  const record = trackedWindowState.tabRecordsById[7];
+  const record = readonlyTrackedWindowState.tabRecordsById[7];
   assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
-  assert.equal(record.pageMediaReady, true);
+  assert.equal(record.videoElementReady, true);
   assert.equal(record.videoDetails.title, 'Cyberpunk 2077 - PS5 Pro Update Trailer');
   assert.equal(record.videoDetails.lengthSeconds, 3365);
   assert.equal(record.videoDetails.remainingTime, 3365);
-  assert.equal(record.isRemainingTimeStale, false);
+  assert.equal(record.remainingTimeNeedsRefresh, false);
 });
 
 test('handlePageVideoDetails preserves ready state when only watch URL parameters change', async () => {
@@ -311,9 +311,9 @@ test('handlePageVideoDetails preserves ready state when only watch URL parameter
   setTrackedTabRecords({
     7: createTabRecordFixture(7, {
       url: 'https://www.youtube.com/watch?v=new',
-      pageMediaReady: true,
+      videoElementReady: true,
       videoDetails: { title: 'Video', remainingTime: 120, lengthSeconds: 300 },
-      isRemainingTimeStale: false,
+      remainingTimeNeedsRefresh: false,
     }),
   });
 
@@ -335,11 +335,11 @@ test('handlePageVideoDetails preserves ready state when only watch URL parameter
     },
   );
 
-  const record = trackedWindowState.tabRecordsById[7];
+  const record = readonlyTrackedWindowState.tabRecordsById[7];
   assert.equal(record.url, 'https://www.youtube.com/watch?v=new&list=abc123&index=10');
-  assert.equal(record.pageMediaReady, true);
+  assert.equal(record.videoElementReady, true);
   assert.equal(record.videoDetails.remainingTime, 120);
-  assert.equal(record.isRemainingTimeStale, false);
+  assert.equal(record.remainingTimeNeedsRefresh, false);
 });
 
 test(
@@ -350,10 +350,10 @@ test(
     setTrackedTabRecords({
       7: createTabRecordFixture(7, {
         url: 'https://www.youtube.com/watch?v=new',
-        pageRuntimeReady: true,
-        pageMediaReady: true,
+        contentScriptReady: true,
+        videoElementReady: true,
         videoDetails: { title: 'Video', remainingTime: 120, lengthSeconds: 300 },
-        isRemainingTimeStale: false,
+        remainingTimeNeedsRefresh: false,
       }),
     });
 
@@ -369,7 +369,7 @@ test(
       },
     };
 
-    await handlePageRuntimeReady({}, sender);
+    await handleContentScriptReady({}, sender);
     await handlePageVideoDetails(
       {
         details: {
@@ -395,7 +395,7 @@ test(
       callback({
         title: 'Video',
         url: sender.tab.url,
-        pageMediaReady: false,
+        videoElementReady: false,
         lengthSeconds: 300,
         duration: 300,
         currentTime: 180,
@@ -406,10 +406,10 @@ test(
 
     await refreshTabPlaybackMetrics(7);
 
-    const record = trackedWindowState.tabRecordsById[7];
+    const record = readonlyTrackedWindowState.tabRecordsById[7];
     assert.equal(record.url, sender.tab.url);
-    assert.equal(record.pageMediaReady, true);
+    assert.equal(record.videoElementReady, true);
     assert.equal(record.videoDetails.remainingTime, 120);
-    assert.equal(record.isRemainingTimeStale, false);
+    assert.equal(record.remainingTimeNeedsRefresh, false);
   },
 );

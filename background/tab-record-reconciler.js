@@ -1,7 +1,7 @@
 import { isValidWindowId } from '../shared/guards.js';
 import { getTabState, listWindowTabs } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
-import { createRecordFromTabSnapshot } from './tab-record-mutations.js';
+import { createRecordFromTabSnapshot } from './tab-record-lifecycle.js';
 import {
   getTabRecordsById,
   getTrackedWindowId,
