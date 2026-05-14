@@ -3,12 +3,7 @@ import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { loadSortOptions, saveSortOptions } from '../shared/storage.js';
 import { createRuntimeClient } from './runtime-client.js';
 import { createSnapshotClient } from './snapshot-client.js';
-import {
-  createSnapshotPoller,
-  shouldPollRecord,
-  shouldPollSnapshot,
-  shouldRetrySnapshotPoll,
-} from './snapshot-poller.js';
+import { createSnapshotPoller } from './snapshot-poller.js';
 import { renderSnapshot } from './snapshot-renderer.js';
 import { syncPopupChrome } from './popup-chrome-view.js';
 import { initializePopupDom, setErrorMessage } from './popup-elements.js';
@@ -138,9 +133,3 @@ if (canBootstrapPopup()) {
     );
   });
 }
-
-export {
-  shouldPollRecord,
-  shouldPollSnapshot,
-  shouldRetrySnapshotPoll,
-};

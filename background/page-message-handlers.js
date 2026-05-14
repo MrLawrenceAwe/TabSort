@@ -1,6 +1,7 @@
 import { isFiniteNumber } from '../shared/guards.js';
 import { ensureTabRecord } from './tab-record.js';
 import {
+  applyPageMediaReady,
   applyPageRuntimeReady,
   applyPageVideoDetails,
   removeTabRecord,
@@ -64,8 +65,7 @@ export async function handlePageMediaReady(_message, sender) {
   const { tabId, windowId } = pageSender;
   setTrackedWindowId(windowId);
   const record = ensureTabRecord(tabId, windowId);
-  record.pageMediaReady = true;
-  record.mediaWaitStartedAt = null;
+  applyPageMediaReady(record);
   await refreshTabPlaybackMetrics(tabId);
 }
 

@@ -1,10 +1,52 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, extname, relative, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const projectRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
+const staticImportPattern =
+  /(?:import\s+(?:[^'"]+\s+from\s+)?|import\s*\(\s*)['"]([^'"]+)['"]/g;
 
 function loadManifest() {
   const manifestUrl = new URL('../manifest.json', import.meta.url);
   return JSON.parse(readFileSync(manifestUrl, 'utf8'));
+}
+
+function toResourcePath(filePath) {
+  return relative(projectRoot, filePath).split(sep).join('/');
+}
+
+function resolveModulePath(importerPath, specifier) {
+  if (!specifier.startsWith('.')) return null;
+
+  const resolvedPath = resolve(dirname(importerPath), specifier);
+  if (extname(resolvedPath)) return resolvedPath;
+
+  for (const extension of ['.js', '.mjs']) {
+    const candidate = `${resolvedPath}${extension}`;
+    if (existsSync(candidate)) return candidate;
+  }
+
+  return resolvedPath;
+}
+
+function collectStaticModuleResources(entryResource, visited = new Set()) {
+  const entryPath = resolve(projectRoot, entryResource);
+  if (visited.has(entryPath)) return [];
+  visited.add(entryPath);
+
+  const source = readFileSync(entryPath, 'utf8');
+  const resources = [toResourcePath(entryPath)];
+
+  for (const match of source.matchAll(staticImportPattern)) {
+    const importedPath = resolveModulePath(entryPath, match[1]);
+    if (importedPath) {
+      resources.push(...collectStaticModuleResources(toResourcePath(importedPath), visited));
+    }
+  }
+
+  return resources;
 }
 
 test('manifest exposes dynamically imported content modules to YouTube pages', () => {
@@ -19,20 +61,10 @@ test('manifest exposes dynamically imported content modules to YouTube pages', (
   );
 
   assert.ok(youtubeEntry, 'missing web_accessible_resources entry for content bootstrap module');
-  assert.deepEqual(youtubeEntry.resources, [
-    'content/youtube/controller.js',
-    'content/youtube/controller-state.js',
-    'content/youtube/messaging.js',
-    'content/youtube/media-readiness.js',
-    'content/youtube/media-elements.js',
-    'content/youtube/video-details.js',
-    'content/youtube/youtube-player-response.js',
-    'content/youtube/live-status.js',
-    'content/youtube/title-observer.js',
-    'content/youtube/video-metrics.js',
-    'shared/guards.js',
-    'shared/messages.js',
-  ]);
+  assert.deepEqual(
+    [...youtubeEntry.resources].sort(),
+    collectStaticModuleResources('content/youtube/controller.js').sort(),
+  );
   assert.deepEqual(youtubeEntry.matches, ['*://*.youtube.com/*']);
 });
 

@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { shouldRetrySnapshotPoll } from '../../popup/popup-controller.js';
 import { TAB_STATES } from '../../shared/tab-states.js';
 import {
   LOADING_GRACE_MS,
@@ -12,7 +11,8 @@ import {
 import {
   shouldPollRecord,
   shouldPollSnapshot,
-} from '../../popup/popup-controller.js';
+  shouldRetrySnapshotPoll,
+} from '../../popup/snapshot-poller.js';
 import { shouldRefreshRecordMetrics } from '../../shared/tab-refresh-policy.js';
 
 const NOW_MS = 100_000;
