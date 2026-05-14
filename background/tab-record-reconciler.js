@@ -9,7 +9,7 @@ import {
   nextSyncToken,
   replaceAllTabRecords,
   setTrackedWindowId,
-} from './window-store.js';
+} from './tracked-window-store.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function resolveWindowIdForQuery(windowId, { force = false } = {}) {

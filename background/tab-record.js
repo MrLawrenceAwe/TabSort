@@ -1,5 +1,5 @@
 import { isFiniteNumber } from '../shared/guards.js';
-import { getWritableTabRecord, setTabRecord } from './window-store.js';
+import { getWritableTabRecord, setTabRecord } from './tracked-window-store.js';
 
 const FALLBACK_TAB_INDEX = Number.MAX_SAFE_INTEGER;
 

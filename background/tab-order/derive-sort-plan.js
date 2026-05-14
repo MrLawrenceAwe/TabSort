@@ -1,5 +1,5 @@
 import { isFiniteNumber } from '../../shared/guards.js';
-import { hasReadyRemainingTime } from '../sort-readiness.js';
+import { hasReadyRemainingTime } from '../remaining-time-readiness.js';
 
 export function areTabIdListsEqual(a, b) {
   if (a.length !== b.length) return false;
@@ -31,14 +31,14 @@ function buildRemainingTimeEntries(records) {
   }));
 }
 
-function buildTargetVideoTabOrder(knownEntries, unknownEntries, eligibleVideoTabIdsInCurrentOrder) {
+function buildTargetVideoTabOrder(knownEntries, unknownEntries, eligibleIdsInTabOrder) {
   const sortedKnownIds = knownEntries
     .slice()
     .sort((a, b) => a.remainingTime - b.remainingTime)
     .map((entry) => entry.id);
 
   const unknownIds = new Set(unknownEntries.map((entry) => entry.id));
-  const unknownIdsInCurrentOrder = eligibleVideoTabIdsInCurrentOrder.filter((id) => unknownIds.has(id));
+  const unknownIdsInCurrentOrder = eligibleIdsInTabOrder.filter((id) => unknownIds.has(id));
 
   return [...sortedKnownIds, ...unknownIdsInCurrentOrder];
 }
@@ -51,11 +51,11 @@ export function deriveSortPlan(records) {
   const trackedTabIdsInWindowOrder = deriveTabIdOrder(records);
   const movableRecords = records.filter((record) => !record.pinned);
   const eligibleVideoRecords = movableRecords.filter(isEligibleVideoRecord);
-  const eligibleVideoTabIdsInCurrentOrder = deriveTabIdOrder(eligibleVideoRecords);
+  const eligibleIdsInTabOrder = deriveTabIdOrder(eligibleVideoRecords);
   const remainingTimeEntries = buildRemainingTimeEntries(eligibleVideoRecords);
   const knownRemainingEntries = remainingTimeEntries.filter((entry) => entry.remainingTime !== null);
   const unknownRemainingEntries = remainingTimeEntries.filter((entry) => entry.remainingTime === null);
-  const readyVideoTabIdsInCurrentOrder = eligibleVideoTabIdsInCurrentOrder.filter((tabId) =>
+  const readyVideoTabIdsInCurrentOrder = eligibleIdsInTabOrder.filter((tabId) =>
     knownRemainingEntries.some((entry) => entry.id === tabId),
   );
   const readyVideoTabIdsByRemainingTime = knownRemainingEntries
@@ -65,22 +65,22 @@ export function deriveSortPlan(records) {
   const targetVideoTabOrder = buildTargetVideoTabOrder(
     knownRemainingEntries,
     unknownRemainingEntries,
-    eligibleVideoTabIdsInCurrentOrder,
+    eligibleIdsInTabOrder,
   );
   const allEligibleVideosReady = unknownRemainingEntries.length === 0;
   const currentVideoTabOrderMatchesPlan =
-    eligibleVideoTabIdsInCurrentOrder.length > 0 &&
-    eligibleVideoTabIdsInCurrentOrder.length === targetVideoTabOrder.length &&
-    eligibleVideoTabIdsInCurrentOrder.every((id, index) => id === targetVideoTabOrder[index]);
+    eligibleIdsInTabOrder.length > 0 &&
+    eligibleIdsInTabOrder.length === targetVideoTabOrder.length &&
+    eligibleIdsInTabOrder.every((id, index) => id === targetVideoTabOrder[index]);
 
   return {
     trackedTabIdsInWindowOrder,
     targetVideoTabOrder,
     eligibleVideoRecords,
-    eligibleVideoTabIdsInCurrentOrder,
+    eligibleIdsInTabOrder,
     readyVideoTabIdsInCurrentOrder,
     readyVideoTabIdsByRemainingTime,
     allEligibleVideosReady,
-    eligibleVideosAlreadySorted: allEligibleVideosReady && currentVideoTabOrderMatchesPlan,
+    allEligibleVideosSorted: allEligibleVideosReady && currentVideoTabOrderMatchesPlan,
   };
 }

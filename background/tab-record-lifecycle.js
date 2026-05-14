@@ -1,7 +1,7 @@
 import { TAB_STATES } from '../shared/tab-states.js';
 import { isFiniteNumber } from '../shared/guards.js';
 import { createTabRecord } from './tab-record.js';
-import { getCurrentTimeMs } from './window-store.js';
+import { getCurrentTimeMs } from './tracked-window-store.js';
 
 export function clearRemainingTime(record) {
   if (record?.videoDetails && record.videoDetails.remainingTime != null) {

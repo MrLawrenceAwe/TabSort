@@ -9,13 +9,13 @@ import {
   RECENT_WATCH_TRANSITION_MS,
 } from '../../shared/tab-resolution-guidance.js';
 import {
-  shouldPollTabSnapshot,
-  shouldRetryTabRefresh,
-} from '../../popup/tab-refresh-poller.js';
+  shouldPollSnapshot,
+  shouldRetrySnapshotLoad,
+} from '../../popup/snapshot-poller.js';
 import {
   shouldPollRecord,
   shouldRefreshRecordMetrics,
-} from '../../shared/tab-refresh-policy.js';
+} from '../../shared/metrics-refresh-policy.js';
 
 const NOW_MS = 100_000;
 const fakeNow = () => NOW_MS;
@@ -147,7 +147,7 @@ test('shouldPollRecord stops polling stalled watch URL transitions', () => {
   assert.equal(shouldPollRecord(record, { now: fakeNow }), false);
 });
 
-test('shouldPollTabSnapshot polls only when at least one tracked tab can self-resolve', () => {
+test('shouldPollSnapshot polls only when at least one tracked tab can self-resolve', () => {
   const snapshot = {
     tabRecordsById: {
       1: makeRecord({
@@ -163,16 +163,16 @@ test('shouldPollTabSnapshot polls only when at least one tracked tab can self-re
     },
   };
 
-  assert.equal(shouldPollTabSnapshot(snapshot, { now: fakeNow }), true);
+  assert.equal(shouldPollSnapshot(snapshot, { now: fakeNow }), true);
   assert.equal(
-    shouldPollTabSnapshot({ tabRecordsById: { 2: snapshot.tabRecordsById[2] } }, { now: fakeNow }),
+    shouldPollSnapshot({ tabRecordsById: { 2: snapshot.tabRecordsById[2] } }, { now: fakeNow }),
     false,
   );
 });
 
-test('shouldRetryTabRefresh keeps polling after a failed snapshot load while popup is active', () => {
-  assert.equal(shouldRetryTabRefresh(null, true), true);
-  assert.equal(shouldRetryTabRefresh(undefined, true), true);
-  assert.equal(shouldRetryTabRefresh({}, true), false);
-  assert.equal(shouldRetryTabRefresh(null, false), false);
+test('shouldRetrySnapshotLoad keeps polling after a failed snapshot load while popup is active', () => {
+  assert.equal(shouldRetrySnapshotLoad(null, true), true);
+  assert.equal(shouldRetrySnapshotLoad(undefined, true), true);
+  assert.equal(shouldRetrySnapshotLoad({}, true), false);
+  assert.equal(shouldRetrySnapshotLoad(null, false), false);
 });

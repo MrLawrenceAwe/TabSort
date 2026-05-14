@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { createYoutubePageController } from '../content/youtube/controller.js';
-import { shouldSendContentScriptReadySignal } from '../content/youtube/controller-setup.js';
+import { shouldSendContentScriptReadySignal } from '../content/youtube/controller-state.js';
 import { collectPageVideoDetails } from '../content/youtube/video-details.js';
 import { inferIsLiveNow } from '../content/youtube/live-status.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
@@ -42,7 +42,7 @@ test('shouldSendContentScriptReadySignal allows first-load, force-refresh, and U
 });
 
 test(
-  'content script session re-sends contentScriptReported after yt-navigate-finish changes the page URL',
+  'content script session re-sends the content script ready event after yt-navigate-finish changes the page URL',
   () => {
     const runtime = createYoutubePageController();
     try {
@@ -79,7 +79,7 @@ test(
 );
 
 test(
-  'content script session waits for fresh media evidence before re-sending mediaElementObserved on SPA navigation',
+  'content script session waits for fresh media evidence before re-sending the video element ready event on SPA navigation',
   () => {
     const runtime = createYoutubePageController();
     try {

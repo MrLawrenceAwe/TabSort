@@ -6,13 +6,13 @@ import {
   markMediaElementObserved,
 } from './tab-record-lifecycle.js';
 import { recomputeSortState } from './sort-state.js';
-import { refreshPlaybackState } from './refresh-playback-state.js';
+import { collectPlaybackMetrics } from './collect-playback-metrics.js';
 import {
   getTabRecord,
   getTrackedWindowId,
   deleteTabRecord,
   setTrackedWindowId,
-} from './window-store.js';
+} from './tracked-window-store.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function isSenderInTrackedWindow(windowId) {
@@ -71,7 +71,7 @@ export async function handleVideoElementReady(_message, sender) {
   setTrackedWindowId(windowId);
   const record = ensureTabRecord(tabId, windowId);
   markMediaElementObserved(record);
-  await refreshPlaybackState(tabId);
+  await collectPlaybackMetrics(tabId);
 }
 
 export async function handlePageVideoDetails(message, sender) {

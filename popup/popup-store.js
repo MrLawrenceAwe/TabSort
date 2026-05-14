@@ -2,13 +2,13 @@ import { createEmptySortSummary } from '../shared/sort-summary.js';
 
 export const popupState = {
   sortSummary: createEmptySortSummary(),
-  eligibleVideosAlreadySorted: false,
+  allEligibleVideosSorted: false,
   activeWindowId: null,
 };
 
 export function resetPopupState() {
   popupState.sortSummary = createEmptySortSummary();
-  popupState.eligibleVideosAlreadySorted = false;
+  popupState.allEligibleVideosSorted = false;
   popupState.activeWindowId = null;
 }
 

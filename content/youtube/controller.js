@@ -5,7 +5,7 @@ import {
   PAGE_CONTROLLER_DEPENDENCIES,
   createPageControllerState,
   shouldSendContentScriptReadySignal,
-} from './controller-setup.js';
+} from './controller-state.js';
 import { createMediaReadinessTracker } from './media-readiness.js';
 import { createTitleObserver } from './title-observer.js';
 import { handleCollectVideoMetricsMessage } from './video-metrics.js';
@@ -136,10 +136,10 @@ export function createYoutubePageController({
     }
   }
 
-  function refreshPageState({ includeContentScriptReadySignal = false, forceContentScriptReadySignal = false } = {}) {
+  function refreshPageState({ sendReadySignal = false, forceReadySignal = false } = {}) {
     syncObservedPageUrl();
-    if (includeContentScriptReadySignal) {
-      dispatchContentScriptReadySignal({ force: forceContentScriptReadySignal });
+    if (sendReadySignal) {
+      dispatchContentScriptReadySignal({ force: forceReadySignal });
     }
     publishPageVideoDetails();
     mediaReadiness.watchForVideoMount();
@@ -180,23 +180,23 @@ export function createYoutubePageController({
       runtimeDocument?.readyState === 'complete' ||
       runtimeDocument?.readyState === 'interactive'
     ) {
-      refreshPageState({ includeContentScriptReadySignal: true });
+      refreshPageState({ sendReadySignal: true });
     } else {
       addWindowEventListener(
         runtimeWindow,
         'DOMContentLoaded',
-        () => refreshPageState({ includeContentScriptReadySignal: true }),
+        () => refreshPageState({ sendReadySignal: true }),
         { once: true },
       );
     }
 
     addWindowEventListener(runtimeWindow, 'yt-navigate-finish', () => {
-      refreshPageState({ includeContentScriptReadySignal: true });
+      refreshPageState({ sendReadySignal: true });
     });
 
     addWindowEventListener(runtimeWindow, 'pageshow', (event) => {
       if (event.persisted) {
-        refreshPageState({ includeContentScriptReadySignal: true, forceContentScriptReadySignal: true });
+        refreshPageState({ sendReadySignal: true, forceReadySignal: true });
       }
     });
 

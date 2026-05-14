@@ -5,7 +5,7 @@ function updateStatus(statusElement) {
   if (!statusElement) return;
   const trackedTabCount = popupState.sortSummary.counts.tracked;
   const sortReadyTabCount = popupState.sortSummary.counts.sortReady;
-  if (!popupState.eligibleVideosAlreadySorted) {
+  if (!popupState.allEligibleVideosSorted) {
     statusElement.classList.toggle('hide', trackedTabCount <= 1);
     statusElement.textContent = `${sortReadyTabCount}/${trackedTabCount} ready for sort.`;
     return;
@@ -15,7 +15,7 @@ function updateStatus(statusElement) {
 
 function updateSortedBadge(sortedBadgeElement) {
   if (!sortedBadgeElement) return;
-  sortedBadgeElement.classList.toggle('hide', !popupState.eligibleVideosAlreadySorted);
+  sortedBadgeElement.classList.toggle('hide', !popupState.allEligibleVideosSorted);
 }
 
 export function getSortButtonText(sortReadyTabCount, totalTabCount) {
@@ -68,7 +68,7 @@ export function syncPopupLayout() {
     sortReadySubsetExists && (!sortReadyTabs.contiguous || !sortReadyTabs.atFront);
   const shouldShowSort =
     counts.sortReady >= 2 &&
-    !popupState.eligibleVideosAlreadySorted &&
+    !popupState.allEligibleVideosSorted &&
     (sortReadyTabs.outOfOrder || sortReadySubsetNeedsSorting);
 
   setOptionToggleVisibility(shouldShowSort);
@@ -77,7 +77,7 @@ export function syncPopupLayout() {
   updateSortedBadge(sortedBadgeElement);
   updateSortButton(sortButton, shouldShowSort);
 
-  if (popupState.eligibleVideosAlreadySorted && table) {
+  if (popupState.allEligibleVideosSorted && table) {
     clearReadyRows(table);
   }
 }

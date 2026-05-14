@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES } from '../../shared/tab-states.js';
-import { trackedWindowSnapshot } from '../../background/window-store.js';
+import { trackedWindowSnapshot } from '../../background/tracked-window-store.js';
 import { reconcileWindowTabRecords } from '../../background/tab-record-reconciler.js';
 import {
   ensureChromeApi,

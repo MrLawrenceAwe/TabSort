@@ -4,10 +4,10 @@ import { recomputeSortState } from './sort-state.js';
 import {
   listTabIds,
   trackedWindowSnapshot,
-  resetWindowStore,
+  resetTrackedWindowStore,
   setTrackedWindowId,
-} from './window-store.js';
-import { refreshPlaybackStateBatch } from './refresh-playback-state.js';
+} from './tracked-window-store.js';
+import { collectPlaybackMetricsBatch } from './collect-playback-metrics.js';
 import { reconcileWindowTabRecords } from './tab-record-reconciler.js';
 
 const REFRESH_ALARM_NAME = 'refreshRemaining';
@@ -34,7 +34,7 @@ const getLastFocusedWindowId = () =>
   });
 
 export function resetTrackedWindow() {
-  resetWindowStore();
+  resetTrackedWindowStore();
   recomputeSortState();
 }
 
@@ -45,7 +45,7 @@ async function syncInitialWindowState() {
 
   const ids = listTabIds();
   if (ids.length) {
-    await refreshPlaybackStateBatch(ids);
+    await collectPlaybackMetricsBatch(ids);
   }
 }
 
@@ -83,7 +83,7 @@ export function initializeWindowLifecycle() {
       if (alarm.name !== REFRESH_ALARM_NAME) return;
       await reconcileWindowTabRecords(trackedWindowSnapshot.windowId, { force: true });
       const ids = listTabIds();
-      await refreshPlaybackStateBatch(ids);
+      await collectPlaybackMetricsBatch(ids);
     }),
   );
 

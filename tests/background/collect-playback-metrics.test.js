@@ -4,11 +4,11 @@ import test from 'node:test';
 import {
   getWritableTabRecord,
   trackedWindowSnapshot,
-} from '../../background/window-store.js';
+} from '../../background/tracked-window-store.js';
 import {
-  refreshPlaybackState,
-  refreshPlaybackStateBatch,
-} from '../../background/refresh-playback-state.js';
+  collectPlaybackMetrics,
+  collectPlaybackMetricsBatch,
+} from '../../background/collect-playback-metrics.js';
 import {
   ensureChromeApi,
   createTabRecordFixture,
@@ -21,7 +21,7 @@ import {
 ensureChromeApi({ tabs: true });
 
 test(
-  'refreshPlaybackState applies updates to the latest record object after async boundaries',
+  'collectPlaybackMetrics applies updates to the latest record object after async boundaries',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
@@ -55,12 +55,12 @@ test(
       }, 0);
     };
 
-    const refreshPromise = refreshPlaybackState(1);
+    const collectPromise = collectPlaybackMetrics(1);
 
     const replacementRecord = createTabRecordFixture(1, { contentScriptReported: false });
     setTrackedTabRecords({ 1: replacementRecord });
 
-    await refreshPromise;
+    await collectPromise;
 
     assert.equal(getWritableTabRecord(1), replacementRecord);
     assert.equal(replacementRecord.contentScriptReported, true);
@@ -71,7 +71,7 @@ test(
 );
 
 test(
-  'refreshPlaybackState updates the stored URL when collected metrics come from a new watch page',
+  'collectPlaybackMetrics updates the stored URL when collected metrics come from a new watch page',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
@@ -107,7 +107,7 @@ test(
       });
     };
 
-    await refreshPlaybackState(1);
+    await collectPlaybackMetrics(1);
 
     const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
@@ -119,7 +119,7 @@ test(
 );
 
 test(
-  'refreshPlaybackState ignores async metric payloads that no longer match the tracked URL',
+  'collectPlaybackMetrics ignores async metric payloads that no longer match the tracked URL',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
@@ -164,7 +164,7 @@ test(
       }, 0);
     };
 
-    const refreshPromise = refreshPlaybackState(1);
+    const collectPromise = collectPlaybackMetrics(1);
 
     setTrackedTabRecord(1, createTabRecordFixture(1, {
       url: 'https://www.youtube.com/watch?v=new',
@@ -174,7 +174,7 @@ test(
       remainingTimeStale: true,
     }));
 
-    await refreshPromise;
+    await collectPromise;
 
     const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
@@ -186,7 +186,7 @@ test(
 );
 
 test(
-  'refreshPlaybackState keeps remaining time stale until the current page reports media ready',
+  'collectPlaybackMetrics keeps remaining time stale until the current page reports media ready',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
@@ -223,7 +223,7 @@ test(
       });
     };
 
-    await refreshPlaybackState(1);
+    await collectPlaybackMetrics(1);
 
     const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.contentScriptReported, true);
@@ -236,7 +236,7 @@ test(
 );
 
 test(
-  'refreshPlaybackState self-resolves when playback metrics expose a ready video',
+  'collectPlaybackMetrics self-resolves when playback metrics expose a ready video',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
@@ -252,7 +252,7 @@ test(
 
     stubChromeTabMetrics({ url: 'https://www.youtube.com/watch?v=archive' });
 
-    await refreshPlaybackState(1);
+    await collectPlaybackMetrics(1);
 
     const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.contentScriptReported, true);
@@ -265,7 +265,7 @@ test(
 );
 
 test(
-  'refreshPlaybackState ignores stale zero recorded length for archived streams',
+  'collectPlaybackMetrics ignores stale zero recorded length for archived streams',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
@@ -281,7 +281,7 @@ test(
 
     stubChromeTabMetrics({ url: 'https://www.youtube.com/watch?v=archive' });
 
-    await refreshPlaybackState(1);
+    await collectPlaybackMetrics(1);
 
     const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.contentScriptReported, true);
@@ -293,7 +293,7 @@ test(
 );
 
 test(
-  'refreshPlaybackState ignores zero playback duration when no valid length exists',
+  'collectPlaybackMetrics ignores zero playback duration when no valid length exists',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
@@ -312,7 +312,7 @@ test(
       metrics: { duration: 0, currentTime: 0 },
     });
 
-    await refreshPlaybackState(1);
+    await collectPlaybackMetrics(1);
 
     const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.contentScriptReported, true);
@@ -324,7 +324,7 @@ test(
 );
 
 test(
-  'refreshPlaybackState does not treat missing current time as playback evidence',
+  'collectPlaybackMetrics does not treat missing current time as playback evidence',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
@@ -343,7 +343,7 @@ test(
       metrics: { duration: 6211, currentTime: null },
     });
 
-    await refreshPlaybackState(1);
+    await collectPlaybackMetrics(1);
 
     const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.contentScriptReported, true);
@@ -355,7 +355,7 @@ test(
 );
 
 test(
-  'refreshPlaybackState keeps remaining time stale when page metadata and video duration disagree',
+  'collectPlaybackMetrics keeps remaining time stale when page metadata and video duration disagree',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
@@ -397,7 +397,7 @@ test(
       });
     };
 
-    await refreshPlaybackState(1);
+    await collectPlaybackMetrics(1);
 
     const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.contentScriptReported, true);
@@ -410,7 +410,7 @@ test(
 );
 
 test(
-  'refreshPlaybackStateBatch recomputes and broadcasts once for multiple updates',
+  'collectPlaybackMetricsBatch recomputes and broadcasts once for multiple updates',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
@@ -448,7 +448,7 @@ test(
       callback?.();
     };
 
-    const changed = await refreshPlaybackStateBatch([1, 2, 3], { concurrency: 2 });
+    const changed = await collectPlaybackMetricsBatch([1, 2, 3], { concurrency: 2 });
 
     assert.equal(changed, true);
     assert.equal(broadcastCount, 1);
