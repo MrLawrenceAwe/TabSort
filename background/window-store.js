@@ -20,9 +20,9 @@ export function cloneTabRecordsById(tabRecordsById = {}) {
 function createTrackedWindowStoreState() {
   return {
     tabRecordsById: {},
-    plannedVideoTabIds: [],
-    visibleTabIds: [],
-    readyTabsAlreadySorted: false,
+    targetVideoTabOrder: [],
+    trackedTabIdsInWindowOrder: [],
+    eligibleVideosAlreadySorted: false,
     sortSummary: createEmptySortSummary(),
     windowId: null,
     snapshotSignature: null,
@@ -36,14 +36,14 @@ export const trackedWindowSnapshot = Object.freeze({
   get tabRecordsById() {
     return cloneTabRecordsById(trackedWindowState.tabRecordsById);
   },
-  get plannedVideoTabIds() {
-    return [...trackedWindowState.plannedVideoTabIds];
+  get targetVideoTabOrder() {
+    return [...trackedWindowState.targetVideoTabOrder];
   },
-  get visibleTabIds() {
-    return [...trackedWindowState.visibleTabIds];
+  get trackedTabIdsInWindowOrder() {
+    return [...trackedWindowState.trackedTabIdsInWindowOrder];
   },
-  get readyTabsAlreadySorted() {
-    return trackedWindowState.readyTabsAlreadySorted;
+  get eligibleVideosAlreadySorted() {
+    return trackedWindowState.eligibleVideosAlreadySorted;
   },
   get sortSummary() {
     return cloneSortSummary(trackedWindowState.sortSummary);
@@ -130,14 +130,14 @@ export function isSyncTokenCurrent(syncToken) {
 }
 
 export function setSortState({
-  visibleTabIds = [],
-  plannedVideoTabIds = [],
-  readyTabsAlreadySorted = false,
+  trackedTabIdsInWindowOrder = [],
+  targetVideoTabOrder = [],
+  eligibleVideosAlreadySorted = false,
   sortSummary = createEmptySortSummary(),
 } = {}) {
-  trackedWindowState.plannedVideoTabIds = [...plannedVideoTabIds];
-  trackedWindowState.visibleTabIds = [...visibleTabIds];
-  trackedWindowState.readyTabsAlreadySorted = Boolean(readyTabsAlreadySorted);
+  trackedWindowState.targetVideoTabOrder = [...targetVideoTabOrder];
+  trackedWindowState.trackedTabIdsInWindowOrder = [...trackedTabIdsInWindowOrder];
+  trackedWindowState.eligibleVideosAlreadySorted = Boolean(eligibleVideosAlreadySorted);
   trackedWindowState.sortSummary = cloneSortSummary(sortSummary);
 }
 

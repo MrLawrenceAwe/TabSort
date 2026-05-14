@@ -24,12 +24,13 @@ function clearVideoIdentity(record) {
   markRemainingTimeAsStale(record);
 }
 
-export function applyMediaElementObserved(record) {
+export function markMediaElementObserved(record) {
   record.mediaElementObserved = true;
   record.videoWaitStartedAt = null;
 }
 
-function applyVideoMetricsUnavailable(record) {
+export function applyVideoMetricsUnavailable(record) {
+  if (!record) return;
   record.contentScriptReported = false;
   resetMediaReadiness(record);
   clearRemainingTime(record);
@@ -42,31 +43,13 @@ function applyVideoIdentityChanged(record, { contentScriptReported = false, time
   clearVideoIdentity(record);
 }
 
-export function applyMetricsUnavailable(record) {
-  if (!record) return;
-
-  applyVideoMetricsUnavailable(record);
-}
-
-function applyPageVideoChanged(record) {
-  if (!record) return;
-
-  applyVideoIdentityChanged(record);
-}
-
-function applyContentScriptReadyAfterVideoChange(record, timestamp) {
-  if (!record) return;
-
-  applyVideoIdentityChanged(record, { contentScriptReported: true, timestamp });
-}
-
 export function applyTabReloadStarted(record) {
   if (!record) return;
   const timestamp = getCurrentTimeMs();
   record.status = TAB_STATES.LOADING;
   record.loadingStartedAt = timestamp;
   record.unsuspendedTimestamp = timestamp;
-  applyMetricsUnavailable(record);
+  applyVideoMetricsUnavailable(record);
 }
 
 export function createRecordFromTabSnapshot(
@@ -133,7 +116,7 @@ export function applyContentScriptReady(record, { urlChanged = false, url = null
   if (!record) return;
   const timestamp = getCurrentTimeMs();
   if (urlChanged) {
-    applyContentScriptReadyAfterVideoChange(record, timestamp);
+    applyVideoIdentityChanged(record, { contentScriptReported: true, timestamp });
   }
   if (url) record.url = url;
   record.contentScriptReported = true;
@@ -142,14 +125,9 @@ export function applyContentScriptReady(record, { urlChanged = false, url = null
   }
 }
 
-export function applyMediaElementReady(record) {
-  if (!record) return;
-  applyMediaElementObserved(record);
-}
-
 export function applyVideoDetailsFromPage(record, details = {}, { urlChanged = false } = {}) {
   if (!record) return;
-  if (urlChanged) applyPageVideoChanged(record);
+  if (urlChanged) applyVideoIdentityChanged(record);
   if (details.url) record.url = details.url;
   record.videoDetails = record.videoDetails || {};
   if (details.title) record.videoDetails.title = details.title;

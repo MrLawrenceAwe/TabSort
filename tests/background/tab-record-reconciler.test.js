@@ -132,8 +132,8 @@ test(
         remainingTimeStale: false,
       }),
     });
-    setTrackedSortState({ visibleTabIds: [1] });
-    setTrackedSortState({ plannedVideoTabIds: [1] });
+    setTrackedSortState({ trackedTabIdsInWindowOrder: [1] });
+    setTrackedSortState({ targetVideoTabOrder: [1] });
 
     globalThis.chrome.tabs.query = (query, callback) => {
       globalThis.chrome.runtime.lastError =
@@ -145,8 +145,8 @@ test(
     await reconcileWindowTabRecords(1, { force: true });
 
     assert.deepEqual(Object.keys(trackedWindowSnapshot.tabRecordsById), ['1']);
-    assert.deepEqual(trackedWindowSnapshot.visibleTabIds, [1]);
-    assert.deepEqual(trackedWindowSnapshot.plannedVideoTabIds, [1]);
+    assert.deepEqual(trackedWindowSnapshot.trackedTabIdsInWindowOrder, [1]);
+    assert.deepEqual(trackedWindowSnapshot.targetVideoTabOrder, [1]);
     assert.equal(trackedWindowSnapshot.tabRecordsById[1].videoDetails.remainingTime, 90);
   },
 );
@@ -162,8 +162,8 @@ test(
         remainingTimeStale: false,
       }),
     });
-    setTrackedSortState({ visibleTabIds: [1] });
-    setTrackedSortState({ plannedVideoTabIds: [1] });
+    setTrackedSortState({ trackedTabIdsInWindowOrder: [1] });
+    setTrackedSortState({ targetVideoTabOrder: [1] });
 
     stubChromeTabQueryFailure();
 
@@ -171,7 +171,7 @@ test(
 
     assert.equal(trackedWindowSnapshot.windowId, 1);
     assert.deepEqual(Object.keys(trackedWindowSnapshot.tabRecordsById), ['1']);
-    assert.deepEqual(trackedWindowSnapshot.visibleTabIds, [1]);
-    assert.deepEqual(trackedWindowSnapshot.plannedVideoTabIds, [1]);
+    assert.deepEqual(trackedWindowSnapshot.trackedTabIdsInWindowOrder, [1]);
+    assert.deepEqual(trackedWindowSnapshot.targetVideoTabOrder, [1]);
   },
 );

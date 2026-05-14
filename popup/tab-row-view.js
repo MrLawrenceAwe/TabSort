@@ -23,33 +23,33 @@ const ROW_VIEW_COLUMNS = Object.freeze({
   ],
 });
 
-export function renderTabRow(row, tabRecord, readyTabsAlreadySorted, postRuntimeMessage) {
+export function renderTabRow(row, tabRecord, eligibleVideosAlreadySorted, postRuntimeMessage) {
   row.insertCell(0).textContent = tabRecord.videoDetails?.title ?? tabRecord.url;
 
   const guidance = determineTabGuidance(tabRecord);
   if (guidance === TAB_GUIDANCE.RELOAD_TAB) {
     row.classList.add('reload-required-row');
   }
-  if (!readyTabsAlreadySorted) {
+  if (!eligibleVideosAlreadySorted) {
     insertGuidanceCell(row, tabRecord, guidance, postRuntimeMessage);
   }
 
-  insertInfoCells(row, tabRecord, readyTabsAlreadySorted, guidance);
+  insertInfoCells(row, tabRecord, eligibleVideosAlreadySorted, guidance);
 
   const remaining = tabRecord?.videoDetails?.remainingTime;
   const hasRemainingTime = isFiniteNumber(remaining) && !tabRecord.remainingTimeStale;
-  if (hasRemainingTime && !readyTabsAlreadySorted) row.classList.add('sort-ready-row');
+  if (hasRemainingTime && !eligibleVideosAlreadySorted) row.classList.add('sort-ready-row');
 }
 
-function insertInfoCells(row, record, readyTabsAlreadySorted, guidance) {
-  const columns = readyTabsAlreadySorted
+function insertInfoCells(row, record, eligibleVideosAlreadySorted, guidance) {
+  const columns = eligibleVideosAlreadySorted
     ? ROW_VIEW_COLUMNS.sortedView
     : ROW_VIEW_COLUMNS.planningView;
 
   columns.forEach((column) => {
     const cell = row.insertCell(row.cells.length);
     const value = column.getter(record, guidance);
-    cell.textContent = readyTabsAlreadySorted ? value : toDisplayText(value);
+    cell.textContent = eligibleVideosAlreadySorted ? value : toDisplayText(value);
   });
 }
 

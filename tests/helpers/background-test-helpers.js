@@ -111,9 +111,9 @@ export function setTrackedTabRecords(tabRecordsById = {}) {
 
 export function setTrackedSortState(sortState = {}) {
   setSortState({
-    visibleTabIds: trackedWindowSnapshot.visibleTabIds,
-    plannedVideoTabIds: trackedWindowSnapshot.plannedVideoTabIds,
-    readyTabsAlreadySorted: trackedWindowSnapshot.readyTabsAlreadySorted,
+    trackedTabIdsInWindowOrder: trackedWindowSnapshot.trackedTabIdsInWindowOrder,
+    targetVideoTabOrder: trackedWindowSnapshot.targetVideoTabOrder,
+    eligibleVideosAlreadySorted: trackedWindowSnapshot.eligibleVideosAlreadySorted,
     sortSummary: trackedWindowSnapshot.sortSummary || createEmptySortSummary(),
     ...sortState,
   });

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { createYoutubePageController } from '../content/youtube/controller.js';
-import { shouldSendContentScriptReadySignal } from '../content/youtube/controller-state.js';
+import { shouldSendContentScriptReadySignal } from '../content/youtube/controller-setup.js';
 import { collectPageVideoDetails } from '../content/youtube/video-details.js';
 import { inferIsLiveNow } from '../content/youtube/live-status.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
