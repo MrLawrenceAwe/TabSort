@@ -42,6 +42,29 @@ test('handlePageVideoDetails does not create records for non-watch YouTube pages
   assert.deepEqual(trackedWindowState.targetSortableTabIds, []);
 });
 
+test('handlePageVideoDetails does not claim a window for non-watch YouTube pages', async () => {
+  resetTrackedWindowState();
+
+  await handlePageVideoDetails(
+    {
+      details: {
+        url: 'https://www.youtube.com/',
+        title: 'YouTube Home',
+      },
+    },
+    {
+      tab: {
+        id: 7,
+        windowId: 99,
+        url: 'https://www.youtube.com/',
+      },
+    },
+  );
+
+  assert.equal(trackedWindowState.windowId, null);
+  assert.equal(trackedWindowState.tabRecordsById[7], undefined);
+});
+
 test('handlePageVideoDetails removes tracked rows when tab leaves watch/shorts', async () => {
   resetTrackedWindowState(1);
   setTrackedTabRecords({

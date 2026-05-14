@@ -17,37 +17,9 @@ function createTrackedWindowStoreState() {
 
 export const trackedWindowStoreState = createTrackedWindowStoreState();
 
-const readonlyTabRecordsById = new Proxy(
-  {},
-  {
-    get(_target, property) {
-      return trackedWindowStoreState.tabRecordsById[property];
-    },
-    getOwnPropertyDescriptor(_target, property) {
-      if (!Object.prototype.hasOwnProperty.call(trackedWindowStoreState.tabRecordsById, property)) {
-        return undefined;
-      }
-      return {
-        configurable: true,
-        enumerable: true,
-        value: trackedWindowStoreState.tabRecordsById[property],
-      };
-    },
-    ownKeys() {
-      return Reflect.ownKeys(trackedWindowStoreState.tabRecordsById);
-    },
-    set() {
-      throw new TypeError('Use window store mutation helpers to update tab records.');
-    },
-    deleteProperty() {
-      throw new TypeError('Use removeTabRecordFromStore to delete tab records.');
-    },
-  },
-);
-
 export const trackedWindowState = Object.freeze({
   get tabRecordsById() {
-    return readonlyTabRecordsById;
+    return trackedWindowStoreState.tabRecordsById;
   },
   get targetSortableTabIds() {
     return [...trackedWindowStoreState.targetSortableTabIds];
