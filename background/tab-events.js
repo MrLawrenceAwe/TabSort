@@ -5,8 +5,8 @@ import { recomputeSortState } from './sort-state.js';
 import { refreshPlaybackState } from './refresh-playback-state.js';
 import {
   canManageWindow,
-  readonlyTrackedWindowState,
-  removeTabRecordFromStore,
+  trackedWindowSnapshot,
+  deleteTabRecord,
 } from './window-store.js';
 import { reconcileWindowTabRecords } from './tab-record-reconciler.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
@@ -65,8 +65,8 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
 
   chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     if (!canManageWindow(removeInfo?.windowId)) return;
-    removeTabRecordFromStore(tabId);
-    if (removeInfo?.isWindowClosing && removeInfo.windowId === readonlyTrackedWindowState.windowId) {
+    deleteTabRecord(tabId);
+    if (removeInfo?.isWindowClosing && removeInfo.windowId === trackedWindowSnapshot.windowId) {
       if (typeof onTrackedWindowClosed === 'function') {
         onTrackedWindowClosed();
       }
@@ -86,8 +86,8 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
           try {
             const tab = await getTab(details.tabId);
             if (
-              readonlyTrackedWindowState.windowId != null &&
-              tab.windowId !== readonlyTrackedWindowState.windowId
+              trackedWindowSnapshot.windowId != null &&
+              tab.windowId !== trackedWindowSnapshot.windowId
             ) {
               return;
             }
@@ -96,8 +96,8 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
             logDebug(`getTab failed for history update ${details.tabId}`, error);
             return;
           }
-        } else if (readonlyTrackedWindowState.windowId != null) {
-          windowIdForUpdate = readonlyTrackedWindowState.windowId;
+        } else if (trackedWindowSnapshot.windowId != null) {
+          windowIdForUpdate = trackedWindowSnapshot.windowId;
         }
 
         await reconcileWindowTabRecords(windowIdForUpdate);

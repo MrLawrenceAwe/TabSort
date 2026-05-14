@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  getMutableTabRecord,
-  readonlyTrackedWindowState,
+  getWritableTabRecord,
+  trackedWindowSnapshot,
 } from '../../background/window-store.js';
 import {
   refreshPlaybackState,
@@ -62,7 +62,7 @@ test(
 
     await refreshPromise;
 
-    assert.equal(getMutableTabRecord(1), replacementRecord);
+    assert.equal(getWritableTabRecord(1), replacementRecord);
     assert.equal(replacementRecord.contentScriptReported, true);
     assert.equal(replacementRecord.videoDetails.lengthSeconds, 120);
     assert.equal(replacementRecord.videoDetails.remainingTime, 100);
@@ -109,7 +109,7 @@ test(
 
     await refreshPlaybackState(1);
 
-    const record = readonlyTrackedWindowState.tabRecordsById[1];
+    const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
     assert.equal(record.videoDetails.title, 'New Video');
     assert.equal(record.videoDetails.lengthSeconds, 400);
@@ -176,7 +176,7 @@ test(
 
     await refreshPromise;
 
-    const record = readonlyTrackedWindowState.tabRecordsById[1];
+    const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
     assert.equal(record.videoDetails, null);
     assert.equal(record.contentScriptReported, false);
@@ -225,7 +225,7 @@ test(
 
     await refreshPlaybackState(1);
 
-    const record = readonlyTrackedWindowState.tabRecordsById[1];
+    const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.contentScriptReported, true);
     assert.equal(record.mediaElementObserved, false);
     assert.equal(typeof record.videoWaitStartedAt, 'number');
@@ -254,7 +254,7 @@ test(
 
     await refreshPlaybackState(1);
 
-    const record = readonlyTrackedWindowState.tabRecordsById[1];
+    const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.contentScriptReported, true);
     assert.equal(record.mediaElementObserved, true);
     assert.equal(record.videoWaitStartedAt, null);
@@ -283,7 +283,7 @@ test(
 
     await refreshPlaybackState(1);
 
-    const record = readonlyTrackedWindowState.tabRecordsById[1];
+    const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.contentScriptReported, true);
     assert.equal(record.mediaElementObserved, true);
     assert.equal(record.videoDetails.lengthSeconds, 6211);
@@ -314,7 +314,7 @@ test(
 
     await refreshPlaybackState(1);
 
-    const record = readonlyTrackedWindowState.tabRecordsById[1];
+    const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.contentScriptReported, true);
     assert.equal(record.mediaElementObserved, false);
     assert.equal(record.videoDetails.lengthSeconds, null);
@@ -345,7 +345,7 @@ test(
 
     await refreshPlaybackState(1);
 
-    const record = readonlyTrackedWindowState.tabRecordsById[1];
+    const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.contentScriptReported, true);
     assert.equal(record.mediaElementObserved, false);
     assert.equal(record.videoDetails.lengthSeconds, 6211);
@@ -399,7 +399,7 @@ test(
 
     await refreshPlaybackState(1);
 
-    const record = readonlyTrackedWindowState.tabRecordsById[1];
+    const record = trackedWindowSnapshot.tabRecordsById[1];
     assert.equal(record.contentScriptReported, true);
     assert.equal(record.mediaElementObserved, false);
     assert.equal(typeof record.videoWaitStartedAt, 'number');
@@ -452,8 +452,8 @@ test(
 
     assert.equal(changed, true);
     assert.equal(broadcastCount, 1);
-    assert.equal(readonlyTrackedWindowState.tabRecordsById[1].videoDetails.remainingTime, 110);
-    assert.equal(readonlyTrackedWindowState.tabRecordsById[2].videoDetails.remainingTime, 100);
-    assert.equal(readonlyTrackedWindowState.tabRecordsById[3].videoDetails.remainingTime, 90);
+    assert.equal(trackedWindowSnapshot.tabRecordsById[1].videoDetails.remainingTime, 110);
+    assert.equal(trackedWindowSnapshot.tabRecordsById[2].videoDetails.remainingTime, 100);
+    assert.equal(trackedWindowSnapshot.tabRecordsById[3].videoDetails.remainingTime, 90);
   },
 );

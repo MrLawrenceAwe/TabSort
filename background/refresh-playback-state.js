@@ -3,22 +3,22 @@ import { logDebug } from '../shared/log.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { getTab, sendMessageToTab } from './chrome-tabs.js';
 import { derivePlaybackStateUpdate } from './derive-playback-state-update.js';
-import { markTabRecordMetricsUnavailable } from './tab-record-lifecycle.js';
+import { applyMetricsUnavailable } from './tab-record-lifecycle.js';
 import { applyPlaybackStateUpdate } from './apply-playback-state-update.js';
 import { recomputeSortState } from './sort-state.js';
-import { getMutableTabRecord, getTrackedWindowId, setTrackedWindowId } from './window-store.js';
+import { getWritableTabRecord, getTrackedWindowId, setTrackedWindowId } from './window-store.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 
 const DEFAULT_BATCH_CONCURRENCY = 4;
 
 async function loadTabRecordContext(tabId) {
-  const initialRecord = getMutableTabRecord(tabId);
+  const initialRecord = getWritableTabRecord(tabId);
   if (!initialRecord || initialRecord.status !== TAB_STATES.UNSUSPENDED) {
     return null;
   }
 
   const tab = await getTab(tabId);
-  const record = getMutableTabRecord(tabId);
+  const record = getWritableTabRecord(tabId);
   if (!record || record.status !== TAB_STATES.UNSUSPENDED) {
     return null;
   }
@@ -53,7 +53,7 @@ export async function refreshPlaybackState(tabId, { recompute = true } = {}) {
     const { record, tab } = currentContext;
 
     if (!result || result.ok !== true) {
-      markTabRecordMetricsUnavailable(record);
+      applyMetricsUnavailable(record);
       if (recompute) recomputeSortState();
       return true;
     }
@@ -85,7 +85,7 @@ export async function refreshPlaybackStateBatch(
 ) {
   const pendingIds = Array.from(new Set(tabIds)).filter((tabId) => {
     if (typeof tabId !== 'number') return false;
-    const record = getMutableTabRecord(tabId);
+    const record = getWritableTabRecord(tabId);
     return record && shouldRefresh(record);
   });
   if (!pendingIds.length) return false;

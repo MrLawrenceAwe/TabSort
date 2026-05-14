@@ -1,7 +1,7 @@
 import { getCurrentTimeMs } from './window-store.js';
 import {
-  markRecordVideoElementReady,
-  resetVideoReadiness,
+  applyMediaElementObserved,
+  resetMediaReadiness,
 } from './tab-record-lifecycle.js';
 
 export function applyPlaybackStateUpdate(record, playbackUpdate, currentTabUrl) {
@@ -9,9 +9,9 @@ export function applyPlaybackStateUpdate(record, playbackUpdate, currentTabUrl) 
 
   record.contentScriptReported = playbackUpdate.contentScriptReported;
   if (playbackUpdate.mediaElementObserved) {
-    markRecordVideoElementReady(record);
+    applyMediaElementObserved(record);
   } else {
-    resetVideoReadiness(record, { videoWaitStartedAt: record.videoWaitStartedAt });
+    resetMediaReadiness(record, { videoWaitStartedAt: record.videoWaitStartedAt });
     if (record.contentScriptReported && typeof record.videoWaitStartedAt !== 'number') {
       record.videoWaitStartedAt = getCurrentTimeMs();
     }

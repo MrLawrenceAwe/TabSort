@@ -7,7 +7,7 @@ import {
   MEDIA_WAIT_GRACE_MS,
   RECENTLY_UNSUSPENDED_MS,
   RECENT_WATCH_TRANSITION_MS,
-} from '../../shared/tab-user-actions.js';
+} from '../../shared/tab-resolution-guidance.js';
 import {
   shouldPollTabSnapshot,
   shouldRetryTabRefresh,

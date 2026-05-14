@@ -1,16 +1,16 @@
 import { isFiniteNumber } from '../shared/guards.js';
 import { ensureTabRecord } from './tab-record.js';
 import {
-  applyVideoElementReady,
+  applyMediaElementReady,
   applyContentScriptReady,
-  applyPageVideoDetails,
+  applyVideoDetailsFromPage,
 } from './tab-record-lifecycle.js';
 import { recomputeSortState } from './sort-state.js';
 import { refreshPlaybackState } from './refresh-playback-state.js';
 import {
   getTabRecord,
   getTrackedWindowId,
-  removeTabRecordFromStore,
+  deleteTabRecord,
   setTrackedWindowId,
 } from './window-store.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
@@ -23,7 +23,7 @@ function isSenderInTrackedWindow(windowId) {
 
 function removeTabRecordWhenSenderLeavesVideoPage(tabId) {
   if (!isFiniteNumber(tabId)) return false;
-  if (!removeTabRecordFromStore(tabId)) return false;
+  if (!deleteTabRecord(tabId)) return false;
   recomputeSortState();
   return true;
 }
@@ -70,7 +70,7 @@ export async function handleVideoElementReady(_message, sender) {
   const { tabId, windowId } = pageSender;
   setTrackedWindowId(windowId);
   const record = ensureTabRecord(tabId, windowId);
-  applyVideoElementReady(record);
+  applyMediaElementReady(record);
   await refreshPlaybackState(tabId);
 }
 
@@ -83,6 +83,6 @@ export async function handlePageVideoDetails(message, sender) {
   setTrackedWindowId(windowId);
   const record = ensureTabRecord(tabId, windowId, { url: detailUrl });
   const urlChanged = hasYoutubeVideoIdentityChanged(record.url, detailUrl);
-  applyPageVideoDetails(record, details, { urlChanged });
+  applyVideoDetailsFromPage(record, details, { urlChanged });
   recomputeSortState();
 }

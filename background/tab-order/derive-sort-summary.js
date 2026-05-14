@@ -2,7 +2,13 @@ import { createEmptySortSummary } from '../../shared/sort-summary.js';
 import { hasReadyRemainingTime } from '../sort-readiness.js';
 import { areTabIdListsEqual } from './derive-sort-plan.js';
 
-export function deriveSortSummary({ trackedRecords, eligibleVideoRecords, currentEligibleVideoIds }) {
+export function deriveSortSummary({
+  trackedRecords,
+  eligibleVideoRecords,
+  eligibleVideoTabIdsInCurrentOrder,
+  readyVideoTabIdsInCurrentOrder,
+  readyVideoTabIdsByRemainingTime,
+}) {
   if (!Array.isArray(trackedRecords) || trackedRecords.length === 0) {
     return createEmptySortSummary();
   }
@@ -17,15 +23,15 @@ export function deriveSortSummary({ trackedRecords, eligibleVideoRecords, curren
   let sortReadyTabsAreAtFront = true;
   let sortReadyTabsAreOutOfOrder = false;
 
-  const sortReadyIdsInCurrentOrder = [];
-  const sortReadyEntries = [];
   const orderedIdsWithRecords = [];
+  const readyIdsInCurrentOrder = readyVideoTabIdsInCurrentOrder || [];
+  const readyIdsByRemainingTime = readyVideoTabIdsByRemainingTime || [];
 
   let encounteredReady = false;
   let encounteredNonReadyBeforeReady = false;
   let gapAfterReady = false;
 
-  for (const tabId of currentEligibleVideoIds) {
+  for (const tabId of eligibleVideoTabIdsInCurrentOrder) {
     const record = recordMap.get(tabId);
     if (!record) continue;
     orderedIdsWithRecords.push(tabId);
@@ -37,8 +43,6 @@ export function deriveSortSummary({ trackedRecords, eligibleVideoRecords, curren
     const isReady = hasReadyRemainingTime(record);
     if (isReady) {
       sortReadyTabCount += 1;
-      sortReadyIdsInCurrentOrder.push(record.id);
-      sortReadyEntries.push({ id: record.id, remainingTime: record.videoDetails?.remainingTime || 0 });
       encounteredReady = true;
       if (gapAfterReady) sortReadyTabsAreContiguous = false;
       continue;
@@ -55,21 +59,16 @@ export function deriveSortSummary({ trackedRecords, eligibleVideoRecords, curren
     sortReadyTabsAreAtFront = false;
   }
 
-  const sortReadyIdsByRemainingTime = sortReadyEntries
-    .slice()
-    .sort((a, b) => a.remainingTime - b.remainingTime)
-    .map((entry) => entry.id);
-
-  if (sortReadyIdsInCurrentOrder.length >= 2) {
+  if (readyIdsInCurrentOrder.length >= 2) {
     sortReadyTabsAreOutOfOrder = !areTabIdListsEqual(
-      sortReadyIdsInCurrentOrder,
-      sortReadyIdsByRemainingTime,
+      readyIdsInCurrentOrder,
+      readyIdsByRemainingTime,
     );
   }
 
   const allEligibleVideosReady = eligibleVideoCount > 1 && sortReadyTabCount === eligibleVideoCount;
-  const currentOrderMatchesTarget =
-    allEligibleVideosReady && areTabIdListsEqual(orderedIdsWithRecords, sortReadyIdsByRemainingTime);
+  const readyTabsAlreadySorted =
+    allEligibleVideosReady && areTabIdListsEqual(orderedIdsWithRecords, readyIdsByRemainingTime);
 
   return {
     counts: {
@@ -86,7 +85,7 @@ export function deriveSortSummary({ trackedRecords, eligibleVideoRecords, curren
     },
     order: {
       allEligibleVideosReady,
-      currentOrderMatchesTarget,
+      readyTabsAlreadySorted,
     },
   };
 }

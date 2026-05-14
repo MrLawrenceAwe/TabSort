@@ -1,8 +1,9 @@
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import { createRuntimeMessaging } from './messaging.js';
 import {
+  DEFAULT_PAGE_CONTROLLER_OPTIONS,
   createPageControllerState,
-  pageControllerConfig,
+  pageControllerDependencies,
   shouldSendContentScriptReadySignal,
 } from './controller-state.js';
 import { createMediaReadinessTracker } from './media-readiness.js';
@@ -10,10 +11,16 @@ import { createTitleObserver } from './title-observer.js';
 import { handleCollectVideoMetricsMessage } from './video-metrics.js';
 
 export function createYoutubePageController({
-  config = pageControllerConfig,
+  config = {},
   environment = globalThis,
 } = {}) {
+  const controllerConfig = {
+    ...DEFAULT_PAGE_CONTROLLER_OPTIONS,
+    ...pageControllerDependencies,
+    ...config,
+  };
   const state = createPageControllerState();
+  const { lifecycle, mediaReadiness: mediaReadinessState, titleObserver: titleObserverState } = state;
 
   const getDocument = () => environment.document ?? globalThis.document;
   const getWindow = () => environment.window ?? globalThis.window;
@@ -28,7 +35,7 @@ export function createYoutubePageController({
     publishPageVideoDetails,
     sendExtensionMessage,
   } = createRuntimeMessaging({
-    config,
+    config: controllerConfig,
     environment,
     getChrome,
     getLocation,
@@ -36,7 +43,7 @@ export function createYoutubePageController({
 
   function registerCleanup(cleanup) {
     if (typeof cleanup !== 'function') return;
-    state.cleanupFns.push(cleanup);
+    lifecycle.cleanupFns.push(cleanup);
   }
 
   function addWindowEventListener(target, type, listener, options) {
@@ -58,25 +65,25 @@ export function createYoutubePageController({
   }
 
   function doesVideoDurationMatchPage(video) {
-    if (!video || !config.isFiniteNumber(video.duration)) {
+    if (!video || !controllerConfig.isFiniteNumber(video.duration)) {
       return false;
     }
     const details = collectPageDetails();
-    if (!config.isFiniteNumber(details.lengthSeconds)) {
+    if (!controllerConfig.isFiniteNumber(details.lengthSeconds)) {
       return true;
     }
     return (
       Math.abs(video.duration - details.lengthSeconds) <=
-      config.mediaDurationSyncToleranceSeconds
+      controllerConfig.mediaDurationSyncToleranceSeconds
     );
   }
 
   function dispatchContentScriptReadySignal({ force = false } = {}) {
     const currentUrl = getCurrentPageUrl();
-    if (!shouldSendContentScriptReadySignal(currentUrl, state.lastScriptReadyUrl, { force })) {
+    if (!shouldSendContentScriptReadySignal(currentUrl, lifecycle.lastScriptReadyUrl, { force })) {
       return;
     }
-    state.lastScriptReadyUrl = currentUrl;
+    lifecycle.lastScriptReadyUrl = currentUrl;
     sendExtensionMessage(
       createRuntimeMessage(RUNTIME_MESSAGE_TYPES.CONTENT_SCRIPT_READY),
       'content script ready',
@@ -84,9 +91,9 @@ export function createYoutubePageController({
   }
 
   const mediaReadiness = createMediaReadinessTracker({
-    config,
+    config: controllerConfig,
     environment,
-    state,
+    state: mediaReadinessState,
     getCurrentPageUrl,
     getDocument,
     getMutationObserver,
@@ -94,7 +101,7 @@ export function createYoutubePageController({
     doesVideoDurationMatchPage,
   });
   const titleObserver = createTitleObserver({
-    state,
+    state: titleObserverState,
     getDocument,
     getMutationObserver,
     publishPageVideoDetails,
@@ -106,26 +113,26 @@ export function createYoutubePageController({
   }
 
   function disposeListeners() {
-    while (state.cleanupFns.length) {
-      const cleanup = state.cleanupFns.pop();
+    while (lifecycle.cleanupFns.length) {
+      const cleanup = lifecycle.cleanupFns.pop();
       try {
         cleanup?.();
       } catch (error) {
         logContentError('Cleaning up content script listener', error);
       }
     }
-    state.runtimeMessageListener = null;
+    lifecycle.runtimeMessageListener = null;
   }
 
   function syncObservedPageUrl() {
     const currentUrl = getCurrentPageUrl();
-    if (currentUrl && currentUrl !== state.observedPageUrl) {
+    if (currentUrl && currentUrl !== lifecycle.observedPageUrl) {
       disposeObservers();
-      state.observedPageUrl = currentUrl;
-      state.lastScriptReadyUrl = null;
-      state.mediaReadyPageUrl = null;
-    } else if (!state.observedPageUrl && currentUrl) {
-      state.observedPageUrl = currentUrl;
+      lifecycle.observedPageUrl = currentUrl;
+      lifecycle.lastScriptReadyUrl = null;
+      mediaReadinessState.mediaReadyPageUrl = null;
+    } else if (!lifecycle.observedPageUrl && currentUrl) {
+      lifecycle.observedPageUrl = currentUrl;
     }
   }
 
@@ -142,32 +149,32 @@ export function createYoutubePageController({
   function reset() {
     disposeObservers();
     disposeListeners();
-    state.observedPageUrl = null;
-    state.lastScriptReadyUrl = null;
-    state.mediaReadyPageUrl = null;
-    state.lastReadyVideo = null;
-    state.lastMediaReadyFingerprint = null;
-    state.initialized = false;
+    lifecycle.observedPageUrl = null;
+    lifecycle.lastScriptReadyUrl = null;
+    mediaReadinessState.mediaReadyPageUrl = null;
+    mediaReadinessState.lastReadyVideo = null;
+    mediaReadinessState.lastMediaReadyFingerprint = null;
+    lifecycle.initialized = false;
   }
 
   function bootstrap() {
-    if (state.initialized) return;
-    state.initialized = true;
+    if (lifecycle.initialized) return;
+    lifecycle.initialized = true;
 
     if (!hasExtensionRuntime()) return;
 
     const runtimeWindow = getWindow();
     const runtimeDocument = getDocument();
-    state.runtimeMessageListener = (message, _sender, sendResponse) =>
+    lifecycle.runtimeMessageListener = (message, _sender, sendResponse) =>
       handleCollectVideoMetricsMessage(message, sendResponse, {
-        config,
+        config: controllerConfig,
         environment,
         collectPageDetails,
         isCurrentVideoElementReady: mediaReadiness.isCurrentVideoElementReady,
         markCurrentVideoElementReadyIfAvailable:
           mediaReadiness.markCurrentVideoElementReadyIfAvailable,
       });
-    addRuntimeMessageListener(state.runtimeMessageListener);
+    addRuntimeMessageListener(lifecycle.runtimeMessageListener);
 
     if (
       runtimeDocument?.readyState === 'complete' ||
@@ -195,10 +202,10 @@ export function createYoutubePageController({
 
     addWindowEventListener(runtimeWindow, 'pagehide', () => {
       disposeObservers();
-      state.lastScriptReadyUrl = null;
-      state.mediaReadyPageUrl = null;
-      state.lastReadyVideo = null;
-      state.lastMediaReadyFingerprint = null;
+      lifecycle.lastScriptReadyUrl = null;
+      mediaReadinessState.mediaReadyPageUrl = null;
+      mediaReadinessState.lastReadyVideo = null;
+      mediaReadinessState.lastMediaReadyFingerprint = null;
     });
   }
 

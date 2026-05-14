@@ -1,14 +1,14 @@
 import { isFiniteNumber, isValidWindowId } from '../shared/guards.js';
 import { logDebug } from '../shared/log.js';
 import { buildTabSnapshot } from './tab-snapshot.js';
-import { markTabRecordReloading } from './tab-record-lifecycle.js';
+import { applyTabReloadStarted } from './tab-record-lifecycle.js';
 import { recomputeSortState } from './sort-state.js';
 import { applyTabSort } from './apply-tab-sort.js';
 import { refreshPlaybackStateBatch } from './refresh-playback-state.js';
 import {
-  getMutableTabRecord,
+  getWritableTabRecord,
   listTabIds,
-  readonlyTrackedWindowState,
+  trackedWindowSnapshot,
   setTrackedWindowId,
 } from './window-store.js';
 import { reconcileWindowTabRecords } from './tab-record-reconciler.js';
@@ -41,10 +41,10 @@ export async function reloadTab(message) {
     logDebug(`tabs.reload failed for ${tabId}`, error);
   }
   if (!didReload) return;
-  const record = getMutableTabRecord(tabId);
+  const record = getWritableTabRecord(tabId);
   if (!record) return;
 
-  markTabRecordReloading(record);
+  applyTabReloadStarted(record);
   recomputeSortState();
 }
 
@@ -68,7 +68,7 @@ export async function getWindowSnapshot(message) {
 export async function applyTabSortOrder(message) {
   const targetWindowId = isValidWindowId(message.windowId)
     ? message.windowId
-    : readonlyTrackedWindowState.windowId;
+    : trackedWindowSnapshot.windowId;
   if (isValidWindowId(targetWindowId)) {
     setTrackedWindowId(targetWindowId, { force: true });
   }

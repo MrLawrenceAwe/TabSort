@@ -7,9 +7,9 @@ import {
   RECENT_WATCH_TRANSITION_MS,
   MEDIA_WAIT_GRACE_MS,
   LOADING_GRACE_MS,
-  determineUserAction,
-  USER_ACTIONS,
-} from '../../shared/tab-user-actions.js';
+  determineTabGuidance,
+  TAB_GUIDANCE,
+} from '../../shared/tab-resolution-guidance.js';
 import { formatRemainingStatus, renderTabRow } from '../../popup/tab-row-view.js';
 
 function makeRecord(overrides = {}) {
@@ -35,7 +35,7 @@ test('stale rows without remaining time do not suggest viewing the tab', () => {
     unsuspendedTimestamp: Date.now() - (RECENTLY_UNSUSPENDED_MS + 1000),
   });
 
-  assert.equal(determineUserAction(record), USER_ACTIONS.RELOAD_TAB);
+  assert.equal(determineTabGuidance(record), TAB_GUIDANCE.RELOAD_TAB);
   assert.equal(formatRemainingStatus(record), 'unavailable');
 });
 
@@ -46,7 +46,7 @@ test('recently unsuspended rows avoid contradictory stale guidance', () => {
     unsuspendedTimestamp: Date.now(),
   });
 
-  assert.equal(determineUserAction(record), USER_ACTIONS.NONE);
+  assert.equal(determineTabGuidance(record), TAB_GUIDANCE.NONE);
   assert.equal(formatRemainingStatus(record), 'unavailable');
 });
 
@@ -68,8 +68,8 @@ test('recent watch URL transitions avoid reload guidance while runtime can catch
     videoDetails: null,
   });
 
-  assert.equal(determineUserAction(activeRecord), USER_ACTIONS.NONE);
-  assert.equal(determineUserAction(inactiveRecord), USER_ACTIONS.NONE);
+  assert.equal(determineTabGuidance(activeRecord), TAB_GUIDANCE.NONE);
+  assert.equal(determineTabGuidance(inactiveRecord), TAB_GUIDANCE.NONE);
   assert.equal(formatRemainingStatus(activeRecord), 'unavailable');
 });
 
@@ -91,8 +91,8 @@ test('stalled watch URL transitions eventually ask for the useful action', () =>
     videoDetails: null,
   });
 
-  assert.equal(determineUserAction(activeRecord), USER_ACTIONS.RELOAD_TAB);
-  assert.equal(determineUserAction(inactiveRecord), USER_ACTIONS.RELOAD_TAB);
+  assert.equal(determineTabGuidance(activeRecord), TAB_GUIDANCE.RELOAD_TAB);
+  assert.equal(determineTabGuidance(inactiveRecord), TAB_GUIDANCE.RELOAD_TAB);
 });
 
 test('stale rows with remaining time can still request a focused tab when appropriate', () => {
@@ -103,7 +103,7 @@ test('stale rows with remaining time can still request a focused tab when approp
     isActiveTab: false,
   });
 
-  assert.equal(determineUserAction(record), USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME);
+  assert.equal(determineTabGuidance(record), TAB_GUIDANCE.VIEW_TAB_TO_REFRESH_TIME);
   assert.equal(formatRemainingStatus(record), 'View tab to refresh time');
 });
 
@@ -120,8 +120,8 @@ test('loading rows switch from waiting to focus after the loading grace period',
     loadingStartedAt: Date.now() - (LOADING_GRACE_MS + 1000),
   });
 
-  assert.equal(determineUserAction(recentLoadingRecord), USER_ACTIONS.WAIT_FOR_LOAD);
-  assert.equal(determineUserAction(stalledLoadingRecord), USER_ACTIONS.FOCUS_TAB);
+  assert.equal(determineTabGuidance(recentLoadingRecord), TAB_GUIDANCE.WAIT_FOR_LOAD);
+  assert.equal(determineTabGuidance(stalledLoadingRecord), TAB_GUIDANCE.FOCUS_TAB);
 });
 
 test('active loading rows switch from waiting to reload after the loading grace period', () => {
@@ -132,7 +132,7 @@ test('active loading rows switch from waiting to reload after the loading grace 
     loadingStartedAt: Date.now() - (LOADING_GRACE_MS + 1000),
   });
 
-  assert.equal(determineUserAction(activeStalledLoadingRecord), USER_ACTIONS.RELOAD_TAB);
+  assert.equal(determineTabGuidance(activeStalledLoadingRecord), TAB_GUIDANCE.RELOAD_TAB);
 });
 
 test('active watch rows wait through video data mismatches instead of asking for reload', () => {
@@ -145,7 +145,7 @@ test('active watch rows wait through video data mismatches instead of asking for
     videoDetails: { remainingTime: 45143, lengthSeconds: 45143 },
   });
 
-  assert.equal(determineUserAction(activeAdRecord), USER_ACTIONS.WAIT_FOR_VIDEO_DATA);
+  assert.equal(determineTabGuidance(activeAdRecord), TAB_GUIDANCE.WAIT_FOR_VIDEO_DATA);
   assert.equal(formatRemainingStatus(activeAdRecord), 'unavailable');
 });
 
@@ -159,7 +159,7 @@ test('active watch rows eventually ask for reload when video data stays stuck', 
     videoDetails: { remainingTime: 45143, lengthSeconds: 45143 },
   });
 
-  assert.equal(determineUserAction(activeStalledMediaRecord), USER_ACTIONS.RELOAD_TAB);
+  assert.equal(determineTabGuidance(activeStalledMediaRecord), TAB_GUIDANCE.RELOAD_TAB);
 });
 
 test('background unsuspended rows ask the user to view before reloading for missing time', () => {
@@ -169,7 +169,7 @@ test('background unsuspended rows ask the user to view before reloading for miss
     videoDetails: { remainingTime: null },
   });
 
-  assert.equal(determineUserAction(record), USER_ACTIONS.VIEW_TAB_TO_LOAD_TIME);
+  assert.equal(determineTabGuidance(record), TAB_GUIDANCE.VIEW_TAB_TO_LOAD_TIME);
 });
 
 function createFakeDocument() {
