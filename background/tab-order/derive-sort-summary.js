@@ -2,14 +2,14 @@ import { createEmptySortSummary } from '../../shared/sort-summary.js';
 import { hasReadyRemainingTime } from '../sort-readiness.js';
 import { areTabIdListsEqual } from './derive-sort-plan.js';
 
-export function deriveSortSummary({ trackedRecords, sortableRecords, currentSortableTabIds }) {
+export function deriveSortSummary({ trackedRecords, eligibleVideoRecords, currentEligibleVideoIds }) {
   if (!Array.isArray(trackedRecords) || trackedRecords.length === 0) {
     return createEmptySortSummary();
   }
 
-  const recordMap = new Map(sortableRecords.map((record) => [record.id, record]));
+  const recordMap = new Map(eligibleVideoRecords.map((record) => [record.id, record]));
   const trackedTabCount = trackedRecords.length;
-  const sortableTabCount = sortableRecords.length;
+  const eligibleVideoCount = eligibleVideoRecords.length;
 
   let inactiveTabsHaveStaleRemainingTime = false;
   let sortReadyTabCount = 0;
@@ -25,12 +25,12 @@ export function deriveSortSummary({ trackedRecords, sortableRecords, currentSort
   let encounteredNonReadyBeforeReady = false;
   let gapAfterReady = false;
 
-  for (const tabId of currentSortableTabIds) {
+  for (const tabId of currentEligibleVideoIds) {
     const record = recordMap.get(tabId);
     if (!record) continue;
     orderedIdsWithRecords.push(tabId);
 
-    if (record.remainingTimeNeedsRefresh && (!record.isActiveTab || record.isHidden)) {
+    if (record.remainingTimeStale && (!record.isActiveTab || record.isHidden)) {
       inactiveTabsHaveStaleRemainingTime = true;
     }
 
@@ -67,9 +67,9 @@ export function deriveSortSummary({ trackedRecords, sortableRecords, currentSort
     );
   }
 
-  const allSortableTabsReady = sortableTabCount > 1 && sortReadyTabCount === sortableTabCount;
+  const allEligibleVideosReady = eligibleVideoCount > 1 && sortReadyTabCount === eligibleVideoCount;
   const currentOrderMatchesTarget =
-    allSortableTabsReady && areTabIdListsEqual(orderedIdsWithRecords, sortReadyIdsByRemainingTime);
+    allEligibleVideosReady && areTabIdListsEqual(orderedIdsWithRecords, sortReadyIdsByRemainingTime);
 
   return {
     counts: {
@@ -85,7 +85,7 @@ export function deriveSortSummary({ trackedRecords, sortableRecords, currentSort
       hasStaleRemainingTime: inactiveTabsHaveStaleRemainingTime,
     },
     order: {
-      allSortableTabsReady,
+      allEligibleVideosReady,
       currentOrderMatchesTarget,
     },
   };

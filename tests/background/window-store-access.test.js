@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { readonlyTrackedWindowState } from '../../background/window-store.js';
-import { getTabRecord, getTabRecordsById } from '../../background/window-store-selectors.js';
-import { getMutableTabRecord } from '../../background/window-store-mutations.js';
+import {
+  getMutableTabRecord,
+  getTabRecord,
+  getTabRecordsById,
+  readonlyTrackedWindowState,
+} from '../../background/window-store.js';
 import {
   createTabRecordFixture,
   resetTrackedWindowState,
@@ -15,7 +18,7 @@ test('public window store access returns defensive copies', () => {
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
       videoDetails: { title: 'Video 1', remainingTime: 20, lengthSeconds: 100 },
-      remainingTimeNeedsRefresh: false,
+      remainingTimeStale: false,
     }),
   });
 
@@ -31,7 +34,7 @@ test('mutable window store access is explicit for write paths', () => {
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
       videoDetails: { title: 'Video 1', remainingTime: 20, lengthSeconds: 100 },
-      remainingTimeNeedsRefresh: false,
+      remainingTimeStale: false,
     }),
   });
 

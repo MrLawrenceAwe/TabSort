@@ -2,10 +2,12 @@ import { isFiniteNumber, isValidWindowId } from '../shared/guards.js';
 import { logDebug, logWarn, withErrorLogging } from '../shared/log.js';
 import { getTab } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
-import { refreshTabPlaybackMetrics } from './playback-metrics-refresher.js';
-import { readonlyTrackedWindowState } from './window-store.js';
-import { canManageWindow } from './window-store-selectors.js';
-import { removeTabRecordFromStore } from './window-store-mutations.js';
+import { refreshPlaybackState } from './refresh-playback-state.js';
+import {
+  canManageWindow,
+  readonlyTrackedWindowState,
+  removeTabRecordFromStore,
+} from './window-store.js';
 import { reconcileWindowTabRecords } from './tab-record-reconciler.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 
@@ -31,7 +33,7 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
       ) {
         await reconcileWindowTabRecords(tab.windowId);
         if (isWatchOrShortsPage(tab.url)) {
-          await refreshTabPlaybackMetrics(tabId);
+          await refreshPlaybackState(tabId);
         }
       }
     }),
@@ -49,7 +51,7 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
       if (!isFiniteNumber(activeInfo.tabId)) return;
       const tab = await getTab(activeInfo.tabId);
       if (!isWatchOrShortsPage(tab?.url)) return;
-      await refreshTabPlaybackMetrics(activeInfo.tabId);
+      await refreshPlaybackState(activeInfo.tabId);
     }),
   );
 
@@ -99,7 +101,7 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
         }
 
         await reconcileWindowTabRecords(windowIdForUpdate);
-        await refreshTabPlaybackMetrics(details.tabId);
+        await refreshPlaybackState(details.tabId);
       }),
       { url: [{ hostContains: 'youtube.com' }] },
     );

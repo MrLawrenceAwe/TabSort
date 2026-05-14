@@ -16,7 +16,7 @@ ensureChromeApi({ tabs: true });
 test('reloadTab does not mutate record state when chrome.tabs.reload fails', { concurrency: false }, async () => {
   resetTrackedWindowState();
   setTrackedTabRecords({
-    1: createTabRecordFixture(1, { videoDetails: { remainingTime: 100 }, remainingTimeNeedsRefresh: false }),
+    1: createTabRecordFixture(1, { videoDetails: { remainingTime: 100 }, remainingTimeStale: false }),
   });
   const before = JSON.parse(JSON.stringify(readonlyTrackedWindowState.tabRecordsById[1]));
 
@@ -32,7 +32,7 @@ test('reloadTab does not mutate record state when chrome.tabs.reload fails', { c
 test('reloadTab marks record loading only after successful reload call', { concurrency: false }, async () => {
   resetTrackedWindowState();
   setTrackedTabRecords({
-    1: createTabRecordFixture(1, { videoDetails: { remainingTime: 100 }, remainingTimeNeedsRefresh: false }),
+    1: createTabRecordFixture(1, { videoDetails: { remainingTime: 100 }, remainingTimeStale: false }),
   });
 
   globalThis.chrome.tabs.reload = async () => {};
@@ -41,8 +41,8 @@ test('reloadTab marks record loading only after successful reload call', { concu
 
   const record = readonlyTrackedWindowState.tabRecordsById[1];
   assert.equal(record.status, TAB_STATES.LOADING);
-  assert.equal(record.contentScriptReady, false);
-  assert.equal(record.remainingTimeNeedsRefresh, true);
+  assert.equal(record.contentScriptReported, false);
+  assert.equal(record.remainingTimeStale, true);
   assert.equal(record.videoDetails.remainingTime, null);
   assert.equal(typeof record.loadingStartedAt, 'number');
   assert.equal(typeof record.unsuspendedTimestamp, 'number');

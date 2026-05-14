@@ -5,11 +5,14 @@ import {
   applyContentScriptReady,
   applyPageVideoDetails,
 } from './tab-record-lifecycle.js';
-import { removeTabRecord } from './tab-record-removal.js';
 import { recomputeSortState } from './sort-state.js';
-import { refreshTabPlaybackMetrics } from './playback-metrics-refresher.js';
-import { getTabRecord, getTrackedWindowId } from './window-store-selectors.js';
-import { setTrackedWindowId } from './window-store-mutations.js';
+import { refreshPlaybackState } from './refresh-playback-state.js';
+import {
+  getTabRecord,
+  getTrackedWindowId,
+  removeTabRecordFromStore,
+  setTrackedWindowId,
+} from './window-store.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function isSenderInTrackedWindow(windowId) {
@@ -20,7 +23,9 @@ function isSenderInTrackedWindow(windowId) {
 
 function removeTabRecordWhenSenderLeavesVideoPage(tabId) {
   if (!isFiniteNumber(tabId)) return false;
-  return removeTabRecord(tabId);
+  if (!removeTabRecordFromStore(tabId)) return false;
+  recomputeSortState();
+  return true;
 }
 
 function resolveVideoPageSender(sender, { url } = {}) {
@@ -66,7 +71,7 @@ export async function handleVideoElementReady(_message, sender) {
   setTrackedWindowId(windowId);
   const record = ensureTabRecord(tabId, windowId);
   applyVideoElementReady(record);
-  await refreshTabPlaybackMetrics(tabId);
+  await refreshPlaybackState(tabId);
 }
 
 export async function handlePageVideoDetails(message, sender) {

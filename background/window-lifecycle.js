@@ -1,15 +1,13 @@
 import { isValidWindowId } from '../shared/guards.js';
 import { logDebug, logListenerError, withErrorLogging } from '../shared/log.js';
 import { recomputeSortState } from './sort-state.js';
-import { readonlyTrackedWindowState } from './window-store.js';
 import {
   listTabIds,
-} from './window-store-selectors.js';
-import {
+  readonlyTrackedWindowState,
   resetWindowStore,
   setTrackedWindowId,
-} from './window-store-mutations.js';
-import { refreshTabPlaybackMetricsBatch } from './playback-metrics-refresher.js';
+} from './window-store.js';
+import { refreshPlaybackStateBatch } from './refresh-playback-state.js';
 import { reconcileWindowTabRecords } from './tab-record-reconciler.js';
 
 const REFRESH_ALARM_NAME = 'refreshRemaining';
@@ -47,7 +45,7 @@ async function syncInitialWindowState() {
 
   const ids = listTabIds();
   if (ids.length) {
-    await refreshTabPlaybackMetricsBatch(ids);
+    await refreshPlaybackStateBatch(ids);
   }
 }
 
@@ -85,7 +83,7 @@ export function initializeWindowLifecycle() {
       if (alarm.name !== REFRESH_ALARM_NAME) return;
       await reconcileWindowTabRecords(readonlyTrackedWindowState.windowId, { force: true });
       const ids = listTabIds();
-      await refreshTabPlaybackMetricsBatch(ids);
+      await refreshPlaybackStateBatch(ids);
     }),
   );
 

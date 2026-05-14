@@ -12,7 +12,7 @@ const EMPTY_SORT_SUMMARY = Object.freeze({
     hasStaleRemainingTime: false,
   }),
   order: Object.freeze({
-    allSortableTabsReady: false,
+    allEligibleVideosReady: false,
     currentOrderMatchesTarget: false,
   }),
 });

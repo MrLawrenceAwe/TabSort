@@ -23,14 +23,14 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         isActiveTab: true,
-        contentScriptReady: true,
-        videoElementReady: false,
+        contentScriptReported: true,
+        mediaElementObserved: false,
         videoWaitStartedAt: now,
-        remainingTimeNeedsRefresh: true,
+        remainingTimeStale: true,
       }),
       2: createTabRecordFixture(2, {
         videoDetails: { title: 'Video 2', remainingTime: 90, lengthSeconds: 120 },
-        remainingTimeNeedsRefresh: false,
+        remainingTimeStale: false,
       }),
     });
 
@@ -51,7 +51,7 @@ test(
       callback({
         title: `Video ${tabId}`,
         url: `https://www.youtube.com/watch?v=${tabId}`,
-        videoElementReady: true,
+        mediaElementObserved: true,
         lengthSeconds: 120,
         currentTime: 20,
         playbackRate: 1,
@@ -76,11 +76,11 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         isActiveTab: true,
-        contentScriptReady: false,
-        videoElementReady: false,
+        contentScriptReported: false,
+        mediaElementObserved: false,
         transitionStartedAt: Date.now() - 10_000,
         videoWaitStartedAt: null,
-        remainingTimeNeedsRefresh: true,
+        remainingTimeStale: true,
         videoDetails: null,
       }),
     });
@@ -103,7 +103,7 @@ test(
       callback({
         title: 'Archived Stream',
         url: 'https://www.youtube.com/watch?v=archive',
-        videoElementReady: false,
+        mediaElementObserved: false,
         lengthSeconds: null,
         duration: 6211,
         currentTime: 0,
@@ -116,8 +116,8 @@ test(
     const snapshot = await getWindowSnapshot({ windowId: 1 });
 
     assert.deepEqual(refreshedTabIds, [1]);
-    assert.equal(snapshot.tabRecordsById[1].videoElementReady, true);
+    assert.equal(snapshot.tabRecordsById[1].mediaElementObserved, true);
     assert.equal(snapshot.tabRecordsById[1].videoDetails.remainingTime, 6211);
-    assert.equal(snapshot.tabRecordsById[1].remainingTimeNeedsRefresh, false);
+    assert.equal(snapshot.tabRecordsById[1].remainingTimeStale, false);
   },
 );

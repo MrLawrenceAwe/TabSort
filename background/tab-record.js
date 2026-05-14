@@ -1,5 +1,5 @@
 import { isFiniteNumber } from '../shared/guards.js';
-import { getMutableTabRecord, setTabRecord } from './window-store-mutations.js';
+import { getMutableTabRecord, setTabRecord } from './window-store.js';
 
 const FALLBACK_TAB_INDEX = Number.MAX_SAFE_INTEGER;
 
@@ -17,8 +17,8 @@ export function createTabRecord(tabId, windowId, defaults = {}) {
     index: initialIndex,
     pinned: Boolean(defaults.pinned),
     status: defaults.status ?? null,
-    contentScriptReady: Boolean(defaults.contentScriptReady),
-    videoElementReady: Boolean(defaults.videoElementReady),
+    contentScriptReported: Boolean(defaults.contentScriptReported),
+    mediaElementObserved: Boolean(defaults.mediaElementObserved),
     isLiveNow: Boolean(defaults.isLiveNow),
     isActiveTab: Boolean(defaults.isActiveTab),
     isHidden: Boolean(defaults.isHidden),
@@ -27,8 +27,8 @@ export function createTabRecord(tabId, windowId, defaults = {}) {
     unsuspendedTimestamp: defaults.unsuspendedTimestamp ?? null,
     transitionStartedAt: defaults.transitionStartedAt ?? null,
     videoWaitStartedAt: defaults.videoWaitStartedAt ?? null,
-    remainingTimeNeedsRefresh:
-      defaults.remainingTimeNeedsRefresh == null ? true : Boolean(defaults.remainingTimeNeedsRefresh),
+    remainingTimeStale:
+      defaults.remainingTimeStale == null ? true : Boolean(defaults.remainingTimeStale),
   };
 }
 

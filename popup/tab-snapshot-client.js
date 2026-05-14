@@ -6,7 +6,7 @@ function isValidSnapshot(snapshot) {
   return snapshot && typeof snapshot === 'object' && 'tabRecordsById' in snapshot;
 }
 
-export function createSnapshotClient({
+export function createTabSnapshotClient({
   requestRuntimeMessage,
   syncActiveWindow,
   setErrorMessage,

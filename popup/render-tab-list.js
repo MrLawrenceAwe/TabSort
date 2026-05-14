@@ -8,7 +8,7 @@ import { setErrorMessage } from './popup-elements.js';
 import { applyPopupState } from './popup-store.js';
 import { renderTabRow } from './tab-row-view.js';
 
-export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
+export function renderTabList(snapshot, { postRuntimeMessage } = {}) {
   if (!snapshot) return;
   setErrorMessage('');
 
@@ -35,15 +35,15 @@ export function renderSnapshot(snapshot, { postRuntimeMessage } = {}) {
     if (!tabRecord) continue;
     const normalizedRecord = {
       ...tabRecord,
-      remainingTimeNeedsRefresh: Boolean(tabRecord.remainingTimeNeedsRefresh),
+      remainingTimeStale: Boolean(tabRecord.remainingTimeStale),
     };
-    if (normalizedRecord.remainingTimeNeedsRefresh) row.classList.add('stale-remaining-row');
+    if (normalizedRecord.remainingTimeStale) row.classList.add('stale-remaining-row');
     renderTabRow(row, normalizedRecord, currentOrderMatchesTarget, postRuntimeMessage);
     rowFragment.appendChild(row);
   }
   tbody.replaceChildren(rowFragment);
 
-  if (sortSummary.order.allSortableTabsReady && !currentOrderMatchesTarget) {
+  if (sortSummary.order.allEligibleVideosReady && !currentOrderMatchesTarget) {
     addClassToTabRows(table, 'all-sort-ready-row');
   }
 

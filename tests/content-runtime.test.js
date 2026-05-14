@@ -6,181 +6,12 @@ import { shouldSendContentScriptReadySignal } from '../content/youtube/controlle
 import { collectPageVideoDetails } from '../content/youtube/video-details.js';
 import { inferIsLiveNow } from '../content/youtube/live-status.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
-
-class FakeMutationObserver {
-  constructor(callback) {
-    this.callback = callback;
-    FakeMutationObserver.instances.push(this);
-  }
-
-  observe(target, options) {
-    this.target = target;
-    this.options = options;
-  }
-
-  disconnect() {}
-}
-
-FakeMutationObserver.instances = [];
-
-function createEventTarget() {
-  const listeners = new Map();
-  return {
-    listeners,
-    addEventListener(type, listener) {
-      listeners.set(type, listener);
-    },
-    removeEventListener(type) {
-      listeners.delete(type);
-    },
-    dispatch(type, event = {}) {
-      const listener = listeners.get(type);
-      if (listener) listener(event);
-    },
-  };
-}
-
-function createFakeVideo({
-  readyState = 0,
-  duration = NaN,
-  currentSrc = '',
-  src = '',
-  paused = false,
-  currentTime = 0,
-} = {}) {
-  const eventTarget = createEventTarget();
-  return {
-    ...eventTarget,
-    readyState,
-    duration,
-    currentSrc,
-    src,
-    paused,
-    currentTime,
-  };
-}
-
-function installRuntimeTestDom() {
-  const windowTarget = createEventTarget();
-  const titleElement = { textContent: 'Video One - YouTube' };
-  const headElement = {};
-  const documentElement = {};
-  const player = {
-    duration: NaN,
-    currentTime: NaN,
-    getDuration() {
-      return this.duration;
-    },
-    getCurrentTime() {
-      return this.currentTime;
-    },
-  };
-  let durationContent = 'PT2M0S';
-  const video = createFakeVideo({
-    readyState: 3,
-    duration: 120,
-    currentSrc: 'blob:video-one',
-  });
-  let videos = [video];
-  let querySelectorAllCount = 0;
-  const animationFrameCallbacks = [];
-
-  globalThis.MutationObserver = FakeMutationObserver;
-  globalThis.location = { href: 'https://www.youtube.com/watch?v=one' };
-  globalThis.window = {
-    ...windowTarget,
-    innerWidth: 1280,
-    innerHeight: 720,
-    ytInitialPlayerResponse: null,
-    requestAnimationFrame(callback) {
-      animationFrameCallbacks.push(callback);
-      return animationFrameCallbacks.length;
-    },
-  };
-  globalThis.document = {
-    readyState: 'complete',
-    title: 'Video One - YouTube',
-    head: headElement,
-    documentElement,
-    scripts: [],
-    querySelector(selector) {
-      if (selector === 'title') return titleElement;
-      if (selector === 'meta[itemprop="duration"]') {
-        return { getAttribute: () => durationContent };
-      }
-      if (selector === '#movie_player') return player;
-      return null;
-    },
-    querySelectorAll() {
-      querySelectorAllCount += 1;
-      return videos;
-    },
-  };
-  globalThis.chrome = {
-    runtime: {
-      id: 'tabsort-test',
-      sendMessage(message) {
-        installRuntimeTestDom.messages.push(message);
-      },
-      onMessage: {
-        addListener(listener) {
-          installRuntimeTestDom.runtimeMessageListeners.add(listener);
-          installRuntimeTestDom.onMessageListener = listener;
-        },
-        removeListener(listener) {
-          installRuntimeTestDom.runtimeMessageListeners.delete(listener);
-          installRuntimeTestDom.onMessageListener =
-            installRuntimeTestDom.runtimeMessageListeners.size > 0
-              ? Array.from(installRuntimeTestDom.runtimeMessageListeners).at(-1)
-              : null;
-        },
-      },
-    },
-  };
-
-  return {
-    getRuntimeMessageListenerCount() {
-      return installRuntimeTestDom.runtimeMessageListeners.size;
-    },
-    windowTarget,
-    updatePage({ href, title, duration }) {
-      globalThis.location.href = href;
-      globalThis.document.title = title;
-      titleElement.textContent = title;
-      durationContent = duration;
-    },
-    video,
-    player,
-    replaceVideos(nextVideos) {
-      videos = nextVideos;
-    },
-    getQuerySelectorAllCount() {
-      return querySelectorAllCount;
-    },
-    flushAnimationFrame() {
-      const callback = animationFrameCallbacks.shift();
-      if (callback) callback();
-    },
-    documentElement,
-  };
-}
-
-installRuntimeTestDom.messages = [];
-installRuntimeTestDom.onMessageListener = null;
-installRuntimeTestDom.runtimeMessageListeners = new Set();
-
-function resetGlobals() {
-  delete globalThis.MutationObserver;
-  delete globalThis.location;
-  delete globalThis.window;
-  delete globalThis.document;
-  delete globalThis.chrome;
-  installRuntimeTestDom.messages = [];
-  installRuntimeTestDom.onMessageListener = null;
-  installRuntimeTestDom.runtimeMessageListeners = new Set();
-  FakeMutationObserver.instances = [];
-}
-
+import {
+  FakeMutationObserver,
+  createFakeVideo,
+  installRuntimeTestDom,
+  resetGlobals,
+} from './helpers/content-runtime-fixtures.js';
 test('shouldSendContentScriptReadySignal allows first-load, force-refresh, and URL-change signals', () => {
   assert.equal(
     shouldSendContentScriptReadySignal('https://www.youtube.com/watch?v=one', null),
@@ -211,7 +42,7 @@ test('shouldSendContentScriptReadySignal allows first-load, force-refresh, and U
 });
 
 test(
-  'content script session re-sends contentScriptReady after yt-navigate-finish changes the page URL',
+  'content script session re-sends contentScriptReported after yt-navigate-finish changes the page URL',
   () => {
     const runtime = createYoutubePageController();
     try {
@@ -248,7 +79,7 @@ test(
 );
 
 test(
-  'content script session waits for fresh media evidence before re-sending videoElementReady on SPA navigation',
+  'content script session waits for fresh media evidence before re-sending mediaElementObserved on SPA navigation',
   () => {
     const runtime = createYoutubePageController();
     try {
@@ -317,7 +148,7 @@ test(
         },
       );
 
-      assert.equal(response?.videoElementReady, true);
+      assert.equal(response?.mediaElementObserved, true);
 
       const mediaReadyAfterMetricCollection = installRuntimeTestDom.messages.filter(
         (message) => message?.type === RUNTIME_MESSAGE_TYPES.VIDEO_ELEMENT_READY,
@@ -353,7 +184,7 @@ test(
         },
       );
 
-      assert.equal(response?.videoElementReady, false);
+      assert.equal(response?.mediaElementObserved, false);
       assert.equal(response?.duration, 6211);
       assert.equal(response?.currentTime, 0);
     } finally {

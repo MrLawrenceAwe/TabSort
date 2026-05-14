@@ -73,10 +73,10 @@ export function createYoutubePageController({
 
   function dispatchContentScriptReadySignal({ force = false } = {}) {
     const currentUrl = getCurrentPageUrl();
-    if (!shouldSendContentScriptReadySignal(currentUrl, state.lastReadyUrl, { force })) {
+    if (!shouldSendContentScriptReadySignal(currentUrl, state.lastScriptReadyUrl, { force })) {
       return;
     }
-    state.lastReadyUrl = currentUrl;
+    state.lastScriptReadyUrl = currentUrl;
     sendExtensionMessage(
       createRuntimeMessage(RUNTIME_MESSAGE_TYPES.CONTENT_SCRIPT_READY),
       'content script ready',
@@ -122,8 +122,8 @@ export function createYoutubePageController({
     if (currentUrl && currentUrl !== state.observedPageUrl) {
       disposeObservers();
       state.observedPageUrl = currentUrl;
-      state.lastReadyUrl = null;
-      state.mediaReadyUrl = null;
+      state.lastScriptReadyUrl = null;
+      state.mediaReadyPageUrl = null;
     } else if (!state.observedPageUrl && currentUrl) {
       state.observedPageUrl = currentUrl;
     }
@@ -143,8 +143,8 @@ export function createYoutubePageController({
     disposeObservers();
     disposeListeners();
     state.observedPageUrl = null;
-    state.lastReadyUrl = null;
-    state.mediaReadyUrl = null;
+    state.lastScriptReadyUrl = null;
+    state.mediaReadyPageUrl = null;
     state.lastReadyVideo = null;
     state.lastMediaReadyFingerprint = null;
     state.initialized = false;
@@ -195,8 +195,8 @@ export function createYoutubePageController({
 
     addWindowEventListener(runtimeWindow, 'pagehide', () => {
       disposeObservers();
-      state.lastReadyUrl = null;
-      state.mediaReadyUrl = null;
+      state.lastScriptReadyUrl = null;
+      state.mediaReadyPageUrl = null;
       state.lastReadyVideo = null;
       state.lastMediaReadyFingerprint = null;
     });

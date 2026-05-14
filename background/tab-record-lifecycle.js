@@ -10,11 +10,11 @@ export function clearTabRemainingTime(record) {
 }
 
 export function markRemainingTimeStale(record) {
-  record.remainingTimeNeedsRefresh = true;
+  record.remainingTimeStale = true;
 }
 
 export function resetVideoReadiness(record, { videoWaitStartedAt = null } = {}) {
-  record.videoElementReady = false;
+  record.mediaElementObserved = false;
   record.videoWaitStartedAt = videoWaitStartedAt;
 }
 
@@ -25,19 +25,19 @@ function resetVideoIdentity(record) {
 }
 
 export function markRecordVideoElementReady(record) {
-  record.videoElementReady = true;
+  record.mediaElementObserved = true;
   record.videoWaitStartedAt = null;
 }
 
 function markRecordVideoUnavailable(record) {
-  record.contentScriptReady = false;
+  record.contentScriptReported = false;
   resetVideoReadiness(record);
   clearTabRemainingTime(record);
   markRemainingTimeStale(record);
 }
 
-function resetRecordForVideoChange(record, { contentScriptReady = false, timestamp = null } = {}) {
-  record.contentScriptReady = Boolean(contentScriptReady);
+function resetRecordForVideoChange(record, { contentScriptReported = false, timestamp = null } = {}) {
+  record.contentScriptReported = Boolean(contentScriptReported);
   resetVideoReadiness(record, { videoWaitStartedAt: timestamp });
   resetVideoIdentity(record);
 }
@@ -57,7 +57,7 @@ function markTabRecordVideoChanged(record) {
 function markTabRecordContentScriptReadyAfterVideoChange(record, timestamp) {
   if (!record) return;
 
-  resetRecordForVideoChange(record, { contentScriptReady: true, timestamp });
+  resetRecordForVideoChange(record, { contentScriptReported: true, timestamp });
 }
 
 export function markTabRecordReloading(record) {
@@ -84,10 +84,10 @@ export function createRecordFromTabSnapshot(
     index: tab.index,
     pinned: Boolean(tab.pinned),
     status: nextStatus,
-    contentScriptReady:
-      isUnsuspended && !urlChanged ? Boolean(previousRecord.contentScriptReady) : false,
-    videoElementReady:
-      isUnsuspended && !urlChanged ? Boolean(previousRecord.videoElementReady) : false,
+    contentScriptReported:
+      isUnsuspended && !urlChanged ? Boolean(previousRecord.contentScriptReported) : false,
+    mediaElementObserved:
+      isUnsuspended && !urlChanged ? Boolean(previousRecord.mediaElementObserved) : false,
     isLiveNow: urlChanged ? false : Boolean(previousRecord.isLiveNow),
     isActiveTab: Boolean(tab.active),
     isHidden: Boolean(tab.hidden),
@@ -96,9 +96,9 @@ export function createRecordFromTabSnapshot(
     unsuspendedTimestamp: previousRecord.unsuspendedTimestamp || null,
     transitionStartedAt: previousRecord.transitionStartedAt || null,
     videoWaitStartedAt: urlChanged ? null : previousRecord.videoWaitStartedAt ?? null,
-    remainingTimeNeedsRefresh:
+    remainingTimeStale:
       !isUnsuspended ||
-      Boolean(previousRecord.remainingTimeNeedsRefresh) ||
+      Boolean(previousRecord.remainingTimeStale) ||
       statusChanged ||
       urlChanged,
   });
@@ -136,8 +136,8 @@ export function applyContentScriptReady(record, { urlChanged = false, url = null
     markTabRecordContentScriptReadyAfterVideoChange(record, timestamp);
   }
   if (url) record.url = url;
-  record.contentScriptReady = true;
-  if (!record.videoElementReady && typeof record.videoWaitStartedAt !== 'number') {
+  record.contentScriptReported = true;
+  if (!record.mediaElementObserved && typeof record.videoWaitStartedAt !== 'number') {
     record.videoWaitStartedAt = timestamp;
   }
 }
@@ -159,13 +159,13 @@ export function applyPageVideoDetails(record, details = {}, { urlChanged = false
     record.videoDetails.lengthSeconds = details.lengthSeconds;
     if (!record.isLiveNow && record.videoDetails.remainingTime == null) {
       record.videoDetails.remainingTime = details.lengthSeconds;
-      record.remainingTimeNeedsRefresh = true;
+      record.remainingTimeStale = true;
     }
   }
 
   if (record.isLiveNow) {
     clearTabRemainingTime(record);
-    record.remainingTimeNeedsRefresh = false;
+    record.remainingTimeStale = false;
     record.videoWaitStartedAt = null;
   }
 }
