@@ -4,24 +4,9 @@ import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../shared/messages.
 import { trackedWindowState } from './window-store.js';
 import { setSnapshotSignature } from './window-store-mutations.js';
 
-function cloneTabRecord(record) {
-  if (!record || typeof record !== 'object') return record;
-  return {
-    ...record,
-    videoDetails: record.videoDetails ? { ...record.videoDetails } : null,
-  };
-}
-
 export function buildTabSnapshot() {
-  const tabRecordsById = Object.fromEntries(
-    Object.entries(trackedWindowState.tabRecordsById).map(([id, record]) => [
-      id,
-      cloneTabRecord(record),
-    ]),
-  );
-
   return {
-    tabRecordsById,
+    tabRecordsById: trackedWindowState.tabRecordsById,
     targetSortableTabIds: [...trackedWindowState.targetSortableTabIds],
     visibleTabIds: [...trackedWindowState.visibleTabIds],
     currentOrderMatchesTarget: trackedWindowState.currentOrderMatchesTarget,

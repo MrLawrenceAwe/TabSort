@@ -1,6 +1,5 @@
 import { isFiniteNumber } from '../shared/guards.js';
-import { getTabRecordsById } from './window-store-selectors.js';
-import { setTabRecord } from './window-store-mutations.js';
+import { getMutableTabRecord, setTabRecord } from './window-store-mutations.js';
 
 const FALLBACK_TAB_INDEX = Number.MAX_SAFE_INTEGER;
 
@@ -38,8 +37,7 @@ export function ensureTabRecord(tabId, windowId, defaults = {}) {
     return undefined;
   }
 
-  const tabRecordsById = getTabRecordsById();
-  let record = tabRecordsById[tabId];
+  let record = getMutableTabRecord(tabId);
 
   if (!record) {
     record = createTabRecord(tabId, windowId, defaults);

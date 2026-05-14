@@ -7,7 +7,7 @@ import { applyTabSort } from './apply-tab-sort.js';
 import { refreshTabPlaybackMetricsBatch } from './playback-metrics-refresher.js';
 import { trackedWindowState } from './window-store.js';
 import { listTabIds } from './window-store-selectors.js';
-import { setTrackedWindowId } from './window-store-mutations.js';
+import { getMutableTabRecord, setTrackedWindowId } from './window-store-mutations.js';
 import { reconcileWindowTabRecords } from './tab-record-reconciler.js';
 import { shouldRefreshRecordMetrics } from '../shared/tab-refresh-policy.js';
 
@@ -38,7 +38,7 @@ export async function reloadTab(message) {
     logDebug(`tabs.reload failed for ${tabId}`, error);
   }
   if (!didReload) return;
-  const record = trackedWindowState.tabRecordsById[tabId];
+  const record = getMutableTabRecord(tabId);
   if (!record) return;
 
   markTabRecordReloading(record);

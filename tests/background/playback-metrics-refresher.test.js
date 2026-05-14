@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { trackedWindowState } from '../../background/window-store.js';
+import { getMutableTabRecord } from '../../background/window-store-mutations.js';
 import {
   refreshTabPlaybackMetrics,
   refreshTabPlaybackMetricsBatch,
@@ -59,7 +60,7 @@ test(
 
     await refreshPromise;
 
-    assert.equal(trackedWindowState.tabRecordsById[1], replacementRecord);
+    assert.equal(getMutableTabRecord(1), replacementRecord);
     assert.equal(replacementRecord.pageRuntimeReady, true);
     assert.equal(replacementRecord.videoDetails.lengthSeconds, 120);
     assert.equal(replacementRecord.videoDetails.remainingTime, 100);

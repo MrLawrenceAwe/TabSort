@@ -8,20 +8,20 @@ import {
   markTabRecordMetricsUnavailable,
 } from './tab-record-mutations.js';
 import { recomputeSortState } from './sort-state.js';
-import { getTabRecord, getTrackedWindowId } from './window-store-selectors.js';
-import { setTrackedWindowId } from './window-store-mutations.js';
+import { getTrackedWindowId } from './window-store-selectors.js';
+import { getMutableTabRecord, setTrackedWindowId } from './window-store-mutations.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 
 const DEFAULT_BATCH_CONCURRENCY = 4;
 
 async function loadTabRecordContext(tabId) {
-  const initialRecord = getTabRecord(tabId);
+  const initialRecord = getMutableTabRecord(tabId);
   if (!initialRecord || initialRecord.status !== TAB_STATES.UNSUSPENDED) {
     return null;
   }
 
   const tab = await getTab(tabId);
-  const record = getTabRecord(tabId);
+  const record = getMutableTabRecord(tabId);
   if (!record || record.status !== TAB_STATES.UNSUSPENDED) {
     return null;
   }
@@ -88,7 +88,7 @@ export async function refreshTabPlaybackMetricsBatch(
 ) {
   const pendingIds = Array.from(new Set(tabIds)).filter((tabId) => {
     if (typeof tabId !== 'number') return false;
-    const record = getTabRecord(tabId);
+    const record = getMutableTabRecord(tabId);
     return record && shouldRefresh(record);
   });
   if (!pendingIds.length) return false;
