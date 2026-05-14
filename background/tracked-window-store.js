@@ -32,7 +32,7 @@ function createTrackedWindowStoreState() {
 
 const trackedWindowState = createTrackedWindowStoreState();
 
-export const trackedWindowSnapshot = Object.freeze({
+export const trackedWindowStateView = Object.freeze({
   get tabRecordsById() {
     return cloneTabRecordsById(trackedWindowState.tabRecordsById);
   },
@@ -91,7 +91,7 @@ export function resetTrackedWindowStore({ windowId = null } = {}) {
   const nextState = createFreshTrackedWindowStoreState();
   nextState.windowId = isValidWindowId(windowId) ? windowId : null;
   Object.assign(trackedWindowState, nextState);
-  return trackedWindowSnapshot;
+  return trackedWindowStateView;
 }
 
 export function replaceAllTabRecords(tabRecordsById = {}) {

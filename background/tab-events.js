@@ -3,11 +3,9 @@ import { logDebug, logWarn, withErrorLogging } from '../shared/log.js';
 import { getTab } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
 import { collectPlaybackMetrics } from './collect-playback-metrics.js';
-import {
-  canManageWindow,
-  trackedWindowSnapshot,
-  deleteTabRecord,
-} from './tracked-window-store.js';
+import { deleteTabRecord } from './tracked-tab-record-store.js';
+import { canManageWindow } from './tracked-window-session.js';
+import { trackedWindowStateView } from './tracked-window-state-view.js';
 import { reconcileWindowTabRecords } from './tab-record-reconciler.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 
@@ -66,7 +64,7 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
   chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     if (!canManageWindow(removeInfo?.windowId)) return;
     deleteTabRecord(tabId);
-    if (removeInfo?.isWindowClosing && removeInfo.windowId === trackedWindowSnapshot.windowId) {
+    if (removeInfo?.isWindowClosing && removeInfo.windowId === trackedWindowStateView.windowId) {
       if (typeof onTrackedWindowClosed === 'function') {
         onTrackedWindowClosed();
       }
@@ -86,8 +84,8 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
           try {
             const tab = await getTab(details.tabId);
             if (
-              trackedWindowSnapshot.windowId != null &&
-              tab.windowId !== trackedWindowSnapshot.windowId
+              trackedWindowStateView.windowId != null &&
+              tab.windowId !== trackedWindowStateView.windowId
             ) {
               return;
             }
@@ -96,8 +94,8 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
             logDebug(`getTab failed for history update ${details.tabId}`, error);
             return;
           }
-        } else if (trackedWindowSnapshot.windowId != null) {
-          windowIdForUpdate = trackedWindowSnapshot.windowId;
+        } else if (trackedWindowStateView.windowId != null) {
+          windowIdForUpdate = trackedWindowStateView.windowId;
         }
 
         await reconcileWindowTabRecords(windowIdForUpdate);

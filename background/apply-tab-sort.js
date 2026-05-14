@@ -2,14 +2,15 @@ import { isValidWindowId } from '../shared/guards.js';
 import { loadSortOptions } from '../shared/storage.js';
 import { hasReadyRemainingTime } from './remaining-time-readiness.js';
 import { listWindowTabs, moveTabsInOrder } from './chrome-tabs.js';
-import { trackedWindowSnapshot, setTrackedWindowId } from './tracked-window-store.js';
+import { setTrackedWindowId } from './tracked-window-session.js';
+import { trackedWindowStateView } from './tracked-window-state-view.js';
 import { buildNonYoutubeOrder, buildYoutubeTabOrder } from './tab-order/build-tab-move-order.js';
 
-export async function applyTabSort(windowId = trackedWindowSnapshot.windowId) {
-  const targetVideoTabOrder = trackedWindowSnapshot.targetVideoTabOrder.slice();
+export async function applyTabSort(windowId = trackedWindowStateView.windowId) {
+  const targetVideoTabOrder = trackedWindowStateView.targetVideoTabOrder.slice();
 
   const readyTabIds = targetVideoTabOrder.filter((tabId) => {
-    const record = trackedWindowSnapshot.tabRecordsById[tabId];
+    const record = trackedWindowStateView.tabRecordsById[tabId];
     return hasReadyRemainingTime(record);
   });
 

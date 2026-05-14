@@ -1,9 +1,9 @@
-import { TAB_STATES } from './tab-states.js';
+import { TAB_STATES } from '../tab-states.js';
 import {
   canLoadingStillSettle,
   canMediaStillSettle,
   canWatchTransitionStillSettle,
-} from './tab-resolution-state.js';
+} from './settle-windows.js';
 
 export function shouldPollRecord(record, { now = Date.now } = {}) {
   if (!record || record.isLiveNow) return false;

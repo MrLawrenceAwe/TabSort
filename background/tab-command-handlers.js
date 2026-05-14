@@ -1,18 +1,15 @@
 import { isFiniteNumber, isValidWindowId } from '../shared/guards.js';
 import { logDebug } from '../shared/log.js';
 import { buildTabSnapshot } from './tab-snapshot.js';
-import { applyTabReloadStarted } from './tab-record-lifecycle.js';
+import { applyTabReloadStarted } from './tab-video-state.js';
 import { recomputeSortState } from './sort-state.js';
 import { applyTabSort } from './apply-tab-sort.js';
 import { collectPlaybackMetricsBatch } from './collect-playback-metrics.js';
-import {
-  getWritableTabRecord,
-  listTabIds,
-  trackedWindowSnapshot,
-  setTrackedWindowId,
-} from './tracked-window-store.js';
+import { getWritableTabRecord, listTabIds } from './tracked-tab-record-store.js';
+import { setTrackedWindowId } from './tracked-window-session.js';
+import { trackedWindowStateView } from './tracked-window-state-view.js';
 import { reconcileWindowTabRecords } from './tab-record-reconciler.js';
-import { shouldRefreshRecordMetrics } from '../shared/metrics-refresh-policy.js';
+import { shouldRefreshRecordMetrics } from '../shared/tab-readiness/refresh-policy.js';
 
 export async function activateTab(message) {
   const tabId = message.tabId;
@@ -68,7 +65,7 @@ export async function getWindowSnapshot(message) {
 export async function applyTabSortOrder(message) {
   const targetWindowId = isValidWindowId(message.windowId)
     ? message.windowId
-    : trackedWindowSnapshot.windowId;
+    : trackedWindowStateView.windowId;
   if (isValidWindowId(targetWindowId)) {
     setTrackedWindowId(targetWindowId, { force: true });
   }

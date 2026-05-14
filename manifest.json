@@ -31,10 +31,12 @@
       {
         "resources": [
           "content/youtube/controller.js",
-          "content/youtube/controller-state.js",
+          "content/youtube/content-script-ready-signal.js",
+          "content/youtube/page-controller-config.js",
+          "content/youtube/page-controller-state.js",
           "content/youtube/extension-runtime-bridge.js",
-          "content/youtube/media-readiness.js",
           "content/youtube/media-elements.js",
+          "content/youtube/video-metrics-readiness.js",
           "content/youtube/video-details.js",
           "content/youtube/youtube-player-response.js",
           "content/youtube/live-status.js",

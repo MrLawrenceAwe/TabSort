@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import {
   getWritableTabRecord,
-  trackedWindowSnapshot,
+  trackedWindowStateView,
 } from '../../background/tracked-window-store.js';
 import {
   collectPlaybackMetrics,
@@ -15,6 +15,9 @@ import {
   resetTrackedWindowState,
   setTrackedTabRecords,
   setTrackedTabRecord,
+  createPlaybackMetricsFixture,
+  stubChromeTabGetSequence,
+  stubChromeTabMetricPayload,
   stubChromeTabMetrics,
 } from '../helpers/background-test-helpers.js';
 
@@ -28,32 +31,8 @@ test(
     const initialRecord = createTabRecordFixture(1, { contentScriptReported: false });
     setTrackedTabRecords({ 1: initialRecord });
 
-    globalThis.chrome.tabs.get = (_tabId, callback) => {
-      setTimeout(() => {
-        callback({
-          id: 1,
-          windowId: 1,
-          url: 'https://www.youtube.com/watch?v=1',
-          active: false,
-          hidden: false,
-        });
-      }, 0);
-    };
-
-    globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
-      setTimeout(() => {
-        callback({
-          title: 'Video 1',
-          url: 'https://www.youtube.com/watch?v=1',
-          mediaElementObserved: true,
-          lengthSeconds: 120,
-          currentTime: 20,
-          playbackRate: 1,
-          paused: false,
-          isLive: false,
-        });
-      }, 0);
-    };
+    stubChromeTabGetSequence([{ tabId: 1 }], { async: true });
+    stubChromeTabMetricPayload(createPlaybackMetricsFixture({ tabId: 1 }), { async: true });
 
     const collectPromise = collectPlaybackMetrics(1);
 
@@ -84,32 +63,19 @@ test(
       }),
     });
 
-    globalThis.chrome.tabs.get = (_tabId, callback) => {
-      callback({
-        id: 1,
-        windowId: 1,
-        url: 'https://www.youtube.com/watch?v=new',
-        active: false,
-        hidden: false,
-      });
-    };
-
-    globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
-      callback({
+    stubChromeTabGetSequence([{ tabId: 1, url: 'https://www.youtube.com/watch?v=new' }]);
+    stubChromeTabMetricPayload(
+      createPlaybackMetricsFixture({
         title: 'New Video',
         url: 'https://www.youtube.com/watch?v=new',
-        mediaElementObserved: true,
         lengthSeconds: 400,
         currentTime: 10,
-        playbackRate: 1,
-        paused: false,
-        isLive: false,
-      });
-    };
+      }),
+    );
 
     await collectPlaybackMetrics(1);
 
-    const record = trackedWindowSnapshot.tabRecordsById[1];
+    const record = trackedWindowStateView.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
     assert.equal(record.videoDetails.title, 'New Video');
     assert.equal(record.videoDetails.lengthSeconds, 400);
@@ -132,37 +98,17 @@ test(
       }),
     });
 
-    let getCallCount = 0;
-    globalThis.chrome.tabs.get = (_tabId, callback) => {
-      getCallCount += 1;
-      setTimeout(() => {
-        callback({
-          id: 1,
-          windowId: 1,
-          url:
-            getCallCount === 1
-              ? 'https://www.youtube.com/watch?v=old'
-              : 'https://www.youtube.com/watch?v=new',
-          active: false,
-          hidden: false,
-        });
-      }, 0);
-    };
-
-    globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
-      setTimeout(() => {
-        callback({
-          title: 'Old Video',
-          url: 'https://www.youtube.com/watch?v=old',
-          mediaElementObserved: true,
-          lengthSeconds: 120,
-          currentTime: 20,
-          playbackRate: 1,
-          paused: false,
-          isLive: false,
-        });
-      }, 0);
-    };
+    stubChromeTabGetSequence([
+      { tabId: 1, url: 'https://www.youtube.com/watch?v=old' },
+      { tabId: 1, url: 'https://www.youtube.com/watch?v=new' },
+    ], { async: true });
+    stubChromeTabMetricPayload(
+      createPlaybackMetricsFixture({
+        title: 'Old Video',
+        url: 'https://www.youtube.com/watch?v=old',
+      }),
+      { async: true },
+    );
 
     const collectPromise = collectPlaybackMetrics(1);
 
@@ -176,7 +122,7 @@ test(
 
     await collectPromise;
 
-    const record = trackedWindowSnapshot.tabRecordsById[1];
+    const record = trackedWindowStateView.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
     assert.equal(record.videoDetails, null);
     assert.equal(record.contentScriptReported, false);
@@ -200,32 +146,20 @@ test(
       }),
     });
 
-    globalThis.chrome.tabs.get = (_tabId, callback) => {
-      callback({
-        id: 1,
-        windowId: 1,
-        url: 'https://www.youtube.com/watch?v=new',
-        active: false,
-        hidden: false,
-      });
-    };
-
-    globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
-      callback({
+    stubChromeTabGetSequence([{ tabId: 1, url: 'https://www.youtube.com/watch?v=new' }]);
+    stubChromeTabMetricPayload(
+      createPlaybackMetricsFixture({
         title: 'New Video',
         url: 'https://www.youtube.com/watch?v=new',
         mediaElementObserved: false,
         lengthSeconds: 400,
         currentTime: 10,
-        playbackRate: 1,
-        paused: false,
-        isLive: false,
-      });
-    };
+      }),
+    );
 
     await collectPlaybackMetrics(1);
 
-    const record = trackedWindowSnapshot.tabRecordsById[1];
+    const record = trackedWindowStateView.tabRecordsById[1];
     assert.equal(record.contentScriptReported, true);
     assert.equal(record.mediaElementObserved, false);
     assert.equal(typeof record.videoWaitStartedAt, 'number');
@@ -254,7 +188,7 @@ test(
 
     await collectPlaybackMetrics(1);
 
-    const record = trackedWindowSnapshot.tabRecordsById[1];
+    const record = trackedWindowStateView.tabRecordsById[1];
     assert.equal(record.contentScriptReported, true);
     assert.equal(record.mediaElementObserved, true);
     assert.equal(record.videoWaitStartedAt, null);
@@ -283,7 +217,7 @@ test(
 
     await collectPlaybackMetrics(1);
 
-    const record = trackedWindowSnapshot.tabRecordsById[1];
+    const record = trackedWindowStateView.tabRecordsById[1];
     assert.equal(record.contentScriptReported, true);
     assert.equal(record.mediaElementObserved, true);
     assert.equal(record.videoDetails.lengthSeconds, 6211);
@@ -314,7 +248,7 @@ test(
 
     await collectPlaybackMetrics(1);
 
-    const record = trackedWindowSnapshot.tabRecordsById[1];
+    const record = trackedWindowStateView.tabRecordsById[1];
     assert.equal(record.contentScriptReported, true);
     assert.equal(record.mediaElementObserved, false);
     assert.equal(record.videoDetails.lengthSeconds, null);
@@ -345,7 +279,7 @@ test(
 
     await collectPlaybackMetrics(1);
 
-    const record = trackedWindowSnapshot.tabRecordsById[1];
+    const record = trackedWindowStateView.tabRecordsById[1];
     assert.equal(record.contentScriptReported, true);
     assert.equal(record.mediaElementObserved, false);
     assert.equal(record.videoDetails.lengthSeconds, 6211);
@@ -373,33 +307,20 @@ test(
       }),
     });
 
-    globalThis.chrome.tabs.get = (_tabId, callback) => {
-      callback({
-        id: 1,
-        windowId: 1,
-        url: 'https://www.youtube.com/watch?v=previous',
-        active: false,
-        hidden: false,
-      });
-    };
-
-    globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
-      callback({
+    stubChromeTabGetSequence([{ tabId: 1, url: 'https://www.youtube.com/watch?v=previous' }]);
+    stubChromeTabMetricPayload(
+      createPlaybackMetricsFixture({
         title: 'OpenAI vs. Anthropic\'s Direct Faceoff + Future of Agents - With Aaron Levie',
         url: 'https://www.youtube.com/watch?v=previous',
-        mediaElementObserved: true,
         lengthSeconds: null,
         duration: 72,
         currentTime: 72,
-        playbackRate: 1,
-        paused: false,
-        isLive: false,
-      });
-    };
+      }),
+    );
 
     await collectPlaybackMetrics(1);
 
-    const record = trackedWindowSnapshot.tabRecordsById[1];
+    const record = trackedWindowStateView.tabRecordsById[1];
     assert.equal(record.contentScriptReported, true);
     assert.equal(record.mediaElementObserved, false);
     assert.equal(typeof record.videoWaitStartedAt, 'number');
@@ -452,8 +373,8 @@ test(
 
     assert.equal(changed, true);
     assert.equal(broadcastCount, 1);
-    assert.equal(trackedWindowSnapshot.tabRecordsById[1].videoDetails.remainingTime, 110);
-    assert.equal(trackedWindowSnapshot.tabRecordsById[2].videoDetails.remainingTime, 100);
-    assert.equal(trackedWindowSnapshot.tabRecordsById[3].videoDetails.remainingTime, 90);
+    assert.equal(trackedWindowStateView.tabRecordsById[1].videoDetails.remainingTime, 110);
+    assert.equal(trackedWindowStateView.tabRecordsById[2].videoDetails.remainingTime, 100);
+    assert.equal(trackedWindowStateView.tabRecordsById[3].videoDetails.remainingTime, 90);
   },
 );

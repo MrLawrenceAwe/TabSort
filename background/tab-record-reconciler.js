@@ -1,15 +1,17 @@
 import { isValidWindowId } from '../shared/guards.js';
 import { getTabState, listWindowTabs } from './chrome-tabs.js';
 import { recomputeSortState } from './sort-state.js';
-import { createRecordFromTabSnapshot } from './tab-record-lifecycle.js';
+import { createRecordFromTabSnapshot } from './tab-record-factory.js';
 import {
   getTabRecordsById,
+  replaceAllTabRecords,
+} from './tracked-tab-record-store.js';
+import {
   getTrackedWindowId,
   isSyncTokenCurrent,
   nextSyncToken,
-  replaceAllTabRecords,
   setTrackedWindowId,
-} from './tracked-window-store.js';
+} from './tracked-window-session.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function resolveWindowIdForQuery(windowId, { force = false } = {}) {

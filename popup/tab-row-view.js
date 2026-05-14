@@ -4,7 +4,7 @@ import {
   determineTabGuidance,
   getTabGuidanceLabel,
   TAB_GUIDANCE,
-} from '../shared/tab-resolution-guidance.js';
+} from '../shared/tab-readiness/action-guidance.js';
 
 const CLICKABLE_GUIDANCE_MESSAGES = Object.freeze({
   ACTIVATE_TAB: RUNTIME_MESSAGE_TYPES.ACTIVATE_TAB,

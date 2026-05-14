@@ -3,10 +3,11 @@ import { logDebug } from '../shared/log.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { getTab, sendMessageToTab } from './chrome-tabs.js';
 import { derivePlaybackStateUpdate } from './derive-playback-state-update.js';
-import { applyVideoMetricsUnavailable } from './tab-record-lifecycle.js';
+import { applyVideoMetricsUnavailable } from './tab-video-state.js';
 import { applyPlaybackStateUpdate } from './apply-playback-state-update.js';
 import { recomputeSortState } from './sort-state.js';
-import { getWritableTabRecord, getTrackedWindowId, setTrackedWindowId } from './tracked-window-store.js';
+import { getWritableTabRecord } from './tracked-tab-record-store.js';
+import { getTrackedWindowId, setTrackedWindowId } from './tracked-window-session.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 
 const DEFAULT_BATCH_CONCURRENCY = 4;

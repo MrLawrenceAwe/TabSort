@@ -3,10 +3,10 @@ import { createExtensionRuntimeBridge } from './extension-runtime-bridge.js';
 import {
   DEFAULT_PAGE_CONTROLLER_CONFIG,
   PAGE_CONTROLLER_DEPENDENCIES,
-  createPageControllerState,
-  shouldSendContentScriptReadySignal,
-} from './controller-state.js';
-import { createMediaReadinessTracker } from './media-readiness.js';
+} from './page-controller-config.js';
+import { createPageControllerState } from './page-controller-state.js';
+import { shouldSendContentScriptReadySignal } from './content-script-ready-signal.js';
+import { createVideoMetricsReadinessTracker } from './video-metrics-readiness.js';
 import { createTitleObserver } from './title-observer.js';
 import { handleCollectVideoMetricsMessage } from './video-metrics.js';
 
@@ -20,7 +20,7 @@ export function createYoutubePageController({
     ...config,
   };
   const state = createPageControllerState();
-  const { lifecycle, mediaReadiness: mediaReadinessState, titleObserver: titleObserverState } = state;
+  const { lifecycle, videoMetricsReadiness: videoMetricsReadinessState, titleObserver: titleObserverState } = state;
 
   const getDocument = () => environment.document ?? globalThis.document;
   const getWindow = () => environment.window ?? globalThis.window;
@@ -90,10 +90,10 @@ export function createYoutubePageController({
     );
   }
 
-  const mediaReadiness = createMediaReadinessTracker({
+  const videoMetricsReadiness = createVideoMetricsReadinessTracker({
     config: controllerConfig,
     environment,
-    state: mediaReadinessState,
+    state: videoMetricsReadinessState,
     getCurrentPageUrl,
     getDocument,
     getMutationObserver,
@@ -108,7 +108,7 @@ export function createYoutubePageController({
   });
 
   function disposeObservers() {
-    mediaReadiness.disposeMediaObservers();
+    videoMetricsReadiness.disposeVideoMetricsReadinessObservers();
     titleObserver.disposeTitleObservers();
   }
 
@@ -130,7 +130,7 @@ export function createYoutubePageController({
       disposeObservers();
       lifecycle.observedPageUrl = currentUrl;
       lifecycle.lastScriptReadyUrl = null;
-      mediaReadinessState.mediaReadyPageUrl = null;
+      videoMetricsReadinessState.metricsReadyPageUrl = null;
     } else if (!lifecycle.observedPageUrl && currentUrl) {
       lifecycle.observedPageUrl = currentUrl;
     }
@@ -142,7 +142,7 @@ export function createYoutubePageController({
       dispatchContentScriptReadySignal({ force: forceReadySignal });
     }
     publishPageVideoDetails();
-    mediaReadiness.watchForVideoMount();
+    videoMetricsReadiness.watchForVideoMount();
     titleObserver.watchTitleChanges();
   }
 
@@ -151,9 +151,9 @@ export function createYoutubePageController({
     disposeListeners();
     lifecycle.observedPageUrl = null;
     lifecycle.lastScriptReadyUrl = null;
-    mediaReadinessState.mediaReadyPageUrl = null;
-    mediaReadinessState.lastReadyVideo = null;
-    mediaReadinessState.lastMediaReadyFingerprint = null;
+    videoMetricsReadinessState.metricsReadyPageUrl = null;
+    videoMetricsReadinessState.lastMetricsReadyVideo = null;
+    videoMetricsReadinessState.lastMetricsReadyFingerprint = null;
     lifecycle.initialized = false;
   }
 
@@ -170,9 +170,9 @@ export function createYoutubePageController({
         config: controllerConfig,
         environment,
         collectPageDetails,
-        isCurrentVideoElementReady: mediaReadiness.isCurrentVideoElementReady,
-        markCurrentVideoElementReadyIfAvailable:
-          mediaReadiness.markCurrentVideoElementReadyIfAvailable,
+        isCurrentVideoMetricsReady: videoMetricsReadiness.isCurrentVideoMetricsReady,
+        markCurrentVideoMetricsReadyIfAvailable:
+          videoMetricsReadiness.markCurrentVideoMetricsReadyIfAvailable,
       });
     addRuntimeMessageListener(lifecycle.runtimeMessageListener);
 
@@ -203,9 +203,9 @@ export function createYoutubePageController({
     addWindowEventListener(runtimeWindow, 'pagehide', () => {
       disposeObservers();
       lifecycle.lastScriptReadyUrl = null;
-      mediaReadinessState.mediaReadyPageUrl = null;
-      mediaReadinessState.lastReadyVideo = null;
-      mediaReadinessState.lastMediaReadyFingerprint = null;
+      videoMetricsReadinessState.metricsReadyPageUrl = null;
+      videoMetricsReadinessState.lastMetricsReadyVideo = null;
+      videoMetricsReadinessState.lastMetricsReadyFingerprint = null;
     });
   }
 

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_STATES } from '../../shared/tab-states.js';
-import { trackedWindowSnapshot } from '../../background/tracked-window-store.js';
+import { trackedWindowStateView } from '../../background/tracked-window-store.js';
 import { reconcileWindowTabRecords } from '../../background/tab-record-reconciler.js';
 import {
   ensureChromeApi,
@@ -27,7 +27,7 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    const record = trackedWindowSnapshot.tabRecordsById[1];
+    const record = trackedWindowStateView.tabRecordsById[1];
     assert.equal(record.status, TAB_STATES.UNSUSPENDED);
     assert.equal(record.unsuspendedTimestamp, null);
   },
@@ -49,7 +49,7 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    const record = trackedWindowSnapshot.tabRecordsById[1];
+    const record = trackedWindowStateView.tabRecordsById[1];
     assert.equal(record.status, TAB_STATES.UNSUSPENDED);
     assert.equal(typeof record.unsuspendedTimestamp, 'number');
   },
@@ -74,7 +74,7 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    const record = trackedWindowSnapshot.tabRecordsById[1];
+    const record = trackedWindowStateView.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
     assert.equal(record.contentScriptReported, false);
     assert.equal(record.mediaElementObserved, false);
@@ -108,7 +108,7 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    const record = trackedWindowSnapshot.tabRecordsById[1];
+    const record = trackedWindowStateView.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=same&list=abc123&index=10');
     assert.equal(record.contentScriptReported, true);
     assert.equal(record.mediaElementObserved, true);
@@ -144,10 +144,10 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    assert.deepEqual(Object.keys(trackedWindowSnapshot.tabRecordsById), ['1']);
-    assert.deepEqual(trackedWindowSnapshot.trackedTabIdsInWindowOrder, [1]);
-    assert.deepEqual(trackedWindowSnapshot.targetVideoTabOrder, [1]);
-    assert.equal(trackedWindowSnapshot.tabRecordsById[1].videoDetails.remainingTime, 90);
+    assert.deepEqual(Object.keys(trackedWindowStateView.tabRecordsById), ['1']);
+    assert.deepEqual(trackedWindowStateView.trackedTabIdsInWindowOrder, [1]);
+    assert.deepEqual(trackedWindowStateView.targetVideoTabOrder, [1]);
+    assert.equal(trackedWindowStateView.tabRecordsById[1].videoDetails.remainingTime, 90);
   },
 );
 
@@ -169,9 +169,9 @@ test(
 
     await reconcileWindowTabRecords(2, { force: true });
 
-    assert.equal(trackedWindowSnapshot.windowId, 1);
-    assert.deepEqual(Object.keys(trackedWindowSnapshot.tabRecordsById), ['1']);
-    assert.deepEqual(trackedWindowSnapshot.trackedTabIdsInWindowOrder, [1]);
-    assert.deepEqual(trackedWindowSnapshot.targetVideoTabOrder, [1]);
+    assert.equal(trackedWindowStateView.windowId, 1);
+    assert.deepEqual(Object.keys(trackedWindowStateView.tabRecordsById), ['1']);
+    assert.deepEqual(trackedWindowStateView.trackedTabIdsInWindowOrder, [1]);
+    assert.deepEqual(trackedWindowStateView.targetVideoTabOrder, [1]);
   },
 );
