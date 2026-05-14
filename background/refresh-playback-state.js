@@ -2,12 +2,11 @@ import { TAB_STATES } from '../shared/tab-states.js';
 import { logDebug } from '../shared/log.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { getTab, sendMessageToTab } from './chrome-tabs.js';
-import { derivePlaybackMetricUpdate } from './playback-metric-update.js';
+import { derivePlaybackStateUpdate } from './derive-playback-state-update.js';
 import { markTabRecordMetricsUnavailable } from './tab-record-lifecycle.js';
-import { applyPlaybackMetricUpdate } from './tab-record-playback-update.js';
+import { applyPlaybackStateUpdate } from './apply-playback-state-update.js';
 import { recomputeSortState } from './sort-state.js';
-import { getTrackedWindowId } from './window-store-selectors.js';
-import { getMutableTabRecord, setTrackedWindowId } from './window-store-mutations.js';
+import { getMutableTabRecord, getTrackedWindowId, setTrackedWindowId } from './window-store.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 
 const DEFAULT_BATCH_CONCURRENCY = 4;
@@ -40,7 +39,7 @@ async function loadTabRecordContext(tabId) {
   return { record, tab };
 }
 
-export async function refreshTabPlaybackMetrics(tabId, { recompute = true } = {}) {
+export async function refreshPlaybackState(tabId, { recompute = true } = {}) {
   try {
     const initialContext = await loadTabRecordContext(tabId);
     if (!initialContext) return false;
@@ -61,7 +60,7 @@ export async function refreshTabPlaybackMetrics(tabId, { recompute = true } = {}
 
     const metricsPayload = result.data;
     const currentTabUrl = tab.url || record.url || null;
-    const playbackUpdate = derivePlaybackMetricUpdate({
+    const playbackUpdate = derivePlaybackStateUpdate({
       metricsPayload,
       record,
       requestedUrl,
@@ -71,16 +70,16 @@ export async function refreshTabPlaybackMetrics(tabId, { recompute = true } = {}
       return false;
     }
 
-    applyPlaybackMetricUpdate(record, playbackUpdate, currentTabUrl);
+    applyPlaybackStateUpdate(record, playbackUpdate, currentTabUrl);
     if (recompute) recomputeSortState();
     return true;
   } catch (error) {
-    logDebug(`refreshTabPlaybackMetrics failed for ${tabId}`, error);
+    logDebug(`refreshPlaybackState failed for ${tabId}`, error);
     return false;
   }
 }
 
-export async function refreshTabPlaybackMetricsBatch(
+export async function refreshPlaybackStateBatch(
   tabIds,
   { concurrency = DEFAULT_BATCH_CONCURRENCY, shouldRefresh = () => true } = {},
 ) {
@@ -99,7 +98,7 @@ export async function refreshTabPlaybackMetricsBatch(
     while (nextIndex < pendingIds.length) {
       const tabId = pendingIds[nextIndex];
       nextIndex += 1;
-      const didChange = await refreshTabPlaybackMetrics(tabId, { recompute: false });
+      const didChange = await refreshPlaybackState(tabId, { recompute: false });
       changed = changed || didChange;
     }
   }

@@ -63,10 +63,10 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
-        videoElementReady: true,
-        contentScriptReady: true,
+        mediaElementObserved: true,
+        contentScriptReported: true,
         videoDetails: { title: 'Old Video', remainingTime: 45, lengthSeconds: 120 },
-        remainingTimeNeedsRefresh: false,
+        remainingTimeStale: false,
       }),
     });
 
@@ -76,11 +76,11 @@ test(
 
     const record = readonlyTrackedWindowState.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
-    assert.equal(record.contentScriptReady, false);
-    assert.equal(record.videoElementReady, false);
+    assert.equal(record.contentScriptReported, false);
+    assert.equal(record.mediaElementObserved, false);
     assert.equal(record.videoDetails, null);
     assert.equal(record.isLiveNow, false);
-    assert.equal(record.remainingTimeNeedsRefresh, true);
+    assert.equal(record.remainingTimeStale, true);
     assert.equal(typeof record.transitionStartedAt, 'number');
   },
 );
@@ -93,10 +93,10 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=same',
-        videoElementReady: true,
-        contentScriptReady: true,
+        mediaElementObserved: true,
+        contentScriptReported: true,
         videoDetails: { title: 'Same Video', remainingTime: 45, lengthSeconds: 120 },
-        remainingTimeNeedsRefresh: false,
+        remainingTimeStale: false,
       }),
     });
 
@@ -110,14 +110,14 @@ test(
 
     const record = readonlyTrackedWindowState.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=same&list=abc123&index=10');
-    assert.equal(record.contentScriptReady, true);
-    assert.equal(record.videoElementReady, true);
+    assert.equal(record.contentScriptReported, true);
+    assert.equal(record.mediaElementObserved, true);
     assert.deepEqual(record.videoDetails, {
       title: 'Same Video',
       remainingTime: 45,
       lengthSeconds: 120,
     });
-    assert.equal(record.remainingTimeNeedsRefresh, false);
+    assert.equal(record.remainingTimeStale, false);
   },
 );
 
@@ -129,11 +129,11 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         videoDetails: { title: 'Video 1', remainingTime: 90, lengthSeconds: 120 },
-        remainingTimeNeedsRefresh: false,
+        remainingTimeStale: false,
       }),
     });
     setTrackedSortState({ visibleTabIds: [1] });
-    setTrackedSortState({ targetSortableTabIds: [1] });
+    setTrackedSortState({ targetVideoOrder: [1] });
 
     globalThis.chrome.tabs.query = (query, callback) => {
       globalThis.chrome.runtime.lastError =
@@ -146,7 +146,7 @@ test(
 
     assert.deepEqual(Object.keys(readonlyTrackedWindowState.tabRecordsById), ['1']);
     assert.deepEqual(readonlyTrackedWindowState.visibleTabIds, [1]);
-    assert.deepEqual(readonlyTrackedWindowState.targetSortableTabIds, [1]);
+    assert.deepEqual(readonlyTrackedWindowState.targetVideoOrder, [1]);
     assert.equal(readonlyTrackedWindowState.tabRecordsById[1].videoDetails.remainingTime, 90);
   },
 );
@@ -159,11 +159,11 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         videoDetails: { title: 'Window 1 Video', remainingTime: 90, lengthSeconds: 120 },
-        remainingTimeNeedsRefresh: false,
+        remainingTimeStale: false,
       }),
     });
     setTrackedSortState({ visibleTabIds: [1] });
-    setTrackedSortState({ targetSortableTabIds: [1] });
+    setTrackedSortState({ targetVideoOrder: [1] });
 
     stubChromeTabQueryFailure();
 
@@ -172,6 +172,6 @@ test(
     assert.equal(readonlyTrackedWindowState.windowId, 1);
     assert.deepEqual(Object.keys(readonlyTrackedWindowState.tabRecordsById), ['1']);
     assert.deepEqual(readonlyTrackedWindowState.visibleTabIds, [1]);
-    assert.deepEqual(readonlyTrackedWindowState.targetSortableTabIds, [1]);
+    assert.deepEqual(readonlyTrackedWindowState.targetVideoOrder, [1]);
   },
 );

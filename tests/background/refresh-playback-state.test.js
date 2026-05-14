@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { readonlyTrackedWindowState } from '../../background/window-store.js';
-import { getMutableTabRecord } from '../../background/window-store-mutations.js';
 import {
-  refreshTabPlaybackMetrics,
-  refreshTabPlaybackMetricsBatch,
-} from '../../background/playback-metrics-refresher.js';
+  getMutableTabRecord,
+  readonlyTrackedWindowState,
+} from '../../background/window-store.js';
+import {
+  refreshPlaybackState,
+  refreshPlaybackStateBatch,
+} from '../../background/refresh-playback-state.js';
 import {
   ensureChromeApi,
   createTabRecordFixture,
@@ -19,11 +21,11 @@ import {
 ensureChromeApi({ tabs: true });
 
 test(
-  'refreshTabPlaybackMetrics applies updates to the latest record object after async boundaries',
+  'refreshPlaybackState applies updates to the latest record object after async boundaries',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
-    const initialRecord = createTabRecordFixture(1, { contentScriptReady: false });
+    const initialRecord = createTabRecordFixture(1, { contentScriptReported: false });
     setTrackedTabRecords({ 1: initialRecord });
 
     globalThis.chrome.tabs.get = (_tabId, callback) => {
@@ -43,7 +45,7 @@ test(
         callback({
           title: 'Video 1',
           url: 'https://www.youtube.com/watch?v=1',
-          videoElementReady: true,
+          mediaElementObserved: true,
           lengthSeconds: 120,
           currentTime: 20,
           playbackRate: 1,
@@ -53,23 +55,23 @@ test(
       }, 0);
     };
 
-    const refreshPromise = refreshTabPlaybackMetrics(1);
+    const refreshPromise = refreshPlaybackState(1);
 
-    const replacementRecord = createTabRecordFixture(1, { contentScriptReady: false });
+    const replacementRecord = createTabRecordFixture(1, { contentScriptReported: false });
     setTrackedTabRecords({ 1: replacementRecord });
 
     await refreshPromise;
 
     assert.equal(getMutableTabRecord(1), replacementRecord);
-    assert.equal(replacementRecord.contentScriptReady, true);
+    assert.equal(replacementRecord.contentScriptReported, true);
     assert.equal(replacementRecord.videoDetails.lengthSeconds, 120);
     assert.equal(replacementRecord.videoDetails.remainingTime, 100);
-    assert.equal(replacementRecord.remainingTimeNeedsRefresh, false);
+    assert.equal(replacementRecord.remainingTimeStale, false);
   },
 );
 
 test(
-  'refreshTabPlaybackMetrics updates the stored URL when collected metrics come from a new watch page',
+  'refreshPlaybackState updates the stored URL when collected metrics come from a new watch page',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
@@ -77,8 +79,8 @@ test(
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
         videoDetails: { title: 'Old Video', remainingTime: 45, lengthSeconds: 120 },
-        remainingTimeNeedsRefresh: false,
-        contentScriptReady: false,
+        remainingTimeStale: false,
+        contentScriptReported: false,
       }),
     });
 
@@ -96,7 +98,7 @@ test(
       callback({
         title: 'New Video',
         url: 'https://www.youtube.com/watch?v=new',
-        videoElementReady: true,
+        mediaElementObserved: true,
         lengthSeconds: 400,
         currentTime: 10,
         playbackRate: 1,
@@ -105,27 +107,27 @@ test(
       });
     };
 
-    await refreshTabPlaybackMetrics(1);
+    await refreshPlaybackState(1);
 
     const record = readonlyTrackedWindowState.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
     assert.equal(record.videoDetails.title, 'New Video');
     assert.equal(record.videoDetails.lengthSeconds, 400);
     assert.equal(record.videoDetails.remainingTime, 390);
-    assert.equal(record.remainingTimeNeedsRefresh, false);
+    assert.equal(record.remainingTimeStale, false);
   },
 );
 
 test(
-  'refreshTabPlaybackMetrics ignores async metric payloads that no longer match the tracked URL',
+  'refreshPlaybackState ignores async metric payloads that no longer match the tracked URL',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
-        contentScriptReady: false,
-        videoElementReady: false,
+        contentScriptReported: false,
+        mediaElementObserved: false,
         videoDetails: null,
       }),
     });
@@ -152,7 +154,7 @@ test(
         callback({
           title: 'Old Video',
           url: 'https://www.youtube.com/watch?v=old',
-          videoElementReady: true,
+          mediaElementObserved: true,
           lengthSeconds: 120,
           currentTime: 20,
           playbackRate: 1,
@@ -162,14 +164,14 @@ test(
       }, 0);
     };
 
-    const refreshPromise = refreshTabPlaybackMetrics(1);
+    const refreshPromise = refreshPlaybackState(1);
 
     setTrackedTabRecord(1, createTabRecordFixture(1, {
       url: 'https://www.youtube.com/watch?v=new',
-      contentScriptReady: false,
-      videoElementReady: false,
+      contentScriptReported: false,
+      mediaElementObserved: false,
       videoDetails: null,
-      remainingTimeNeedsRefresh: true,
+      remainingTimeStale: true,
     }));
 
     await refreshPromise;
@@ -177,24 +179,24 @@ test(
     const record = readonlyTrackedWindowState.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
     assert.equal(record.videoDetails, null);
-    assert.equal(record.contentScriptReady, false);
-    assert.equal(record.videoElementReady, false);
-    assert.equal(record.remainingTimeNeedsRefresh, true);
+    assert.equal(record.contentScriptReported, false);
+    assert.equal(record.mediaElementObserved, false);
+    assert.equal(record.remainingTimeStale, true);
   },
 );
 
 test(
-  'refreshTabPlaybackMetrics keeps remaining time stale until the current page reports media ready',
+  'refreshPlaybackState keeps remaining time stale until the current page reports media ready',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=new',
-        contentScriptReady: true,
-        videoElementReady: false,
+        contentScriptReported: true,
+        mediaElementObserved: false,
         videoDetails: { title: 'New Video', remainingTime: null, lengthSeconds: null },
-        remainingTimeNeedsRefresh: true,
+        remainingTimeStale: true,
       }),
     });
 
@@ -212,7 +214,7 @@ test(
       callback({
         title: 'New Video',
         url: 'https://www.youtube.com/watch?v=new',
-        videoElementReady: false,
+        mediaElementObserved: false,
         lengthSeconds: 400,
         currentTime: 10,
         playbackRate: 1,
@@ -221,87 +223,87 @@ test(
       });
     };
 
-    await refreshTabPlaybackMetrics(1);
+    await refreshPlaybackState(1);
 
     const record = readonlyTrackedWindowState.tabRecordsById[1];
-    assert.equal(record.contentScriptReady, true);
-    assert.equal(record.videoElementReady, false);
+    assert.equal(record.contentScriptReported, true);
+    assert.equal(record.mediaElementObserved, false);
     assert.equal(typeof record.videoWaitStartedAt, 'number');
     assert.equal(record.videoDetails.lengthSeconds, 400);
     assert.equal(record.videoDetails.remainingTime, 400);
-    assert.equal(record.remainingTimeNeedsRefresh, true);
+    assert.equal(record.remainingTimeStale, true);
   },
 );
 
 test(
-  'refreshTabPlaybackMetrics self-resolves when playback metrics expose a ready video',
+  'refreshPlaybackState self-resolves when playback metrics expose a ready video',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=archive',
-        contentScriptReady: true,
-        videoElementReady: false,
+        contentScriptReported: true,
+        mediaElementObserved: false,
         videoDetails: { title: 'Archived Stream', remainingTime: null, lengthSeconds: null },
-        remainingTimeNeedsRefresh: true,
+        remainingTimeStale: true,
       }),
     });
 
     stubChromeTabMetrics({ url: 'https://www.youtube.com/watch?v=archive' });
 
-    await refreshTabPlaybackMetrics(1);
+    await refreshPlaybackState(1);
 
     const record = readonlyTrackedWindowState.tabRecordsById[1];
-    assert.equal(record.contentScriptReady, true);
-    assert.equal(record.videoElementReady, true);
+    assert.equal(record.contentScriptReported, true);
+    assert.equal(record.mediaElementObserved, true);
     assert.equal(record.videoWaitStartedAt, null);
     assert.equal(record.videoDetails.lengthSeconds, 6211);
     assert.equal(record.videoDetails.remainingTime, 6211);
-    assert.equal(record.remainingTimeNeedsRefresh, false);
+    assert.equal(record.remainingTimeStale, false);
   },
 );
 
 test(
-  'refreshTabPlaybackMetrics ignores stale zero recorded length for archived streams',
+  'refreshPlaybackState ignores stale zero recorded length for archived streams',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=archive',
-        contentScriptReady: true,
-        videoElementReady: false,
+        contentScriptReported: true,
+        mediaElementObserved: false,
         videoDetails: { title: 'Archived Stream', remainingTime: null, lengthSeconds: 0 },
-        remainingTimeNeedsRefresh: true,
+        remainingTimeStale: true,
       }),
     });
 
     stubChromeTabMetrics({ url: 'https://www.youtube.com/watch?v=archive' });
 
-    await refreshTabPlaybackMetrics(1);
+    await refreshPlaybackState(1);
 
     const record = readonlyTrackedWindowState.tabRecordsById[1];
-    assert.equal(record.contentScriptReady, true);
-    assert.equal(record.videoElementReady, true);
+    assert.equal(record.contentScriptReported, true);
+    assert.equal(record.mediaElementObserved, true);
     assert.equal(record.videoDetails.lengthSeconds, 6211);
     assert.equal(record.videoDetails.remainingTime, 6211);
-    assert.equal(record.remainingTimeNeedsRefresh, false);
+    assert.equal(record.remainingTimeStale, false);
   },
 );
 
 test(
-  'refreshTabPlaybackMetrics ignores zero playback duration when no valid length exists',
+  'refreshPlaybackState ignores zero playback duration when no valid length exists',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=archive',
-        contentScriptReady: true,
-        videoElementReady: false,
+        contentScriptReported: true,
+        mediaElementObserved: false,
         videoDetails: { title: 'Archived Stream', remainingTime: null, lengthSeconds: 0 },
-        remainingTimeNeedsRefresh: true,
+        remainingTimeStale: true,
       }),
     });
 
@@ -310,29 +312,29 @@ test(
       metrics: { duration: 0, currentTime: 0 },
     });
 
-    await refreshTabPlaybackMetrics(1);
+    await refreshPlaybackState(1);
 
     const record = readonlyTrackedWindowState.tabRecordsById[1];
-    assert.equal(record.contentScriptReady, true);
-    assert.equal(record.videoElementReady, false);
+    assert.equal(record.contentScriptReported, true);
+    assert.equal(record.mediaElementObserved, false);
     assert.equal(record.videoDetails.lengthSeconds, null);
     assert.equal(record.videoDetails.remainingTime, null);
-    assert.equal(record.remainingTimeNeedsRefresh, true);
+    assert.equal(record.remainingTimeStale, true);
   },
 );
 
 test(
-  'refreshTabPlaybackMetrics does not treat missing current time as playback evidence',
+  'refreshPlaybackState does not treat missing current time as playback evidence',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=archive',
-        contentScriptReady: true,
-        videoElementReady: false,
+        contentScriptReported: true,
+        mediaElementObserved: false,
         videoDetails: { title: 'Archived Stream', remainingTime: null, lengthSeconds: null },
-        remainingTimeNeedsRefresh: true,
+        remainingTimeStale: true,
       }),
     });
 
@@ -341,33 +343,33 @@ test(
       metrics: { duration: 6211, currentTime: null },
     });
 
-    await refreshTabPlaybackMetrics(1);
+    await refreshPlaybackState(1);
 
     const record = readonlyTrackedWindowState.tabRecordsById[1];
-    assert.equal(record.contentScriptReady, true);
-    assert.equal(record.videoElementReady, false);
+    assert.equal(record.contentScriptReported, true);
+    assert.equal(record.mediaElementObserved, false);
     assert.equal(record.videoDetails.lengthSeconds, 6211);
     assert.equal(record.videoDetails.remainingTime, 6211);
-    assert.equal(record.remainingTimeNeedsRefresh, true);
+    assert.equal(record.remainingTimeStale, true);
   },
 );
 
 test(
-  'refreshTabPlaybackMetrics keeps remaining time stale when page metadata and video duration disagree',
+  'refreshPlaybackState keeps remaining time stale when page metadata and video duration disagree',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=previous',
-        contentScriptReady: true,
-        videoElementReady: true,
+        contentScriptReported: true,
+        mediaElementObserved: true,
         videoDetails: {
           title: 'OpenAI vs. Anthropic\'s Direct Faceoff + Future of Agents - With Aaron Levie',
           remainingTime: 3364,
           lengthSeconds: 3364,
         },
-        remainingTimeNeedsRefresh: false,
+        remainingTimeStale: false,
       }),
     });
 
@@ -385,7 +387,7 @@ test(
       callback({
         title: 'OpenAI vs. Anthropic\'s Direct Faceoff + Future of Agents - With Aaron Levie',
         url: 'https://www.youtube.com/watch?v=previous',
-        videoElementReady: true,
+        mediaElementObserved: true,
         lengthSeconds: null,
         duration: 72,
         currentTime: 72,
@@ -395,20 +397,20 @@ test(
       });
     };
 
-    await refreshTabPlaybackMetrics(1);
+    await refreshPlaybackState(1);
 
     const record = readonlyTrackedWindowState.tabRecordsById[1];
-    assert.equal(record.contentScriptReady, true);
-    assert.equal(record.videoElementReady, false);
+    assert.equal(record.contentScriptReported, true);
+    assert.equal(record.mediaElementObserved, false);
     assert.equal(typeof record.videoWaitStartedAt, 'number');
     assert.equal(record.videoDetails.lengthSeconds, 3364);
     assert.equal(record.videoDetails.remainingTime, 3364);
-    assert.equal(record.remainingTimeNeedsRefresh, true);
+    assert.equal(record.remainingTimeStale, true);
   },
 );
 
 test(
-  'refreshTabPlaybackMetricsBatch recomputes and broadcasts once for multiple updates',
+  'refreshPlaybackStateBatch recomputes and broadcasts once for multiple updates',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
@@ -431,7 +433,7 @@ test(
       callback({
         title: `Video ${tabId}`,
         url: `https://www.youtube.com/watch?v=${tabId}`,
-        videoElementReady: true,
+        mediaElementObserved: true,
         lengthSeconds: 120,
         currentTime: tabId * 10,
         playbackRate: 1,
@@ -446,7 +448,7 @@ test(
       callback?.();
     };
 
-    const changed = await refreshTabPlaybackMetricsBatch([1, 2, 3], { concurrency: 2 });
+    const changed = await refreshPlaybackStateBatch([1, 2, 3], { concurrency: 2 });
 
     assert.equal(changed, true);
     assert.equal(broadcastCount, 1);

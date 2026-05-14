@@ -5,13 +5,11 @@ import { createRecordFromTabSnapshot } from './tab-record-lifecycle.js';
 import {
   getTabRecordsById,
   getTrackedWindowId,
-} from './window-store-selectors.js';
-import {
   isSyncTokenCurrent,
   nextSyncToken,
   replaceAllTabRecords,
   setTrackedWindowId,
-} from './window-store-mutations.js';
+} from './window-store.js';
 import { hasYoutubeVideoIdentityChanged, isWatchOrShortsPage } from './youtube-url-utils.js';
 
 function resolveWindowIdForQuery(windowId, { force = false } = {}) {

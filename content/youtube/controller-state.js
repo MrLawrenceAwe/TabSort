@@ -19,8 +19,8 @@ export function createPageControllerState() {
     observedTitleElement: null,
     lastKnownTitleText: null,
     observedPageUrl: null,
-    lastReadyUrl: null,
-    mediaReadyUrl: null,
+    lastScriptReadyUrl: null,
+    mediaReadyPageUrl: null,
     lastReadyVideo: null,
     lastMediaReadyFingerprint: null,
     mediaReadyListenerVideo: null,
@@ -32,6 +32,6 @@ export function createPageControllerState() {
   };
 }
 
-export function shouldSendContentScriptReadySignal(currentUrl, lastReadyUrl, { force = false } = {}) {
-  return Boolean(currentUrl) && (force || currentUrl !== lastReadyUrl);
+export function shouldSendContentScriptReadySignal(currentUrl, lastScriptReadyUrl, { force = false } = {}) {
+  return Boolean(currentUrl) && (force || currentUrl !== lastScriptReadyUrl);
 }

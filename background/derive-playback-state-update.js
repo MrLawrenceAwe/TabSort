@@ -79,7 +79,7 @@ function deriveRemainingTimeSeconds(resolvedLengthSeconds, currentTimeSeconds, p
   return Math.max(0, (resolvedLengthSeconds - currentTimeSeconds) / safePlaybackRate);
 }
 
-export function derivePlaybackMetricUpdate({
+export function derivePlaybackStateUpdate({
   metricsPayload,
   record,
   requestedUrl,
@@ -101,41 +101,41 @@ export function derivePlaybackMetricUpdate({
   const isLiveNow =
     metricsPayload.isLive === true ? true : metricsPayload.isLive === false ? false : record.isLiveNow;
   const previousMediaStillApplies =
-    record.videoElementReady === true &&
+    record.mediaElementObserved === true &&
     areEquivalentVideoUrls(record.url, payloadUrl || currentTabUrl || requestedUrl);
   const playbackEvidenceIsUsable = hasUsablePlaybackEvidence(metricsPayload);
 
   const update = {
     nextUrl: payloadUrl || currentTabUrl || null,
     nextTitle: typeof metricsPayload.title === 'string' ? metricsPayload.title : null,
-    contentScriptReady: true,
-    videoElementReady:
-      metricsPayload.videoElementReady === true ||
+    contentScriptReported: true,
+    mediaElementObserved:
+      metricsPayload.mediaElementObserved === true ||
       previousMediaStillApplies ||
       playbackEvidenceIsUsable,
     isLiveNow,
     resolvedLengthSeconds: isFiniteNumber(resolvedLengthSeconds) ? resolvedLengthSeconds : null,
     remainingTime: null,
-    remainingTimeNeedsRefresh: true,
+    remainingTimeStale: true,
   };
 
   if (isLiveNow) {
-    update.remainingTimeNeedsRefresh = false;
+    update.remainingTimeStale = false;
     return update;
   }
 
   if (!isFiniteNumber(resolvedLengthSeconds)) {
-    update.remainingTimeNeedsRefresh = !update.videoElementReady;
+    update.remainingTimeStale = !update.mediaElementObserved;
     return update;
   }
 
   if (hasMediaDurationMismatch(metricsPayload, record, resolvedLengthSeconds)) {
-    update.videoElementReady = false;
+    update.mediaElementObserved = false;
     update.remainingTime = resolvedLengthSeconds;
     return update;
   }
 
-  if (!update.videoElementReady) {
+  if (!update.mediaElementObserved) {
     update.remainingTime = resolvedLengthSeconds;
     return update;
   }
@@ -145,6 +145,6 @@ export function derivePlaybackMetricUpdate({
     currentTimeSeconds,
     playbackRate,
   );
-  update.remainingTimeNeedsRefresh = !isFiniteNumber(currentTimeSeconds);
+  update.remainingTimeStale = !isFiniteNumber(currentTimeSeconds);
   return update;
 }

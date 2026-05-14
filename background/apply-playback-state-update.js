@@ -4,15 +4,15 @@ import {
   resetVideoReadiness,
 } from './tab-record-lifecycle.js';
 
-export function applyPlaybackMetricUpdate(record, playbackUpdate, currentTabUrl) {
+export function applyPlaybackStateUpdate(record, playbackUpdate, currentTabUrl) {
   if (!record || !playbackUpdate) return;
 
-  record.contentScriptReady = playbackUpdate.contentScriptReady;
-  if (playbackUpdate.videoElementReady) {
+  record.contentScriptReported = playbackUpdate.contentScriptReported;
+  if (playbackUpdate.mediaElementObserved) {
     markRecordVideoElementReady(record);
   } else {
     resetVideoReadiness(record, { videoWaitStartedAt: record.videoWaitStartedAt });
-    if (record.contentScriptReady && typeof record.videoWaitStartedAt !== 'number') {
+    if (record.contentScriptReported && typeof record.videoWaitStartedAt !== 'number') {
       record.videoWaitStartedAt = getCurrentTimeMs();
     }
   }
@@ -26,5 +26,5 @@ export function applyPlaybackMetricUpdate(record, playbackUpdate, currentTabUrl)
   record.isLiveNow = Boolean(playbackUpdate.isLiveNow);
   record.videoDetails.lengthSeconds = playbackUpdate.resolvedLengthSeconds;
   record.videoDetails.remainingTime = playbackUpdate.remainingTime;
-  record.remainingTimeNeedsRefresh = playbackUpdate.remainingTimeNeedsRefresh;
+  record.remainingTimeStale = playbackUpdate.remainingTimeStale;
 }

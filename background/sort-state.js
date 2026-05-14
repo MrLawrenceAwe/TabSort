@@ -1,20 +1,19 @@
 import { broadcastSnapshotUpdate } from './tab-snapshot.js';
 import { deriveSortPlan } from './tab-order/derive-sort-plan.js';
 import { deriveSortSummary } from './tab-order/derive-sort-summary.js';
-import { listTabRecords } from './window-store-selectors.js';
-import { setSortState } from './window-store-mutations.js';
+import { listTabRecords, setSortState } from './window-store.js';
 
 function deriveSortState(records) {
   const sortPlan = deriveSortPlan(records);
   const sortSummary = deriveSortSummary({
     trackedRecords: records,
-    sortableRecords: sortPlan.sortableRecords,
-    currentSortableTabIds: sortPlan.currentSortableTabIds,
+    eligibleVideoRecords: sortPlan.eligibleVideoRecords,
+    currentEligibleVideoIds: sortPlan.currentEligibleVideoIds,
   });
 
   return {
     visibleTabIds: sortPlan.visibleTabIds,
-    targetSortableTabIds: sortPlan.targetSortableTabIds,
+    targetVideoOrder: sortPlan.targetVideoOrder,
     currentOrderMatchesTarget: sortPlan.currentOrderMatchesTarget,
     sortSummary,
   };

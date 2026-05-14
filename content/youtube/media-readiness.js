@@ -13,7 +13,7 @@ export function createMediaReadinessTracker({
 }) {
   function isCurrentVideoElementReady() {
     const currentUrl = getCurrentPageUrl();
-    return Boolean(currentUrl) && currentUrl === state.mediaReadyUrl;
+    return Boolean(currentUrl) && currentUrl === state.mediaReadyPageUrl;
   }
 
   function getVideoFingerprint(video) {
@@ -70,7 +70,7 @@ export function createMediaReadinessTracker({
   function markVideoElementReady(video, { notify = true } = {}) {
     const currentUrl = getCurrentPageUrl();
     if (!currentUrl) return false;
-    state.mediaReadyUrl = currentUrl;
+    state.mediaReadyPageUrl = currentUrl;
     state.lastReadyVideo = video;
     state.lastMediaReadyFingerprint = getVideoFingerprint(video);
     if (notify) {

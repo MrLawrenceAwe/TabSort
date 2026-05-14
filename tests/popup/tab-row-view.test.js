@@ -19,9 +19,9 @@ function makeRecord(overrides = {}) {
     isLiveNow: false,
     isActiveTab: false,
     isHidden: false,
-    contentScriptReady: true,
-    videoElementReady: true,
-    remainingTimeNeedsRefresh: false,
+    contentScriptReported: true,
+    mediaElementObserved: true,
+    remainingTimeStale: false,
     unsuspendedTimestamp: null,
     videoDetails: { remainingTime: null },
     ...overrides,
@@ -30,8 +30,8 @@ function makeRecord(overrides = {}) {
 
 test('stale rows without remaining time do not suggest viewing the tab', () => {
   const record = makeRecord({
-    remainingTimeNeedsRefresh: true,
-    contentScriptReady: false,
+    remainingTimeStale: true,
+    contentScriptReported: false,
     unsuspendedTimestamp: Date.now() - (RECENTLY_UNSUSPENDED_MS + 1000),
   });
 
@@ -41,8 +41,8 @@ test('stale rows without remaining time do not suggest viewing the tab', () => {
 
 test('recently unsuspended rows avoid contradictory stale guidance', () => {
   const record = makeRecord({
-    remainingTimeNeedsRefresh: true,
-    contentScriptReady: false,
+    remainingTimeStale: true,
+    contentScriptReported: false,
     unsuspendedTimestamp: Date.now(),
   });
 
@@ -53,17 +53,17 @@ test('recently unsuspended rows avoid contradictory stale guidance', () => {
 test('recent watch URL transitions avoid reload guidance while runtime can catch up', () => {
   const activeRecord = makeRecord({
     isActiveTab: true,
-    remainingTimeNeedsRefresh: true,
-    contentScriptReady: false,
-    videoElementReady: false,
+    remainingTimeStale: true,
+    contentScriptReported: false,
+    mediaElementObserved: false,
     transitionStartedAt: Date.now(),
     videoDetails: null,
   });
   const inactiveRecord = makeRecord({
     isActiveTab: false,
-    remainingTimeNeedsRefresh: true,
-    contentScriptReady: false,
-    videoElementReady: false,
+    remainingTimeStale: true,
+    contentScriptReported: false,
+    mediaElementObserved: false,
     transitionStartedAt: Date.now(),
     videoDetails: null,
   });
@@ -76,17 +76,17 @@ test('recent watch URL transitions avoid reload guidance while runtime can catch
 test('stalled watch URL transitions eventually ask for the useful action', () => {
   const activeRecord = makeRecord({
     isActiveTab: true,
-    remainingTimeNeedsRefresh: true,
-    contentScriptReady: false,
-    videoElementReady: false,
+    remainingTimeStale: true,
+    contentScriptReported: false,
+    mediaElementObserved: false,
     transitionStartedAt: Date.now() - (RECENT_WATCH_TRANSITION_MS + 1000),
     videoDetails: null,
   });
   const inactiveRecord = makeRecord({
     isActiveTab: false,
-    remainingTimeNeedsRefresh: true,
-    contentScriptReady: false,
-    videoElementReady: false,
+    remainingTimeStale: true,
+    contentScriptReported: false,
+    mediaElementObserved: false,
     transitionStartedAt: Date.now() - (RECENT_WATCH_TRANSITION_MS + 1000),
     videoDetails: null,
   });
@@ -97,9 +97,9 @@ test('stalled watch URL transitions eventually ask for the useful action', () =>
 
 test('stale rows with remaining time can still request a focused tab when appropriate', () => {
   const record = makeRecord({
-    remainingTimeNeedsRefresh: true,
+    remainingTimeStale: true,
     videoDetails: { remainingTime: 320 },
-    contentScriptReady: true,
+    contentScriptReported: true,
     isActiveTab: false,
   });
 
@@ -110,13 +110,13 @@ test('stale rows with remaining time can still request a focused tab when approp
 test('loading rows switch from waiting to focus after the loading grace period', () => {
   const recentLoadingRecord = makeRecord({
     status: TAB_STATES.LOADING,
-    contentScriptReady: false,
+    contentScriptReported: false,
     loadingStartedAt: Date.now() - (LOADING_GRACE_MS - 1000),
   });
 
   const stalledLoadingRecord = makeRecord({
     status: TAB_STATES.LOADING,
-    contentScriptReady: false,
+    contentScriptReported: false,
     loadingStartedAt: Date.now() - (LOADING_GRACE_MS + 1000),
   });
 
@@ -128,7 +128,7 @@ test('active loading rows switch from waiting to reload after the loading grace 
   const activeStalledLoadingRecord = makeRecord({
     status: TAB_STATES.LOADING,
     isActiveTab: true,
-    contentScriptReady: false,
+    contentScriptReported: false,
     loadingStartedAt: Date.now() - (LOADING_GRACE_MS + 1000),
   });
 
@@ -138,9 +138,9 @@ test('active loading rows switch from waiting to reload after the loading grace 
 test('active watch rows wait through video data mismatches instead of asking for reload', () => {
   const activeAdRecord = makeRecord({
     isActiveTab: true,
-    contentScriptReady: true,
-    videoElementReady: false,
-    remainingTimeNeedsRefresh: true,
+    contentScriptReported: true,
+    mediaElementObserved: false,
+    remainingTimeStale: true,
     videoWaitStartedAt: Date.now() - (MEDIA_WAIT_GRACE_MS - 1000),
     videoDetails: { remainingTime: 45143, lengthSeconds: 45143 },
   });
@@ -152,9 +152,9 @@ test('active watch rows wait through video data mismatches instead of asking for
 test('active watch rows eventually ask for reload when video data stays stuck', () => {
   const activeStalledMediaRecord = makeRecord({
     isActiveTab: true,
-    contentScriptReady: true,
-    videoElementReady: false,
-    remainingTimeNeedsRefresh: true,
+    contentScriptReported: true,
+    mediaElementObserved: false,
+    remainingTimeStale: true,
     videoWaitStartedAt: Date.now() - (MEDIA_WAIT_GRACE_MS + 1000),
     videoDetails: { remainingTime: 45143, lengthSeconds: 45143 },
   });
@@ -165,7 +165,7 @@ test('active watch rows eventually ask for reload when video data stays stuck', 
 test('background unsuspended rows ask the user to view before reloading for missing time', () => {
   const record = makeRecord({
     isActiveTab: false,
-    contentScriptReady: true,
+    contentScriptReported: true,
     videoDetails: { remainingTime: null },
   });
 
@@ -223,7 +223,7 @@ test('reload rows receive the reload-required styling hook', () => {
   try {
     const row = createFakeRow();
     const record = makeRecord({
-      contentScriptReady: false,
+      contentScriptReported: false,
       unsuspendedTimestamp: Date.now() - (RECENTLY_UNSUSPENDED_MS + 1000),
     });
 
@@ -244,8 +244,8 @@ test('wait rows render passive text instead of clickable actions', () => {
         'Wait for tab to load',
         makeRecord({
           status: TAB_STATES.LOADING,
-          contentScriptReady: false,
-          videoElementReady: false,
+          contentScriptReported: false,
+          mediaElementObserved: false,
           loadingStartedAt: Date.now() - (LOADING_GRACE_MS - 1000),
         }),
       ],
@@ -253,9 +253,9 @@ test('wait rows render passive text instead of clickable actions', () => {
         'Wait for video data',
         makeRecord({
           isActiveTab: true,
-          contentScriptReady: true,
-          videoElementReady: false,
-          remainingTimeNeedsRefresh: true,
+          contentScriptReported: true,
+          mediaElementObserved: false,
+          remainingTimeStale: true,
           videoWaitStartedAt: Date.now() - (MEDIA_WAIT_GRACE_MS - 1000),
           videoDetails: { remainingTime: 45143, lengthSeconds: 45143 },
         }),

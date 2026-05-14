@@ -40,17 +40,17 @@ function determineActionForMissingRemainingTime(tabRecord, transitionCanSettle, 
   switch (tabRecord.status) {
     case TAB_STATES.UNSUSPENDED:
       if (tabRecord.isActiveTab) {
-        if (tabRecord.contentScriptReady && !tabRecord.videoElementReady) {
+        if (tabRecord.contentScriptReported && !tabRecord.mediaElementObserved) {
           return canMediaStillSettle(tabRecord, nowMs)
             ? USER_ACTIONS.WAIT_FOR_VIDEO_DATA
             : USER_ACTIONS.RELOAD_TAB;
         }
-        return transitionCanSettle && !tabRecord.contentScriptReady
+        return transitionCanSettle && !tabRecord.contentScriptReported
           ? USER_ACTIONS.NONE
           : USER_ACTIONS.RELOAD_TAB;
       }
-      if (transitionCanSettle && !tabRecord.contentScriptReady) return USER_ACTIONS.NONE;
-      if (!tabRecord.contentScriptReady) return USER_ACTIONS.RELOAD_TAB;
+      if (transitionCanSettle && !tabRecord.contentScriptReported) return USER_ACTIONS.NONE;
+      if (!tabRecord.contentScriptReported) return USER_ACTIONS.RELOAD_TAB;
       return USER_ACTIONS.VIEW_TAB_TO_LOAD_TIME;
     case TAB_STATES.SUSPENDED:
       return USER_ACTIONS.FOCUS_TAB;
@@ -79,8 +79,8 @@ export function determineUserAction(tabRecord, { now = Date.now } = {}) {
     return determineActionForMissingRemainingTime(tabRecord, transitionCanSettle, nowMs);
   }
 
-  if (tabRecord?.remainingTimeNeedsRefresh) {
-    if (!tabRecord.contentScriptReady || tabRecord.isActiveTab) {
+  if (tabRecord?.remainingTimeStale) {
+    if (!tabRecord.contentScriptReported || tabRecord.isActiveTab) {
       return determineActionForMissingRemainingTime(tabRecord, transitionCanSettle, nowMs);
     }
     return USER_ACTIONS.VIEW_TAB_TO_REFRESH_TIME;

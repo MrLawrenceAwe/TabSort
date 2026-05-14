@@ -9,13 +9,13 @@ export function shouldPollRecord(record, { now = Date.now } = {}) {
   if (!record || record.isLiveNow) return false;
 
   const nowMs = now();
-  if (record.status === TAB_STATES.UNSUSPENDED && record.remainingTimeNeedsRefresh) {
+  if (record.status === TAB_STATES.UNSUSPENDED && record.remainingTimeStale) {
     const waitingForContentScript =
-      !record.contentScriptReady && canWatchTransitionStillSettle(record, nowMs);
+      !record.contentScriptReported && canWatchTransitionStillSettle(record, nowMs);
     const waitingForVideoElement =
       record.isActiveTab &&
-      record.contentScriptReady &&
-      !record.videoElementReady &&
+      record.contentScriptReported &&
+      !record.mediaElementObserved &&
       canMediaStillSettle(record, nowMs);
     return waitingForContentScript || waitingForVideoElement;
   }
@@ -26,5 +26,5 @@ export function shouldPollRecord(record, { now = Date.now } = {}) {
 export function shouldRefreshRecordMetrics(record, options = {}) {
   if (!record || record.isLiveNow || record.status !== TAB_STATES.UNSUSPENDED) return false;
   if (shouldPollRecord(record, options)) return true;
-  return Boolean(record.remainingTimeNeedsRefresh && record.isActiveTab && !record.isHidden);
+  return Boolean(record.remainingTimeStale && record.isActiveTab && !record.isHidden);
 }

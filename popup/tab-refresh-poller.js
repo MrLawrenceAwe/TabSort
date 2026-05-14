@@ -1,16 +1,16 @@
 import { shouldPollRecord } from '../shared/tab-refresh-policy.js';
 
-export function shouldPollSnapshot(snapshot, { now = Date.now } = {}) {
+export function shouldPollTabSnapshot(snapshot, { now = Date.now } = {}) {
   const tabRecordsById = snapshot?.tabRecordsById;
   if (!tabRecordsById || typeof tabRecordsById !== 'object') return false;
   return Object.values(tabRecordsById).some((record) => shouldPollRecord(record, { now }));
 }
 
-export function shouldRetrySnapshotPoll(snapshot, appActive) {
+export function shouldRetryTabRefresh(snapshot, appActive) {
   return Boolean(appActive) && snapshot == null;
 }
 
-export function createSnapshotPoller({
+export function createTabRefreshPoller({
   delayMs,
   isAppActive,
   loadSnapshot,
@@ -42,8 +42,8 @@ export function createSnapshotPoller({
       } finally {
         pollInFlight = false;
         if (
-          shouldRetrySnapshotPoll(snapshot, isAppActive()) ||
-          (isAppActive() && shouldPollSnapshot(snapshot))
+          shouldRetryTabRefresh(snapshot, isAppActive()) ||
+          (isAppActive() && shouldPollTabSnapshot(snapshot))
         ) {
           schedule();
         }
@@ -53,7 +53,7 @@ export function createSnapshotPoller({
 
   function scheduleIfNeeded(snapshot) {
     clear();
-    if (isAppActive() && shouldPollSnapshot(snapshot)) {
+    if (isAppActive() && shouldPollTabSnapshot(snapshot)) {
       schedule();
     }
   }

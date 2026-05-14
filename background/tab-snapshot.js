@@ -1,13 +1,12 @@
 import { cloneSortSummary } from '../shared/sort-summary.js';
 import { logDebug } from '../shared/log.js';
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
-import { readonlyTrackedWindowState } from './window-store.js';
-import { setSnapshotSignature } from './window-store-mutations.js';
+import { readonlyTrackedWindowState, setSnapshotSignature } from './window-store.js';
 
 export function buildTabSnapshot() {
   return {
     tabRecordsById: readonlyTrackedWindowState.tabRecordsById,
-    targetSortableTabIds: [...readonlyTrackedWindowState.targetSortableTabIds],
+    targetVideoOrder: [...readonlyTrackedWindowState.targetVideoOrder],
     visibleTabIds: [...readonlyTrackedWindowState.visibleTabIds],
     currentOrderMatchesTarget: readonlyTrackedWindowState.currentOrderMatchesTarget,
     sortSummary: cloneSortSummary(readonlyTrackedWindowState.sortSummary),

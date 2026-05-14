@@ -2,9 +2,9 @@ import { POPUP_LOG_LEVELS, toErrorMessage } from '../shared/log.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { loadSortOptions, saveSortOptions } from '../shared/storage.js';
 import { createRuntimeClient } from './runtime-client.js';
-import { createSnapshotClient } from './snapshot-client.js';
-import { createSnapshotPoller } from './snapshot-poller.js';
-import { renderSnapshot } from './snapshot-renderer.js';
+import { createTabSnapshotClient } from './tab-snapshot-client.js';
+import { createTabRefreshPoller } from './tab-refresh-poller.js';
+import { renderTabList } from './render-tab-list.js';
 import { syncPopupLayout } from './popup-layout-view.js';
 import { initializePopupDom, setErrorMessage } from './popup-elements.js';
 import { popupState, setActiveWindowId } from './popup-store.js';
@@ -20,7 +20,7 @@ const runtimeClient = createRuntimeClient({
   getActiveWindowId: () => popupState.activeWindowId,
   setActiveWindowId,
 });
-const snapshotClient = createSnapshotClient({
+const snapshotClient = createTabSnapshotClient({
   requestRuntimeMessage: runtimeClient.requestRuntimeMessage,
   syncActiveWindow: runtimeClient.syncActiveWindow,
   setErrorMessage,
@@ -29,7 +29,7 @@ const snapshotClient = createSnapshotClient({
   retryDelayMs: SNAPSHOT_RETRY_DELAY_MS,
   maxAttempts: SNAPSHOT_MAX_ATTEMPTS,
 });
-const snapshotPoller = createSnapshotPoller({
+const snapshotPoller = createTabRefreshPoller({
   delayMs: SNAPSHOT_POLL_DELAY_MS,
   isAppActive: () => isPopupActive,
   loadSnapshot: snapshotClient.loadSnapshot,
@@ -60,7 +60,7 @@ async function initializeSortOptions() {
 }
 
 function renderAndScheduleSnapshot(snapshot) {
-  renderSnapshot(snapshot, {
+  renderTabList(snapshot, {
     postRuntimeMessage: runtimeClient.postRuntimeMessage,
   });
   snapshotPoller.scheduleIfNeeded(snapshot);

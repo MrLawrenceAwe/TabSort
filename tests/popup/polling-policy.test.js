@@ -9,9 +9,9 @@ import {
   RECENT_WATCH_TRANSITION_MS,
 } from '../../shared/tab-user-actions.js';
 import {
-  shouldPollSnapshot,
-  shouldRetrySnapshotPoll,
-} from '../../popup/snapshot-poller.js';
+  shouldPollTabSnapshot,
+  shouldRetryTabRefresh,
+} from '../../popup/tab-refresh-poller.js';
 import {
   shouldPollRecord,
   shouldRefreshRecordMetrics,
@@ -27,9 +27,9 @@ function makeRecord(overrides = {}) {
     isLiveNow: false,
     isActiveTab: false,
     isHidden: false,
-    contentScriptReady: true,
-    videoElementReady: true,
-    remainingTimeNeedsRefresh: false,
+    contentScriptReported: true,
+    mediaElementObserved: true,
+    remainingTimeStale: false,
     unsuspendedTimestamp: null,
     loadingStartedAt: null,
     videoDetails: { remainingTime: null },
@@ -39,8 +39,8 @@ function makeRecord(overrides = {}) {
 
 test('shouldPollRecord polls recently unsuspended stale tabs that need no user action yet', () => {
   const record = makeRecord({
-    remainingTimeNeedsRefresh: true,
-    contentScriptReady: false,
+    remainingTimeStale: true,
+    contentScriptReported: false,
     unsuspendedTimestamp: NOW_MS - (RECENTLY_UNSUSPENDED_MS - 1000),
   });
 
@@ -49,8 +49,8 @@ test('shouldPollRecord polls recently unsuspended stale tabs that need no user a
 
 test('shouldPollRecord does not poll stale tabs once they require a reload', () => {
   const record = makeRecord({
-    remainingTimeNeedsRefresh: true,
-    contentScriptReady: false,
+    remainingTimeStale: true,
+    contentScriptReported: false,
     unsuspendedTimestamp: NOW_MS - (RECENTLY_UNSUSPENDED_MS + 1000),
   });
 
@@ -60,7 +60,7 @@ test('shouldPollRecord does not poll stale tabs once they require a reload', () 
 test('shouldPollRecord polls loading tabs during the loading grace window', () => {
   const record = makeRecord({
     status: TAB_STATES.LOADING,
-    contentScriptReady: false,
+    contentScriptReported: false,
     loadingStartedAt: NOW_MS - (LOADING_GRACE_MS - 1000),
   });
 
@@ -70,9 +70,9 @@ test('shouldPollRecord polls loading tabs during the loading grace window', () =
 test('shouldPollRecord polls active stale watch tabs while video data can self-resolve', () => {
   const record = makeRecord({
     isActiveTab: true,
-    contentScriptReady: true,
-    videoElementReady: false,
-    remainingTimeNeedsRefresh: true,
+    contentScriptReported: true,
+    mediaElementObserved: false,
+    remainingTimeStale: true,
     videoWaitStartedAt: NOW_MS - (MEDIA_WAIT_GRACE_MS - 1000),
     videoDetails: { remainingTime: 45143, lengthSeconds: 45143 },
   });
@@ -83,9 +83,9 @@ test('shouldPollRecord polls active stale watch tabs while video data can self-r
 test('shouldPollRecord stops polling active stale watch tabs when media stays stuck', () => {
   const record = makeRecord({
     isActiveTab: true,
-    contentScriptReady: true,
-    videoElementReady: false,
-    remainingTimeNeedsRefresh: true,
+    contentScriptReported: true,
+    mediaElementObserved: false,
+    remainingTimeStale: true,
     videoWaitStartedAt: NOW_MS - (MEDIA_WAIT_GRACE_MS + 1000),
     videoDetails: { remainingTime: 45143, lengthSeconds: 45143 },
   });
@@ -96,9 +96,9 @@ test('shouldPollRecord stops polling active stale watch tabs when media stays st
 test('shouldRefreshRecordMetrics still probes active stale tabs after polling grace expires', () => {
   const record = makeRecord({
     isActiveTab: true,
-    contentScriptReady: false,
-    videoElementReady: false,
-    remainingTimeNeedsRefresh: true,
+    contentScriptReported: false,
+    mediaElementObserved: false,
+    remainingTimeStale: true,
     transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS + 1000),
     videoDetails: null,
   });
@@ -111,9 +111,9 @@ test('shouldRefreshRecordMetrics does not probe hidden stale tabs after polling 
   const record = makeRecord({
     isActiveTab: true,
     isHidden: true,
-    contentScriptReady: false,
-    videoElementReady: false,
-    remainingTimeNeedsRefresh: true,
+    contentScriptReported: false,
+    mediaElementObserved: false,
+    remainingTimeStale: true,
     transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS + 1000),
     videoDetails: null,
   });
@@ -124,9 +124,9 @@ test('shouldRefreshRecordMetrics does not probe hidden stale tabs after polling 
 test('shouldPollRecord polls recent watch URL transitions before asking for reload', () => {
   const record = makeRecord({
     isActiveTab: true,
-    contentScriptReady: false,
-    videoElementReady: false,
-    remainingTimeNeedsRefresh: true,
+    contentScriptReported: false,
+    mediaElementObserved: false,
+    remainingTimeStale: true,
     transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS - 1000),
     videoDetails: null,
   });
@@ -137,9 +137,9 @@ test('shouldPollRecord polls recent watch URL transitions before asking for relo
 test('shouldPollRecord stops polling stalled watch URL transitions', () => {
   const record = makeRecord({
     isActiveTab: true,
-    contentScriptReady: false,
-    videoElementReady: false,
-    remainingTimeNeedsRefresh: true,
+    contentScriptReported: false,
+    mediaElementObserved: false,
+    remainingTimeStale: true,
     transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS + 1000),
     videoDetails: null,
   });
@@ -147,32 +147,32 @@ test('shouldPollRecord stops polling stalled watch URL transitions', () => {
   assert.equal(shouldPollRecord(record, { now: fakeNow }), false);
 });
 
-test('shouldPollSnapshot polls only when at least one tracked tab can self-resolve', () => {
+test('shouldPollTabSnapshot polls only when at least one tracked tab can self-resolve', () => {
   const snapshot = {
     tabRecordsById: {
       1: makeRecord({
-        remainingTimeNeedsRefresh: true,
-        contentScriptReady: false,
+        remainingTimeStale: true,
+        contentScriptReported: false,
         unsuspendedTimestamp: NOW_MS - (RECENTLY_UNSUSPENDED_MS - 1000),
       }),
       2: makeRecord({
-        remainingTimeNeedsRefresh: true,
-        contentScriptReady: false,
+        remainingTimeStale: true,
+        contentScriptReported: false,
         unsuspendedTimestamp: NOW_MS - (RECENTLY_UNSUSPENDED_MS + 1000),
       }),
     },
   };
 
-  assert.equal(shouldPollSnapshot(snapshot, { now: fakeNow }), true);
+  assert.equal(shouldPollTabSnapshot(snapshot, { now: fakeNow }), true);
   assert.equal(
-    shouldPollSnapshot({ tabRecordsById: { 2: snapshot.tabRecordsById[2] } }, { now: fakeNow }),
+    shouldPollTabSnapshot({ tabRecordsById: { 2: snapshot.tabRecordsById[2] } }, { now: fakeNow }),
     false,
   );
 });
 
-test('shouldRetrySnapshotPoll keeps polling after a failed snapshot load while popup is active', () => {
-  assert.equal(shouldRetrySnapshotPoll(null, true), true);
-  assert.equal(shouldRetrySnapshotPoll(undefined, true), true);
-  assert.equal(shouldRetrySnapshotPoll({}, true), false);
-  assert.equal(shouldRetrySnapshotPoll(null, false), false);
+test('shouldRetryTabRefresh keeps polling after a failed snapshot load while popup is active', () => {
+  assert.equal(shouldRetryTabRefresh(null, true), true);
+  assert.equal(shouldRetryTabRefresh(undefined, true), true);
+  assert.equal(shouldRetryTabRefresh({}, true), false);
+  assert.equal(shouldRetryTabRefresh(null, false), false);
 });

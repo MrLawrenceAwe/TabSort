@@ -1,12 +1,12 @@
 import { TAB_STATES } from '../../shared/tab-states.js';
 import { createEmptySortSummary } from '../../shared/sort-summary.js';
-import { readonlyTrackedWindowState } from '../../background/window-store.js';
 import {
+  readonlyTrackedWindowState,
   resetWindowStore,
   replaceAllTabRecords,
   setSortState,
   setTabRecord,
-} from '../../background/window-store-mutations.js';
+} from '../../background/window-store.js';
 import { createTabRecord } from '../../background/tab-record.js';
 
 export function ensureChromeApi({ tabs = false } = {}) {
@@ -88,7 +88,7 @@ export function stubChromeTabMetrics({
     callback({
       title: 'Archived Stream',
       url,
-      videoElementReady: false,
+      mediaElementObserved: false,
       lengthSeconds: null,
       duration: 6211,
       currentTime: 0,
@@ -112,7 +112,7 @@ export function setTrackedTabRecords(tabRecordsById = {}) {
 export function setTrackedSortState(sortState = {}) {
   setSortState({
     visibleTabIds: readonlyTrackedWindowState.visibleTabIds,
-    targetSortableTabIds: readonlyTrackedWindowState.targetSortableTabIds,
+    targetVideoOrder: readonlyTrackedWindowState.targetVideoOrder,
     currentOrderMatchesTarget: readonlyTrackedWindowState.currentOrderMatchesTarget,
     sortSummary: readonlyTrackedWindowState.sortSummary || createEmptySortSummary(),
     ...sortState,
@@ -129,8 +129,8 @@ export function createTabRecordFixture(id = 1, overrides = {}) {
     index: 0,
     pinned: false,
     status: TAB_STATES.UNSUSPENDED,
-    contentScriptReady: true,
-    videoElementReady: true,
+    contentScriptReported: true,
+    mediaElementObserved: true,
     isLiveNow: false,
     isActiveTab: false,
     isHidden: false,
@@ -139,7 +139,7 @@ export function createTabRecordFixture(id = 1, overrides = {}) {
     unsuspendedTimestamp: null,
     transitionStartedAt: null,
     videoWaitStartedAt: null,
-    remainingTimeNeedsRefresh: true,
+    remainingTimeStale: true,
     ...overrides,
   });
 }

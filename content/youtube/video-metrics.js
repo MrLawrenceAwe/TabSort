@@ -32,7 +32,7 @@ export function collectVideoMetrics({
   return {
     title: details.title || null,
     url: details.url,
-    videoElementReady: isCurrentVideoElementReady(),
+    mediaElementObserved: isCurrentVideoElementReady(),
     lengthSeconds: config.isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
     isLive: Boolean(details.isLive),
     duration: getVideoDurationSeconds(video, player),

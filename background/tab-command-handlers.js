@@ -4,10 +4,13 @@ import { buildTabSnapshot } from './tab-snapshot.js';
 import { markTabRecordReloading } from './tab-record-lifecycle.js';
 import { recomputeSortState } from './sort-state.js';
 import { applyTabSort } from './apply-tab-sort.js';
-import { refreshTabPlaybackMetricsBatch } from './playback-metrics-refresher.js';
-import { readonlyTrackedWindowState } from './window-store.js';
-import { listTabIds } from './window-store-selectors.js';
-import { getMutableTabRecord, setTrackedWindowId } from './window-store-mutations.js';
+import { refreshPlaybackStateBatch } from './refresh-playback-state.js';
+import {
+  getMutableTabRecord,
+  listTabIds,
+  readonlyTrackedWindowState,
+  setTrackedWindowId,
+} from './window-store.js';
 import { reconcileWindowTabRecords } from './tab-record-reconciler.js';
 import { shouldRefreshRecordMetrics } from '../shared/tab-refresh-policy.js';
 
@@ -58,7 +61,7 @@ export async function getWindowSnapshot(message) {
     isValidWindowId(message.windowId) ? { force: true } : undefined,
   );
   const ids = listTabIds();
-  await refreshTabPlaybackMetricsBatch(ids, { shouldRefresh: shouldRefreshRecordMetrics });
+  await refreshPlaybackStateBatch(ids, { shouldRefresh: shouldRefreshRecordMetrics });
   return buildTabSnapshot();
 }
 
