@@ -1,11 +1,11 @@
 import { createEmptySortSummary } from '../../shared/sort-summary.js';
-import { hasReadyRemainingTime } from '../sort-readiness.js';
+import { hasReadyRemainingTime } from '../remaining-time-readiness.js';
 import { areTabIdListsEqual } from './derive-sort-plan.js';
 
 export function deriveSortSummary({
   trackedRecords,
   eligibleVideoRecords,
-  eligibleVideoTabIdsInCurrentOrder,
+  eligibleIdsInTabOrder,
   readyVideoTabIdsInCurrentOrder,
   readyVideoTabIdsByRemainingTime,
 }) {
@@ -31,7 +31,7 @@ export function deriveSortSummary({
   let encounteredNonReadyBeforeReady = false;
   let gapAfterReady = false;
 
-  for (const tabId of eligibleVideoTabIdsInCurrentOrder) {
+  for (const tabId of eligibleIdsInTabOrder) {
     const record = recordMap.get(tabId);
     if (!record) continue;
     orderedIdsWithRecords.push(tabId);
@@ -67,7 +67,7 @@ export function deriveSortSummary({
   }
 
   const allEligibleVideosReady = eligibleVideoCount > 1 && sortReadyTabCount === eligibleVideoCount;
-  const eligibleVideosAlreadySorted =
+  const allEligibleVideosSorted =
     allEligibleVideosReady && areTabIdListsEqual(orderedIdsWithRecords, readyIdsByRemainingTime);
 
   return {
@@ -85,7 +85,7 @@ export function deriveSortSummary({
     },
     order: {
       allEligibleVideosReady,
-      eligibleVideosAlreadySorted,
+      allEligibleVideosSorted,
     },
   };
 }

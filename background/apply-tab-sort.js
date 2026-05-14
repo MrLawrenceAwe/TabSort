@@ -1,8 +1,8 @@
 import { isValidWindowId } from '../shared/guards.js';
 import { loadSortOptions } from '../shared/storage.js';
-import { hasReadyRemainingTime } from './sort-readiness.js';
+import { hasReadyRemainingTime } from './remaining-time-readiness.js';
 import { listWindowTabs, moveTabsInOrder } from './chrome-tabs.js';
-import { trackedWindowSnapshot, setTrackedWindowId } from './window-store.js';
+import { trackedWindowSnapshot, setTrackedWindowId } from './tracked-window-store.js';
 import { buildNonYoutubeOrder, buildYoutubeTabOrder } from './tab-order/build-tab-move-order.js';
 
 export async function applyTabSort(windowId = trackedWindowSnapshot.windowId) {

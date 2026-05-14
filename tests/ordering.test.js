@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { trackedWindowSnapshot } from '../background/window-store.js';
+import { trackedWindowSnapshot } from '../background/tracked-window-store.js';
 import { recomputeSortState } from '../background/sort-state.js';
 import {
   ensureChromeApi,
@@ -24,7 +24,7 @@ test('orders known remaining-time tabs before unknown tabs', () => {
 
   assert.deepEqual(trackedWindowSnapshot.targetVideoTabOrder, [3, 1, 2]);
   assert.deepEqual(trackedWindowSnapshot.trackedTabIdsInWindowOrder, [1, 2, 3]);
-  assert.equal(trackedWindowSnapshot.eligibleVideosAlreadySorted, false);
+  assert.equal(trackedWindowSnapshot.allEligibleVideosSorted, false);
 });
 
 test('marks window as sorted only when all actionable tabs are known and ordered', () => {
@@ -36,9 +36,9 @@ test('marks window as sorted only when all actionable tabs are known and ordered
 
   recomputeSortState();
 
-  assert.equal(trackedWindowSnapshot.eligibleVideosAlreadySorted, true);
+  assert.equal(trackedWindowSnapshot.allEligibleVideosSorted, true);
   assert.equal(trackedWindowSnapshot.sortSummary.order.allEligibleVideosReady, true);
-  assert.equal(trackedWindowSnapshot.sortSummary.order.eligibleVideosAlreadySorted, true);
+  assert.equal(trackedWindowSnapshot.sortSummary.order.allEligibleVideosSorted, true);
   assert.equal(trackedWindowSnapshot.sortSummary.sortReadyTabs.outOfOrder, false);
 });
 
@@ -89,11 +89,11 @@ test('live tabs do not block sorted readiness for VOD tabs with known remaining 
 
   recomputeSortState();
 
-  assert.equal(trackedWindowSnapshot.eligibleVideosAlreadySorted, true);
+  assert.equal(trackedWindowSnapshot.allEligibleVideosSorted, true);
   assert.equal(trackedWindowSnapshot.sortSummary.counts.tracked, 3);
   assert.equal(trackedWindowSnapshot.sortSummary.counts.sortReady, 2);
   assert.equal(trackedWindowSnapshot.sortSummary.order.allEligibleVideosReady, true);
-  assert.equal(trackedWindowSnapshot.sortSummary.order.eligibleVideosAlreadySorted, true);
+  assert.equal(trackedWindowSnapshot.sortSummary.order.allEligibleVideosSorted, true);
   assert.deepEqual(trackedWindowSnapshot.targetVideoTabOrder, [1, 2]);
 });
 
@@ -120,10 +120,10 @@ test('pinned tracked tabs count toward popup totals without affecting sort summa
 
   recomputeSortState();
 
-  assert.equal(trackedWindowSnapshot.eligibleVideosAlreadySorted, true);
+  assert.equal(trackedWindowSnapshot.allEligibleVideosSorted, true);
   assert.equal(trackedWindowSnapshot.sortSummary.counts.tracked, 3);
   assert.equal(trackedWindowSnapshot.sortSummary.counts.sortReady, 2);
   assert.equal(trackedWindowSnapshot.sortSummary.order.allEligibleVideosReady, true);
-  assert.equal(trackedWindowSnapshot.sortSummary.order.eligibleVideosAlreadySorted, true);
+  assert.equal(trackedWindowSnapshot.sortSummary.order.allEligibleVideosSorted, true);
   assert.deepEqual(trackedWindowSnapshot.targetVideoTabOrder, [2, 3]);
 });

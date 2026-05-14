@@ -1,4 +1,4 @@
-import { getCurrentTimeMs } from './window-store.js';
+import { getCurrentTimeMs } from './tracked-window-store.js';
 import {
   markMediaElementObserved,
   resetMediaReadiness,

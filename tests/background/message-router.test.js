@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { trackedWindowSnapshot } from '../../background/window-store.js';
+import { trackedWindowSnapshot } from '../../background/tracked-window-store.js';
 import {
   handleVideoElementReady,
   handleContentScriptReady,
   handlePageVideoDetails,
 } from '../../background/page-message-handlers.js';
-import { refreshPlaybackState } from '../../background/refresh-playback-state.js';
+import { collectPlaybackMetrics } from '../../background/collect-playback-metrics.js';
 import {
   ensureChromeApi,
   createTabRecordFixture,
@@ -128,10 +128,10 @@ test('handleContentScriptReady marks the runtime ready without collecting metric
   resetTrackedWindowState(1);
   globalThis.chrome.tabs = {
     get() {
-      throw new Error('tabs.get should not be called on contentScriptReported');
+      throw new Error('tabs.get should not be called on content script ready');
     },
     sendMessage() {
-      throw new Error('tabs.sendMessage should not be called on contentScriptReported');
+      throw new Error('tabs.sendMessage should not be called on content script ready');
     },
   };
 
@@ -192,7 +192,7 @@ test('handleContentScriptReady clears stale sort data on watch-to-watch SPA navi
   assert.equal(record.isLiveNow, false);
   assert.equal(record.remainingTimeStale, true);
   assert.deepEqual(trackedWindowSnapshot.targetVideoTabOrder, [7]);
-  assert.equal(trackedWindowSnapshot.eligibleVideosAlreadySorted, false);
+  assert.equal(trackedWindowSnapshot.allEligibleVideosSorted, false);
 });
 
 test('handleVideoElementReady removes tracked rows when a stale event arrives off watch/shorts', async () => {
@@ -404,7 +404,7 @@ test(
       });
     };
 
-    await refreshPlaybackState(7);
+    await collectPlaybackMetrics(7);
 
     const record = trackedWindowSnapshot.tabRecordsById[7];
     assert.equal(record.url, sender.tab.url);

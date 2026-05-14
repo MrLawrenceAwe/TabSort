@@ -6,7 +6,7 @@ import { derivePlaybackStateUpdate } from './derive-playback-state-update.js';
 import { applyVideoMetricsUnavailable } from './tab-record-lifecycle.js';
 import { applyPlaybackStateUpdate } from './apply-playback-state-update.js';
 import { recomputeSortState } from './sort-state.js';
-import { getWritableTabRecord, getTrackedWindowId, setTrackedWindowId } from './window-store.js';
+import { getWritableTabRecord, getTrackedWindowId, setTrackedWindowId } from './tracked-window-store.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 
 const DEFAULT_BATCH_CONCURRENCY = 4;
@@ -39,7 +39,7 @@ async function loadTabRecordContext(tabId) {
   return { record, tab };
 }
 
-export async function refreshPlaybackState(tabId, { recompute = true } = {}) {
+export async function collectPlaybackMetrics(tabId, { recompute = true } = {}) {
   try {
     const initialContext = await loadTabRecordContext(tabId);
     if (!initialContext) return false;
@@ -74,12 +74,12 @@ export async function refreshPlaybackState(tabId, { recompute = true } = {}) {
     if (recompute) recomputeSortState();
     return true;
   } catch (error) {
-    logDebug(`refreshPlaybackState failed for ${tabId}`, error);
+    logDebug(`collectPlaybackMetrics failed for ${tabId}`, error);
     return false;
   }
 }
 
-export async function refreshPlaybackStateBatch(
+export async function collectPlaybackMetricsBatch(
   tabIds,
   { concurrency = DEFAULT_BATCH_CONCURRENCY, shouldRefresh = () => true } = {},
 ) {
@@ -98,7 +98,7 @@ export async function refreshPlaybackStateBatch(
     while (nextIndex < pendingIds.length) {
       const tabId = pendingIds[nextIndex];
       nextIndex += 1;
-      const didChange = await refreshPlaybackState(tabId, { recompute: false });
+      const didChange = await collectPlaybackMetrics(tabId, { recompute: false });
       changed = changed || didChange;
     }
   }

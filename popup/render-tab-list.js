@@ -19,14 +19,14 @@ export function renderTabList(snapshot, { postRuntimeMessage } = {}) {
   const tabRecords = snapshot.tabRecordsById || {};
   const trackedTabIdsInWindowOrder = snapshot.trackedTabIdsInWindowOrder || [];
   const sortSummary = cloneSortSummary(snapshot.sortSummary);
-  const eligibleVideosAlreadySorted = snapshot.eligibleVideosAlreadySorted === true;
+  const allEligibleVideosSorted = snapshot.allEligibleVideosSorted === true;
 
   applyPopupState({
-    eligibleVideosAlreadySorted,
+    allEligibleVideosSorted,
     sortSummary,
   });
 
-  setMetadataColumnsVisible(!eligibleVideosAlreadySorted);
+  setMetadataColumnsVisible(!allEligibleVideosSorted);
 
   const rowFragment = document.createDocumentFragment();
   for (const tabId of trackedTabIdsInWindowOrder) {
@@ -38,12 +38,12 @@ export function renderTabList(snapshot, { postRuntimeMessage } = {}) {
       remainingTimeStale: Boolean(tabRecord.remainingTimeStale),
     };
     if (normalizedRecord.remainingTimeStale) row.classList.add('stale-remaining-row');
-    renderTabRow(row, normalizedRecord, eligibleVideosAlreadySorted, postRuntimeMessage);
+    renderTabRow(row, normalizedRecord, allEligibleVideosSorted, postRuntimeMessage);
     rowFragment.appendChild(row);
   }
   tbody.replaceChildren(rowFragment);
 
-  if (sortSummary.order.allEligibleVideosReady && !eligibleVideosAlreadySorted) {
+  if (sortSummary.order.allEligibleVideosReady && !allEligibleVideosSorted) {
     addClassToTabRows(table, 'all-sort-ready-row');
   }
 

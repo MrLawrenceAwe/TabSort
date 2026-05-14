@@ -22,7 +22,7 @@ function createTrackedWindowStoreState() {
     tabRecordsById: {},
     targetVideoTabOrder: [],
     trackedTabIdsInWindowOrder: [],
-    eligibleVideosAlreadySorted: false,
+    allEligibleVideosSorted: false,
     sortSummary: createEmptySortSummary(),
     windowId: null,
     snapshotSignature: null,
@@ -42,8 +42,8 @@ export const trackedWindowSnapshot = Object.freeze({
   get trackedTabIdsInWindowOrder() {
     return [...trackedWindowState.trackedTabIdsInWindowOrder];
   },
-  get eligibleVideosAlreadySorted() {
-    return trackedWindowState.eligibleVideosAlreadySorted;
+  get allEligibleVideosSorted() {
+    return trackedWindowState.allEligibleVideosSorted;
   },
   get sortSummary() {
     return cloneSortSummary(trackedWindowState.sortSummary);
@@ -87,7 +87,7 @@ export function canManageWindow(windowId) {
   return trackedWindowState.windowId == null || windowId === trackedWindowState.windowId;
 }
 
-export function resetWindowStore({ windowId = null } = {}) {
+export function resetTrackedWindowStore({ windowId = null } = {}) {
   const nextState = createFreshTrackedWindowStoreState();
   nextState.windowId = isValidWindowId(windowId) ? windowId : null;
   Object.assign(trackedWindowState, nextState);
@@ -132,12 +132,12 @@ export function isSyncTokenCurrent(syncToken) {
 export function setSortState({
   trackedTabIdsInWindowOrder = [],
   targetVideoTabOrder = [],
-  eligibleVideosAlreadySorted = false,
+  allEligibleVideosSorted = false,
   sortSummary = createEmptySortSummary(),
 } = {}) {
   trackedWindowState.targetVideoTabOrder = [...targetVideoTabOrder];
   trackedWindowState.trackedTabIdsInWindowOrder = [...trackedTabIdsInWindowOrder];
-  trackedWindowState.eligibleVideosAlreadySorted = Boolean(eligibleVideosAlreadySorted);
+  trackedWindowState.allEligibleVideosSorted = Boolean(allEligibleVideosSorted);
   trackedWindowState.sortSummary = cloneSortSummary(sortSummary);
 }
 

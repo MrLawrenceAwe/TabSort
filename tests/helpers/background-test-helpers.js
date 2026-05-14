@@ -2,11 +2,11 @@ import { TAB_STATES } from '../../shared/tab-states.js';
 import { createEmptySortSummary } from '../../shared/sort-summary.js';
 import {
   trackedWindowSnapshot,
-  resetWindowStore,
+  resetTrackedWindowStore,
   replaceAllTabRecords,
   setSortState,
   setTabRecord,
-} from '../../background/window-store.js';
+} from '../../background/tracked-window-store.js';
 import { createTabRecord } from '../../background/tab-record.js';
 
 export function ensureChromeApi({ tabs = false } = {}) {
@@ -101,7 +101,7 @@ export function stubChromeTabMetrics({
 }
 
 export function resetTrackedWindowState(windowId = null) {
-  resetWindowStore({ windowId });
+  resetTrackedWindowStore({ windowId });
   setSortState({ sortSummary: createEmptySortSummary() });
 }
 
@@ -113,7 +113,7 @@ export function setTrackedSortState(sortState = {}) {
   setSortState({
     trackedTabIdsInWindowOrder: trackedWindowSnapshot.trackedTabIdsInWindowOrder,
     targetVideoTabOrder: trackedWindowSnapshot.targetVideoTabOrder,
-    eligibleVideosAlreadySorted: trackedWindowSnapshot.eligibleVideosAlreadySorted,
+    allEligibleVideosSorted: trackedWindowSnapshot.allEligibleVideosSorted,
     sortSummary: trackedWindowSnapshot.sortSummary || createEmptySortSummary(),
     ...sortState,
   });

@@ -3,7 +3,7 @@ import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import { loadSortOptions, saveSortOptions } from '../shared/storage.js';
 import { createRuntimeClient } from './runtime-client.js';
 import { createTabSnapshotClient } from './tab-snapshot-client.js';
-import { createTabRefreshPoller } from './tab-refresh-poller.js';
+import { createSnapshotPoller } from './snapshot-poller.js';
 import { renderTabList } from './render-tab-list.js';
 import { syncPopupLayout } from './popup-layout-view.js';
 import { initializePopupDom, setErrorMessage } from './popup-elements.js';
@@ -29,7 +29,7 @@ const snapshotClient = createTabSnapshotClient({
   retryDelayMs: SNAPSHOT_RETRY_DELAY_MS,
   maxAttempts: SNAPSHOT_MAX_ATTEMPTS,
 });
-const snapshotPoller = createTabRefreshPoller({
+const snapshotPoller = createSnapshotPoller({
   delayMs: SNAPSHOT_POLL_DELAY_MS,
   isAppActive: () => isPopupActive,
   loadSnapshot: snapshotClient.loadSnapshot,
@@ -49,12 +49,12 @@ async function runWithPopupErrorLogging(task, context) {
 async function initializePopupPreferences() {
   startThemeSync();
   const options = await loadSortOptions();
-  const groupOtherTabsByDomainToggle = document.getElementById('groupNonYoutubeTabsToggle');
+  const groupByDomainToggle = document.getElementById('groupNonYoutubeTabsToggle');
 
-  if (groupOtherTabsByDomainToggle) {
-    groupOtherTabsByDomainToggle.checked = Boolean(options.groupNonYoutubeTabsByDomain);
-    groupOtherTabsByDomainToggle.addEventListener('change', () => {
-      saveSortOptions({ groupNonYoutubeTabsByDomain: groupOtherTabsByDomainToggle.checked });
+  if (groupByDomainToggle) {
+    groupByDomainToggle.checked = Boolean(options.groupNonYoutubeTabsByDomain);
+    groupByDomainToggle.addEventListener('change', () => {
+      saveSortOptions({ groupNonYoutubeTabsByDomain: groupByDomainToggle.checked });
     });
   }
 }
