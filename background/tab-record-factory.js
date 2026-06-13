@@ -18,10 +18,10 @@ export function createRecordFromTabSnapshot(
     index: tab.index,
     pinned: Boolean(tab.pinned),
     status: nextStatus,
-    contentScriptReported:
-      isUnsuspended && !urlChanged ? Boolean(previousRecord.contentScriptReported) : false,
-    mediaElementObserved:
-      isUnsuspended && !urlChanged ? Boolean(previousRecord.mediaElementObserved) : false,
+    pageRuntimeReady:
+      isUnsuspended && !urlChanged ? Boolean(previousRecord.pageRuntimeReady) : false,
+    videoElementReady:
+      isUnsuspended && !urlChanged ? Boolean(previousRecord.videoElementReady) : false,
     isLiveNow: urlChanged ? false : Boolean(previousRecord.isLiveNow),
     isActiveTab: Boolean(tab.active),
     isHidden: Boolean(tab.hidden),
@@ -29,7 +29,7 @@ export function createRecordFromTabSnapshot(
     loadingStartedAt: previousRecord.loadingStartedAt ?? null,
     unsuspendedTimestamp: previousRecord.unsuspendedTimestamp || null,
     transitionStartedAt: previousRecord.transitionStartedAt || null,
-    videoWaitStartedAt: urlChanged ? null : previousRecord.videoWaitStartedAt ?? null,
+    waitingForVideoSince: urlChanged ? null : previousRecord.waitingForVideoSince ?? null,
     remainingTimeStale:
       !isUnsuspended ||
       Boolean(previousRecord.remainingTimeStale) ||

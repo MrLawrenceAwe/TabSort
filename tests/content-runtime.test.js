@@ -78,6 +78,38 @@ test(
   },
 );
 
+test('content script session skips video collection work outside watch and shorts pages', () => {
+  const runtime = createYoutubePageController();
+  try {
+    const dom = installRuntimeTestDom();
+    dom.updatePage({
+      href: 'https://www.youtube.com/',
+      title: 'YouTube',
+      duration: null,
+    });
+
+    runtime.bootstrap();
+
+    const readySignals = installRuntimeTestDom.messages.filter(
+      (message) => message?.type === RUNTIME_MESSAGE_TYPES.CONTENT_SCRIPT_READY,
+    );
+    const detailSignals = installRuntimeTestDom.messages.filter(
+      (message) => message?.type === RUNTIME_MESSAGE_TYPES.PAGE_VIDEO_DETAILS,
+    );
+    const mediaReadySignals = installRuntimeTestDom.messages.filter(
+      (message) => message?.type === RUNTIME_MESSAGE_TYPES.VIDEO_ELEMENT_READY,
+    );
+
+    assert.equal(readySignals.length, 1);
+    assert.equal(detailSignals.length, 0);
+    assert.equal(mediaReadySignals.length, 0);
+    assert.equal(dom.getQuerySelectorAllCount(), 0);
+  } finally {
+    runtime.reset();
+    resetGlobals();
+  }
+});
+
 test(
   'content script session waits for fresh media evidence before re-sending the video element ready event on SPA navigation',
   () => {
@@ -148,7 +180,7 @@ test(
         },
       );
 
-      assert.equal(response?.mediaElementObserved, true);
+      assert.equal(response?.videoElementReady, true);
 
       const mediaReadyAfterMetricCollection = installRuntimeTestDom.messages.filter(
         (message) => message?.type === RUNTIME_MESSAGE_TYPES.VIDEO_ELEMENT_READY,
@@ -184,7 +216,7 @@ test(
         },
       );
 
-      assert.equal(response?.mediaElementObserved, false);
+      assert.equal(response?.videoElementReady, false);
       assert.equal(response?.duration, 6211);
       assert.equal(response?.currentTime, 0);
     } finally {

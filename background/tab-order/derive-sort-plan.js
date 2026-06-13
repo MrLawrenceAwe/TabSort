@@ -22,25 +22,33 @@ function deriveTabIdOrder(records) {
     .map((record) => record.id);
 }
 
-function buildRemainingTimeEntries(records) {
-  return records.map((record) => ({
-    id: record.id,
-    remainingTime: hasReadyRemainingTime(record)
-      ? record.videoDetails?.remainingTime ?? null
-      : null,
-  }));
+function splitVideoReadiness(records) {
+  return records.reduce(
+    (groups, record) => {
+      const entry = {
+        id: record.id,
+        remainingTime: hasReadyRemainingTime(record)
+          ? record.videoDetails?.remainingTime ?? null
+          : null,
+      };
+      if (entry.remainingTime === null) {
+        groups.waitingIds.add(entry.id);
+      } else {
+        groups.readyEntries.push(entry);
+      }
+      return groups;
+    },
+    { readyEntries: [], waitingIds: new Set() },
+  );
 }
 
-function buildTargetVideoTabOrder(knownEntries, unknownEntries, eligibleIdsInTabOrder) {
-  const sortedKnownIds = knownEntries
+function buildPlannedVideoTabOrder(readyEntries, waitingIds, eligibleIdsInTabOrder) {
+  const sortedReadyIds = readyEntries
     .slice()
     .sort((a, b) => a.remainingTime - b.remainingTime)
     .map((entry) => entry.id);
-
-  const unknownIds = new Set(unknownEntries.map((entry) => entry.id));
-  const unknownIdsInCurrentOrder = eligibleIdsInTabOrder.filter((id) => unknownIds.has(id));
-
-  return [...sortedKnownIds, ...unknownIdsInCurrentOrder];
+  const waitingIdsInCurrentOrder = eligibleIdsInTabOrder.filter((id) => waitingIds.has(id));
+  return [...sortedReadyIds, ...waitingIdsInCurrentOrder];
 }
 
 function isEligibleVideoRecord(record) {
@@ -52,35 +60,34 @@ export function deriveSortPlan(records) {
   const movableRecords = records.filter((record) => !record.pinned);
   const eligibleVideoRecords = movableRecords.filter(isEligibleVideoRecord);
   const eligibleIdsInTabOrder = deriveTabIdOrder(eligibleVideoRecords);
-  const remainingTimeEntries = buildRemainingTimeEntries(eligibleVideoRecords);
-  const knownRemainingEntries = remainingTimeEntries.filter((entry) => entry.remainingTime !== null);
-  const unknownRemainingEntries = remainingTimeEntries.filter((entry) => entry.remainingTime === null);
+  const { readyEntries, waitingIds } = splitVideoReadiness(eligibleVideoRecords);
+  const readyVideoIds = new Set(readyEntries.map((entry) => entry.id));
   const readyVideoTabIdsInCurrentOrder = eligibleIdsInTabOrder.filter((tabId) =>
-    knownRemainingEntries.some((entry) => entry.id === tabId),
+    readyVideoIds.has(tabId),
   );
-  const readyVideoTabIdsByRemainingTime = knownRemainingEntries
+  const readyVideoTabIdsByRemainingTime = readyEntries
     .slice()
     .sort((a, b) => a.remainingTime - b.remainingTime)
     .map((entry) => entry.id);
-  const targetVideoTabOrder = buildTargetVideoTabOrder(
-    knownRemainingEntries,
-    unknownRemainingEntries,
+  const plannedVideoTabOrder = buildPlannedVideoTabOrder(
+    readyEntries,
+    waitingIds,
     eligibleIdsInTabOrder,
   );
-  const allEligibleVideosReady = unknownRemainingEntries.length === 0;
+  const allSortableVideosReady = waitingIds.size === 0;
   const currentVideoTabOrderMatchesPlan =
     eligibleIdsInTabOrder.length > 0 &&
-    eligibleIdsInTabOrder.length === targetVideoTabOrder.length &&
-    eligibleIdsInTabOrder.every((id, index) => id === targetVideoTabOrder[index]);
+    eligibleIdsInTabOrder.length === plannedVideoTabOrder.length &&
+    eligibleIdsInTabOrder.every((id, index) => id === plannedVideoTabOrder[index]);
 
   return {
     trackedTabIdsInWindowOrder,
-    targetVideoTabOrder,
+    plannedVideoTabOrder,
     eligibleVideoRecords,
     eligibleIdsInTabOrder,
     readyVideoTabIdsInCurrentOrder,
     readyVideoTabIdsByRemainingTime,
-    allEligibleVideosReady,
-    allEligibleVideosSorted: allEligibleVideosReady && currentVideoTabOrderMatchesPlan,
+    allSortableVideosReady,
+    isSortComplete: allSortableVideosReady && currentVideoTabOrderMatchesPlan,
   };
 }

@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { listWindowTabs } from '../background/chrome-tabs.js';
+import {
+  executeScriptInTab,
+  listWindowTabs,
+  MESSAGE_FAILURE_REASONS,
+  sendMessageToTab,
+} from '../background/chrome-api.js';
 import { ensureChromeApi } from './helpers/background-test-helpers.js';
 
 ensureChromeApi({ tabs: true });
@@ -61,4 +66,37 @@ test('listWindowTabs filters out malformed tab entries from Chrome results', asy
     { id: 1, windowId: 9, url: 'https://www.youtube.com/watch?v=1' },
     { id: 2, windowId: 9, url: 'https://www.youtube.com/watch?v=2' },
   ]);
+});
+
+test('sendMessageToTab classifies missing content-script receivers', async () => {
+  globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
+    globalThis.chrome.runtime.lastError = new Error('Could not establish connection. Receiving end does not exist.');
+    callback();
+    globalThis.chrome.runtime.lastError = null;
+  };
+
+  const result = await sendMessageToTab(1, { type: 'collectVideoMetrics' });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, MESSAGE_FAILURE_REASONS.NO_RECEIVER);
+});
+
+test('executeScriptInTab reports successful Chrome scripting injection', async () => {
+  const calls = [];
+  globalThis.chrome.scripting = {
+    executeScript(options, callback) {
+      calls.push(options);
+      callback();
+    },
+  };
+
+  const result = await executeScriptInTab(7, ['content/youtube/youtube-page-bootstrap.js']);
+
+  assert.deepEqual(calls, [
+    {
+      target: { tabId: 7 },
+      files: ['content/youtube/youtube-page-bootstrap.js'],
+    },
+  ]);
+  assert.equal(result.ok, true);
 });

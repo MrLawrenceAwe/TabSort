@@ -1,16 +1,24 @@
 import { TAB_STATES } from '../shared/tab-states.js';
 import { logDebug } from '../shared/log.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
-import { getTab, sendMessageToTab } from './chrome-tabs.js';
+import { getTab, MESSAGE_FAILURE_REASONS, sendMessageToTab } from './chrome-api.js';
+import { tryInjectYoutubeBootstrap } from './content-script-injection.js';
 import { derivePlaybackStateUpdate } from './derive-playback-state-update.js';
 import { applyVideoMetricsUnavailable } from './tab-video-state.js';
 import { applyPlaybackStateUpdate } from './apply-playback-state-update.js';
 import { recomputeSortState } from './sort-state.js';
-import { getWritableTabRecord } from './tracked-tab-record-store.js';
-import { getTrackedWindowId, setTrackedWindowId } from './tracked-window-session.js';
+import {
+  getTrackedWindowId,
+  getWritableTabRecord,
+  setTrackedWindowId,
+} from './tracked-window-store.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
 
 const DEFAULT_BATCH_CONCURRENCY = 4;
+const NO_RECEIVER_RETRY_ATTEMPTS = 3;
+const NO_RECEIVER_RETRY_DELAY_MS = 50;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function loadTabRecordContext(tabId) {
   const initialRecord = getWritableTabRecord(tabId);
@@ -46,9 +54,22 @@ export async function collectPlaybackMetrics(tabId, { recompute = true } = {}) {
     if (!initialContext) return false;
 
     const requestedUrl = initialContext.tab.url || initialContext.record.url || null;
-    const result = await sendMessageToTab(tabId, {
+    let result = await sendMessageToTab(tabId, {
       type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS,
     });
+
+    if (result?.reason === MESSAGE_FAILURE_REASONS.NO_RECEIVER) {
+      const injected = await tryInjectYoutubeBootstrap(tabId);
+      if (injected) {
+        for (let attempt = 0; attempt < NO_RECEIVER_RETRY_ATTEMPTS; attempt += 1) {
+          await sleep(NO_RECEIVER_RETRY_DELAY_MS);
+          result = await sendMessageToTab(tabId, {
+            type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS,
+          });
+          if (result?.reason !== MESSAGE_FAILURE_REASONS.NO_RECEIVER) break;
+        }
+      }
+    }
     const currentContext = await loadTabRecordContext(tabId);
     if (!currentContext) return false;
     const { record, tab } = currentContext;

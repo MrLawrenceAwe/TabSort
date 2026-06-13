@@ -49,12 +49,12 @@ async function runWithPopupErrorLogging(task, context) {
 async function initializePopupPreferences() {
   startThemeSync();
   const options = await loadSortOptions();
-  const groupByDomainToggle = document.getElementById('groupNonYoutubeTabsToggle');
+  const groupOtherTabsToggle = document.getElementById('groupOtherTabsToggle');
 
-  if (groupByDomainToggle) {
-    groupByDomainToggle.checked = Boolean(options.groupNonYoutubeTabsByDomain);
-    groupByDomainToggle.addEventListener('change', () => {
-      saveSortOptions({ groupNonYoutubeTabsByDomain: groupByDomainToggle.checked });
+  if (groupOtherTabsToggle) {
+    groupOtherTabsToggle.checked = Boolean(options.groupOtherTabsBySite);
+    groupOtherTabsToggle.addEventListener('change', () => {
+      saveSortOptions({ groupOtherTabsBySite: groupOtherTabsToggle.checked });
     });
   }
 }

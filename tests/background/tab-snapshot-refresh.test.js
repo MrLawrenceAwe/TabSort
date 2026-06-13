@@ -23,9 +23,9 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         isActiveTab: true,
-        contentScriptReported: true,
-        mediaElementObserved: false,
-        videoWaitStartedAt: now,
+        pageRuntimeReady: true,
+        videoElementReady: false,
+        waitingForVideoSince: now,
         remainingTimeStale: true,
       }),
       2: createTabRecordFixture(2, {
@@ -51,7 +51,7 @@ test(
       callback({
         title: `Video ${tabId}`,
         url: `https://www.youtube.com/watch?v=${tabId}`,
-        mediaElementObserved: true,
+        videoElementReady: true,
         lengthSeconds: 120,
         currentTime: 20,
         playbackRate: 1,
@@ -76,10 +76,10 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         isActiveTab: true,
-        contentScriptReported: false,
-        mediaElementObserved: false,
+        pageRuntimeReady: false,
+        videoElementReady: false,
         transitionStartedAt: Date.now() - 10_000,
-        videoWaitStartedAt: null,
+        waitingForVideoSince: null,
         remainingTimeStale: true,
         videoDetails: null,
       }),
@@ -103,7 +103,7 @@ test(
       callback({
         title: 'Archived Stream',
         url: 'https://www.youtube.com/watch?v=archive',
-        mediaElementObserved: false,
+        videoElementReady: false,
         lengthSeconds: null,
         duration: 6211,
         currentTime: 0,
@@ -116,7 +116,7 @@ test(
     const snapshot = await getWindowSnapshot({ windowId: 1 });
 
     assert.deepEqual(refreshedTabIds, [1]);
-    assert.equal(snapshot.tabRecordsById[1].mediaElementObserved, true);
+    assert.equal(snapshot.tabRecordsById[1].videoElementReady, true);
     assert.equal(snapshot.tabRecordsById[1].videoDetails.remainingTime, 6211);
     assert.equal(snapshot.tabRecordsById[1].remainingTimeStale, false);
   },

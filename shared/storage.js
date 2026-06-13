@@ -1,5 +1,5 @@
 export const DEFAULT_SORT_OPTIONS = Object.freeze({
-  groupNonYoutubeTabsByDomain: false,
+  groupOtherTabsBySite: false,
 });
 
 const getChromeApi = () => globalThis.chrome ?? null;

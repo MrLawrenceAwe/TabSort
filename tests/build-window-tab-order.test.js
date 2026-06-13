@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  buildNonYoutubeOrder,
+  buildOtherTabOrder,
   buildYoutubeTabOrder,
 } from '../background/tab-order/build-tab-move-order.js';
 
@@ -18,17 +18,17 @@ test('buildYoutubeTabOrder keeps tracked video tabs in requested order then appe
   assert.deepEqual(buildYoutubeTabOrder(unpinnedTabs, orderedTrackedTabIds), [2, 1, 3]);
 });
 
-test('buildNonYoutubeOrder returns current order when grouping is disabled', () => {
+test('buildOtherTabOrder returns current order when grouping is disabled', () => {
   const unpinnedTabs = [
     { id: 1, index: 0, url: 'https://www.youtube.com/watch?v=1' },
     { id: 2, index: 1, url: 'https://example.com/a' },
     { id: 3, index: 2, url: 'https://docs.example.com/b' },
   ];
 
-  assert.deepEqual(buildNonYoutubeOrder(unpinnedTabs, false), [2, 3]);
+  assert.deepEqual(buildOtherTabOrder(unpinnedTabs, false), [2, 3]);
 });
 
-test('buildNonYoutubeOrder groups by first-seen domain and preserves intra-domain order', () => {
+test('buildOtherTabOrder groups by first-seen domain and preserves intra-domain order', () => {
   const unpinnedTabs = [
     { id: 1, index: 0, url: 'https://a.com/1' },
     { id: 2, index: 1, url: 'https://b.com/1' },
@@ -36,5 +36,5 @@ test('buildNonYoutubeOrder groups by first-seen domain and preserves intra-domai
     { id: 4, index: 3, url: 'https://b.com/2' },
   ];
 
-  assert.deepEqual(buildNonYoutubeOrder(unpinnedTabs, true), [1, 3, 2, 4]);
+  assert.deepEqual(buildOtherTabOrder(unpinnedTabs, true), [1, 3, 2, 4]);
 });

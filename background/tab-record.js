@@ -1,5 +1,5 @@
 import { isFiniteNumber } from '../shared/guards.js';
-import { getWritableTabRecord, setTabRecord } from './tracked-tab-record-store.js';
+import { getWritableTabRecord, setTabRecord } from './tracked-window-store.js';
 
 const FALLBACK_TAB_INDEX = Number.MAX_SAFE_INTEGER;
 
@@ -17,8 +17,8 @@ export function createTabRecord(tabId, windowId, defaults = {}) {
     index: initialIndex,
     pinned: Boolean(defaults.pinned),
     status: defaults.status ?? null,
-    contentScriptReported: Boolean(defaults.contentScriptReported),
-    mediaElementObserved: Boolean(defaults.mediaElementObserved),
+    pageRuntimeReady: Boolean(defaults.pageRuntimeReady),
+    videoElementReady: Boolean(defaults.videoElementReady),
     isLiveNow: Boolean(defaults.isLiveNow),
     isActiveTab: Boolean(defaults.isActiveTab),
     isHidden: Boolean(defaults.isHidden),
@@ -26,7 +26,7 @@ export function createTabRecord(tabId, windowId, defaults = {}) {
     loadingStartedAt: defaults.loadingStartedAt ?? null,
     unsuspendedTimestamp: defaults.unsuspendedTimestamp ?? null,
     transitionStartedAt: defaults.transitionStartedAt ?? null,
-    videoWaitStartedAt: defaults.videoWaitStartedAt ?? null,
+    waitingForVideoSince: defaults.waitingForVideoSince ?? null,
     remainingTimeStale:
       defaults.remainingTimeStale == null ? true : Boolean(defaults.remainingTimeStale),
   };

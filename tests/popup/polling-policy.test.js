@@ -27,8 +27,8 @@ function makeRecord(overrides = {}) {
     isLiveNow: false,
     isActiveTab: false,
     isHidden: false,
-    contentScriptReported: true,
-    mediaElementObserved: true,
+    pageRuntimeReady: true,
+    videoElementReady: true,
     remainingTimeStale: false,
     unsuspendedTimestamp: null,
     loadingStartedAt: null,
@@ -40,7 +40,7 @@ function makeRecord(overrides = {}) {
 test('shouldPollRecord polls recently unsuspended stale tabs that need no user action yet', () => {
   const record = makeRecord({
     remainingTimeStale: true,
-    contentScriptReported: false,
+    pageRuntimeReady: false,
     unsuspendedTimestamp: NOW_MS - (RECENTLY_UNSUSPENDED_MS - 1000),
   });
 
@@ -50,7 +50,7 @@ test('shouldPollRecord polls recently unsuspended stale tabs that need no user a
 test('shouldPollRecord does not poll stale tabs once they require a reload', () => {
   const record = makeRecord({
     remainingTimeStale: true,
-    contentScriptReported: false,
+    pageRuntimeReady: false,
     unsuspendedTimestamp: NOW_MS - (RECENTLY_UNSUSPENDED_MS + 1000),
   });
 
@@ -60,7 +60,7 @@ test('shouldPollRecord does not poll stale tabs once they require a reload', () 
 test('shouldPollRecord polls loading tabs during the loading grace window', () => {
   const record = makeRecord({
     status: TAB_STATES.LOADING,
-    contentScriptReported: false,
+    pageRuntimeReady: false,
     loadingStartedAt: NOW_MS - (LOADING_GRACE_MS - 1000),
   });
 
@@ -70,10 +70,10 @@ test('shouldPollRecord polls loading tabs during the loading grace window', () =
 test('shouldPollRecord polls active stale watch tabs while video data can self-resolve', () => {
   const record = makeRecord({
     isActiveTab: true,
-    contentScriptReported: true,
-    mediaElementObserved: false,
+    pageRuntimeReady: true,
+    videoElementReady: false,
     remainingTimeStale: true,
-    videoWaitStartedAt: NOW_MS - (MEDIA_WAIT_GRACE_MS - 1000),
+    waitingForVideoSince: NOW_MS - (MEDIA_WAIT_GRACE_MS - 1000),
     videoDetails: { remainingTime: 45143, lengthSeconds: 45143 },
   });
 
@@ -83,10 +83,10 @@ test('shouldPollRecord polls active stale watch tabs while video data can self-r
 test('shouldPollRecord stops polling active stale watch tabs when media stays stuck', () => {
   const record = makeRecord({
     isActiveTab: true,
-    contentScriptReported: true,
-    mediaElementObserved: false,
+    pageRuntimeReady: true,
+    videoElementReady: false,
     remainingTimeStale: true,
-    videoWaitStartedAt: NOW_MS - (MEDIA_WAIT_GRACE_MS + 1000),
+    waitingForVideoSince: NOW_MS - (MEDIA_WAIT_GRACE_MS + 1000),
     videoDetails: { remainingTime: 45143, lengthSeconds: 45143 },
   });
 
@@ -96,8 +96,8 @@ test('shouldPollRecord stops polling active stale watch tabs when media stays st
 test('shouldRefreshRecordMetrics still probes active stale tabs after polling grace expires', () => {
   const record = makeRecord({
     isActiveTab: true,
-    contentScriptReported: false,
-    mediaElementObserved: false,
+    pageRuntimeReady: false,
+    videoElementReady: false,
     remainingTimeStale: true,
     transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS + 1000),
     videoDetails: null,
@@ -111,8 +111,8 @@ test('shouldRefreshRecordMetrics does not probe hidden stale tabs after polling 
   const record = makeRecord({
     isActiveTab: true,
     isHidden: true,
-    contentScriptReported: false,
-    mediaElementObserved: false,
+    pageRuntimeReady: false,
+    videoElementReady: false,
     remainingTimeStale: true,
     transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS + 1000),
     videoDetails: null,
@@ -124,8 +124,8 @@ test('shouldRefreshRecordMetrics does not probe hidden stale tabs after polling 
 test('shouldPollRecord polls recent watch URL transitions before asking for reload', () => {
   const record = makeRecord({
     isActiveTab: true,
-    contentScriptReported: false,
-    mediaElementObserved: false,
+    pageRuntimeReady: false,
+    videoElementReady: false,
     remainingTimeStale: true,
     transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS - 1000),
     videoDetails: null,
@@ -137,8 +137,8 @@ test('shouldPollRecord polls recent watch URL transitions before asking for relo
 test('shouldPollRecord stops polling stalled watch URL transitions', () => {
   const record = makeRecord({
     isActiveTab: true,
-    contentScriptReported: false,
-    mediaElementObserved: false,
+    pageRuntimeReady: false,
+    videoElementReady: false,
     remainingTimeStale: true,
     transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS + 1000),
     videoDetails: null,
@@ -152,12 +152,12 @@ test('shouldPollSnapshot polls only when at least one tracked tab can self-resol
     tabRecordsById: {
       1: makeRecord({
         remainingTimeStale: true,
-        contentScriptReported: false,
+        pageRuntimeReady: false,
         unsuspendedTimestamp: NOW_MS - (RECENTLY_UNSUSPENDED_MS - 1000),
       }),
       2: makeRecord({
         remainingTimeStale: true,
-        contentScriptReported: false,
+        pageRuntimeReady: false,
         unsuspendedTimestamp: NOW_MS - (RECENTLY_UNSUSPENDED_MS + 1000),
       }),
     },

@@ -20,9 +20,9 @@ export function cloneTabRecordsById(tabRecordsById = {}) {
 function createTrackedWindowStoreState() {
   return {
     tabRecordsById: {},
-    targetVideoTabOrder: [],
+    plannedVideoTabOrder: [],
     trackedTabIdsInWindowOrder: [],
-    allEligibleVideosSorted: false,
+    isSortComplete: false,
     sortSummary: createEmptySortSummary(),
     windowId: null,
     snapshotSignature: null,
@@ -36,14 +36,14 @@ export const trackedWindowStateView = Object.freeze({
   get tabRecordsById() {
     return cloneTabRecordsById(trackedWindowState.tabRecordsById);
   },
-  get targetVideoTabOrder() {
-    return [...trackedWindowState.targetVideoTabOrder];
+  get plannedVideoTabOrder() {
+    return [...trackedWindowState.plannedVideoTabOrder];
   },
   get trackedTabIdsInWindowOrder() {
     return [...trackedWindowState.trackedTabIdsInWindowOrder];
   },
-  get allEligibleVideosSorted() {
-    return trackedWindowState.allEligibleVideosSorted;
+  get isSortComplete() {
+    return trackedWindowState.isSortComplete;
   },
   get sortSummary() {
     return cloneSortSummary(trackedWindowState.sortSummary);
@@ -131,13 +131,13 @@ export function isSyncTokenCurrent(syncToken) {
 
 export function setSortState({
   trackedTabIdsInWindowOrder = [],
-  targetVideoTabOrder = [],
-  allEligibleVideosSorted = false,
+  plannedVideoTabOrder = [],
+  isSortComplete = false,
   sortSummary = createEmptySortSummary(),
 } = {}) {
-  trackedWindowState.targetVideoTabOrder = [...targetVideoTabOrder];
+  trackedWindowState.plannedVideoTabOrder = [...plannedVideoTabOrder];
   trackedWindowState.trackedTabIdsInWindowOrder = [...trackedTabIdsInWindowOrder];
-  trackedWindowState.allEligibleVideosSorted = Boolean(allEligibleVideosSorted);
+  trackedWindowState.isSortComplete = Boolean(isSortComplete);
   trackedWindowState.sortSummary = cloneSortSummary(sortSummary);
 }
 

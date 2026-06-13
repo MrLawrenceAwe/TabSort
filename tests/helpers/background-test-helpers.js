@@ -78,7 +78,7 @@ export function createPlaybackMetricsFixture({
   tabId = 1,
   title = `Video ${tabId}`,
   url = `https://www.youtube.com/watch?v=${tabId}`,
-  mediaElementObserved = true,
+  videoElementReady = true,
   lengthSeconds = 120,
   currentTime = 20,
   playbackRate = 1,
@@ -89,7 +89,7 @@ export function createPlaybackMetricsFixture({
   return {
     title,
     url,
-    mediaElementObserved,
+    videoElementReady,
     lengthSeconds,
     currentTime,
     playbackRate,
@@ -148,7 +148,7 @@ export function stubChromeTabMetrics({
       tabId,
       title: 'Archived Stream',
       url,
-      mediaElementObserved: false,
+      videoElementReady: false,
       lengthSeconds: null,
       duration: 6211,
       currentTime: 0,
@@ -172,8 +172,8 @@ export function setTrackedTabRecords(tabRecordsById = {}) {
 export function setTrackedSortState(sortState = {}) {
   setSortState({
     trackedTabIdsInWindowOrder: trackedWindowStateView.trackedTabIdsInWindowOrder,
-    targetVideoTabOrder: trackedWindowStateView.targetVideoTabOrder,
-    allEligibleVideosSorted: trackedWindowStateView.allEligibleVideosSorted,
+    plannedVideoTabOrder: trackedWindowStateView.plannedVideoTabOrder,
+    isSortComplete: trackedWindowStateView.isSortComplete,
     sortSummary: trackedWindowStateView.sortSummary || createEmptySortSummary(),
     ...sortState,
   });
@@ -189,8 +189,8 @@ export function createTabRecordFixture(id = 1, overrides = {}) {
     index: 0,
     pinned: false,
     status: TAB_STATES.UNSUSPENDED,
-    contentScriptReported: true,
-    mediaElementObserved: true,
+    pageRuntimeReady: true,
+    videoElementReady: true,
     isLiveNow: false,
     isActiveTab: false,
     isHidden: false,
@@ -198,7 +198,7 @@ export function createTabRecordFixture(id = 1, overrides = {}) {
     loadingStartedAt: null,
     unsuspendedTimestamp: null,
     transitionStartedAt: null,
-    videoWaitStartedAt: null,
+    waitingForVideoSince: null,
     remainingTimeStale: true,
     ...overrides,
   });

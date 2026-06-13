@@ -66,9 +66,9 @@ export function deriveSortSummary({
     );
   }
 
-  const allEligibleVideosReady = eligibleVideoCount > 1 && sortReadyTabCount === eligibleVideoCount;
-  const allEligibleVideosSorted =
-    allEligibleVideosReady && areTabIdListsEqual(orderedIdsWithRecords, readyIdsByRemainingTime);
+  const allSortableVideosReady = eligibleVideoCount > 1 && sortReadyTabCount === eligibleVideoCount;
+  const isSortComplete =
+    allSortableVideosReady && areTabIdListsEqual(orderedIdsWithRecords, readyIdsByRemainingTime);
 
   return {
     counts: {
@@ -84,8 +84,8 @@ export function deriveSortSummary({
       hasStaleRemainingTime: inactiveTabsHaveStaleRemainingTime,
     },
     order: {
-      allEligibleVideosReady,
-      allEligibleVideosSorted,
+      allSortableVideosReady,
+      isSortComplete,
     },
   };
 }

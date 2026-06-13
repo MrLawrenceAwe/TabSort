@@ -11,11 +11,11 @@ export function shouldPollRecord(record, { now = Date.now } = {}) {
   const nowMs = now();
   if (record.status === TAB_STATES.UNSUSPENDED && record.remainingTimeStale) {
     const waitingForContentScript =
-      !record.contentScriptReported && canWatchTransitionStillSettle(record, nowMs);
+      !record.pageRuntimeReady && canWatchTransitionStillSettle(record, nowMs);
     const waitingForVideoElement =
       record.isActiveTab &&
-      record.contentScriptReported &&
-      !record.mediaElementObserved &&
+      record.pageRuntimeReady &&
+      !record.videoElementReady &&
       canMediaStillSettle(record, nowMs);
     return waitingForContentScript || waitingForVideoElement;
   }
