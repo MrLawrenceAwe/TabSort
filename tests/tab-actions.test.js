@@ -41,7 +41,7 @@ test('reloadTab marks record loading only after successful reload call', { concu
 
   const record = trackedWindowStateView.tabRecordsById[1];
   assert.equal(record.status, TAB_STATES.LOADING);
-  assert.equal(record.contentScriptReported, false);
+  assert.equal(record.pageRuntimeReady, false);
   assert.equal(record.remainingTimeStale, true);
   assert.equal(record.videoDetails.remainingTime, null);
   assert.equal(typeof record.loadingStartedAt, 'number');

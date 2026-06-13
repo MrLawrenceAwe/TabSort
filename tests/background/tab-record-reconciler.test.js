@@ -63,8 +63,8 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
-        mediaElementObserved: true,
-        contentScriptReported: true,
+        videoElementReady: true,
+        pageRuntimeReady: true,
         videoDetails: { title: 'Old Video', remainingTime: 45, lengthSeconds: 120 },
         remainingTimeStale: false,
       }),
@@ -76,8 +76,8 @@ test(
 
     const record = trackedWindowStateView.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
-    assert.equal(record.contentScriptReported, false);
-    assert.equal(record.mediaElementObserved, false);
+    assert.equal(record.pageRuntimeReady, false);
+    assert.equal(record.videoElementReady, false);
     assert.equal(record.videoDetails, null);
     assert.equal(record.isLiveNow, false);
     assert.equal(record.remainingTimeStale, true);
@@ -93,8 +93,8 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=same',
-        mediaElementObserved: true,
-        contentScriptReported: true,
+        videoElementReady: true,
+        pageRuntimeReady: true,
         videoDetails: { title: 'Same Video', remainingTime: 45, lengthSeconds: 120 },
         remainingTimeStale: false,
       }),
@@ -110,8 +110,8 @@ test(
 
     const record = trackedWindowStateView.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=same&list=abc123&index=10');
-    assert.equal(record.contentScriptReported, true);
-    assert.equal(record.mediaElementObserved, true);
+    assert.equal(record.pageRuntimeReady, true);
+    assert.equal(record.videoElementReady, true);
     assert.deepEqual(record.videoDetails, {
       title: 'Same Video',
       remainingTime: 45,
@@ -133,7 +133,7 @@ test(
       }),
     });
     setTrackedSortState({ trackedTabIdsInWindowOrder: [1] });
-    setTrackedSortState({ targetVideoTabOrder: [1] });
+    setTrackedSortState({ plannedVideoTabOrder: [1] });
 
     globalThis.chrome.tabs.query = (query, callback) => {
       globalThis.chrome.runtime.lastError =
@@ -146,7 +146,7 @@ test(
 
     assert.deepEqual(Object.keys(trackedWindowStateView.tabRecordsById), ['1']);
     assert.deepEqual(trackedWindowStateView.trackedTabIdsInWindowOrder, [1]);
-    assert.deepEqual(trackedWindowStateView.targetVideoTabOrder, [1]);
+    assert.deepEqual(trackedWindowStateView.plannedVideoTabOrder, [1]);
     assert.equal(trackedWindowStateView.tabRecordsById[1].videoDetails.remainingTime, 90);
   },
 );
@@ -163,7 +163,7 @@ test(
       }),
     });
     setTrackedSortState({ trackedTabIdsInWindowOrder: [1] });
-    setTrackedSortState({ targetVideoTabOrder: [1] });
+    setTrackedSortState({ plannedVideoTabOrder: [1] });
 
     stubChromeTabQueryFailure();
 
@@ -172,6 +172,6 @@ test(
     assert.equal(trackedWindowStateView.windowId, 1);
     assert.deepEqual(Object.keys(trackedWindowStateView.tabRecordsById), ['1']);
     assert.deepEqual(trackedWindowStateView.trackedTabIdsInWindowOrder, [1]);
-    assert.deepEqual(trackedWindowStateView.targetVideoTabOrder, [1]);
+    assert.deepEqual(trackedWindowStateView.plannedVideoTabOrder, [1]);
   },
 );

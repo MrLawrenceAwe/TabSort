@@ -1,11 +1,17 @@
 import { isValidWindowId } from '../shared/guards.js';
 import { logDebug, logListenerError, withErrorLogging } from '../shared/log.js';
 import { recomputeSortState } from './sort-state.js';
-import { listTabIds } from './tracked-tab-record-store.js';
-import { resetTrackedWindowStore, setTrackedWindowId } from './tracked-window-session.js';
-import { trackedWindowStateView } from './tracked-window-state-view.js';
+import {
+  listTabIds,
+  resetTrackedWindowStore,
+  setTrackedWindowId,
+  trackedWindowStateView,
+} from './tracked-window-store.js';
 import { collectPlaybackMetricsBatch } from './collect-playback-metrics.js';
 import { reconcileWindowTabRecords } from './tab-record-reconciler.js';
+import { listWindowTabs } from './chrome-api.js';
+import { isWatchOrShortsPage } from './youtube-url-utils.js';
+import { shouldRefreshRecordMetrics } from '../shared/tab-readiness/refresh-policy.js';
 
 const REFRESH_ALARM_NAME = 'refreshRemaining';
 const REFRESH_INTERVAL_MINUTES = 1;
@@ -35,15 +41,31 @@ export function resetTrackedWindow() {
   recomputeSortState();
 }
 
+export async function syncFocusedWindow(windowId) {
+  if (!isValidWindowId(windowId)) return;
+  if (windowId === trackedWindowStateView.windowId) return;
+  setTrackedWindowId(windowId, { force: true });
+  await reconcileWindowTabRecords(windowId, { force: true });
+}
+
 async function syncInitialWindowState() {
   const lastFocusedWindowId = await getLastFocusedWindowId();
-  const targetWindowId = isValidWindowId(lastFocusedWindowId) ? lastFocusedWindowId : null;
+  const targetWindowId =
+    isValidWindowId(lastFocusedWindowId) && (await windowHasTrackedYoutubeTabs(lastFocusedWindowId))
+      ? lastFocusedWindowId
+      : null;
   await reconcileWindowTabRecords(targetWindowId, { force: true });
 
   const ids = listTabIds();
   if (ids.length) {
     await collectPlaybackMetricsBatch(ids);
   }
+}
+
+async function windowHasTrackedYoutubeTabs(windowId) {
+  if (!isValidWindowId(windowId)) return false;
+  const tabs = await listWindowTabs(windowId);
+  return Array.isArray(tabs) && tabs.some((tab) => isWatchOrShortsPage(tab?.url));
 }
 
 function ensureRefreshAlarm() {
@@ -80,7 +102,7 @@ export function initializeWindowLifecycle() {
       if (alarm.name !== REFRESH_ALARM_NAME) return;
       await reconcileWindowTabRecords(trackedWindowStateView.windowId, { force: true });
       const ids = listTabIds();
-      await collectPlaybackMetricsBatch(ids);
+      await collectPlaybackMetricsBatch(ids, { shouldRefresh: shouldRefreshRecordMetrics });
     }),
   );
 
@@ -94,10 +116,7 @@ export function initializeWindowLifecycle() {
 
   chrome.windows.onFocusChanged.addListener(
     withErrorLogging('windows.onFocusChanged', async (windowId) => {
-      if (!isValidWindowId(windowId)) return;
-      if (windowId === trackedWindowStateView.windowId) return;
-      setTrackedWindowId(windowId, { force: true });
-      await reconcileWindowTabRecords(windowId, { force: true });
+      await syncFocusedWindow(windowId);
     }),
   );
 

@@ -40,6 +40,6 @@ test('loadSortOptions falls back to defaults when chrome is unavailable', async 
 
 test('saveSortOptions resolves when chrome is unavailable', async () => {
   await withMissingChrome(async () => {
-    await assert.doesNotReject(() => saveSortOptions({ groupNonYoutubeTabsByDomain: true }));
+    await assert.doesNotReject(() => saveSortOptions({ groupOtherTabsBySite: true }));
   });
 });

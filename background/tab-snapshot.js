@@ -1,15 +1,14 @@
 import { cloneSortSummary } from '../shared/sort-summary.js';
 import { logDebug } from '../shared/log.js';
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
-import { setSnapshotSignature } from './tracked-window-session.js';
-import { trackedWindowStateView } from './tracked-window-state-view.js';
+import { setSnapshotSignature, trackedWindowStateView } from './tracked-window-store.js';
 
 export function buildTabSnapshot() {
   return {
     tabRecordsById: trackedWindowStateView.tabRecordsById,
-    targetVideoTabOrder: [...trackedWindowStateView.targetVideoTabOrder],
+    plannedVideoTabOrder: [...trackedWindowStateView.plannedVideoTabOrder],
     trackedTabIdsInWindowOrder: [...trackedWindowStateView.trackedTabIdsInWindowOrder],
-    allEligibleVideosSorted: trackedWindowStateView.allEligibleVideosSorted,
+    isSortComplete: trackedWindowStateView.isSortComplete,
     sortSummary: cloneSortSummary(trackedWindowStateView.sortSummary),
   };
 }

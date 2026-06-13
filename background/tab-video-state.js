@@ -12,9 +12,9 @@ export function markRemainingTimeAsStale(record) {
   record.remainingTimeStale = true;
 }
 
-export function resetVideoMetricsReadiness(record, { videoWaitStartedAt = null } = {}) {
-  record.mediaElementObserved = false;
-  record.videoWaitStartedAt = videoWaitStartedAt;
+export function resetVideoReadiness(record, { waitingForVideoSince = null } = {}) {
+  record.videoElementReady = false;
+  record.waitingForVideoSince = waitingForVideoSince;
 }
 
 function clearVideoIdentity(record) {
@@ -23,22 +23,22 @@ function clearVideoIdentity(record) {
   markRemainingTimeAsStale(record);
 }
 
-export function markMediaElementObserved(record) {
-  record.mediaElementObserved = true;
-  record.videoWaitStartedAt = null;
+export function markVideoElementReady(record) {
+  record.videoElementReady = true;
+  record.waitingForVideoSince = null;
 }
 
 export function applyVideoMetricsUnavailable(record) {
   if (!record) return;
-  record.contentScriptReported = false;
-  resetVideoMetricsReadiness(record);
+  record.pageRuntimeReady = false;
+  resetVideoReadiness(record);
   clearRemainingTime(record);
   markRemainingTimeAsStale(record);
 }
 
-function applyVideoIdentityChanged(record, { contentScriptReported = false, timestamp = null } = {}) {
-  record.contentScriptReported = Boolean(contentScriptReported);
-  resetVideoMetricsReadiness(record, { videoWaitStartedAt: timestamp });
+function applyVideoIdentityChanged(record, { pageRuntimeReady = false, timestamp = null } = {}) {
+  record.pageRuntimeReady = Boolean(pageRuntimeReady);
+  resetVideoReadiness(record, { waitingForVideoSince: timestamp });
   clearVideoIdentity(record);
 }
 
@@ -55,12 +55,12 @@ export function applyContentScriptReady(record, { urlChanged = false, url = null
   if (!record) return;
   const timestamp = getCurrentTimeMs();
   if (urlChanged) {
-    applyVideoIdentityChanged(record, { contentScriptReported: true, timestamp });
+    applyVideoIdentityChanged(record, { pageRuntimeReady: true, timestamp });
   }
   if (url) record.url = url;
-  record.contentScriptReported = true;
-  if (!record.mediaElementObserved && typeof record.videoWaitStartedAt !== 'number') {
-    record.videoWaitStartedAt = timestamp;
+  record.pageRuntimeReady = true;
+  if (!record.videoElementReady && typeof record.waitingForVideoSince !== 'number') {
+    record.waitingForVideoSince = timestamp;
   }
 }
 
@@ -83,6 +83,6 @@ export function applyVideoDetailsFromPage(record, details = {}, { urlChanged = f
   if (record.isLiveNow) {
     clearRemainingTime(record);
     record.remainingTimeStale = false;
-    record.videoWaitStartedAt = null;
+    record.waitingForVideoSince = null;
   }
 }

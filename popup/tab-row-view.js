@@ -6,7 +6,7 @@ import {
   TAB_GUIDANCE,
 } from '../shared/tab-readiness/action-guidance.js';
 
-const CLICKABLE_GUIDANCE_MESSAGES = Object.freeze({
+const GUIDANCE_ACTION_MESSAGES = Object.freeze({
   ACTIVATE_TAB: RUNTIME_MESSAGE_TYPES.ACTIVATE_TAB,
   RELOAD_TAB: RUNTIME_MESSAGE_TYPES.RELOAD_TAB,
 });
@@ -23,33 +23,33 @@ const ROW_VIEW_COLUMNS = Object.freeze({
   ],
 });
 
-export function renderTabRow(row, tabRecord, allEligibleVideosSorted, postRuntimeMessage) {
+export function renderTabRow(row, tabRecord, isSortComplete, postRuntimeMessage) {
   row.insertCell(0).textContent = tabRecord.videoDetails?.title ?? tabRecord.url;
 
   const guidance = determineTabGuidance(tabRecord);
   if (guidance === TAB_GUIDANCE.RELOAD_TAB) {
     row.classList.add('reload-required-row');
   }
-  if (!allEligibleVideosSorted) {
+  if (!isSortComplete) {
     insertGuidanceCell(row, tabRecord, guidance, postRuntimeMessage);
   }
 
-  insertInfoCells(row, tabRecord, allEligibleVideosSorted, guidance);
+  insertInfoCells(row, tabRecord, isSortComplete, guidance);
 
   const remaining = tabRecord?.videoDetails?.remainingTime;
   const hasRemainingTime = isFiniteNumber(remaining) && !tabRecord.remainingTimeStale;
-  if (hasRemainingTime && !allEligibleVideosSorted) row.classList.add('sort-ready-row');
+  if (hasRemainingTime && !isSortComplete) row.classList.add('sort-ready-row');
 }
 
-function insertInfoCells(row, record, allEligibleVideosSorted, guidance) {
-  const columns = allEligibleVideosSorted
+function insertInfoCells(row, record, isSortComplete, guidance) {
+  const columns = isSortComplete
     ? ROW_VIEW_COLUMNS.sortedView
     : ROW_VIEW_COLUMNS.planningView;
 
   columns.forEach((column) => {
     const cell = row.insertCell(row.cells.length);
     const value = column.getter(record, guidance);
-    cell.textContent = allEligibleVideosSorted ? value : toDisplayText(value);
+    cell.textContent = isSortComplete ? value : toDisplayText(value);
   });
 }
 
@@ -68,8 +68,8 @@ function insertGuidanceCell(row, record, guidance, postRuntimeMessage) {
   const linkElement = createActionLink(
     getTabGuidanceLabel(guidance),
     guidance === TAB_GUIDANCE.RELOAD_TAB
-      ? CLICKABLE_GUIDANCE_MESSAGES.RELOAD_TAB
-      : CLICKABLE_GUIDANCE_MESSAGES.ACTIVATE_TAB,
+      ? GUIDANCE_ACTION_MESSAGES.RELOAD_TAB
+      : GUIDANCE_ACTION_MESSAGES.ACTIVATE_TAB,
     record.id,
     postRuntimeMessage,
   );

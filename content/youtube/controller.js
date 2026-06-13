@@ -10,6 +10,8 @@ import { createVideoMetricsReadinessTracker } from './video-metrics-readiness.js
 import { createTitleObserver } from './title-observer.js';
 import { handleCollectVideoMetricsMessage } from './video-metrics.js';
 
+const YOUTUBE_VIDEO_PAGE_REGEX = /^https?:\/\/([^/]+\.)?youtube\.com\/(?:watch\?|shorts\/)/i;
+
 export function createYoutubePageController({
   config = {},
   environment = globalThis,
@@ -136,10 +138,18 @@ export function createYoutubePageController({
     }
   }
 
+  function isVideoPageUrl(url) {
+    return typeof url === 'string' && YOUTUBE_VIDEO_PAGE_REGEX.test(url);
+  }
+
   function refreshPageState({ sendReadySignal = false, forceReadySignal = false } = {}) {
     syncObservedPageUrl();
     if (sendReadySignal) {
       dispatchContentScriptReadySignal({ force: forceReadySignal });
+    }
+    if (!isVideoPageUrl(getCurrentPageUrl())) {
+      disposeObservers();
+      return;
     }
     publishPageVideoDetails();
     videoMetricsReadiness.watchForVideoMount();

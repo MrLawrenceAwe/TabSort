@@ -40,17 +40,17 @@ function resolveGuidanceForMissingRemainingTime(tabRecord, transitionCanSettle, 
   switch (tabRecord.status) {
     case TAB_STATES.UNSUSPENDED:
       if (tabRecord.isActiveTab) {
-        if (tabRecord.contentScriptReported && !tabRecord.mediaElementObserved) {
+        if (tabRecord.pageRuntimeReady && !tabRecord.videoElementReady) {
           return canMediaStillSettle(tabRecord, nowMs)
             ? TAB_GUIDANCE.WAIT_FOR_VIDEO_DATA
             : TAB_GUIDANCE.RELOAD_TAB;
         }
-        return transitionCanSettle && !tabRecord.contentScriptReported
+        return transitionCanSettle && !tabRecord.pageRuntimeReady
           ? TAB_GUIDANCE.NONE
           : TAB_GUIDANCE.RELOAD_TAB;
       }
-      if (transitionCanSettle && !tabRecord.contentScriptReported) return TAB_GUIDANCE.NONE;
-      if (!tabRecord.contentScriptReported) return TAB_GUIDANCE.RELOAD_TAB;
+      if (transitionCanSettle && !tabRecord.pageRuntimeReady) return TAB_GUIDANCE.NONE;
+      if (!tabRecord.pageRuntimeReady) return TAB_GUIDANCE.RELOAD_TAB;
       return TAB_GUIDANCE.VIEW_TAB_TO_LOAD_TIME;
     case TAB_STATES.SUSPENDED:
       return TAB_GUIDANCE.FOCUS_TAB;
@@ -80,7 +80,7 @@ export function determineTabGuidance(tabRecord, { now = Date.now } = {}) {
   }
 
   if (tabRecord?.remainingTimeStale) {
-    if (!tabRecord.contentScriptReported || tabRecord.isActiveTab) {
+    if (!tabRecord.pageRuntimeReady || tabRecord.isActiveTab) {
       return resolveGuidanceForMissingRemainingTime(tabRecord, transitionCanSettle, nowMs);
     }
     return TAB_GUIDANCE.VIEW_TAB_TO_REFRESH_TIME;

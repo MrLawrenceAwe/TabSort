@@ -28,7 +28,7 @@ test(
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
-    const initialRecord = createTabRecordFixture(1, { contentScriptReported: false });
+    const initialRecord = createTabRecordFixture(1, { pageRuntimeReady: false });
     setTrackedTabRecords({ 1: initialRecord });
 
     stubChromeTabGetSequence([{ tabId: 1 }], { async: true });
@@ -36,13 +36,13 @@ test(
 
     const collectPromise = collectPlaybackMetrics(1);
 
-    const replacementRecord = createTabRecordFixture(1, { contentScriptReported: false });
+    const replacementRecord = createTabRecordFixture(1, { pageRuntimeReady: false });
     setTrackedTabRecords({ 1: replacementRecord });
 
     await collectPromise;
 
     assert.equal(getWritableTabRecord(1), replacementRecord);
-    assert.equal(replacementRecord.contentScriptReported, true);
+    assert.equal(replacementRecord.pageRuntimeReady, true);
     assert.equal(replacementRecord.videoDetails.lengthSeconds, 120);
     assert.equal(replacementRecord.videoDetails.remainingTime, 100);
     assert.equal(replacementRecord.remainingTimeStale, false);
@@ -59,7 +59,7 @@ test(
         url: 'https://www.youtube.com/watch?v=old',
         videoDetails: { title: 'Old Video', remainingTime: 45, lengthSeconds: 120 },
         remainingTimeStale: false,
-        contentScriptReported: false,
+        pageRuntimeReady: false,
       }),
     });
 
@@ -92,8 +92,8 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
-        contentScriptReported: false,
-        mediaElementObserved: false,
+        pageRuntimeReady: false,
+        videoElementReady: false,
         videoDetails: null,
       }),
     });
@@ -114,8 +114,8 @@ test(
 
     setTrackedTabRecord(1, createTabRecordFixture(1, {
       url: 'https://www.youtube.com/watch?v=new',
-      contentScriptReported: false,
-      mediaElementObserved: false,
+      pageRuntimeReady: false,
+      videoElementReady: false,
       videoDetails: null,
       remainingTimeStale: true,
     }));
@@ -125,8 +125,8 @@ test(
     const record = trackedWindowStateView.tabRecordsById[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
     assert.equal(record.videoDetails, null);
-    assert.equal(record.contentScriptReported, false);
-    assert.equal(record.mediaElementObserved, false);
+    assert.equal(record.pageRuntimeReady, false);
+    assert.equal(record.videoElementReady, false);
     assert.equal(record.remainingTimeStale, true);
   },
 );
@@ -139,8 +139,8 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=new',
-        contentScriptReported: true,
-        mediaElementObserved: false,
+        pageRuntimeReady: true,
+        videoElementReady: false,
         videoDetails: { title: 'New Video', remainingTime: null, lengthSeconds: null },
         remainingTimeStale: true,
       }),
@@ -151,7 +151,7 @@ test(
       createPlaybackMetricsFixture({
         title: 'New Video',
         url: 'https://www.youtube.com/watch?v=new',
-        mediaElementObserved: false,
+        videoElementReady: false,
         lengthSeconds: 400,
         currentTime: 10,
       }),
@@ -160,9 +160,9 @@ test(
     await collectPlaybackMetrics(1);
 
     const record = trackedWindowStateView.tabRecordsById[1];
-    assert.equal(record.contentScriptReported, true);
-    assert.equal(record.mediaElementObserved, false);
-    assert.equal(typeof record.videoWaitStartedAt, 'number');
+    assert.equal(record.pageRuntimeReady, true);
+    assert.equal(record.videoElementReady, false);
+    assert.equal(typeof record.waitingForVideoSince, 'number');
     assert.equal(record.videoDetails.lengthSeconds, 400);
     assert.equal(record.videoDetails.remainingTime, 400);
     assert.equal(record.remainingTimeStale, true);
@@ -177,8 +177,8 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=archive',
-        contentScriptReported: true,
-        mediaElementObserved: false,
+        pageRuntimeReady: true,
+        videoElementReady: false,
         videoDetails: { title: 'Archived Stream', remainingTime: null, lengthSeconds: null },
         remainingTimeStale: true,
       }),
@@ -189,9 +189,9 @@ test(
     await collectPlaybackMetrics(1);
 
     const record = trackedWindowStateView.tabRecordsById[1];
-    assert.equal(record.contentScriptReported, true);
-    assert.equal(record.mediaElementObserved, true);
-    assert.equal(record.videoWaitStartedAt, null);
+    assert.equal(record.pageRuntimeReady, true);
+    assert.equal(record.videoElementReady, true);
+    assert.equal(record.waitingForVideoSince, null);
     assert.equal(record.videoDetails.lengthSeconds, 6211);
     assert.equal(record.videoDetails.remainingTime, 6211);
     assert.equal(record.remainingTimeStale, false);
@@ -206,8 +206,8 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=archive',
-        contentScriptReported: true,
-        mediaElementObserved: false,
+        pageRuntimeReady: true,
+        videoElementReady: false,
         videoDetails: { title: 'Archived Stream', remainingTime: null, lengthSeconds: 0 },
         remainingTimeStale: true,
       }),
@@ -218,8 +218,8 @@ test(
     await collectPlaybackMetrics(1);
 
     const record = trackedWindowStateView.tabRecordsById[1];
-    assert.equal(record.contentScriptReported, true);
-    assert.equal(record.mediaElementObserved, true);
+    assert.equal(record.pageRuntimeReady, true);
+    assert.equal(record.videoElementReady, true);
     assert.equal(record.videoDetails.lengthSeconds, 6211);
     assert.equal(record.videoDetails.remainingTime, 6211);
     assert.equal(record.remainingTimeStale, false);
@@ -234,8 +234,8 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=archive',
-        contentScriptReported: true,
-        mediaElementObserved: false,
+        pageRuntimeReady: true,
+        videoElementReady: false,
         videoDetails: { title: 'Archived Stream', remainingTime: null, lengthSeconds: 0 },
         remainingTimeStale: true,
       }),
@@ -249,8 +249,8 @@ test(
     await collectPlaybackMetrics(1);
 
     const record = trackedWindowStateView.tabRecordsById[1];
-    assert.equal(record.contentScriptReported, true);
-    assert.equal(record.mediaElementObserved, false);
+    assert.equal(record.pageRuntimeReady, true);
+    assert.equal(record.videoElementReady, false);
     assert.equal(record.videoDetails.lengthSeconds, null);
     assert.equal(record.videoDetails.remainingTime, null);
     assert.equal(record.remainingTimeStale, true);
@@ -265,8 +265,8 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=archive',
-        contentScriptReported: true,
-        mediaElementObserved: false,
+        pageRuntimeReady: true,
+        videoElementReady: false,
         videoDetails: { title: 'Archived Stream', remainingTime: null, lengthSeconds: null },
         remainingTimeStale: true,
       }),
@@ -280,8 +280,8 @@ test(
     await collectPlaybackMetrics(1);
 
     const record = trackedWindowStateView.tabRecordsById[1];
-    assert.equal(record.contentScriptReported, true);
-    assert.equal(record.mediaElementObserved, false);
+    assert.equal(record.pageRuntimeReady, true);
+    assert.equal(record.videoElementReady, false);
     assert.equal(record.videoDetails.lengthSeconds, 6211);
     assert.equal(record.videoDetails.remainingTime, 6211);
     assert.equal(record.remainingTimeStale, true);
@@ -296,8 +296,8 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=previous',
-        contentScriptReported: true,
-        mediaElementObserved: true,
+        pageRuntimeReady: true,
+        videoElementReady: true,
         videoDetails: {
           title: 'OpenAI vs. Anthropic\'s Direct Faceoff + Future of Agents - With Aaron Levie',
           remainingTime: 3364,
@@ -321,9 +321,9 @@ test(
     await collectPlaybackMetrics(1);
 
     const record = trackedWindowStateView.tabRecordsById[1];
-    assert.equal(record.contentScriptReported, true);
-    assert.equal(record.mediaElementObserved, false);
-    assert.equal(typeof record.videoWaitStartedAt, 'number');
+    assert.equal(record.pageRuntimeReady, true);
+    assert.equal(record.videoElementReady, false);
+    assert.equal(typeof record.waitingForVideoSince, 'number');
     assert.equal(record.videoDetails.lengthSeconds, 3364);
     assert.equal(record.videoDetails.remainingTime, 3364);
     assert.equal(record.remainingTimeStale, true);
@@ -354,7 +354,7 @@ test(
       callback({
         title: `Video ${tabId}`,
         url: `https://www.youtube.com/watch?v=${tabId}`,
-        mediaElementObserved: true,
+        videoElementReady: true,
         lengthSeconds: 120,
         currentTime: tabId * 10,
         playbackRate: 1,
@@ -376,5 +376,107 @@ test(
     assert.equal(trackedWindowStateView.tabRecordsById[1].videoDetails.remainingTime, 110);
     assert.equal(trackedWindowStateView.tabRecordsById[2].videoDetails.remainingTime, 100);
     assert.equal(trackedWindowStateView.tabRecordsById[3].videoDetails.remainingTime, 90);
+  },
+);
+
+test(
+  'collectPlaybackMetrics reinjects the YouTube bootstrap when no receiver is available',
+  { concurrency: false },
+  async () => {
+    resetTrackedWindowState();
+    setTrackedTabRecords({
+      1: createTabRecordFixture(1, {
+        pageRuntimeReady: false,
+        videoElementReady: false,
+        videoDetails: null,
+      }),
+    });
+
+    stubChromeTabGetSequence([
+      { tabId: 1, url: 'https://www.youtube.com/watch?v=1' },
+      { tabId: 1, url: 'https://www.youtube.com/watch?v=1' },
+    ]);
+
+    const injected = [];
+    globalThis.chrome.scripting = {
+      executeScript(options, callback) {
+        injected.push(options);
+        callback();
+      },
+    };
+
+    let sendCount = 0;
+    globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
+      sendCount += 1;
+      if (sendCount === 1) {
+        globalThis.chrome.runtime.lastError = new Error(
+          'Could not establish connection. Receiving end does not exist.',
+        );
+        callback();
+        globalThis.chrome.runtime.lastError = null;
+        return;
+      }
+      callback(createPlaybackMetricsFixture({ tabId: 1 }));
+    };
+
+    await collectPlaybackMetrics(1);
+
+    const record = trackedWindowStateView.tabRecordsById[1];
+    assert.equal(sendCount, 2);
+    assert.deepEqual(injected, [
+      {
+        target: { tabId: 1 },
+        files: ['content/youtube/youtube-page-bootstrap.js'],
+      },
+    ]);
+    assert.equal(record.videoDetails.remainingTime, 100);
+    assert.equal(record.remainingTimeStale, false);
+  },
+);
+
+test(
+  'collectPlaybackMetrics waits for injected bootstrap before giving up on missing receivers',
+  { concurrency: false },
+  async () => {
+    resetTrackedWindowState();
+    setTrackedTabRecords({
+      1: createTabRecordFixture(1, {
+        pageRuntimeReady: false,
+        videoElementReady: false,
+        videoDetails: null,
+      }),
+    });
+
+    stubChromeTabGetSequence([
+      { tabId: 1, url: 'https://www.youtube.com/watch?v=1' },
+      { tabId: 1, url: 'https://www.youtube.com/watch?v=1' },
+    ]);
+
+    globalThis.chrome.scripting = {
+      executeScript(_options, callback) {
+        callback();
+      },
+    };
+
+    let sendCount = 0;
+    globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
+      sendCount += 1;
+      if (sendCount < 3) {
+        globalThis.chrome.runtime.lastError = new Error(
+          'Could not establish connection. Receiving end does not exist.',
+        );
+        callback();
+        globalThis.chrome.runtime.lastError = null;
+        return;
+      }
+      callback(createPlaybackMetricsFixture({ tabId: 1 }));
+    };
+
+    await collectPlaybackMetrics(1);
+
+    const record = trackedWindowStateView.tabRecordsById[1];
+    assert.equal(sendCount, 3);
+    assert.equal(record.videoDetails.remainingTime, 100);
+    assert.equal(record.remainingTimeStale, false);
   },
 );

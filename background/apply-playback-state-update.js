@@ -1,19 +1,19 @@
 import { getCurrentTimeMs } from './tracked-window-store.js';
 import {
-  markMediaElementObserved,
-  resetVideoMetricsReadiness,
+  markVideoElementReady,
+  resetVideoReadiness,
 } from './tab-video-state.js';
 
 export function applyPlaybackStateUpdate(record, playbackUpdate, currentTabUrl) {
   if (!record || !playbackUpdate) return;
 
-  record.contentScriptReported = playbackUpdate.contentScriptReported;
-  if (playbackUpdate.mediaElementObserved) {
-    markMediaElementObserved(record);
+  record.pageRuntimeReady = playbackUpdate.pageRuntimeReady;
+  if (playbackUpdate.videoElementReady) {
+    markVideoElementReady(record);
   } else {
-    resetVideoMetricsReadiness(record, { videoWaitStartedAt: record.videoWaitStartedAt });
-    if (record.contentScriptReported && typeof record.videoWaitStartedAt !== 'number') {
-      record.videoWaitStartedAt = getCurrentTimeMs();
+    resetVideoReadiness(record, { waitingForVideoSince: record.waitingForVideoSince });
+    if (record.pageRuntimeReady && typeof record.waitingForVideoSince !== 'number') {
+      record.waitingForVideoSince = getCurrentTimeMs();
     }
   }
   record.videoDetails = record.videoDetails || {};

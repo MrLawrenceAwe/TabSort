@@ -6,6 +6,7 @@
     "permissions": [
       "tabs",
       "alarms",
+      "scripting",
       "webNavigation",
       "storage"
     ],

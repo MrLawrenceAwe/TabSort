@@ -101,16 +101,16 @@ export function derivePlaybackStateUpdate({
   const isLiveNow =
     metricsPayload.isLive === true ? true : metricsPayload.isLive === false ? false : record.isLiveNow;
   const previousMediaStillApplies =
-    record.mediaElementObserved === true &&
+    record.videoElementReady === true &&
     areEquivalentVideoUrls(record.url, payloadUrl || currentTabUrl || requestedUrl);
   const playbackEvidenceIsUsable = hasUsablePlaybackEvidence(metricsPayload);
 
   const update = {
     nextUrl: payloadUrl || currentTabUrl || null,
     nextTitle: typeof metricsPayload.title === 'string' ? metricsPayload.title : null,
-    contentScriptReported: true,
-    mediaElementObserved:
-      metricsPayload.mediaElementObserved === true ||
+    pageRuntimeReady: true,
+    videoElementReady:
+      metricsPayload.videoElementReady === true ||
       previousMediaStillApplies ||
       playbackEvidenceIsUsable,
     isLiveNow,
@@ -125,17 +125,17 @@ export function derivePlaybackStateUpdate({
   }
 
   if (!isFiniteNumber(resolvedLengthSeconds)) {
-    update.remainingTimeStale = !update.mediaElementObserved;
+    update.remainingTimeStale = !update.videoElementReady;
     return update;
   }
 
   if (hasMediaDurationMismatch(metricsPayload, record, resolvedLengthSeconds)) {
-    update.mediaElementObserved = false;
+    update.videoElementReady = false;
     update.remainingTime = resolvedLengthSeconds;
     return update;
   }
 
-  if (!update.mediaElementObserved) {
+  if (!update.videoElementReady) {
     update.remainingTime = resolvedLengthSeconds;
     return update;
   }

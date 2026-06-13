@@ -22,20 +22,20 @@ export function buildYoutubeTabOrder(unpinnedTabs, orderedTrackedTabIds) {
   return [...orderedVideoTabIds, ...remainingVideoTabIds, ...otherYoutubeTabIds];
 }
 
-export function buildNonYoutubeOrder(unpinnedTabs, groupByDomain) {
-  const nonYoutubeTabs = unpinnedTabs
+export function buildOtherTabOrder(unpinnedTabs, groupBySite) {
+  const otherTabs = unpinnedTabs
     .filter((tab) => tab && !isYoutubeDomain(tab.url))
     .sort((a, b) => a.index - b.index);
-  if (!nonYoutubeTabs.length) return [];
+  if (!otherTabs.length) return [];
 
-  if (!groupByDomain) {
-    return nonYoutubeTabs.map((tab) => tab.id);
+  if (!groupBySite) {
+    return otherTabs.map((tab) => tab.id);
   }
 
   const domainOrder = [];
   const domainToTabIds = new Map();
 
-  for (const tab of nonYoutubeTabs) {
+  for (const tab of otherTabs) {
     const key = getHostnameKey(tab.url);
     if (!domainToTabIds.has(key)) {
       domainToTabIds.set(key, []);

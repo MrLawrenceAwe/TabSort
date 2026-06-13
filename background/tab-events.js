@@ -1,20 +1,66 @@
 import { isFiniteNumber, isValidWindowId } from '../shared/guards.js';
 import { logDebug, logWarn, withErrorLogging } from '../shared/log.js';
-import { getTab } from './chrome-tabs.js';
+import { getTab } from './chrome-api.js';
 import { recomputeSortState } from './sort-state.js';
 import { collectPlaybackMetrics } from './collect-playback-metrics.js';
-import { deleteTabRecord } from './tracked-tab-record-store.js';
-import { canManageWindow } from './tracked-window-session.js';
-import { trackedWindowStateView } from './tracked-window-state-view.js';
+import {
+  canManageWindow,
+  deleteTabRecord,
+  trackedWindowStateView,
+} from './tracked-window-store.js';
 import { reconcileWindowTabRecords } from './tab-record-reconciler.js';
 import { isWatchOrShortsPage } from './youtube-url-utils.js';
+
+const RECONCILE_DEBOUNCE_MS = 200;
+const pendingReconcilesByWindow = new Map();
+
+function getPendingKey(windowId) {
+  return isValidWindowId(windowId) ? String(windowId) : 'last-focused';
+}
+
+function scheduleWindowReconcile(windowId, { force = false, afterReconcile } = {}) {
+  const key = getPendingKey(windowId);
+  const existing = pendingReconcilesByWindow.get(key);
+  if (existing) {
+    clearTimeout(existing.timerId);
+    existing.force = existing.force || force;
+    if (typeof afterReconcile === 'function') {
+      existing.afterReconcile.push(afterReconcile);
+    }
+    existing.timerId = setTimeout(() => {
+      flushWindowReconcile(key).catch((error) => logDebug('scheduled reconcile failed', error));
+    }, RECONCILE_DEBOUNCE_MS);
+    return;
+  }
+
+  const pending = {
+    windowId,
+    force,
+    afterReconcile: typeof afterReconcile === 'function' ? [afterReconcile] : [],
+    timerId: null,
+  };
+  pending.timerId = setTimeout(() => {
+    flushWindowReconcile(key).catch((error) => logDebug('scheduled reconcile failed', error));
+  }, RECONCILE_DEBOUNCE_MS);
+  pendingReconcilesByWindow.set(key, pending);
+}
+
+async function flushWindowReconcile(key) {
+  const pending = pendingReconcilesByWindow.get(key);
+  if (!pending) return;
+  pendingReconcilesByWindow.delete(key);
+  await reconcileWindowTabRecords(pending.windowId, pending.force ? { force: true } : undefined);
+  for (const callback of pending.afterReconcile) {
+    await callback();
+  }
+}
 
 function syncForWindowChange(label, resolveWindowId) {
   return withErrorLogging(label, async (...args) => {
     const windowId = resolveWindowId(...args);
     if (!isValidWindowId(windowId)) return;
     if (!canManageWindow(windowId)) return;
-    await reconcileWindowTabRecords(windowId);
+    scheduleWindowReconcile(windowId);
   });
 }
 
@@ -29,10 +75,11 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
         changeInfo.status === 'loading' ||
         changeInfo.url
       ) {
-        await reconcileWindowTabRecords(tab.windowId);
-        if (isWatchOrShortsPage(tab.url)) {
-          await collectPlaybackMetrics(tabId);
-        }
+        scheduleWindowReconcile(tab.windowId, {
+          afterReconcile: isWatchOrShortsPage(tab.url)
+            ? () => collectPlaybackMetrics(tabId)
+            : undefined,
+        });
       }
     }),
   );
@@ -45,11 +92,14 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
     withErrorLogging('tabs.onActivated', async (activeInfo) => {
       if (!isValidWindowId(activeInfo?.windowId)) return;
       if (!canManageWindow(activeInfo.windowId)) return;
-      await reconcileWindowTabRecords(activeInfo.windowId);
       if (!isFiniteNumber(activeInfo.tabId)) return;
-      const tab = await getTab(activeInfo.tabId);
-      if (!isWatchOrShortsPage(tab?.url)) return;
-      await collectPlaybackMetrics(activeInfo.tabId);
+      scheduleWindowReconcile(activeInfo.windowId, {
+        afterReconcile: async () => {
+          const tab = await getTab(activeInfo.tabId);
+          if (!isWatchOrShortsPage(tab?.url)) return;
+          await collectPlaybackMetrics(activeInfo.tabId);
+        },
+      });
     }),
   );
 
@@ -98,8 +148,9 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
           windowIdForUpdate = trackedWindowStateView.windowId;
         }
 
-        await reconcileWindowTabRecords(windowIdForUpdate);
-        await collectPlaybackMetrics(details.tabId);
+        scheduleWindowReconcile(windowIdForUpdate, {
+          afterReconcile: () => collectPlaybackMetrics(details.tabId),
+        });
       }),
       { url: [{ hostContains: 'youtube.com' }] },
     );
