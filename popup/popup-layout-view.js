@@ -1,25 +1,25 @@
 import { getPopupDocument, getPopupElement } from './popup-elements.js';
 import { popupState } from './popup-store.js';
 
-function updateStatus(statusElement) {
-  if (!statusElement) return;
+function updateStatus(status) {
+  if (!status) return;
   const trackedTabCount = popupState.sortSummary.counts.tracked;
   const sortReadyTabCount = popupState.sortSummary.counts.sortReady;
   if (!popupState.isSortComplete) {
-    statusElement.classList.toggle('hide', trackedTabCount <= 1);
-    statusElement.textContent = `${sortReadyTabCount}/${trackedTabCount} ready for sort.`;
+    status.classList.toggle('hide', trackedTabCount <= 1);
+    status.textContent = `${sortReadyTabCount} of ${trackedTabCount} tabs ready.`;
     return;
   }
-  statusElement.classList.add('hide');
+  status.classList.add('hide');
 }
 
-function updateSortedBadge(sortedBadgeElement) {
-  if (!sortedBadgeElement) return;
-  sortedBadgeElement.classList.toggle('hide', !popupState.isSortComplete);
+function updateSortedBadge(sortedBadge) {
+  if (!sortedBadge) return;
+  sortedBadge.classList.toggle('hide', !popupState.isSortComplete);
 }
 
 export function getSortButtonText(sortReadyTabCount, totalTabCount) {
-  return sortReadyTabCount === totalTabCount ? 'Sort Videos' : 'Move Ready Videos';
+  return sortReadyTabCount === totalTabCount ? 'Sort Tabs' : 'Organise Ready Tabs';
 }
 
 function updateSortButton(sortButton, shouldShowSort) {
@@ -41,11 +41,10 @@ function clearReadyRows(table) {
 }
 
 export function setMetadataColumnsVisible(visible) {
-  const actionRequired = getPopupElement('actionRequiredColumn');
-  const tabStatus = getPopupElement('tabStatusColumn');
-  const method = visible ? 'remove' : 'add';
-  actionRequired?.classList[method]('hide');
-  tabStatus?.classList[method]('hide');
+  const nextStep = getPopupElement('nextStepColumn');
+  const loadState = getPopupElement('loadStateColumn');
+  nextStep?.classList.toggle('hide', !visible);
+  loadState?.classList.toggle('hide', !visible);
 }
 
 function setOptionToggleVisibility(visible) {
@@ -57,9 +56,9 @@ function setOptionToggleVisibility(visible) {
 }
 
 export function syncPopupLayout() {
-  const statusElement = getPopupElement('statusElement');
+  const status = getPopupElement('status');
   const sortButton = getPopupElement('sortButton');
-  const sortedBadgeElement = getPopupElement('sortedBadgeElement');
+  const sortedBadge = getPopupElement('sortedBadge');
   const table = getPopupElement('table');
   const { counts, sortReadyTabs } = popupState.sortSummary;
 
@@ -73,8 +72,8 @@ export function syncPopupLayout() {
 
   setOptionToggleVisibility(shouldShowSort);
 
-  updateStatus(statusElement);
-  updateSortedBadge(sortedBadgeElement);
+  updateStatus(status);
+  updateSortedBadge(sortedBadge);
   updateSortButton(sortButton, shouldShowSort);
 
   if (popupState.isSortComplete && table) {

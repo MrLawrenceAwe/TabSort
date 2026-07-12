@@ -1,13 +1,13 @@
-import { TAB_STATES } from '../../shared/tab-states.js';
-import { createEmptySortSummary } from '../../shared/sort-summary.js';
+import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
+import { createSortSummary } from '../../shared/sorting/summary.js';
 import {
-  trackedWindowStateView,
+  trackedWindow,
   resetTrackedWindowStore,
   replaceAllTabRecords,
   setSortState,
   setTabRecord,
-} from '../../background/tracked-window-store.js';
-import { createTabRecord } from '../../background/tab-record.js';
+} from '../../background/windows/store.js';
+import { createTabRecord } from '../../background/tabs/record.js';
 
 export function ensureChromeApi({ tabs = false } = {}) {
   if (!globalThis.chrome) {
@@ -162,7 +162,7 @@ export function stubChromeTabMetrics({
 
 export function resetTrackedWindowState(windowId = null) {
   resetTrackedWindowStore({ windowId });
-  setSortState({ sortSummary: createEmptySortSummary() });
+  setSortState({ sortSummary: createSortSummary() });
 }
 
 export function setTrackedTabRecords(tabRecordsById = {}) {
@@ -171,10 +171,10 @@ export function setTrackedTabRecords(tabRecordsById = {}) {
 
 export function setTrackedSortState(sortState = {}) {
   setSortState({
-    trackedTabIdsInWindowOrder: trackedWindowStateView.trackedTabIdsInWindowOrder,
-    plannedVideoTabOrder: trackedWindowStateView.plannedVideoTabOrder,
-    isSortComplete: trackedWindowStateView.isSortComplete,
-    sortSummary: trackedWindowStateView.sortSummary || createEmptySortSummary(),
+    trackedTabIdsInWindowOrder: trackedWindow.trackedTabIdsInWindowOrder,
+    plannedVideoTabOrder: trackedWindow.plannedVideoTabOrder,
+    isSortComplete: trackedWindow.isSortComplete,
+    sortSummary: trackedWindow.sortSummary || createSortSummary(),
     ...sortState,
   });
 }
@@ -188,11 +188,11 @@ export function createTabRecordFixture(id = 1, overrides = {}) {
     url: `https://www.youtube.com/watch?v=${id}`,
     index: 0,
     pinned: false,
-    status: TAB_STATES.UNSUSPENDED,
+    loadState: TAB_LOAD_STATES.UNSUSPENDED,
     pageRuntimeReady: true,
     videoElementReady: true,
-    isLiveNow: false,
-    isActiveTab: false,
+    isLive: false,
+    isActive: false,
     isHidden: false,
     videoDetails: { title: `Video ${id}`, remainingTime: null, lengthSeconds: null },
     loadingStartedAt: null,

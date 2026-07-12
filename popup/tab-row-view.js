@@ -6,20 +6,15 @@ import {
   TAB_GUIDANCE,
 } from '../shared/tab-readiness/action-guidance.js';
 
-const GUIDANCE_ACTION_MESSAGES = Object.freeze({
-  ACTIVATE_TAB: RUNTIME_MESSAGE_TYPES.ACTIVATE_TAB,
-  RELOAD_TAB: RUNTIME_MESSAGE_TYPES.RELOAD_TAB,
-});
-
-const ROW_VIEW_COLUMNS = Object.freeze({
-  sortedView: [
+const COLUMNS = Object.freeze({
+  sorted: [
     { key: 'remainingStatus', getter: formatRemainingStatus },
     { key: 'index', getter: formatIndex },
   ],
-  planningView: [
+  planning: [
     { key: 'remainingStatus', getter: formatRemainingStatus },
     { key: 'index', getter: formatIndex },
-    { key: 'status', getter: (record) => record.status },
+    { key: 'status', getter: (record) => record.loadState },
   ],
 });
 
@@ -43,8 +38,8 @@ export function renderTabRow(row, tabRecord, isSortComplete, postRuntimeMessage)
 
 function insertInfoCells(row, record, isSortComplete, guidance) {
   const columns = isSortComplete
-    ? ROW_VIEW_COLUMNS.sortedView
-    : ROW_VIEW_COLUMNS.planningView;
+    ? COLUMNS.sorted
+    : COLUMNS.planning;
 
   columns.forEach((column) => {
     const cell = row.insertCell(row.cells.length);
@@ -68,8 +63,8 @@ function insertGuidanceCell(row, record, guidance, postRuntimeMessage) {
   const linkElement = createActionLink(
     getTabGuidanceLabel(guidance),
     guidance === TAB_GUIDANCE.RELOAD_TAB
-      ? GUIDANCE_ACTION_MESSAGES.RELOAD_TAB
-      : GUIDANCE_ACTION_MESSAGES.ACTIVATE_TAB,
+      ? RUNTIME_MESSAGE_TYPES.RELOAD_TAB
+      : RUNTIME_MESSAGE_TYPES.OPEN_TAB,
     record.id,
     postRuntimeMessage,
   );
@@ -89,7 +84,7 @@ function createActionLink(text, actionType, tabId, postRuntimeMessage) {
 }
 
 export function formatRemainingStatus(record, requiredAction = determineTabGuidance(record)) {
-  if (record.isLiveNow) return 'Live Stream';
+  if (record.isLive) return 'Live Stream';
 
   const remaining = record?.videoDetails?.remainingTime;
   const hasRemainingTime = isFiniteNumber(remaining);

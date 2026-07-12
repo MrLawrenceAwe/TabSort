@@ -1,47 +1,47 @@
-function createEmptyPopupElements() {
+function createPopupElements() {
   return {
-    errorElement: null,
-    statusElement: null,
+    error: null,
+    status: null,
     sortButton: null,
-    sortedBadgeElement: null,
+    sortedBadge: null,
     table: null,
-    actionRequiredColumn: null,
-    tabStatusColumn: null,
+    nextStepColumn: null,
+    loadStateColumn: null,
     initialized: false,
   };
 }
 
-const popupElements = createEmptyPopupElements();
+const popupElements = createPopupElements();
 
-let rootPopupDocument = null;
+let popupDocument = null;
 
-function getRootDocument(nextDocument) {
-  return nextDocument ?? rootPopupDocument ?? globalThis.document;
+function resolveDocument(nextDocument) {
+  return nextDocument ?? popupDocument ?? globalThis.document;
 }
 
 export function resetPopupDom() {
-  Object.assign(popupElements, createEmptyPopupElements());
-  rootPopupDocument = null;
+  Object.assign(popupElements, createPopupElements());
+  popupDocument = null;
 }
 
 export function initializePopupDom(rootDocument = globalThis.document) {
   if (popupElements.initialized) return;
-  const runtimeDocument = getRootDocument(rootDocument);
+  const runtimeDocument = resolveDocument(rootDocument);
   if (!runtimeDocument) return;
 
-  rootPopupDocument = runtimeDocument;
-  popupElements.errorElement = runtimeDocument.getElementById('popupError');
-  popupElements.statusElement = runtimeDocument.getElementById('videoTabsReadyStatus');
+  popupDocument = runtimeDocument;
+  popupElements.error = runtimeDocument.getElementById('popupError');
+  popupElements.status = runtimeDocument.getElementById('sortStatus');
   popupElements.sortButton = runtimeDocument.getElementById('sortButton');
-  popupElements.sortedBadgeElement = runtimeDocument.getElementById('tabsSorted');
-  popupElements.table = runtimeDocument.getElementById('videoTabsTable');
-  popupElements.actionRequiredColumn = runtimeDocument.querySelector('.action-required');
-  popupElements.tabStatusColumn = runtimeDocument.querySelector('.tab-status');
+  popupElements.sortedBadge = runtimeDocument.getElementById('sortedBadge');
+  popupElements.table = runtimeDocument.getElementById('tabsTable');
+  popupElements.nextStepColumn = runtimeDocument.querySelector('.next-step');
+  popupElements.loadStateColumn = runtimeDocument.querySelector('.load-state');
   popupElements.initialized = true;
 }
 
 export function getPopupDocument() {
-  return getRootDocument();
+  return resolveDocument();
 }
 
 export function getPopupElement(key) {
@@ -50,9 +50,9 @@ export function getPopupElement(key) {
 }
 
 export function setErrorMessage(message = '') {
-  const errorElement = getPopupElement('errorElement');
-  if (!errorElement) return;
+  const error = getPopupElement('error');
+  if (!error) return;
   const nextMessage = typeof message === 'string' ? message.trim() : '';
-  errorElement.textContent = nextMessage;
-  errorElement.classList.toggle('hide', !nextMessage);
+  error.textContent = nextMessage;
+  error.classList.toggle('hide', !nextMessage);
 }

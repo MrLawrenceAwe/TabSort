@@ -1,0 +1,153 @@
+import { createSortSummary } from '../../shared/sorting/summary.js';
+import { isValidWindowId } from '../../shared/guards.js';
+
+export const getCurrentTimeMs = () => Date.now();
+
+export function cloneTabRecord(record) {
+  if (!record || typeof record !== 'object') return record;
+  return {
+    ...record,
+    videoDetails: record.videoDetails ? { ...record.videoDetails } : null,
+  };
+}
+
+export function cloneTabRecordsById(tabRecordsById = {}) {
+  return Object.fromEntries(
+    Object.entries(tabRecordsById).map(([id, record]) => [id, cloneTabRecord(record)]),
+  );
+}
+
+function createTrackedWindowStoreState() {
+  return {
+    tabRecordsById: {},
+    plannedVideoTabOrder: [],
+    trackedTabIdsInWindowOrder: [],
+    isSortComplete: false,
+    sortSummary: createSortSummary(),
+    windowId: null,
+    snapshotSignature: null,
+    syncToken: 0,
+  };
+}
+
+const trackedWindowState = createTrackedWindowStoreState();
+
+export const trackedWindow = Object.freeze({
+  get tabRecordsById() {
+    return cloneTabRecordsById(trackedWindowState.tabRecordsById);
+  },
+  get plannedVideoTabOrder() {
+    return [...trackedWindowState.plannedVideoTabOrder];
+  },
+  get trackedTabIdsInWindowOrder() {
+    return [...trackedWindowState.trackedTabIdsInWindowOrder];
+  },
+  get isSortComplete() {
+    return trackedWindowState.isSortComplete;
+  },
+  get sortSummary() {
+    return createSortSummary(trackedWindowState.sortSummary);
+  },
+  get windowId() {
+    return trackedWindowState.windowId;
+  },
+  get snapshotSignature() {
+    return trackedWindowState.snapshotSignature;
+  },
+  get syncToken() {
+    return trackedWindowState.syncToken;
+  },
+});
+
+export function createWindowState() {
+  return createTrackedWindowStoreState();
+}
+
+export function getTrackedWindowId() {
+  return isValidWindowId(trackedWindowState.windowId) ? trackedWindowState.windowId : null;
+}
+
+export function getTabRecord(tabId) {
+  return cloneTabRecord(trackedWindowState.tabRecordsById[tabId] || null);
+}
+
+export function getTabRecordsById() {
+  return cloneTabRecordsById(trackedWindowState.tabRecordsById);
+}
+
+export function listTabRecords() {
+  return Object.values(getTabRecordsById());
+}
+
+export function listTabIds() {
+  return Object.keys(trackedWindowState.tabRecordsById).map(Number);
+}
+
+export function canManageWindow(windowId) {
+  return trackedWindowState.windowId == null || windowId === trackedWindowState.windowId;
+}
+
+export function resetTrackedWindowStore({ windowId = null } = {}) {
+  const nextState = createWindowState();
+  nextState.windowId = isValidWindowId(windowId) ? windowId : null;
+  Object.assign(trackedWindowState, nextState);
+  return trackedWindow;
+}
+
+export function replaceAllTabRecords(tabRecordsById = {}) {
+  trackedWindowState.tabRecordsById = { ...tabRecordsById };
+  return trackedWindowState.tabRecordsById;
+}
+
+export function getMutableTabRecord(tabId) {
+  return trackedWindowState.tabRecordsById[tabId] || null;
+}
+
+export function setTabRecord(tabId, record) {
+  if (typeof tabId !== 'number' || !record) return null;
+  trackedWindowState.tabRecordsById[tabId] = record;
+  return trackedWindowState.tabRecordsById[tabId];
+}
+
+export function deleteTabRecord(tabId) {
+  if (!trackedWindowState.tabRecordsById[tabId]) return false;
+  delete trackedWindowState.tabRecordsById[tabId];
+  return true;
+}
+
+export function setSnapshotSignature(signature = null) {
+  trackedWindowState.snapshotSignature = signature;
+  return trackedWindowState.snapshotSignature;
+}
+
+export function nextSyncToken() {
+  trackedWindowState.syncToken += 1;
+  return trackedWindowState.syncToken;
+}
+
+export function isSyncTokenCurrent(syncToken) {
+  return syncToken === trackedWindowState.syncToken;
+}
+
+export function setSortState({
+  trackedTabIdsInWindowOrder = [],
+  plannedVideoTabOrder = [],
+  isSortComplete = false,
+  sortSummary = createSortSummary(),
+} = {}) {
+  trackedWindowState.plannedVideoTabOrder = [...plannedVideoTabOrder];
+  trackedWindowState.trackedTabIdsInWindowOrder = [...trackedTabIdsInWindowOrder];
+  trackedWindowState.isSortComplete = Boolean(isSortComplete);
+  trackedWindowState.sortSummary = createSortSummary(sortSummary);
+}
+
+export function setTrackedWindowId(windowId, { force = false } = {}) {
+  if (isValidWindowId(windowId)) {
+    if (force || !isValidWindowId(trackedWindowState.windowId)) {
+      trackedWindowState.windowId = windowId;
+    }
+  } else if (force && windowId == null) {
+    trackedWindowState.windowId = null;
+  }
+  return getTrackedWindowId();
+}

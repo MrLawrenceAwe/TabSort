@@ -57,13 +57,13 @@ test('manifest exposes dynamically imported content modules to YouTube pages', (
 
   const youtubeEntry = resources.find((entry) =>
     Array.isArray(entry?.resources) &&
-    entry.resources.includes('content/youtube/controller.js'),
+    entry.resources.includes('content/youtube/page/controller.js'),
   );
 
   assert.ok(youtubeEntry, 'missing web_accessible_resources entry for content bootstrap module');
   assert.deepEqual(
     [...youtubeEntry.resources].sort(),
-    collectStaticModuleResources('content/youtube/controller.js').sort(),
+    collectStaticModuleResources('content/youtube/page/controller.js').sort(),
   );
   assert.deepEqual(youtubeEntry.matches, ['*://*.youtube.com/*']);
 });
@@ -73,7 +73,7 @@ test('manifest injects YouTube runtime on all YouTube pages for SPA navigation',
   const [youtubeContentScript] = manifest.content_scripts;
 
   assert.deepEqual(youtubeContentScript.matches, ['*://*.youtube.com/*']);
-  assert.deepEqual(youtubeContentScript.js, ['content/youtube/youtube-page-bootstrap.js']);
+  assert.deepEqual(youtubeContentScript.js, ['content/youtube/page/bootstrap.js']);
 });
 
 test('manifest avoids unused tab group permission', () => {

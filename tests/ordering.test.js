@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { trackedWindowStateView } from '../background/tracked-window-store.js';
-import { recomputeSortState } from '../background/sort-state.js';
+import { trackedWindow } from '../background/windows/store.js';
+import { recomputeSortState } from '../background/sorting/state.js';
 import {
   ensureChromeApi,
   createTabRecordFixture,
@@ -22,9 +22,9 @@ test('orders known remaining-time tabs before unknown tabs', () => {
 
   recomputeSortState();
 
-  assert.deepEqual(trackedWindowStateView.plannedVideoTabOrder, [3, 1, 2]);
-  assert.deepEqual(trackedWindowStateView.trackedTabIdsInWindowOrder, [1, 2, 3]);
-  assert.equal(trackedWindowStateView.isSortComplete, false);
+  assert.deepEqual(trackedWindow.plannedVideoTabOrder, [3, 1, 2]);
+  assert.deepEqual(trackedWindow.trackedTabIdsInWindowOrder, [1, 2, 3]);
+  assert.equal(trackedWindow.isSortComplete, false);
 });
 
 test('marks window as sorted only when all actionable tabs are known and ordered', () => {
@@ -36,16 +36,31 @@ test('marks window as sorted only when all actionable tabs are known and ordered
 
   recomputeSortState();
 
-  assert.equal(trackedWindowStateView.isSortComplete, true);
-  assert.equal(trackedWindowStateView.sortSummary.order.allSortableVideosReady, true);
-  assert.equal(trackedWindowStateView.sortSummary.order.isSortComplete, true);
-  assert.equal(trackedWindowStateView.sortSummary.sortReadyTabs.outOfOrder, false);
+  assert.equal(trackedWindow.isSortComplete, true);
+  assert.equal(trackedWindow.sortSummary.order.allSortableVideosReady, true);
+  assert.equal(trackedWindow.sortSummary.sortReadyTabs.outOfOrder, false);
+});
+
+test('does not call a single sortable tab a completed sort', () => {
+  resetTrackedWindowState();
+  setTrackedTabRecords({
+    1: createTabRecordFixture(1, {
+      index: 0,
+      videoDetails: { remainingTime: 5 },
+      remainingTimeStale: false,
+    }),
+  });
+
+  recomputeSortState();
+
+  assert.equal(trackedWindow.isSortComplete, false);
+  assert.equal(trackedWindow.sortSummary.order.allSortableVideosReady, false);
 });
 
 test('derives sort summary metrics for non-contiguous and out-of-order ready subsets', () => {
   resetTrackedWindowState();
   setTrackedTabRecords({
-    1: createTabRecordFixture(1, { index: 0, remainingTimeStale: true, isActiveTab: false, isHidden: true }),
+    1: createTabRecordFixture(1, { index: 0, remainingTimeStale: true, isActive: false, isHidden: true }),
     2: createTabRecordFixture(2, { index: 1, videoDetails: { remainingTime: 20 }, remainingTimeStale: false }),
     3: createTabRecordFixture(3, { index: 2, remainingTimeStale: true }),
     4: createTabRecordFixture(4, { index: 3, videoDetails: { remainingTime: 10 }, remainingTimeStale: false }),
@@ -53,11 +68,11 @@ test('derives sort summary metrics for non-contiguous and out-of-order ready sub
 
   recomputeSortState();
 
-  assert.equal(trackedWindowStateView.sortSummary.counts.sortReady, 2);
-  assert.equal(trackedWindowStateView.sortSummary.sortReadyTabs.atFront, false);
-  assert.equal(trackedWindowStateView.sortSummary.sortReadyTabs.contiguous, false);
-  assert.equal(trackedWindowStateView.sortSummary.sortReadyTabs.outOfOrder, true);
-  assert.equal(trackedWindowStateView.sortSummary.inactiveTabs.hasStaleRemainingTime, true);
+  assert.equal(trackedWindow.sortSummary.counts.sortReady, 2);
+  assert.equal(trackedWindow.sortSummary.sortReadyTabs.atFront, false);
+  assert.equal(trackedWindow.sortSummary.sortReadyTabs.contiguous, false);
+  assert.equal(trackedWindow.sortSummary.sortReadyTabs.outOfOrder, true);
+  assert.equal(trackedWindow.sortSummary.inactiveTabs.hasStaleRemainingTime, true);
 });
 
 test('handles records without a finite index deterministically', () => {
@@ -70,8 +85,8 @@ test('handles records without a finite index deterministically', () => {
 
   recomputeSortState();
 
-  assert.deepEqual(trackedWindowStateView.trackedTabIdsInWindowOrder, [1, 2, 3]);
-  assert.deepEqual(trackedWindowStateView.plannedVideoTabOrder, [3, 2, 1]);
+  assert.deepEqual(trackedWindow.trackedTabIdsInWindowOrder, [1, 2, 3]);
+  assert.deepEqual(trackedWindow.plannedVideoTabOrder, [3, 2, 1]);
 });
 
 test('live tabs do not block sorted readiness for VOD tabs with known remaining times', () => {
@@ -81,7 +96,7 @@ test('live tabs do not block sorted readiness for VOD tabs with known remaining 
     2: createTabRecordFixture(2, { index: 1, videoDetails: { remainingTime: 15 }, remainingTimeStale: false }),
     3: createTabRecordFixture(3, {
       index: 2,
-      isLiveNow: true,
+      isLive: true,
       videoDetails: { remainingTime: null },
       remainingTimeStale: false,
     }),
@@ -89,12 +104,11 @@ test('live tabs do not block sorted readiness for VOD tabs with known remaining 
 
   recomputeSortState();
 
-  assert.equal(trackedWindowStateView.isSortComplete, true);
-  assert.equal(trackedWindowStateView.sortSummary.counts.tracked, 3);
-  assert.equal(trackedWindowStateView.sortSummary.counts.sortReady, 2);
-  assert.equal(trackedWindowStateView.sortSummary.order.allSortableVideosReady, true);
-  assert.equal(trackedWindowStateView.sortSummary.order.isSortComplete, true);
-  assert.deepEqual(trackedWindowStateView.plannedVideoTabOrder, [1, 2]);
+  assert.equal(trackedWindow.isSortComplete, true);
+  assert.equal(trackedWindow.sortSummary.counts.tracked, 3);
+  assert.equal(trackedWindow.sortSummary.counts.sortReady, 2);
+  assert.equal(trackedWindow.sortSummary.order.allSortableVideosReady, true);
+  assert.deepEqual(trackedWindow.plannedVideoTabOrder, [1, 2]);
 });
 
 test('pinned tracked tabs count toward popup totals without affecting sort summary', () => {
@@ -120,10 +134,9 @@ test('pinned tracked tabs count toward popup totals without affecting sort summa
 
   recomputeSortState();
 
-  assert.equal(trackedWindowStateView.isSortComplete, true);
-  assert.equal(trackedWindowStateView.sortSummary.counts.tracked, 3);
-  assert.equal(trackedWindowStateView.sortSummary.counts.sortReady, 2);
-  assert.equal(trackedWindowStateView.sortSummary.order.allSortableVideosReady, true);
-  assert.equal(trackedWindowStateView.sortSummary.order.isSortComplete, true);
-  assert.deepEqual(trackedWindowStateView.plannedVideoTabOrder, [2, 3]);
+  assert.equal(trackedWindow.isSortComplete, true);
+  assert.equal(trackedWindow.sortSummary.counts.tracked, 3);
+  assert.equal(trackedWindow.sortSummary.counts.sortReady, 2);
+  assert.equal(trackedWindow.sortSummary.order.allSortableVideosReady, true);
+  assert.deepEqual(trackedWindow.plannedVideoTabOrder, [2, 3]);
 });
