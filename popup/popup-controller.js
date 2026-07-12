@@ -88,7 +88,7 @@ function registerPopupControls() {
   const sortButton = document.getElementById('sortButton');
   if (sortButton) {
     sortButton.addEventListener('click', () =>
-      runtimeClient.postRuntimeMessage(RUNTIME_MESSAGE_TYPES.REORDER_WINDOW_TABS),
+      runtimeClient.postRuntimeMessage(RUNTIME_MESSAGE_TYPES.SORT_TABS),
     );
   }
 }

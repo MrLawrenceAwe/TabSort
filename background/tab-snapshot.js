@@ -1,15 +1,15 @@
-import { cloneSortSummary } from '../shared/sort-summary.js';
+import { createSortSummary } from '../shared/sorting/summary.js';
 import { logDebug } from '../shared/log.js';
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
-import { setSnapshotSignature, trackedWindowStateView } from './tracked-window-store.js';
+import { setSnapshotSignature, trackedWindow } from './windows/store.js';
 
 export function buildTabSnapshot() {
   return {
-    tabRecordsById: trackedWindowStateView.tabRecordsById,
-    plannedVideoTabOrder: [...trackedWindowStateView.plannedVideoTabOrder],
-    trackedTabIdsInWindowOrder: [...trackedWindowStateView.trackedTabIdsInWindowOrder],
-    isSortComplete: trackedWindowStateView.isSortComplete,
-    sortSummary: cloneSortSummary(trackedWindowStateView.sortSummary),
+    tabRecordsById: trackedWindow.tabRecordsById,
+    plannedVideoTabOrder: [...trackedWindow.plannedVideoTabOrder],
+    trackedTabIdsInWindowOrder: [...trackedWindow.trackedTabIdsInWindowOrder],
+    isSortComplete: trackedWindow.isSortComplete,
+    sortSummary: createSortSummary(trackedWindow.sortSummary),
   };
 }
 
@@ -17,7 +17,7 @@ export function broadcastSnapshotUpdate({ force = false } = {}) {
   try {
     const snapshot = buildTabSnapshot();
     const signature = JSON.stringify(snapshot);
-    if (!force && signature === trackedWindowStateView.snapshotSignature) return;
+    if (!force && signature === trackedWindow.snapshotSignature) return;
     setSnapshotSignature(signature);
 
     chrome.runtime.sendMessage(

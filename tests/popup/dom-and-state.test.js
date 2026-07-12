@@ -23,10 +23,10 @@ function createFakeElement() {
 function createFakeDocument() {
   const elements = new Map([
     ['popupError', createFakeElement()],
-    ['videoTabsReadyStatus', createFakeElement()],
+    ['sortStatus', createFakeElement()],
     ['sortButton', createFakeElement()],
-    ['tabsSorted', createFakeElement()],
-    ['videoTabsTable', createFakeElement()],
+    ['sortedBadge', createFakeElement()],
+    ['tabsTable', createFakeElement()],
   ]);
 
   return {
@@ -35,7 +35,7 @@ function createFakeDocument() {
       return elements.get(id) ?? null;
     },
     querySelector(selector) {
-      if (selector === '.action-required' || selector === '.tab-status') {
+      if (selector === '.next-step' || selector === '.load-state') {
         return createFakeElement();
       }
       return null;

@@ -79,20 +79,20 @@ h2 {
     border-bottom: 5px solid var(--header-border-color);
 }
 
-#videoTabsTable {
+#tabsTable {
     width: 100%;
     border-collapse: collapse;
     color: var(--text-color);
 }
 
-#videoTabsTable th:first-child,
-#videoTabsTable td:first-child {
+#tabsTable th:first-child,
+#tabsTable td:first-child {
     min-width: 300px;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-#videoTabsTable th {
+#tabsTable th {
     text-align: left;
     padding: 8px;
     background: none;
@@ -104,14 +104,14 @@ h2 {
     text-overflow: ellipsis;
 }
 
-#videoTabsTable td {
+#tabsTable td {
     padding: 8px;
     text-align: left;
     border-bottom: 1px solid var(--table-cell-border-color);
     color: var(--text-color);
 }
 
-#videoTabsTable tr:nth-child(odd) td {
+#tabsTable tr:nth-child(odd) td {
     background-color: var(--table-odd-row-background);
     color: var(--text-color);
 }

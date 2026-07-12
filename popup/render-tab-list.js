@@ -1,4 +1,4 @@
-import { cloneSortSummary } from '../shared/sort-summary.js';
+import { createSortSummary } from '../shared/sorting/summary.js';
 import {
   addClassToTabRows,
   syncPopupLayout,
@@ -12,13 +12,13 @@ export function renderTabList(snapshot, { postRuntimeMessage } = {}) {
   if (!snapshot) return;
   setErrorMessage('');
 
-  const table = document.getElementById('videoTabsTable');
+  const table = document.getElementById('tabsTable');
   if (!table) return;
   const tbody = table.tBodies[0] ?? table.createTBody();
 
   const tabRecords = snapshot.tabRecordsById || {};
   const trackedTabIdsInWindowOrder = snapshot.trackedTabIdsInWindowOrder || [];
-  const sortSummary = cloneSortSummary(snapshot.sortSummary);
+  const sortSummary = createSortSummary(snapshot.sortSummary);
   const isSortComplete = snapshot.isSortComplete === true;
 
   applyPopupState({

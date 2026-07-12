@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { createYoutubePageController } from '../content/youtube/controller.js';
-import { shouldSendContentScriptReadySignal } from '../content/youtube/content-script-ready-signal.js';
-import { collectPageVideoDetails } from '../content/youtube/video-details.js';
-import { inferIsLiveNow } from '../content/youtube/live-status.js';
+import { createYouTubePageController } from '../content/youtube/page/controller.js';
+import { shouldSendContentScriptReadySignal } from '../content/youtube/page/ready-signal.js';
+import { collectPageVideoDetails } from '../content/youtube/metadata/details.js';
+import { inferIsLiveNow } from '../content/youtube/metadata/live-status.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import {
   FakeMutationObserver,
@@ -44,7 +44,7 @@ test('shouldSendContentScriptReadySignal allows first-load, force-refresh, and U
 test(
   'content script session re-sends the content script ready event after yt-navigate-finish changes the page URL',
   () => {
-    const runtime = createYoutubePageController();
+    const runtime = createYouTubePageController();
     try {
       const { windowTarget, updatePage } = installRuntimeTestDom();
 
@@ -79,7 +79,7 @@ test(
 );
 
 test('content script session skips video collection work outside watch and shorts pages', () => {
-  const runtime = createYoutubePageController();
+  const runtime = createYouTubePageController();
   try {
     const dom = installRuntimeTestDom();
     dom.updatePage({
@@ -113,7 +113,7 @@ test('content script session skips video collection work outside watch and short
 test(
   'content script session waits for fresh media evidence before re-sending the video element ready event on SPA navigation',
   () => {
-    const runtime = createYoutubePageController();
+    const runtime = createYouTubePageController();
     try {
       const { windowTarget, updatePage, video } = installRuntimeTestDom();
 
@@ -155,7 +155,7 @@ test(
 test(
   'video metric collection self-resolves video readiness when ready events were missed',
   () => {
-    const runtime = createYoutubePageController();
+    const runtime = createYouTubePageController();
     try {
       const { video } = installRuntimeTestDom();
       video.readyState = 0;
@@ -196,7 +196,7 @@ test(
 test(
   'video metric collection falls back to YouTube player duration for archived streams',
   () => {
-    const runtime = createYoutubePageController();
+    const runtime = createYouTubePageController();
     try {
       const { video, player } = installRuntimeTestDom();
       video.readyState = 3;
@@ -263,7 +263,7 @@ test('page video details ignore zero-length YouTube player metadata', () => {
 });
 
 test('content script session reset removes listeners before a second bootstrap', () => {
-  const runtime = createYoutubePageController();
+  const runtime = createYouTubePageController();
   try {
     const { getRuntimeMessageListenerCount, windowTarget } = installRuntimeTestDom();
 
@@ -285,7 +285,7 @@ test('content script session reset removes listeners before a second bootstrap',
 });
 
 test('content script throttles video mount scans during mutation bursts', () => {
-  const runtime = createYoutubePageController();
+  const runtime = createYouTubePageController();
   try {
     const dom = installRuntimeTestDom();
     dom.replaceVideos([]);

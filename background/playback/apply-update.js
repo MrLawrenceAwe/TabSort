@@ -1,0 +1,30 @@
+import { getCurrentTimeMs } from '../windows/store.js';
+import {
+  markVideoElementReady,
+  resetVideoReadiness,
+} from '../tabs/video-state.js';
+
+export function applyPlaybackStateUpdate(record, playbackUpdate, currentTabUrl) {
+  if (!record || !playbackUpdate) return;
+
+  record.pageRuntimeReady = playbackUpdate.pageRuntimeReady;
+  if (playbackUpdate.videoElementReady) {
+    markVideoElementReady(record);
+  } else {
+    resetVideoReadiness(record, { waitingForVideoSince: record.waitingForVideoSince });
+    if (record.pageRuntimeReady && typeof record.waitingForVideoSince !== 'number') {
+      record.waitingForVideoSince = getCurrentTimeMs();
+    }
+  }
+  record.videoDetails = record.videoDetails || {};
+
+  if (playbackUpdate.nextTitle || playbackUpdate.nextUrl || currentTabUrl) {
+    if (playbackUpdate.nextTitle) record.videoDetails.title = playbackUpdate.nextTitle;
+    record.url = playbackUpdate.nextUrl || currentTabUrl;
+  }
+
+  record.isLive = Boolean(playbackUpdate.isLive);
+  record.videoDetails.lengthSeconds = playbackUpdate.resolvedLengthSeconds;
+  record.videoDetails.remainingTime = playbackUpdate.remainingTime;
+  record.remainingTimeStale = playbackUpdate.remainingTimeStale;
+}
