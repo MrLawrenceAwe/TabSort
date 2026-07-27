@@ -1,6 +1,6 @@
 import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
 import { isFiniteNumber } from '../../shared/guards.js';
-import { getCurrentTimeMs } from '../windows/store.js';
+import { nowMs } from '../../shared/time.js';
 
 export function clearRemainingTime(record) {
   if (record?.videoDetails && record.videoDetails.remainingTime != null) {
@@ -12,9 +12,9 @@ export function markRemainingTimeAsStale(record) {
   record.remainingTimeStale = true;
 }
 
-export function resetVideoReadiness(record, { waitingForVideoSince = null } = {}) {
-  record.videoElementReady = false;
-  record.waitingForVideoSince = waitingForVideoSince;
+export function resetPlaybackReadiness(record, { metricsWaitStartedAt = null } = {}) {
+  record.playbackMetricsReady = false;
+  record.metricsWaitStartedAt = metricsWaitStartedAt;
 }
 
 function clearVideoIdentity(record) {
@@ -23,28 +23,28 @@ function clearVideoIdentity(record) {
   markRemainingTimeAsStale(record);
 }
 
-export function markVideoElementReady(record) {
-  record.videoElementReady = true;
-  record.waitingForVideoSince = null;
+export function markPlaybackMetricsReady(record) {
+  record.playbackMetricsReady = true;
+  record.metricsWaitStartedAt = null;
 }
 
 export function applyVideoMetricsUnavailable(record) {
   if (!record) return;
-  record.pageRuntimeReady = false;
-  resetVideoReadiness(record);
+  record.contentScriptReady = false;
+  resetPlaybackReadiness(record);
   clearRemainingTime(record);
   markRemainingTimeAsStale(record);
 }
 
-function applyVideoIdentityChanged(record, { pageRuntimeReady = false, timestamp = null } = {}) {
-  record.pageRuntimeReady = Boolean(pageRuntimeReady);
-  resetVideoReadiness(record, { waitingForVideoSince: timestamp });
+function applyVideoIdentityChanged(record, { contentScriptReady = false, timestamp = null } = {}) {
+  record.contentScriptReady = Boolean(contentScriptReady);
+  resetPlaybackReadiness(record, { metricsWaitStartedAt: timestamp });
   clearVideoIdentity(record);
 }
 
 export function applyTabReloadStarted(record) {
   if (!record) return;
-  const timestamp = getCurrentTimeMs();
+  const timestamp = nowMs();
   record.loadState = TAB_LOAD_STATES.LOADING;
   record.loadingStartedAt = timestamp;
   record.unsuspendedTimestamp = timestamp;
@@ -53,14 +53,14 @@ export function applyTabReloadStarted(record) {
 
 export function applyContentScriptReady(record, { urlChanged = false, url = null } = {}) {
   if (!record) return;
-  const timestamp = getCurrentTimeMs();
+  const timestamp = nowMs();
   if (urlChanged) {
-    applyVideoIdentityChanged(record, { pageRuntimeReady: true, timestamp });
+    applyVideoIdentityChanged(record, { contentScriptReady: true, timestamp });
   }
   if (url) record.url = url;
-  record.pageRuntimeReady = true;
-  if (!record.videoElementReady && typeof record.waitingForVideoSince !== 'number') {
-    record.waitingForVideoSince = timestamp;
+  record.contentScriptReady = true;
+  if (!record.playbackMetricsReady && typeof record.metricsWaitStartedAt !== 'number') {
+    record.metricsWaitStartedAt = timestamp;
   }
 }
 
@@ -83,6 +83,6 @@ export function applyVideoDetailsFromPage(record, details = {}, { urlChanged = f
   if (record.isLive) {
     clearRemainingTime(record);
     record.remainingTimeStale = false;
-    record.waitingForVideoSince = null;
+    record.metricsWaitStartedAt = null;
   }
 }

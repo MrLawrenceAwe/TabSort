@@ -70,7 +70,6 @@ export function createRuntimeClient({
   return {
     logPopupError,
     logPopupMessage,
-    postRuntimeMessage,
     requestRuntimeMessage,
     syncActiveWindow,
   };

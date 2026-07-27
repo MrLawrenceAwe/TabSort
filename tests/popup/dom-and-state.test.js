@@ -30,9 +30,10 @@ function createFakeDocument() {
     ['popupError', createFakeElement()],
     ['popupNotice', createFakeElement()],
     ['popupStateMessage', createFakeElement()],
-    ['sortStatus', createFakeElement()],
-    ['sortButton', createFakeElement()],
-    ['sortedBadge', createFakeElement()],
+    ['organiseStatus', createFakeElement()],
+    ['organiseButton', createFakeElement()],
+    ['organisedBadge', createFakeElement()],
+    ['groupOtherTabsToggle', createFakeElement()],
     ['tabsTable', createFakeElement()],
   ]);
 
@@ -53,10 +54,10 @@ function createFakeDocument() {
   };
 }
 
-test('popup view model keeps sort summary flags available for view decisions', () => {
+test('popup view model keeps flat sort summary fields available for view decisions', () => {
   resetPopupState();
-  popupState.sortSummary.inactiveTabs.hasStaleRemainingTime = true;
-  assert.equal(popupState.sortSummary.inactiveTabs.hasStaleRemainingTime, true);
+  popupState.sortSummary.readyTabsAtFront = false;
+  assert.equal(popupState.sortSummary.readyTabsAtFront, false);
 });
 
 test('popup accepts snapshot broadcasts only for its active window', () => {

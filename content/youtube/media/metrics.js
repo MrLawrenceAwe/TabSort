@@ -22,17 +22,17 @@ export function collectVideoMetrics({
   config,
   environment,
   collectPageDetails,
-  isCurrentVideoMetricsReady,
-  markCurrentVideoMetricsReadyIfAvailable,
+  isCurrentPlaybackReady,
+  markCurrentPlaybackReadyIfAvailable,
 }) {
   const video = getPrimaryVideoElement(environment);
   const player = getYouTubePlayer(environment);
   const details = collectPageDetails();
-  markCurrentVideoMetricsReadyIfAvailable?.({ notify: false });
+  markCurrentPlaybackReadyIfAvailable?.({ notify: false });
   return {
     title: details.title || null,
     url: details.url,
-    videoElementReady: isCurrentVideoMetricsReady(),
+    playbackMetricsReady: isCurrentPlaybackReady(),
     lengthSeconds: config.isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
     isLive: Boolean(details.isLive),
     duration: getVideoDurationSeconds(video, player),
@@ -41,7 +41,6 @@ export function collectVideoMetrics({
       video && config.isFiniteNumber(video.playbackRate) && video.playbackRate > 0
         ? video.playbackRate
         : 1,
-    paused: video ? video.paused : null,
   };
 }
 

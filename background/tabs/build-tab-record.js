@@ -1,9 +1,9 @@
 import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
+import { nowMs } from '../../shared/time.js';
 import { createTabRecord } from './record.js';
-import { getCurrentTimeMs } from '../windows/store.js';
 import { clearRemainingTime } from './video-state.js';
 
-export function createRecordFromTab(
+export function buildTabRecord(
   tab,
   previousRecord = {},
   nextLoadState,
@@ -11,17 +11,17 @@ export function createRecordFromTab(
 ) {
   const isUnsuspended = nextLoadState === TAB_LOAD_STATES.UNSUSPENDED;
   const loadStateChanged = previousRecord.loadState && previousRecord.loadState !== nextLoadState;
-  const timestamp = getCurrentTimeMs();
+  const timestamp = nowMs();
 
   const record = createTabRecord(tab.id, tab.windowId, {
     url: tab.url,
     index: tab.index,
     pinned: Boolean(tab.pinned),
     loadState: nextLoadState,
-    pageRuntimeReady:
-      isUnsuspended && !urlChanged ? Boolean(previousRecord.pageRuntimeReady) : false,
-    videoElementReady:
-      isUnsuspended && !urlChanged ? Boolean(previousRecord.videoElementReady) : false,
+    contentScriptReady:
+      isUnsuspended && !urlChanged ? Boolean(previousRecord.contentScriptReady) : false,
+    playbackMetricsReady:
+      isUnsuspended && !urlChanged ? Boolean(previousRecord.playbackMetricsReady) : false,
     isLive: urlChanged ? false : Boolean(previousRecord.isLive),
     isActive: Boolean(tab.active),
     isHidden: Boolean(tab.hidden),
@@ -29,7 +29,7 @@ export function createRecordFromTab(
     loadingStartedAt: previousRecord.loadingStartedAt ?? null,
     unsuspendedTimestamp: previousRecord.unsuspendedTimestamp || null,
     transitionStartedAt: previousRecord.transitionStartedAt || null,
-    waitingForVideoSince: urlChanged ? null : previousRecord.waitingForVideoSince ?? null,
+    metricsWaitStartedAt: urlChanged ? null : previousRecord.metricsWaitStartedAt ?? null,
     remainingTimeStale:
       !isUnsuspended ||
       Boolean(previousRecord.remainingTimeStale) ||

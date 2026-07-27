@@ -23,9 +23,9 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         isActive: true,
-        pageRuntimeReady: true,
-        videoElementReady: false,
-        waitingForVideoSince: now,
+        contentScriptReady: true,
+        playbackMetricsReady: false,
+        metricsWaitStartedAt: now,
         remainingTimeStale: true,
       }),
       2: createTabRecordFixture(2, {
@@ -51,11 +51,10 @@ test(
       callback({
         title: `Video ${tabId}`,
         url: `https://www.youtube.com/watch?v=${tabId}`,
-        videoElementReady: true,
+        playbackMetricsReady: true,
         lengthSeconds: 120,
         currentTime: 20,
         playbackRate: 1,
-        paused: false,
         isLive: false,
       });
     };
@@ -76,10 +75,10 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         isActive: true,
-        pageRuntimeReady: false,
-        videoElementReady: false,
+        contentScriptReady: false,
+        playbackMetricsReady: false,
         transitionStartedAt: Date.now() - 10_000,
-        waitingForVideoSince: null,
+        metricsWaitStartedAt: null,
         remainingTimeStale: true,
         videoDetails: null,
       }),
@@ -103,12 +102,11 @@ test(
       callback({
         title: 'Archived Stream',
         url: 'https://www.youtube.com/watch?v=archive',
-        videoElementReady: false,
+        playbackMetricsReady: false,
         lengthSeconds: null,
         duration: 6211,
         currentTime: 0,
         playbackRate: 1,
-        paused: true,
         isLive: false,
       });
     };
@@ -116,7 +114,7 @@ test(
     const snapshot = await getWindowSnapshot({ windowId: 1 });
 
     assert.deepEqual(refreshedTabIds, [1]);
-    assert.equal(snapshot.tabRecordsById[1].videoElementReady, true);
+    assert.equal(snapshot.tabRecordsById[1].playbackMetricsReady, true);
     assert.equal(snapshot.tabRecordsById[1].videoDetails.remainingTime, 6211);
     assert.equal(snapshot.tabRecordsById[1].remainingTimeStale, false);
   },

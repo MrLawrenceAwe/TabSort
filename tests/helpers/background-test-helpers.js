@@ -4,7 +4,7 @@ import {
   trackedWindow,
   resetTrackedWindowStore,
   replaceAllTabRecords,
-  replaceTabsInWindowOrder,
+  replaceOrderedWindowTabs,
   setSortState,
   setTabRecord,
 } from '../../background/windows/store.js';
@@ -79,22 +79,20 @@ export function createPlaybackMetricsFixture({
   tabId = 1,
   title = `Video ${tabId}`,
   url = `https://www.youtube.com/watch?v=${tabId}`,
-  videoElementReady = true,
+  playbackMetricsReady = true,
   lengthSeconds = 120,
   currentTime = 20,
   playbackRate = 1,
-  paused = false,
   isLive = false,
   ...overrides
 } = {}) {
   return {
     title,
     url,
-    videoElementReady,
+    playbackMetricsReady,
     lengthSeconds,
     currentTime,
     playbackRate,
-    paused,
     isLive,
     ...overrides,
   };
@@ -149,12 +147,11 @@ export function stubChromeTabMetrics({
       tabId,
       title: 'Archived Stream',
       url,
-      videoElementReady: false,
+      playbackMetricsReady: false,
       lengthSeconds: null,
       duration: 6211,
       currentTime: 0,
       playbackRate: 1,
-      paused: true,
       isLive: false,
       ...metrics,
     }));
@@ -171,14 +168,14 @@ export function setTrackedTabRecords(tabRecordsById = {}) {
 }
 
 export function setTrackedWindowTabs(tabs = []) {
-  return replaceTabsInWindowOrder(tabs);
+  return replaceOrderedWindowTabs(tabs);
 }
 
 export function setTrackedSortState(sortState = {}) {
   setSortState({
-    trackedTabIdsInWindowOrder: trackedWindow.trackedTabIdsInWindowOrder,
-    plannedVideoTabOrder: trackedWindow.plannedVideoTabOrder,
-    isSortComplete: trackedWindow.isSortComplete,
+    trackedTabOrder: trackedWindow.trackedTabOrder,
+    targetVideoTabOrder: trackedWindow.targetVideoTabOrder,
+    isTargetOrderApplied: trackedWindow.isTargetOrderApplied,
     sortSummary: trackedWindow.sortSummary || createSortSummary(),
     ...sortState,
   });
@@ -194,8 +191,8 @@ export function createTabRecordFixture(id = 1, overrides = {}) {
     index: 0,
     pinned: false,
     loadState: TAB_LOAD_STATES.UNSUSPENDED,
-    pageRuntimeReady: true,
-    videoElementReady: true,
+    contentScriptReady: true,
+    playbackMetricsReady: true,
     isLive: false,
     isActive: false,
     isHidden: false,
@@ -203,7 +200,7 @@ export function createTabRecordFixture(id = 1, overrides = {}) {
     loadingStartedAt: null,
     unsuspendedTimestamp: null,
     transitionStartedAt: null,
-    waitingForVideoSince: null,
+    metricsWaitStartedAt: null,
     remainingTimeStale: true,
     ...overrides,
   });

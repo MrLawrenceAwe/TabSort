@@ -4,7 +4,7 @@ import {
   toPositiveFiniteNumber,
 } from '../../shared/guards.js';
 import { MEDIA_DURATION_SYNC_TOLERANCE_SECONDS } from '../../shared/playback/constants.js';
-import { getYouTubeVideoId } from '../youtube/urls.js';
+import { getYouTubeVideoId } from '../../shared/youtube/urls.js';
 
 function areEquivalentVideoUrls(leftUrl, rightUrl) {
   const leftIdentity = getYouTubeVideoId(leftUrl);
@@ -101,16 +101,16 @@ export function derivePlaybackUpdate({
   const isLive =
     metricsPayload.isLive === true ? true : metricsPayload.isLive === false ? false : record.isLive;
   const previousMediaStillApplies =
-    record.videoElementReady === true &&
+    record.playbackMetricsReady === true &&
     areEquivalentVideoUrls(record.url, payloadUrl || currentTabUrl || requestedUrl);
   const playbackEvidenceIsUsable = hasUsablePlaybackEvidence(metricsPayload);
 
   const update = {
     nextUrl: payloadUrl || currentTabUrl || null,
     nextTitle: typeof metricsPayload.title === 'string' ? metricsPayload.title : null,
-    pageRuntimeReady: true,
-    videoElementReady:
-      metricsPayload.videoElementReady === true ||
+    contentScriptReady: true,
+    playbackMetricsReady:
+      metricsPayload.playbackMetricsReady === true ||
       previousMediaStillApplies ||
       playbackEvidenceIsUsable,
     isLive,
@@ -125,17 +125,17 @@ export function derivePlaybackUpdate({
   }
 
   if (!isFiniteNumber(resolvedLengthSeconds)) {
-    update.remainingTimeStale = !update.videoElementReady;
+    update.remainingTimeStale = !update.playbackMetricsReady;
     return update;
   }
 
   if (hasMediaDurationMismatch(metricsPayload, record, resolvedLengthSeconds)) {
-    update.videoElementReady = false;
+    update.playbackMetricsReady = false;
     update.remainingTime = resolvedLengthSeconds;
     return update;
   }
 
-  if (!update.videoElementReady) {
+  if (!update.playbackMetricsReady) {
     update.remainingTime = resolvedLengthSeconds;
     return update;
   }

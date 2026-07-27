@@ -7,7 +7,7 @@ import {
   canMediaStillSettle,
   canWatchTransitionStillSettle,
   hasRemainingTime,
-} from './settle-windows.js';
+} from './readiness-grace-periods.js';
 
 export {
   LOADING_GRACE_MS,
@@ -40,17 +40,17 @@ function resolveGuidanceForMissingRemainingTime(tabRecord, transitionCanSettle, 
   switch (tabRecord.loadState) {
     case TAB_LOAD_STATES.UNSUSPENDED:
       if (tabRecord.isActive) {
-        if (tabRecord.pageRuntimeReady && !tabRecord.videoElementReady) {
+        if (tabRecord.contentScriptReady && !tabRecord.playbackMetricsReady) {
           return canMediaStillSettle(tabRecord, nowMs)
             ? TAB_GUIDANCE.WAIT_FOR_VIDEO_DATA
             : TAB_GUIDANCE.RELOAD_TAB;
         }
-        return transitionCanSettle && !tabRecord.pageRuntimeReady
+        return transitionCanSettle && !tabRecord.contentScriptReady
           ? TAB_GUIDANCE.NONE
           : TAB_GUIDANCE.RELOAD_TAB;
       }
-      if (transitionCanSettle && !tabRecord.pageRuntimeReady) return TAB_GUIDANCE.NONE;
-      if (!tabRecord.pageRuntimeReady) return TAB_GUIDANCE.RELOAD_TAB;
+      if (transitionCanSettle && !tabRecord.contentScriptReady) return TAB_GUIDANCE.NONE;
+      if (!tabRecord.contentScriptReady) return TAB_GUIDANCE.RELOAD_TAB;
       return TAB_GUIDANCE.VIEW_TAB_TO_LOAD_TIME;
     case TAB_LOAD_STATES.SUSPENDED:
       return TAB_GUIDANCE.OPEN_TAB;
@@ -80,7 +80,7 @@ export function determineTabGuidance(tabRecord, { now = Date.now } = {}) {
   }
 
   if (tabRecord?.remainingTimeStale) {
-    if (!tabRecord.pageRuntimeReady || tabRecord.isActive) {
+    if (!tabRecord.contentScriptReady || tabRecord.isActive) {
       return resolveGuidanceForMissingRemainingTime(tabRecord, transitionCanSettle, nowMs);
     }
     return TAB_GUIDANCE.VIEW_TAB_TO_REFRESH_TIME;

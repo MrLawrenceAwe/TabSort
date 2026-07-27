@@ -1,11 +1,11 @@
 import { isValidWindowId } from '../../shared/guards.js';
 import { loadSortOptions } from '../../shared/storage.js';
-import { hasReadyRemainingTime } from './readiness.js';
+import { hasReadyRemainingTime } from './sort-readiness.js';
 import { listWindowTabs, moveTabsInOrder } from '../tabs/chrome-tabs.js';
 import { isSyncTokenCurrent, trackedWindow } from '../windows/store.js';
 import { buildOtherTabOrder, buildYouTubeTabOrder } from './move-order.js';
 
-export async function sortTabs(
+export async function organiseTabs(
   windowId = trackedWindow.windowId,
   { expectedSyncToken = null } = {},
 ) {
@@ -13,9 +13,9 @@ export async function sortTabs(
     return { ok: false, movedCount: 0, skippedReason: 'windowSyncSuperseded' };
   }
 
-  const plannedVideoTabOrder = trackedWindow.plannedVideoTabOrder.slice();
+  const targetVideoTabOrder = trackedWindow.targetVideoTabOrder.slice();
 
-  const readyTabIds = plannedVideoTabOrder.filter((tabId) => {
+  const readyTabIds = targetVideoTabOrder.filter((tabId) => {
     const record = trackedWindow.tabRecordsById[tabId];
     return hasReadyRemainingTime(record);
   });
@@ -35,7 +35,7 @@ export async function sortTabs(
   const pinnedCount = tabsByIndex.filter((tab) => tab?.pinned).length;
   const unpinnedTabs = tabsByIndex.filter((tab) => tab && !tab.pinned);
 
-  const youtubeOrder = buildYouTubeTabOrder(unpinnedTabs, plannedVideoTabOrder);
+  const youtubeOrder = buildYouTubeTabOrder(unpinnedTabs, targetVideoTabOrder);
   const nonYouTubeOrder = buildOtherTabOrder(
     unpinnedTabs,
     Boolean(options.groupOtherTabsBySite),

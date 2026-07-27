@@ -18,7 +18,7 @@ function cleanTitle(raw) {
   return trimmed.endsWith(suffix) ? trimmed.slice(0, -suffix.length) : trimmed;
 }
 
-export function collectPageVideoDetails({ inferIsLiveNow, logContentError, environment = globalThis }) {
+export function collectPageDetails({ inferIsLiveNow, logContentError, environment = globalThis }) {
   const runtimeDocument = environment.document ?? globalThis.document;
   const runtimeLocation = environment.location ?? globalThis.location;
   const docTitle = cleanTitle(runtimeDocument?.title);

@@ -1,6 +1,6 @@
 import { isValidWindowId } from '../../shared/guards.js';
 import { logDebug, logListenerError, withErrorLogging } from '../../shared/log.js';
-import { recomputeSortState } from '../sorting/state.js';
+import { recomputeSortState } from '../sorting/update-sort-state.js';
 import {
   listTabIds,
   resetTrackedWindowStore,
@@ -9,7 +9,7 @@ import {
 import { collectPlaybackMetricsBatch } from '../playback/collect.js';
 import { reconcileWindowTabRecords } from '../tabs/reconcile.js';
 import { listWindowTabs } from '../tabs/chrome-tabs.js';
-import { isYouTubeVideoPage } from '../youtube/urls.js';
+import { isYouTubeVideoPage } from '../../shared/youtube/urls.js';
 import { shouldRefreshRecordMetrics } from '../../shared/tab-readiness/refresh-policy.js';
 
 const PLAYBACK_REFRESH_ALARM = 'refreshRemaining';

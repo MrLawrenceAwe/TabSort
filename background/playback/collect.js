@@ -6,13 +6,13 @@ import { tryInjectYouTubeBootstrap } from '../youtube/inject.js';
 import { derivePlaybackUpdate } from './derive-update.js';
 import { applyVideoMetricsUnavailable } from '../tabs/video-state.js';
 import { applyPlaybackStateUpdate } from './apply-update.js';
-import { recomputeSortState } from '../sorting/state.js';
+import { recomputeSortState } from '../sorting/update-sort-state.js';
 import {
   getTrackedWindowId,
   getMutableTabRecord,
   setTrackedWindowId,
 } from '../windows/store.js';
-import { isYouTubeVideoPage } from '../youtube/urls.js';
+import { isYouTubeVideoPage } from '../../shared/youtube/urls.js';
 
 const DEFAULT_BATCH_CONCURRENCY = 4;
 const NO_RECEIVER_RETRY_ATTEMPTS = 3;

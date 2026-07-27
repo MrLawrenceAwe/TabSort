@@ -3,7 +3,7 @@ import {
   canLoadingStillSettle,
   canMediaStillSettle,
   canWatchTransitionStillSettle,
-} from './settle-windows.js';
+} from './readiness-grace-periods.js';
 
 export function shouldPollRecord(record, { now = Date.now } = {}) {
   if (!record || record.isLive) return false;
@@ -11,11 +11,11 @@ export function shouldPollRecord(record, { now = Date.now } = {}) {
   const nowMs = now();
   if (record.loadState === TAB_LOAD_STATES.UNSUSPENDED && record.remainingTimeStale) {
     const waitingForContentScript =
-      !record.pageRuntimeReady && canWatchTransitionStillSettle(record, nowMs);
+      !record.contentScriptReady && canWatchTransitionStillSettle(record, nowMs);
     const waitingForVideoElement =
       record.isActive &&
-      record.pageRuntimeReady &&
-      !record.videoElementReady &&
+      record.contentScriptReady &&
+      !record.playbackMetricsReady &&
       canMediaStillSettle(record, nowMs);
     return waitingForContentScript || waitingForVideoElement;
   }

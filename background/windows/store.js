@@ -1,9 +1,7 @@
 import { createSortSummary } from '../../shared/sorting/summary.js';
 import { isValidWindowId } from '../../shared/guards.js';
 
-export const getCurrentTimeMs = () => Date.now();
-
-export function cloneTabRecord(record) {
+function cloneTabRecord(record) {
   if (!record || typeof record !== 'object') return record;
   return {
     ...record,
@@ -11,7 +9,7 @@ export function cloneTabRecord(record) {
   };
 }
 
-export function cloneTabRecordsById(tabRecordsById = {}) {
+function cloneTabRecordsById(tabRecordsById = {}) {
   return Object.fromEntries(
     Object.entries(tabRecordsById).map(([id, record]) => [id, cloneTabRecord(record)]),
   );
@@ -20,10 +18,10 @@ export function cloneTabRecordsById(tabRecordsById = {}) {
 function createTrackedWindowStoreState() {
   return {
     tabRecordsById: {},
-    tabsInWindowOrder: [],
-    plannedVideoTabOrder: [],
-    trackedTabIdsInWindowOrder: [],
-    isSortComplete: false,
+    orderedWindowTabs: [],
+    targetVideoTabOrder: [],
+    trackedTabOrder: [],
+    isTargetOrderApplied: false,
     sortSummary: createSortSummary(),
     windowId: null,
     snapshotSignature: null,
@@ -37,14 +35,14 @@ export const trackedWindow = Object.freeze({
   get tabRecordsById() {
     return cloneTabRecordsById(trackedWindowState.tabRecordsById);
   },
-  get plannedVideoTabOrder() {
-    return [...trackedWindowState.plannedVideoTabOrder];
+  get targetVideoTabOrder() {
+    return [...trackedWindowState.targetVideoTabOrder];
   },
-  get trackedTabIdsInWindowOrder() {
-    return [...trackedWindowState.trackedTabIdsInWindowOrder];
+  get trackedTabOrder() {
+    return [...trackedWindowState.trackedTabOrder];
   },
-  get isSortComplete() {
-    return trackedWindowState.isSortComplete;
+  get isTargetOrderApplied() {
+    return trackedWindowState.isTargetOrderApplied;
   },
   get sortSummary() {
     return createSortSummary(trackedWindowState.sortSummary);
@@ -59,10 +57,6 @@ export const trackedWindow = Object.freeze({
     return trackedWindowState.syncToken;
   },
 });
-
-export function createWindowState() {
-  return createTrackedWindowStoreState();
-}
 
 export function getTrackedWindowId() {
   return isValidWindowId(trackedWindowState.windowId) ? trackedWindowState.windowId : null;
@@ -84,12 +78,12 @@ export function listTabIds() {
   return Object.keys(trackedWindowState.tabRecordsById).map(Number);
 }
 
-export function getTabsInWindowOrder() {
-  return trackedWindowState.tabsInWindowOrder.map((tab) => ({ ...tab }));
+export function getOrderedWindowTabs() {
+  return trackedWindowState.orderedWindowTabs.map((tab) => ({ ...tab }));
 }
 
-export function replaceTabsInWindowOrder(tabs = []) {
-  trackedWindowState.tabsInWindowOrder = tabs
+export function replaceOrderedWindowTabs(tabs = []) {
+  trackedWindowState.orderedWindowTabs = tabs
     .filter((tab) => tab && typeof tab.id === 'number')
     .map((tab) => ({
       id: tab.id,
@@ -98,15 +92,15 @@ export function replaceTabsInWindowOrder(tabs = []) {
       url: tab.url ?? null,
     }))
     .sort((left, right) => left.index - right.index);
-  return getTabsInWindowOrder();
+  return getOrderedWindowTabs();
 }
 
-export function deleteTabFromWindowOrder(tabId) {
-  const previousLength = trackedWindowState.tabsInWindowOrder.length;
-  trackedWindowState.tabsInWindowOrder = trackedWindowState.tabsInWindowOrder.filter(
+export function deleteTabFromOrderedWindow(tabId) {
+  const previousLength = trackedWindowState.orderedWindowTabs.length;
+  trackedWindowState.orderedWindowTabs = trackedWindowState.orderedWindowTabs.filter(
     (tab) => tab.id !== tabId,
   );
-  return trackedWindowState.tabsInWindowOrder.length !== previousLength;
+  return trackedWindowState.orderedWindowTabs.length !== previousLength;
 }
 
 export function canManageWindow(windowId) {
@@ -114,7 +108,7 @@ export function canManageWindow(windowId) {
 }
 
 export function resetTrackedWindowStore({ windowId = null } = {}) {
-  const nextState = createWindowState();
+  const nextState = createTrackedWindowStoreState();
   nextState.windowId = isValidWindowId(windowId) ? windowId : null;
   Object.assign(trackedWindowState, nextState);
   return trackedWindow;
@@ -156,14 +150,14 @@ export function isSyncTokenCurrent(syncToken) {
 }
 
 export function setSortState({
-  trackedTabIdsInWindowOrder = [],
-  plannedVideoTabOrder = [],
-  isSortComplete = false,
+  trackedTabOrder = [],
+  targetVideoTabOrder = [],
+  isTargetOrderApplied = false,
   sortSummary = createSortSummary(),
 } = {}) {
-  trackedWindowState.plannedVideoTabOrder = [...plannedVideoTabOrder];
-  trackedWindowState.trackedTabIdsInWindowOrder = [...trackedTabIdsInWindowOrder];
-  trackedWindowState.isSortComplete = Boolean(isSortComplete);
+  trackedWindowState.targetVideoTabOrder = [...targetVideoTabOrder];
+  trackedWindowState.trackedTabOrder = [...trackedTabOrder];
+  trackedWindowState.isTargetOrderApplied = Boolean(isTargetOrderApplied);
   trackedWindowState.sortSummary = createSortSummary(sortSummary);
 }
 

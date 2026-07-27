@@ -7,9 +7,9 @@ export function buildTabSnapshot() {
   return {
     windowId: trackedWindow.windowId,
     tabRecordsById: trackedWindow.tabRecordsById,
-    plannedVideoTabOrder: [...trackedWindow.plannedVideoTabOrder],
-    trackedTabIdsInWindowOrder: [...trackedWindow.trackedTabIdsInWindowOrder],
-    isSortComplete: trackedWindow.isSortComplete,
+    targetVideoTabOrder: [...trackedWindow.targetVideoTabOrder],
+    trackedTabOrder: [...trackedWindow.trackedTabOrder],
+    isTargetOrderApplied: trackedWindow.isTargetOrderApplied,
     sortSummary: createSortSummary(trackedWindow.sortSummary),
   };
 }

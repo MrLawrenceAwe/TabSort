@@ -1,7 +1,7 @@
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../../shared/messages.js';
 import { getPrimaryVideoElement } from './elements.js';
 
-export function createVideoMetricsReadinessTracker({
+export function createPlaybackReadinessTracker({
   config,
   environment,
   state,
@@ -9,11 +9,11 @@ export function createVideoMetricsReadinessTracker({
   getDocument,
   getMutationObserver,
   sendExtensionMessage,
-  doesVideoDurationMatchPage,
+  doesMediaMatchPageMetadata,
 }) {
-  function isCurrentVideoMetricsReady() {
+  function isCurrentPlaybackReady() {
     const currentUrl = getCurrentPageUrl();
-    return Boolean(currentUrl) && currentUrl === state.metricsReadyPageUrl;
+    return Boolean(currentUrl) && currentUrl === state.playbackReadyPageUrl;
   }
 
   function getVideoFingerprint(video) {
@@ -30,27 +30,27 @@ export function createVideoMetricsReadinessTracker({
 
   function hasFreshMediaEvidence(video, observedFreshMediaEvent) {
     if (observedFreshMediaEvent) return true;
-    if (!state.lastMetricsReadyVideo) return true;
-    if (video !== state.lastMetricsReadyVideo) return true;
+    if (!state.lastReadyVideo) return true;
+    if (video !== state.lastReadyVideo) return true;
     const fingerprint = getVideoFingerprint(video);
-    return Boolean(fingerprint) && fingerprint !== state.lastMetricsReadyFingerprint;
+    return Boolean(fingerprint) && fingerprint !== state.lastReadyFingerprint;
   }
 
-  function canMarkVideoMetricsReady(video, observedFreshMediaEvent = false) {
+  function canMarkPlaybackReady(video, observedFreshMediaEvent = false) {
     return (
       video?.readyState >= config.mediaReadyStateThreshold &&
       config.isFiniteNumber(video.duration) &&
       hasFreshMediaEvidence(video, observedFreshMediaEvent) &&
-      doesVideoDurationMatchPage(video)
+      doesMediaMatchPageMetadata(video)
     );
   }
 
-  function clearVideoMetricsReadyListener() {
-    if (typeof state.videoMetricsReadyListenerCleanup === 'function') {
-      state.videoMetricsReadyListenerCleanup();
+  function clearPlaybackReadyListener() {
+    if (typeof state.playbackReadyListenerCleanup === 'function') {
+      state.playbackReadyListenerCleanup();
     }
-    state.videoMetricsReadyListenerVideo = null;
-    state.videoMetricsReadyListenerCleanup = null;
+    state.playbackReadyListenerVideo = null;
+    state.playbackReadyListenerCleanup = null;
   }
 
   function nodeMayContainVideo(node) {
@@ -67,29 +67,29 @@ export function createVideoMetricsReadinessTracker({
     });
   }
 
-  function markVideoMetricsReady(video, { notify = true } = {}) {
+  function markPlaybackReady(video, { notify = true } = {}) {
     const currentUrl = getCurrentPageUrl();
     if (!currentUrl) return false;
-    state.metricsReadyPageUrl = currentUrl;
-    state.lastMetricsReadyVideo = video;
-    state.lastMetricsReadyFingerprint = getVideoFingerprint(video);
+    state.playbackReadyPageUrl = currentUrl;
+    state.lastReadyVideo = video;
+    state.lastReadyFingerprint = getVideoFingerprint(video);
     if (notify) {
       sendExtensionMessage(
-        createRuntimeMessage(RUNTIME_MESSAGE_TYPES.VIDEO_ELEMENT_READY),
-        'video element ready',
+        createRuntimeMessage(RUNTIME_MESSAGE_TYPES.PLAYBACK_METRICS_READY),
+        'playback metrics ready',
       );
     }
-    if (state.videoMetricsReadyListenerVideo === video) {
-      clearVideoMetricsReadyListener();
+    if (state.playbackReadyListenerVideo === video) {
+      clearPlaybackReadyListener();
     }
     return true;
   }
 
-  function markCurrentVideoMetricsReadyIfAvailable({ notify = true } = {}) {
-    if (isCurrentVideoMetricsReady()) return true;
+  function markCurrentPlaybackReadyIfAvailable({ notify = true } = {}) {
+    if (isCurrentPlaybackReady()) return true;
     const video = getPrimaryVideoElement(environment);
-    if (!canMarkVideoMetricsReady(video)) return false;
-    return markVideoMetricsReady(video, { notify });
+    if (!canMarkPlaybackReady(video)) return false;
+    return markPlaybackReady(video, { notify });
   }
 
   function requestVideoMountCheck() {
@@ -106,35 +106,35 @@ export function createVideoMetricsReadinessTracker({
     schedule(() => {
       if (scheduledToken !== state.videoMountCheckToken) return;
       state.videoMountCheckScheduled = false;
-      attachVideoMetricsReadyListener();
-      if (isCurrentVideoMetricsReady() && state.videoMountObserver) {
+      attachPlaybackReadyListener();
+      if (isCurrentPlaybackReady() && state.videoMountObserver) {
         state.videoMountObserver.disconnect();
         state.videoMountObserver = null;
       }
     });
   }
 
-  function attachVideoMetricsReadyListener() {
+  function attachPlaybackReadyListener() {
     const video = getPrimaryVideoElement(environment);
     if (!video) return false;
-    if (isCurrentVideoMetricsReady()) return true;
-    if (canMarkVideoMetricsReady(video)) return markVideoMetricsReady(video);
-    if (state.videoMetricsReadyListenerVideo === video) return true;
+    if (isCurrentPlaybackReady()) return true;
+    if (canMarkPlaybackReady(video)) return markPlaybackReady(video);
+    if (state.playbackReadyListenerVideo === video) return true;
 
-    clearVideoMetricsReadyListener();
+    clearPlaybackReadyListener();
 
     const events = ['loadedmetadata', 'loadeddata', 'durationchange', 'canplay'];
     let observedFreshMediaEvent = false;
     const cleanup = () => {
       events.forEach((eventName) => video.removeEventListener(eventName, onAny));
-      if (state.videoMetricsReadyListenerVideo === video) {
-        state.videoMetricsReadyListenerVideo = null;
-        state.videoMetricsReadyListenerCleanup = null;
+      if (state.playbackReadyListenerVideo === video) {
+        state.playbackReadyListenerVideo = null;
+        state.playbackReadyListenerCleanup = null;
       }
     };
     const maybeSend = () => {
-      if (canMarkVideoMetricsReady(video, observedFreshMediaEvent)) {
-        markVideoMetricsReady(video);
+      if (canMarkPlaybackReady(video, observedFreshMediaEvent)) {
+        markPlaybackReady(video);
         return true;
       }
       return false;
@@ -147,14 +147,14 @@ export function createVideoMetricsReadinessTracker({
     if (maybeSend()) return true;
 
     events.forEach((eventName) => video.addEventListener(eventName, onAny));
-    state.videoMetricsReadyListenerVideo = video;
-    state.videoMetricsReadyListenerCleanup = cleanup;
+    state.playbackReadyListenerVideo = video;
+    state.playbackReadyListenerCleanup = cleanup;
     return true;
   }
 
   function watchForVideoMount() {
-    attachVideoMetricsReadyListener();
-    if (isCurrentVideoMetricsReady()) {
+    attachPlaybackReadyListener();
+    if (isCurrentPlaybackReady()) {
       if (state.videoMountObserver) {
         state.videoMountObserver.disconnect();
         state.videoMountObserver = null;
@@ -178,15 +178,15 @@ export function createVideoMetricsReadinessTracker({
       return;
     }
 
-    attachVideoMetricsReadyListener();
-    if (isCurrentVideoMetricsReady()) {
+    attachPlaybackReadyListener();
+    if (isCurrentPlaybackReady()) {
       state.videoMountObserver.disconnect();
       state.videoMountObserver = null;
     }
   }
 
-  function disposeVideoMetricsReadinessObservers() {
-    clearVideoMetricsReadyListener();
+  function disposePlaybackReadinessObservers() {
+    clearPlaybackReadyListener();
     state.videoMountCheckScheduled = false;
     state.videoMountCheckToken += 1;
     if (state.videoMountObserver) {
@@ -196,10 +196,9 @@ export function createVideoMetricsReadinessTracker({
   }
 
   return {
-    disposeVideoMetricsReadinessObservers,
-    getVideoFingerprint,
-    isCurrentVideoMetricsReady,
-    markCurrentVideoMetricsReadyIfAvailable,
+    disposePlaybackReadinessObservers,
+    isCurrentPlaybackReady,
+    markCurrentPlaybackReadyIfAvailable,
     watchForVideoMount,
   };
 }

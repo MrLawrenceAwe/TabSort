@@ -1,8 +1,8 @@
 import { isFiniteNumber, isValidWindowId } from '../../shared/guards.js';
 import { buildTabSnapshot } from '../tab-snapshot.js';
 import { applyTabReloadStarted } from '../tabs/video-state.js';
-import { recomputeSortState } from '../sorting/state.js';
-import { sortTabs } from '../sorting/apply.js';
+import { recomputeSortState } from '../sorting/update-sort-state.js';
+import { organiseTabs } from '../sorting/execute-sort.js';
 import { reloadChromeTab, updateTab } from '../tabs/chrome-tabs.js';
 import { collectPlaybackMetricsBatch } from '../playback/collect.js';
 import {
@@ -14,22 +14,29 @@ import {
 import { reconcileWindowTabRecords } from '../tabs/reconcile.js';
 import { shouldRefreshRecordMetrics } from '../../shared/tab-readiness/refresh-policy.js';
 
-export async function openTab(message) {
+function resolveTabAction(message) {
   const tabId = message.tabId;
   if (!isFiniteNumber(tabId)) {
-    return { ok: false, error: 'invalidTabId' };
+    return { error: 'invalidTabId' };
   }
   const record = getMutableTabRecord(tabId);
   if (!record) {
-    return { ok: false, error: 'tabNotTracked' };
+    return { error: 'tabNotTracked' };
   }
   if (
     isValidWindowId(message.windowId) &&
     isValidWindowId(record.windowId) &&
     message.windowId !== record.windowId
   ) {
-    return { ok: false, error: 'windowMismatch' };
+    return { error: 'windowMismatch' };
   }
+  return { record, tabId };
+}
+
+export async function openTab(message) {
+  const action = resolveTabAction(message);
+  if (action.error) return { ok: false, error: action.error };
+  const { tabId } = action;
   const didOpen = await updateTab(tabId, { active: true });
   return didOpen
     ? { ok: true, tabId }
@@ -37,21 +44,9 @@ export async function openTab(message) {
 }
 
 export async function reloadTab(message) {
-  const tabId = message.tabId;
-  if (!isFiniteNumber(tabId)) {
-    return { ok: false, error: 'invalidTabId' };
-  }
-  const record = getMutableTabRecord(tabId);
-  if (!record) {
-    return { ok: false, error: 'tabNotTracked' };
-  }
-  if (
-    isValidWindowId(message.windowId) &&
-    isValidWindowId(record.windowId) &&
-    message.windowId !== record.windowId
-  ) {
-    return { ok: false, error: 'windowMismatch' };
-  }
+  const action = resolveTabAction(message);
+  if (action.error) return { ok: false, error: action.error };
+  const { record, tabId } = action;
   const didReload = await reloadChromeTab(tabId);
   if (!didReload) {
     return { ok: false, error: 'reloadFailed', tabId };
@@ -98,7 +93,7 @@ export async function getWindowSnapshot(message) {
   return buildTabSnapshot();
 }
 
-export async function handleSortTabs(message) {
+export async function handleOrganiseTabs(message) {
   const targetWindowId = isValidWindowId(message.windowId)
     ? message.windowId
     : trackedWindow.windowId;
@@ -119,11 +114,11 @@ export async function handleSortTabs(message) {
   }
 
   const resolvedTargetWindowId = reconciliation.windowId;
-  const sortResult = await sortTabs(resolvedTargetWindowId, {
+  const organisationResult = await organiseTabs(resolvedTargetWindowId, {
     expectedSyncToken: reconciliation.syncToken,
   });
   if (isSyncTokenCurrent(reconciliation.syncToken)) {
     await reconcileWindowTabRecords(resolvedTargetWindowId, { force: true });
   }
-  return sortResult;
+  return organisationResult;
 }

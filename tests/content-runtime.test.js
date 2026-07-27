@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { createYouTubePageController } from '../content/youtube/page/controller.js';
 import { shouldSendContentScriptReadySignal } from '../content/youtube/page/ready-signal.js';
-import { collectPageVideoDetails } from '../content/youtube/metadata/details.js';
+import { collectPageDetails } from '../content/youtube/metadata/collect-page-details.js';
 import { inferIsLiveNow } from '../content/youtube/metadata/live-status.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import {
@@ -97,7 +97,7 @@ test('content script session skips video collection work outside watch and short
       (message) => message?.type === RUNTIME_MESSAGE_TYPES.PAGE_VIDEO_DETAILS,
     );
     const mediaReadySignals = installRuntimeTestDom.messages.filter(
-      (message) => message?.type === RUNTIME_MESSAGE_TYPES.VIDEO_ELEMENT_READY,
+      (message) => message?.type === RUNTIME_MESSAGE_TYPES.PLAYBACK_METRICS_READY,
     );
 
     assert.equal(readySignals.length, 1);
@@ -111,7 +111,7 @@ test('content script session skips video collection work outside watch and short
 });
 
 test(
-  'content script session waits for fresh media evidence before re-sending the video element ready event on SPA navigation',
+  'content script waits for fresh media evidence before re-sending playback readiness on SPA navigation',
   () => {
     const runtime = createYouTubePageController();
     try {
@@ -120,7 +120,7 @@ test(
       runtime.bootstrap();
 
       const initialMediaReadySignals = installRuntimeTestDom.messages.filter(
-        (message) => message?.type === RUNTIME_MESSAGE_TYPES.VIDEO_ELEMENT_READY,
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PLAYBACK_METRICS_READY,
       );
       assert.equal(initialMediaReadySignals.length, 1);
 
@@ -132,7 +132,7 @@ test(
       windowTarget.dispatch('yt-navigate-finish');
 
       const mediaReadyAfterNavigation = installRuntimeTestDom.messages.filter(
-        (message) => message?.type === RUNTIME_MESSAGE_TYPES.VIDEO_ELEMENT_READY,
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PLAYBACK_METRICS_READY,
       );
       assert.equal(mediaReadyAfterNavigation.length, 1);
 
@@ -142,7 +142,7 @@ test(
       video.dispatch('loadedmetadata');
 
       const mediaReadyAfterFreshVideo = installRuntimeTestDom.messages.filter(
-        (message) => message?.type === RUNTIME_MESSAGE_TYPES.VIDEO_ELEMENT_READY,
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PLAYBACK_METRICS_READY,
       );
       assert.equal(mediaReadyAfterFreshVideo.length, 2);
     } finally {
@@ -164,7 +164,7 @@ test(
       runtime.bootstrap();
 
       const mediaReadyAfterBootstrap = installRuntimeTestDom.messages.filter(
-        (message) => message?.type === RUNTIME_MESSAGE_TYPES.VIDEO_ELEMENT_READY,
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PLAYBACK_METRICS_READY,
       );
       assert.equal(mediaReadyAfterBootstrap.length, 0);
 
@@ -180,10 +180,10 @@ test(
         },
       );
 
-      assert.equal(response?.videoElementReady, true);
+      assert.equal(response?.playbackMetricsReady, true);
 
       const mediaReadyAfterMetricCollection = installRuntimeTestDom.messages.filter(
-        (message) => message?.type === RUNTIME_MESSAGE_TYPES.VIDEO_ELEMENT_READY,
+        (message) => message?.type === RUNTIME_MESSAGE_TYPES.PLAYBACK_METRICS_READY,
       );
       assert.equal(mediaReadyAfterMetricCollection.length, 0);
     } finally {
@@ -216,7 +216,7 @@ test(
         },
       );
 
-      assert.equal(response?.videoElementReady, false);
+      assert.equal(response?.playbackMetricsReady, false);
       assert.equal(response?.duration, 6211);
       assert.equal(response?.currentTime, 0);
     } finally {
@@ -252,7 +252,7 @@ test('page video details ignore zero-length YouTube player metadata', () => {
     },
   };
 
-  const details = collectPageVideoDetails({
+  const details = collectPageDetails({
     inferIsLiveNow,
     logContentError() {},
     environment,

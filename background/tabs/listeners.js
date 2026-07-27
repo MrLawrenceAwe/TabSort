@@ -1,16 +1,16 @@
 import { isFiniteNumber, isValidWindowId } from '../../shared/guards.js';
 import { logDebug, logWarn, withErrorLogging } from '../../shared/log.js';
 import { getTab } from './chrome-tabs.js';
-import { recomputeSortState } from '../sorting/state.js';
+import { recomputeSortState } from '../sorting/update-sort-state.js';
 import { collectPlaybackMetrics } from '../playback/collect.js';
 import {
   canManageWindow,
-  deleteTabFromWindowOrder,
+  deleteTabFromOrderedWindow,
   deleteTabRecord,
   trackedWindow,
 } from '../windows/store.js';
 import { reconcileWindowTabRecords } from './reconcile.js';
-import { isYouTubeVideoPage } from '../youtube/urls.js';
+import { isYouTubeVideoPage } from '../../shared/youtube/urls.js';
 
 const RECONCILE_DEBOUNCE_MS = 200;
 const pendingReconcilesByWindow = new Map();
@@ -114,7 +114,7 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
 
   chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     if (!canManageWindow(removeInfo?.windowId)) return;
-    deleteTabFromWindowOrder(tabId);
+    deleteTabFromOrderedWindow(tabId);
     deleteTabRecord(tabId);
     if (removeInfo?.isWindowClosing && removeInfo.windowId === trackedWindow.windowId) {
       if (typeof onTrackedWindowClosed === 'function') {

@@ -1,5 +1,5 @@
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../../shared/messages.js';
-import { collectPageVideoDetails } from '../metadata/details.js';
+import { collectPageDetails as collectYouTubePageDetails } from '../metadata/collect-page-details.js';
 
 export function createExtensionRuntimeBridge({ config, environment, getChrome, getLocation }) {
   function logContentError(context, error) {
@@ -27,7 +27,7 @@ export function createExtensionRuntimeBridge({ config, environment, getChrome, g
   }
 
   function collectPageDetails() {
-    return collectPageVideoDetails({
+    return collectYouTubePageDetails({
       environment,
       inferIsLiveNow: config.inferIsLiveNow,
       logContentError,

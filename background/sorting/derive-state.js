@@ -1,6 +1,6 @@
 import { isFiniteNumber } from '../../shared/guards.js';
 import { createSortSummary } from '../../shared/sorting/summary.js';
-import { hasReadyRemainingTime } from './readiness.js';
+import { hasReadyRemainingTime } from './sort-readiness.js';
 import { buildYouTubeTabOrder } from './move-order.js';
 
 function tabIdsEqual(left, right) {
@@ -16,8 +16,8 @@ function tabIdsByPosition(records) {
     .map((record) => record.id);
 }
 
-export function deriveSortState(records, { tabsInWindowOrder = [] } = {}) {
-  const trackedTabIdsInWindowOrder = tabIdsByPosition(records);
+export function deriveSortState(records, { orderedWindowTabs = [] } = {}) {
+  const trackedTabOrder = tabIdsByPosition(records);
   const sortableRecords = records.filter((record) => !record.pinned && !record.isLive);
   const sortableTabIds = tabIdsByPosition(sortableRecords);
   const readyRecords = sortableRecords.filter(hasReadyRemainingTime);
@@ -29,16 +29,16 @@ export function deriveSortState(records, { tabsInWindowOrder = [] } = {}) {
       left.videoDetails.remainingTime - right.videoDetails.remainingTime)
     .map((record) => record.id);
   const waitingTabIds = sortableTabIds.filter((id) => !readyTabIds.has(id));
-  const plannedVideoTabOrder = [...readyTabIdsByRemainingTime, ...waitingTabIds];
-  const hasTabStripState = Array.isArray(tabsInWindowOrder) && tabsInWindowOrder.length > 0;
+  const targetVideoTabOrder = [...readyTabIdsByRemainingTime, ...waitingTabIds];
+  const hasTabStripState = Array.isArray(orderedWindowTabs) && orderedWindowTabs.length > 0;
   const unpinnedTabs = hasTabStripState
-    ? tabsInWindowOrder
+    ? orderedWindowTabs
       .filter((tab) => tab && !tab.pinned)
       .sort((left, right) => left.index - right.index)
     : [];
   const unpinnedTabIds = unpinnedTabs.map((tab) => tab.id);
   const expectedYouTubeTabOrder = hasTabStripState
-    ? buildYouTubeTabOrder(unpinnedTabs, plannedVideoTabOrder)
+    ? buildYouTubeTabOrder(unpinnedTabs, targetVideoTabOrder)
     : [];
 
   let readyTabsAreContiguous = true;
@@ -60,40 +60,28 @@ export function deriveSortState(records, { tabsInWindowOrder = [] } = {}) {
     );
   }
 
-  const allSortableVideosReady = sortableRecords.length > 1 && waitingTabIds.length === 0;
+  const allSortableTabsReady = sortableRecords.length > 1 && waitingTabIds.length === 0;
   const youtubeTabStripMatchesPlan =
     !hasTabStripState ||
     expectedYouTubeTabOrder.every((id, index) => unpinnedTabIds[index] === id);
-  const isSortComplete =
-    allSortableVideosReady &&
+  const isTargetOrderApplied =
+    allSortableTabsReady &&
     tabIdsEqual(sortableTabIds, readyTabIdsByRemainingTime) &&
     youtubeTabStripMatchesPlan;
-  const inactiveTabsHaveStaleRemainingTime = sortableRecords.some(
-    (record) => record.remainingTimeStale && (!record.isActive || record.isHidden),
-  );
-
   return {
-    trackedTabIdsInWindowOrder,
-    plannedVideoTabOrder,
-    isSortComplete,
+    trackedTabOrder,
+    targetVideoTabOrder,
+    isTargetOrderApplied,
     sortSummary: createSortSummary({
-      counts: {
-        tracked: records.length,
-        sortReady: readyRecords.length,
-      },
-      sortReadyTabs: {
-        contiguous: readyTabsAreContiguous,
-        atFront: readyTabsAreAtFront,
-        outOfOrder:
-          readyTabIdsInCurrentOrder.length >= 2 &&
-          !tabIdsEqual(readyTabIdsInCurrentOrder, readyTabIdsByRemainingTime),
-      },
-      inactiveTabs: {
-        hasStaleRemainingTime: inactiveTabsHaveStaleRemainingTime,
-      },
-      order: {
-        allSortableVideosReady,
-      },
+      trackedCount: records.length,
+      sortableCount: sortableRecords.length,
+      readyCount: readyRecords.length,
+      readyTabsContiguous: readyTabsAreContiguous,
+      readyTabsAtFront: readyTabsAreAtFront,
+      readyTabsOutOfOrder:
+        readyTabIdsInCurrentOrder.length >= 2 &&
+        !tabIdsEqual(readyTabIdsInCurrentOrder, readyTabIdsByRemainingTime),
+      allSortableTabsReady,
     }),
   };
 }

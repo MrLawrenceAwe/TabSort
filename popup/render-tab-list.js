@@ -4,7 +4,12 @@ import {
   syncPopupLayout,
   setMetadataColumnsVisible,
 } from './popup-layout-view.js';
-import { setErrorMessage, setStateMessage } from './popup-elements.js';
+import {
+  getPopupDocument,
+  getPopupElement,
+  setErrorMessage,
+  setStateMessage,
+} from './popup-elements.js';
 import { applyPopupState } from './popup-store.js';
 import { renderTabRow } from './tab-row-view.js';
 
@@ -12,26 +17,27 @@ export function renderTabList(snapshot, { requestTabAction } = {}) {
   if (!snapshot) return;
   setErrorMessage('');
 
-  const table = document.getElementById('tabsTable');
+  const runtimeDocument = getPopupDocument();
+  const table = getPopupElement('table');
   if (!table) return;
   const tbody = table.tBodies[0] ?? table.createTBody();
 
   const tabRecords = snapshot.tabRecordsById || {};
-  const trackedTabIdsInWindowOrder = snapshot.trackedTabIdsInWindowOrder || [];
+  const trackedTabOrder = snapshot.trackedTabOrder || [];
   const sortSummary = createSortSummary(snapshot.sortSummary);
-  const isSortComplete = snapshot.isSortComplete === true;
-  const hasTrackedTabs = trackedTabIdsInWindowOrder.some((tabId) => Boolean(tabRecords[tabId]));
+  const isTargetOrderApplied = snapshot.isTargetOrderApplied === true;
+  const hasTrackedTabs = trackedTabOrder.some((tabId) => Boolean(tabRecords[tabId]));
 
   applyPopupState({
-    isSortComplete,
+    isTargetOrderApplied,
     sortSummary,
   });
 
-  setMetadataColumnsVisible(!isSortComplete);
+  setMetadataColumnsVisible(!isTargetOrderApplied);
 
-  const rowFragment = document.createDocumentFragment();
-  for (const tabId of trackedTabIdsInWindowOrder) {
-    const row = document.createElement('tr');
+  const rowFragment = runtimeDocument.createDocumentFragment();
+  for (const tabId of trackedTabOrder) {
+    const row = runtimeDocument.createElement('tr');
     const tabRecord = tabRecords[tabId];
     if (!tabRecord) continue;
     const normalizedRecord = {
@@ -39,15 +45,15 @@ export function renderTabList(snapshot, { requestTabAction } = {}) {
       remainingTimeStale: Boolean(tabRecord.remainingTimeStale),
     };
     if (normalizedRecord.remainingTimeStale) row.classList.add('stale-remaining-row');
-    renderTabRow(row, normalizedRecord, isSortComplete, requestTabAction);
+    renderTabRow(row, normalizedRecord, isTargetOrderApplied, requestTabAction);
     rowFragment.appendChild(row);
   }
   tbody.replaceChildren(rowFragment);
   table.classList.toggle('hide', !hasTrackedTabs);
   setStateMessage(hasTrackedTabs ? '' : 'No YouTube video tabs in this window.');
 
-  if (sortSummary.order.allSortableVideosReady && !isSortComplete) {
-    addClassToTabRows(table, 'all-sort-ready-row');
+  if (sortSummary.allSortableTabsReady && !isTargetOrderApplied) {
+    addClassToTabRows(table, 'all-ready-row');
   }
 
   syncPopupLayout();

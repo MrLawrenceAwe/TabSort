@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   getYouTubeVideoId,
   hasYouTubeVideoChanged,
-} from '../background/youtube/urls.js';
+} from '../shared/youtube/urls.js';
 
 test('watch and Shorts URLs use the same video identity', () => {
   const watchUrl = 'https://www.youtube.com/watch?v=abc123';

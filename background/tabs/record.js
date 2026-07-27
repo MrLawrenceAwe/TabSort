@@ -17,8 +17,8 @@ export function createTabRecord(tabId, windowId, defaults = {}) {
     index: initialIndex,
     pinned: Boolean(defaults.pinned),
     loadState: defaults.loadState ?? null,
-    pageRuntimeReady: Boolean(defaults.pageRuntimeReady),
-    videoElementReady: Boolean(defaults.videoElementReady),
+    contentScriptReady: Boolean(defaults.contentScriptReady),
+    playbackMetricsReady: Boolean(defaults.playbackMetricsReady),
     isLive: Boolean(defaults.isLive),
     isActive: Boolean(defaults.isActive),
     isHidden: Boolean(defaults.isHidden),
@@ -26,7 +26,7 @@ export function createTabRecord(tabId, windowId, defaults = {}) {
     loadingStartedAt: defaults.loadingStartedAt ?? null,
     unsuspendedTimestamp: defaults.unsuspendedTimestamp ?? null,
     transitionStartedAt: defaults.transitionStartedAt ?? null,
-    waitingForVideoSince: defaults.waitingForVideoSince ?? null,
+    metricsWaitStartedAt: defaults.metricsWaitStartedAt ?? null,
     remainingTimeStale:
       defaults.remainingTimeStale == null ? true : Boolean(defaults.remainingTimeStale),
   };
