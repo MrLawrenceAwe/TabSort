@@ -175,12 +175,21 @@ test('background unsuspended rows ask the user to view before reloading for miss
 function createFakeDocument() {
   return {
     createElement(tagName) {
+      const listeners = new Map();
       return {
         tagName,
-        href: '',
+        type: '',
+        disabled: false,
         classList: { add() {} },
         textContent: '',
-        addEventListener() {},
+        addEventListener(type, listener) {
+          listeners.set(type, listener);
+        },
+        setAttribute() {},
+        removeAttribute() {},
+        click() {
+          return listeners.get('click')?.();
+        },
       };
     },
     createTextNode(textContent) {
@@ -272,6 +281,40 @@ test('wait rows render passive text instead of clickable actions', () => {
       assert.equal(row.cells[1].textContent, label);
       assert.equal(row.cells[1].children.length, 0);
     }
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test('action guidance renders a semantic button and awaits the action result', async () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = createFakeDocument();
+  try {
+    const row = createFakeRow();
+    let request = null;
+    renderTabRow(
+      row,
+      makeRecord({
+        pageRuntimeReady: false,
+        unsuspendedTimestamp: Date.now() - (RECENTLY_UNSUSPENDED_MS + 1000),
+      }),
+      false,
+      async (type, data) => {
+        request = { type, data };
+        return false;
+      },
+    );
+
+    const button = row.cells[1].children[0];
+    assert.equal(button.tagName, 'button');
+    assert.equal(button.type, 'button');
+    await button.click();
+    assert.deepEqual(request, {
+      type: 'reloadTab',
+      data: { tabId: 1 },
+    });
+    assert.equal(button.disabled, false);
+    assert.equal(button.textContent, 'Reload tab');
   } finally {
     globalThis.document = previousDocument;
   }

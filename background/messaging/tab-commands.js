@@ -9,7 +9,6 @@ import {
   getMutableTabRecord,
   isSyncTokenCurrent,
   listTabIds,
-  setTrackedWindowId,
   trackedWindow,
 } from '../windows/store.js';
 import { reconcileWindowTabRecords } from '../tabs/reconcile.js';
@@ -17,30 +16,54 @@ import { shouldRefreshRecordMetrics } from '../../shared/tab-readiness/refresh-p
 
 export async function openTab(message) {
   const tabId = message.tabId;
-  if (!isFiniteNumber(tabId)) return;
-  if (isValidWindowId(message.windowId)) {
-    setTrackedWindowId(message.windowId, { force: true });
+  if (!isFiniteNumber(tabId)) {
+    return { ok: false, error: 'invalidTabId' };
   }
-  await updateTab(tabId, { active: true });
+  const record = getMutableTabRecord(tabId);
+  if (!record) {
+    return { ok: false, error: 'tabNotTracked' };
+  }
+  if (
+    isValidWindowId(message.windowId) &&
+    isValidWindowId(record.windowId) &&
+    message.windowId !== record.windowId
+  ) {
+    return { ok: false, error: 'windowMismatch' };
+  }
+  const didOpen = await updateTab(tabId, { active: true });
+  return didOpen
+    ? { ok: true, tabId }
+    : { ok: false, error: 'openFailed', tabId };
 }
 
 export async function reloadTab(message) {
   const tabId = message.tabId;
-  if (!isFiniteNumber(tabId)) return;
-  if (isValidWindowId(message.windowId)) {
-    setTrackedWindowId(message.windowId, { force: true });
+  if (!isFiniteNumber(tabId)) {
+    return { ok: false, error: 'invalidTabId' };
+  }
+  const record = getMutableTabRecord(tabId);
+  if (!record) {
+    return { ok: false, error: 'tabNotTracked' };
+  }
+  if (
+    isValidWindowId(message.windowId) &&
+    isValidWindowId(record.windowId) &&
+    message.windowId !== record.windowId
+  ) {
+    return { ok: false, error: 'windowMismatch' };
   }
   const didReload = await reloadChromeTab(tabId);
-  if (!didReload) return;
-  const record = getMutableTabRecord(tabId);
-  if (!record) return;
+  if (!didReload) {
+    return { ok: false, error: 'reloadFailed', tabId };
+  }
 
   applyTabReloadStarted(record);
   recomputeSortState();
+  return { ok: true, tabId };
 }
 
 export async function syncWindowTabs(message) {
-  await reconcileWindowTabRecords(
+  return reconcileWindowTabRecords(
     message.windowId,
     isValidWindowId(message.windowId) ? { force: true } : undefined,
   );

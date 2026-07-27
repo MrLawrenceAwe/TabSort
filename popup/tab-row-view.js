@@ -18,7 +18,7 @@ const COLUMNS = Object.freeze({
   ],
 });
 
-export function renderTabRow(row, tabRecord, isSortComplete, postRuntimeMessage) {
+export function renderTabRow(row, tabRecord, isSortComplete, requestTabAction) {
   row.insertCell(0).textContent = tabRecord.videoDetails?.title ?? tabRecord.url;
 
   const guidance = determineTabGuidance(tabRecord);
@@ -26,7 +26,7 @@ export function renderTabRow(row, tabRecord, isSortComplete, postRuntimeMessage)
     row.classList.add('reload-required-row');
   }
   if (!isSortComplete) {
-    insertGuidanceCell(row, tabRecord, guidance, postRuntimeMessage);
+    insertGuidanceCell(row, tabRecord, guidance, requestTabAction);
   }
 
   insertInfoCells(row, tabRecord, isSortComplete, guidance);
@@ -48,7 +48,7 @@ function insertInfoCells(row, record, isSortComplete, guidance) {
   });
 }
 
-function insertGuidanceCell(row, record, guidance, postRuntimeMessage) {
+function insertGuidanceCell(row, record, guidance, requestTabAction) {
   const cell = row.insertCell(1);
   if (
     guidance === TAB_GUIDANCE.NONE ||
@@ -60,27 +60,37 @@ function insertGuidanceCell(row, record, guidance, postRuntimeMessage) {
     return;
   }
 
-  const linkElement = createActionLink(
+  const actionButton = createActionButton(
     getTabGuidanceLabel(guidance),
     guidance === TAB_GUIDANCE.RELOAD_TAB
       ? RUNTIME_MESSAGE_TYPES.RELOAD_TAB
       : RUNTIME_MESSAGE_TYPES.OPEN_TAB,
     record.id,
-    postRuntimeMessage,
+    requestTabAction,
   );
-  cell.appendChild(linkElement);
+  cell.appendChild(actionButton);
 }
 
-function createActionLink(text, actionType, tabId, postRuntimeMessage) {
-  const linkElement = document.createElement('a');
-  linkElement.href = '#';
-  linkElement.classList.add('user-action-link');
-  linkElement.textContent = text;
-  linkElement.addEventListener('click', (event) => {
-    event.preventDefault();
-    postRuntimeMessage(actionType, { tabId });
+function createActionButton(text, actionType, tabId, requestTabAction) {
+  const actionButton = document.createElement('button');
+  actionButton.type = 'button';
+  actionButton.classList.add('user-action-button');
+  actionButton.textContent = text;
+  actionButton.addEventListener('click', async () => {
+    const originalText = actionButton.textContent;
+    actionButton.disabled = true;
+    actionButton.setAttribute?.('aria-busy', 'true');
+    actionButton.textContent = actionType === RUNTIME_MESSAGE_TYPES.RELOAD_TAB
+      ? 'Reloading…'
+      : 'Opening…';
+    const didSucceed = await requestTabAction?.(actionType, { tabId });
+    if (!didSucceed) {
+      actionButton.disabled = false;
+      actionButton.removeAttribute?.('aria-busy');
+      actionButton.textContent = originalText;
+    }
   });
-  return linkElement;
+  return actionButton;
 }
 
 export function formatRemainingStatus(record, requiredAction = determineTabGuidance(record)) {

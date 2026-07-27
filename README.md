@@ -5,8 +5,12 @@ Chrome extension that keeps YouTube video tabs organised by the time you still h
 ## Install (unpacked)
 
 1. Clone or download this repository.
-2. Visit `chrome://extensions`, enable **Developer mode**, and choose **Load unpacked**.
-3. Select the project directory.
+2. Run `npm install` and `npm run build`.
+3. Visit `chrome://extensions`, enable **Developer mode**, and choose **Load unpacked**.
+4. Select the project directory.
+
+Alternatively, install the ZIP produced by `npm run package` using your normal extension
+distribution workflow.
 
 ## Using the popup
 
@@ -19,5 +23,32 @@ Chrome extension that keeps YouTube video tabs organised by the time you still h
 
 ## Development
 
-- Run tests with `npm test`.
-- Run tests and syntax checks with `npm run check`.
+- `npm run build` bundles the isolated YouTube content runtime into
+  `dist/content-runtime.js`.
+- `npm test` runs the unit and integration-style Node tests.
+- `npm run test:e2e` launches Chromium with the unpacked extension and runs the popup/runtime
+  smoke test. Install its browser once with `npx playwright install chromium`.
+- `npm run check` builds and runs tests, linting, static import checks, and release validation.
+- `npm run package` creates `release/tabsort-v<version>.zip`.
+
+The package and manifest versions must match. CI verifies the committed bundle, runs the
+Chromium smoke test, and uploads the packaged extension as a workflow artifact.
+
+## Permissions and privacy
+
+TabSort performs all processing locally and does not send browsing data to a server.
+
+- `tabs` reads tab URLs and positions, activates or reloads a requested tab, and reorders tabs.
+  URLs outside YouTube are only used locally when the optional “Group other tabs by site”
+  setting is enabled.
+- `alarms` refreshes eligible playback information periodically while the extension service
+  worker is available.
+- `scripting` reinjects the bundled YouTube runtime if Chrome reports that a tab has no content
+  script receiver.
+- `webNavigation` detects YouTube single-page navigation reliably.
+- `storage` saves the grouping preference using Chrome sync storage when available, falling back
+  to local storage.
+- The YouTube host permission limits page inspection and content-script execution to
+  `youtube.com`.
+
+No analytics, advertising SDKs, remote code, or external network services are included.

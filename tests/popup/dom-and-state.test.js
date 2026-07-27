@@ -28,6 +28,8 @@ function createFakeElement() {
 function createFakeDocument() {
   const elements = new Map([
     ['popupError', createFakeElement()],
+    ['popupNotice', createFakeElement()],
+    ['popupStateMessage', createFakeElement()],
     ['sortStatus', createFakeElement()],
     ['sortButton', createFakeElement()],
     ['sortedBadge', createFakeElement()],

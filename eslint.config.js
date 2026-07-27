@@ -1,4 +1,3 @@
-import importPlugin from 'eslint-plugin-import';
 import globals from 'globals';
 
 export default [
@@ -7,9 +6,6 @@ export default [
   },
   {
     files: ['**/*.js', '**/*.mjs'],
-    plugins: {
-      import: importPlugin,
-    },
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -20,7 +16,6 @@ export default [
       },
     },
     rules: {
-      'import/no-unresolved': ['error', { commonjs: false }],
       'no-undef': 'error',
       'no-unused-vars': [
         'error',
@@ -30,13 +25,6 @@ export default [
           varsIgnorePattern: '^_',
         },
       ],
-    },
-    settings: {
-      'import/resolver': {
-        node: {
-          extensions: ['.js', '.mjs'],
-        },
-      },
     },
   },
 ];

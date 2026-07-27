@@ -55,8 +55,9 @@ export async function sortTabs(
     return { ok: false, movedCount: 0, skippedReason: 'windowSyncSuperseded' };
   }
 
-  const results = await moveTabsInOrder(finalTabOrder, pinnedCount);
-  const movedCount = results.filter((result) => result.ok).length;
-  const failedCount = results.length - movedCount;
-  return { ok: failedCount === 0, movedCount, failedCount };
+  return moveTabsInOrder(
+    finalTabOrder,
+    pinnedCount,
+    unpinnedTabs.map((tab) => tab.id),
+  );
 }

@@ -3,12 +3,14 @@ import { createSortSummary } from '../shared/sorting/summary.js';
 export const popupState = {
   sortSummary: createSortSummary(),
   isSortComplete: false,
+  isSorting: false,
   activeWindowId: null,
 };
 
 export function resetPopupState() {
   popupState.sortSummary = createSortSummary();
   popupState.isSortComplete = false;
+  popupState.isSorting = false;
   popupState.activeWindowId = null;
 }
 

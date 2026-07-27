@@ -380,7 +380,7 @@ test(
 );
 
 test(
-  'collectPlaybackMetrics reinjects the YouTube bootstrap when no receiver is available',
+  'collectPlaybackMetrics reinjects the bundled YouTube runtime when no receiver is available',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
@@ -426,7 +426,7 @@ test(
     assert.deepEqual(injected, [
       {
         target: { tabId: 1 },
-        files: ['content/youtube/page/bootstrap.js'],
+        files: ['dist/content-runtime.js'],
       },
     ]);
     assert.equal(record.videoDetails.remainingTime, 100);
@@ -435,7 +435,7 @@ test(
 );
 
 test(
-  'collectPlaybackMetrics waits for injected bootstrap before giving up on missing receivers',
+  'collectPlaybackMetrics waits for the injected runtime before giving up on missing receivers',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();

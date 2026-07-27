@@ -10,33 +10,42 @@
     <main>
         <header>
             <div id="headerContainer">
-              <h1>TabSort for YouTube</h1>
+              <div class="brand">
+                <div class="brand-copy">
+                  <h1>TabSort <span>for YouTube</span></h1>
+                </div>
+              </div>
               <div class="header-actions">
                 <button id="sortButton" class="action-button hide">Sort Tabs</button>
-                <div id="sortedBadge" class="tabs-sorted hide">Tabs sorted</div>
+                <div id="sortedBadge" class="tabs-sorted hide"><span aria-hidden="true">✓</span> Tabs sorted</div>
               </div>
           </div>
           <div id="headerBorder"></div>
         </header>
         <section>
             <div id="popupError" class="message-banner error-message hide" role="alert"></div>
+            <div id="popupNotice" class="message-banner notice-message hide" role="status" aria-live="polite"></div>
             <h2>YouTube tabs</h2>
-            <table id="tabsTable">
+            <p id="popupStateMessage" class="state-message" role="status" aria-live="polite">Loading YouTube tabs…</p>
+            <div class="table-scroll">
+            <table id="tabsTable" class="hide">
+              <caption class="visually-hidden">YouTube video tabs and their sorting readiness</caption>
               <thead>
                 <tr>
                     <th class="video-title-url">Video</th>
-                    <th class="next-step">Next Step</th>
-                    <th class="remaining-time">Remaining Time</th>
+                    <th class="next-step">Next step</th>
+                    <th class="remaining-time">Remaining</th>
                     <th class="tab-index">Position</th>
-                    <th class="load-state">Load State</th>
+                    <th class="load-state">Load state</th>
                 </tr>
               </thead>
-                <tbody></tbody>
+              <tbody></tbody>
             </table>
+            </div>
         </section>
         <footer>
             <div id="controls">
-                <div id="sortStatus" class="status-message"></div>
+                <div id="sortStatus" class="status-message" role="status" aria-live="polite"></div>
                 <label class="option-toggle hide">
                     <input type="checkbox" id="groupOtherTabsToggle">
                     Group other tabs by site
