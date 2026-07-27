@@ -2,15 +2,15 @@ import { createSortSummary } from '../shared/sorting/summary.js';
 
 export const popupState = {
   sortSummary: createSortSummary(),
-  isSortComplete: false,
-  isSorting: false,
+  isTargetOrderApplied: false,
+  isOrganising: false,
   activeWindowId: null,
 };
 
 export function resetPopupState() {
   popupState.sortSummary = createSortSummary();
-  popupState.isSortComplete = false;
-  popupState.isSorting = false;
+  popupState.isTargetOrderApplied = false;
+  popupState.isOrganising = false;
   popupState.activeWindowId = null;
 }
 

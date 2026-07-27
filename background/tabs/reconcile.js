@@ -1,17 +1,17 @@
 import { isValidWindowId } from '../../shared/guards.js';
-import { getTabState, listWindowTabs } from './chrome-tabs.js';
-import { recomputeSortState } from '../sorting/state.js';
-import { createRecordFromTab } from './record-from-tab.js';
+import { getTabLoadState, listWindowTabs } from './chrome-tabs.js';
+import { recomputeSortState } from '../sorting/update-sort-state.js';
+import { buildTabRecord } from './build-tab-record.js';
 import {
   getTabRecordsById,
   getTrackedWindowId,
   isSyncTokenCurrent,
   nextSyncToken,
   replaceAllTabRecords,
-  replaceTabsInWindowOrder,
+  replaceOrderedWindowTabs,
   setTrackedWindowId,
 } from '../windows/store.js';
-import { hasYouTubeVideoChanged, isYouTubeVideoPage } from '../youtube/urls.js';
+import { hasYouTubeVideoChanged, isYouTubeVideoPage } from '../../shared/youtube/urls.js';
 
 function resolveWindowIdForQuery(windowId, { force = false } = {}) {
   const currentWindowId = getTrackedWindowId();
@@ -62,8 +62,8 @@ export async function reconcileWindowTabRecords(windowId, options = {}) {
 
     const previousTabRecord = previousTabRecords[tab.id] || {};
     const urlChanged = hasYouTubeVideoChanged(previousTabRecord.url, tab.url);
-    const nextStatus = getTabState(tab);
-    const nextTabRecord = createRecordFromTab(tab, previousTabRecord, nextStatus, {
+    const nextLoadState = getTabLoadState(tab);
+    const nextTabRecord = buildTabRecord(tab, previousTabRecord, nextLoadState, {
       urlChanged,
     });
 
@@ -73,7 +73,7 @@ export async function reconcileWindowTabRecords(windowId, options = {}) {
   if (!isSyncTokenCurrent(syncToken)) {
     return { ok: false, applied: false, reason: 'superseded', windowId: resolvedWindowId };
   }
-  replaceTabsInWindowOrder(tabs);
+  replaceOrderedWindowTabs(tabs);
   replaceAllTabRecords(nextTabRecords);
   recomputeSortState();
   return { ok: true, applied: true, windowId: queriedWindowId, syncToken };

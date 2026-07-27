@@ -1,14 +1,14 @@
 import { RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import {
   openTab,
-  handleSortTabs,
+  handleOrganiseTabs,
   getWindowSnapshot,
   reloadTab,
   syncWindowTabs,
 } from './tab-commands.js';
 import {
   handlePageVideoDetails,
-  handleVideoElementReady,
+  handlePlaybackMetricsReady,
   handleContentScriptReady,
 } from './page-events.js';
 
@@ -32,7 +32,7 @@ function createMessageHandlers(message, sender) {
   return {
     [RUNTIME_MESSAGE_TYPES.SYNC_TRACKED_TABS]: () => syncWindowTabs(message),
     [RUNTIME_MESSAGE_TYPES.GET_TAB_SNAPSHOT]: () => getWindowSnapshot(message),
-    [RUNTIME_MESSAGE_TYPES.SORT_TABS]: () => handleSortTabs(message),
+    [RUNTIME_MESSAGE_TYPES.ORGANISE_TABS]: () => handleOrganiseTabs(message),
     [RUNTIME_MESSAGE_TYPES.PING]: async () => ({ ok: true }),
     [RUNTIME_MESSAGE_TYPES.OPEN_TAB]: () => openTab(message),
     [RUNTIME_MESSAGE_TYPES.RELOAD_TAB]: () => reloadTab(message),
@@ -41,7 +41,7 @@ function createMessageHandlers(message, sender) {
       console[level](`[Popup] ${message.text}`);
     },
     [RUNTIME_MESSAGE_TYPES.CONTENT_SCRIPT_READY]: () => handleContentScriptReady(message, sender),
-    [RUNTIME_MESSAGE_TYPES.VIDEO_ELEMENT_READY]: () => handleVideoElementReady(message, sender),
+    [RUNTIME_MESSAGE_TYPES.PLAYBACK_METRICS_READY]: () => handlePlaybackMetricsReady(message, sender),
     [RUNTIME_MESSAGE_TYPES.PAGE_VIDEO_DETAILS]: () => handlePageVideoDetails(message, sender),
   };
 }

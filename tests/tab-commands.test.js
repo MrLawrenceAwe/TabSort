@@ -5,7 +5,7 @@ import { TAB_LOAD_STATES } from '../shared/tabs/load-states.js';
 import { trackedWindow } from '../background/windows/store.js';
 import {
   getWindowSnapshot,
-  handleSortTabs,
+  handleOrganiseTabs,
   openTab,
   reloadTab,
 } from '../background/messaging/tab-commands.js';
@@ -50,7 +50,7 @@ test('reloadTab marks record loading only after successful reload call', { concu
 
   const record = trackedWindow.tabRecordsById[1];
   assert.equal(record.loadState, TAB_LOAD_STATES.LOADING);
-  assert.equal(record.pageRuntimeReady, false);
+  assert.equal(record.contentScriptReady, false);
   assert.equal(record.remainingTimeStale, true);
   assert.equal(record.videoDetails.remainingTime, null);
   assert.equal(typeof record.loadingStartedAt, 'number');
@@ -84,7 +84,7 @@ test('openTab returns a structured success result', { concurrency: false }, asyn
   assert.deepEqual(result, { ok: true, tabId: 1 });
 });
 
-test('handleSortTabs refreshes a newly targeted window before deriving its sort', { concurrency: false }, async () => {
+test('handleOrganiseTabs refreshes a newly targeted window before deriving its sort', { concurrency: false }, async () => {
   resetTrackedWindowState(1);
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
@@ -96,7 +96,7 @@ test('handleSortTabs refreshes a newly targeted window before deriving its sort'
       remainingTimeStale: false,
     }),
   });
-  setTrackedSortState({ plannedVideoTabOrder: [2, 1] });
+  setTrackedSortState({ targetVideoTabOrder: [2, 1] });
 
   const queriedWindowIds = [];
   globalThis.chrome.tabs.query = (query, callback) => {
@@ -111,7 +111,7 @@ test('handleSortTabs refreshes a newly targeted window before deriving its sort'
     movedTabIds.push(tabId);
   };
 
-  const result = await handleSortTabs({ windowId: 2 });
+  const result = await handleOrganiseTabs({ windowId: 2 });
 
   assert.deepEqual(result, {
     ok: true,
@@ -164,7 +164,7 @@ test(
 );
 
 test(
-  'handleSortTabs does not sort with another window state when reconciliation is superseded',
+  'handleOrganiseTabs does not sort with another window state when reconciliation is superseded',
   { concurrency: false },
   async () => {
     resetTrackedWindowState(1);
@@ -177,7 +177,7 @@ test(
       movedTabIds.push(tabId);
     };
 
-    const sortWindow1 = handleSortTabs({ windowId: 1 });
+    const sortWindow1 = handleOrganiseTabs({ windowId: 1 });
     await Promise.resolve();
     const reconcileWindow2 = reconcileWindowTabRecords(2, { force: true });
     await Promise.resolve();

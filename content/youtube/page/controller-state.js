@@ -1,17 +1,17 @@
-export function createVideoMetricsReadinessState() {
+function createPlaybackReadinessState() {
   return {
     videoMountObserver: null,
-    metricsReadyPageUrl: null,
-    lastMetricsReadyVideo: null,
-    lastMetricsReadyFingerprint: null,
-    videoMetricsReadyListenerVideo: null,
-    videoMetricsReadyListenerCleanup: null,
+    playbackReadyPageUrl: null,
+    lastReadyVideo: null,
+    lastReadyFingerprint: null,
+    playbackReadyListenerVideo: null,
+    playbackReadyListenerCleanup: null,
     videoMountCheckScheduled: false,
     videoMountCheckToken: 0,
   };
 }
 
-export function createTitleObserverState() {
+function createTitleObserverState() {
   return {
     titleElementObserver: null,
     titleTextObserver: null,
@@ -20,20 +20,19 @@ export function createTitleObserverState() {
   };
 }
 
-export function createControllerLifecycleState() {
+function createControllerLifecycleState() {
   return {
     initialized: false,
     observedPageUrl: null,
     lastScriptReadyUrl: null,
     cleanupFns: [],
-    runtimeMessageListener: null,
   };
 }
 
 export function createPageControllerState() {
   return {
     lifecycle: createControllerLifecycleState(),
-    videoMetricsReadiness: createVideoMetricsReadinessState(),
+    playbackReadiness: createPlaybackReadinessState(),
     titleObserver: createTitleObserverState(),
   };
 }

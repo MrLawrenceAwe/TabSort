@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { sortTabs } from '../background/sorting/apply.js';
+import { organiseTabs } from '../background/sorting/execute-sort.js';
 import { nextSyncToken } from '../background/windows/store.js';
 import {
   ensureChromeApi,
@@ -15,7 +15,7 @@ import {
 
 ensureChromeApi({ tabs: true });
 
-test('sortTabs returns move counts after sorting tabs', { concurrency: false }, async () => {
+test('organiseTabs returns move counts after organising tabs', { concurrency: false }, async () => {
   resetTrackedWindowState(1);
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
@@ -30,8 +30,8 @@ test('sortTabs returns move counts after sorting tabs', { concurrency: false }, 
     }),
   });
   setTrackedSortState({
-    trackedTabIdsInWindowOrder: [1, 2],
-    plannedVideoTabOrder: [2, 1],
+    trackedTabOrder: [1, 2],
+    targetVideoTabOrder: [2, 1],
   });
   stubChromeTabQuery([
     createChromeTabFixture(1, { index: 0 }),
@@ -44,7 +44,7 @@ test('sortTabs returns move counts after sorting tabs', { concurrency: false }, 
     moves.push({ tabId, index: options.index });
   };
 
-  const result = await sortTabs(1);
+  const result = await organiseTabs(1);
 
   assert.deepEqual(result, { ok: true, movedCount: 2, failedCount: 0 });
   assert.deepEqual(moves, [
@@ -52,7 +52,7 @@ test('sortTabs returns move counts after sorting tabs', { concurrency: false }, 
   ]);
 });
 
-test('sortTabs reports an atomic bulk move failure', { concurrency: false }, async () => {
+test('organiseTabs reports an atomic bulk move failure', { concurrency: false }, async () => {
   resetTrackedWindowState(1);
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
@@ -64,21 +64,21 @@ test('sortTabs reports an atomic bulk move failure', { concurrency: false }, asy
       remainingTimeStale: false,
     }),
   });
-  setTrackedSortState({ plannedVideoTabOrder: [2, 1] });
+  setTrackedSortState({ targetVideoTabOrder: [2, 1] });
   stubChromeTabQuery([createChromeTabFixture(1), createChromeTabFixture(2)]);
 
   globalThis.chrome.tabs.move = async () => {
     throw new Error('move failed');
   };
 
-  const result = await sortTabs(1);
+  const result = await organiseTabs(1);
 
   assert.equal(result.ok, false);
   assert.equal(result.movedCount, 0);
   assert.equal(result.failedCount, 2);
 });
 
-test('sortTabs avoids Chrome move calls when the complete order already matches', { concurrency: false }, async () => {
+test('organiseTabs avoids Chrome move calls when the complete order already matches', { concurrency: false }, async () => {
   resetTrackedWindowState(1);
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
@@ -91,7 +91,7 @@ test('sortTabs avoids Chrome move calls when the complete order already matches'
       remainingTimeStale: false,
     }),
   });
-  setTrackedSortState({ plannedVideoTabOrder: [1, 2] });
+  setTrackedSortState({ targetVideoTabOrder: [1, 2] });
   stubChromeTabQuery([
     createChromeTabFixture(1),
     createChromeTabFixture(2, { index: 1 }),
@@ -100,13 +100,13 @@ test('sortTabs avoids Chrome move calls when the complete order already matches'
     throw new Error('already ordered tabs should not move');
   };
 
-  const result = await sortTabs(1);
+  const result = await organiseTabs(1);
 
   assert.deepEqual(result, { ok: true, movedCount: 0, failedCount: 0 });
 });
 
 test(
-  'sortTabs does not move tabs when its sync token is superseded during preparation',
+  'organiseTabs does not move tabs when its sync token is superseded during preparation',
   { concurrency: false },
   async () => {
     resetTrackedWindowState(1);
@@ -121,8 +121,8 @@ test(
       }),
     });
     setTrackedSortState({
-      trackedTabIdsInWindowOrder: [1, 2],
-      plannedVideoTabOrder: [2, 1],
+      trackedTabOrder: [1, 2],
+      targetVideoTabOrder: [2, 1],
     });
     stubChromeTabQuery([
       createChromeTabFixture(1),
@@ -135,10 +135,10 @@ test(
     };
 
     const expectedSyncToken = nextSyncToken();
-    const pendingSort = sortTabs(1, { expectedSyncToken });
+    const pendingOrganisation = organiseTabs(1, { expectedSyncToken });
     nextSyncToken();
 
-    const result = await pendingSort;
+    const result = await pendingOrganisation;
 
     assert.deepEqual(result, {
       ok: false,

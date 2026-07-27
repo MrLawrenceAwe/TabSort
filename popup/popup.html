@@ -16,8 +16,8 @@
                 </div>
               </div>
               <div class="header-actions">
-                <button id="sortButton" class="action-button hide">Sort Tabs</button>
-                <div id="sortedBadge" class="tabs-sorted hide"><span aria-hidden="true">✓</span> Tabs sorted</div>
+                <button id="organiseButton" class="action-button hide">Organise Tabs</button>
+                <div id="organisedBadge" class="tabs-organised hide"><span aria-hidden="true">✓</span> Tabs organised</div>
               </div>
           </div>
           <div id="headerBorder"></div>
@@ -29,7 +29,7 @@
             <p id="popupStateMessage" class="state-message" role="status" aria-live="polite">Loading YouTube tabs…</p>
             <div class="table-scroll">
             <table id="tabsTable" class="hide">
-              <caption class="visually-hidden">YouTube video tabs and their sorting readiness</caption>
+              <caption class="visually-hidden">YouTube video tabs and their organisation readiness</caption>
               <thead>
                 <tr>
                     <th class="video-title-url">Video</th>
@@ -45,7 +45,7 @@
         </section>
         <footer>
             <div id="controls">
-                <div id="sortStatus" class="status-message" role="status" aria-live="polite"></div>
+                <div id="organiseStatus" class="status-message" role="status" aria-live="polite"></div>
                 <label class="option-toggle hide">
                     <input type="checkbox" id="groupOtherTabsToggle">
                     Group other tabs by site

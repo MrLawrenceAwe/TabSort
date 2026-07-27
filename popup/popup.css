@@ -227,21 +227,21 @@ h2 {
     background-color: var(--surface-hover-color);
 }
 
-.sort-ready-row td {
+.ready-row td {
     background-color: var(--ready-background) !important;
     color: var(--ready-text) !important;
 }
 
-.sort-ready-row td:first-child {
+.ready-row td:first-child {
     box-shadow: inset 2px 0 0 var(--ready-accent);
 }
 
-.all-sort-ready-row td {
+.all-ready-row td {
     background-color: var(--complete-background) !important;
     color: var(--complete-text) !important;
 }
 
-.all-sort-ready-row td:first-child {
+.all-ready-row td:first-child {
     box-shadow: inset 2px 0 0 var(--complete-accent);
 }
 
@@ -389,14 +389,14 @@ input:focus-visible {
     border-color: var(--ready-button-hover-color);
 }
 
-.tabs-sorted {
+.tabs-organised {
     color: var(--complete-text);
     font-size: 11px;
     font-weight: 560;
     white-space: nowrap;
 }
 
-.tabs-sorted span {
+.tabs-organised span {
     margin-right: 3px;
     color: var(--complete-accent);
 }

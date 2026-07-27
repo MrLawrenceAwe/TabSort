@@ -7,44 +7,44 @@ import {
 } from '../shared/tab-readiness/action-guidance.js';
 
 const COLUMNS = Object.freeze({
-  sorted: [
+  organised: [
     { key: 'remainingStatus', getter: formatRemainingStatus },
     { key: 'index', getter: formatIndex },
   ],
-  planning: [
+  pending: [
     { key: 'remainingStatus', getter: formatRemainingStatus },
     { key: 'index', getter: formatIndex },
     { key: 'status', getter: (record) => record.loadState },
   ],
 });
 
-export function renderTabRow(row, tabRecord, isSortComplete, requestTabAction) {
+export function renderTabRow(row, tabRecord, isTargetOrderApplied, requestTabAction) {
   row.insertCell(0).textContent = tabRecord.videoDetails?.title ?? tabRecord.url;
 
   const guidance = determineTabGuidance(tabRecord);
   if (guidance === TAB_GUIDANCE.RELOAD_TAB) {
     row.classList.add('reload-required-row');
   }
-  if (!isSortComplete) {
+  if (!isTargetOrderApplied) {
     insertGuidanceCell(row, tabRecord, guidance, requestTabAction);
   }
 
-  insertInfoCells(row, tabRecord, isSortComplete, guidance);
+  insertInfoCells(row, tabRecord, isTargetOrderApplied, guidance);
 
   const remaining = tabRecord?.videoDetails?.remainingTime;
   const hasRemainingTime = isFiniteNumber(remaining) && !tabRecord.remainingTimeStale;
-  if (hasRemainingTime && !isSortComplete) row.classList.add('sort-ready-row');
+  if (hasRemainingTime && !isTargetOrderApplied) row.classList.add('ready-row');
 }
 
-function insertInfoCells(row, record, isSortComplete, guidance) {
-  const columns = isSortComplete
-    ? COLUMNS.sorted
-    : COLUMNS.planning;
+function insertInfoCells(row, record, isTargetOrderApplied, guidance) {
+  const columns = isTargetOrderApplied
+    ? COLUMNS.organised
+    : COLUMNS.pending;
 
   columns.forEach((column) => {
     const cell = row.insertCell(row.cells.length);
     const value = column.getter(record, guidance);
-    cell.textContent = isSortComplete ? value : toDisplayText(value);
+    cell.textContent = isTargetOrderApplied ? value : toDisplayText(value);
   });
 }
 
@@ -61,6 +61,7 @@ function insertGuidanceCell(row, record, guidance, requestTabAction) {
   }
 
   const actionButton = createActionButton(
+    row.ownerDocument ?? globalThis.document,
     getTabGuidanceLabel(guidance),
     guidance === TAB_GUIDANCE.RELOAD_TAB
       ? RUNTIME_MESSAGE_TYPES.RELOAD_TAB
@@ -71,8 +72,8 @@ function insertGuidanceCell(row, record, guidance, requestTabAction) {
   cell.appendChild(actionButton);
 }
 
-function createActionButton(text, actionType, tabId, requestTabAction) {
-  const actionButton = document.createElement('button');
+function createActionButton(runtimeDocument, text, actionType, tabId, requestTabAction) {
+  const actionButton = runtimeDocument.createElement('button');
   actionButton.type = 'button';
   actionButton.classList.add('user-action-button');
   actionButton.textContent = text;

@@ -1,7 +1,7 @@
 import { broadcastSnapshotUpdate } from '../tab-snapshot.js';
 import { deriveSortState } from './derive-state.js';
 import {
-  getTabsInWindowOrder,
+  getOrderedWindowTabs,
   listTabRecords,
   setSortState,
 } from '../windows/store.js';
@@ -9,7 +9,7 @@ import {
 export function recomputeSortState() {
   const records = listTabRecords();
   const derivedState = deriveSortState(records, {
-    tabsInWindowOrder: getTabsInWindowOrder(),
+    orderedWindowTabs: getOrderedWindowTabs(),
   });
   setSortState(derivedState);
   broadcastSnapshotUpdate();

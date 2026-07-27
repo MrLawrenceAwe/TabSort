@@ -1,19 +1,19 @@
-import { getCurrentTimeMs } from '../windows/store.js';
+import { nowMs } from '../../shared/time.js';
 import {
-  markVideoElementReady,
-  resetVideoReadiness,
+  markPlaybackMetricsReady,
+  resetPlaybackReadiness,
 } from '../tabs/video-state.js';
 
 export function applyPlaybackStateUpdate(record, playbackUpdate, currentTabUrl) {
   if (!record || !playbackUpdate) return;
 
-  record.pageRuntimeReady = playbackUpdate.pageRuntimeReady;
-  if (playbackUpdate.videoElementReady) {
-    markVideoElementReady(record);
+  record.contentScriptReady = playbackUpdate.contentScriptReady;
+  if (playbackUpdate.playbackMetricsReady) {
+    markPlaybackMetricsReady(record);
   } else {
-    resetVideoReadiness(record, { waitingForVideoSince: record.waitingForVideoSince });
-    if (record.pageRuntimeReady && typeof record.waitingForVideoSince !== 'number') {
-      record.waitingForVideoSince = getCurrentTimeMs();
+    resetPlaybackReadiness(record, { metricsWaitStartedAt: record.metricsWaitStartedAt });
+    if (record.contentScriptReady && typeof record.metricsWaitStartedAt !== 'number') {
+      record.metricsWaitStartedAt = nowMs();
     }
   }
   record.videoDetails = record.videoDetails || {};

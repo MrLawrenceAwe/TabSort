@@ -3,9 +3,9 @@ import { getOrCreateTabRecord } from '../tabs/record.js';
 import {
   applyContentScriptReady,
   applyVideoDetailsFromPage,
-  markVideoElementReady,
+  markPlaybackMetricsReady,
 } from '../tabs/video-state.js';
-import { recomputeSortState } from '../sorting/state.js';
+import { recomputeSortState } from '../sorting/update-sort-state.js';
 import { collectPlaybackMetrics } from '../playback/collect.js';
 import {
   deleteTabRecord,
@@ -13,7 +13,7 @@ import {
   getTrackedWindowId,
   setTrackedWindowId,
 } from '../windows/store.js';
-import { hasYouTubeVideoChanged, isYouTubeVideoPage } from '../youtube/urls.js';
+import { hasYouTubeVideoChanged, isYouTubeVideoPage } from '../../shared/youtube/urls.js';
 
 function isSenderInTrackedWindow(windowId) {
   const trackedWindowId = getTrackedWindowId();
@@ -61,16 +61,16 @@ export async function handleContentScriptReady(_message, sender) {
   });
   applyContentScriptReady(record, { urlChanged: videoChanged, url: senderUrl });
   recomputeSortState();
-  return { type: 'pageRuntimeAck' };
+  return { type: 'contentScriptReadyAck' };
 }
 
-export async function handleVideoElementReady(_message, sender) {
+export async function handlePlaybackMetricsReady(_message, sender) {
   const pageSender = resolveVideoPageSender(sender);
   if (!pageSender) return;
   const { tabId, windowId } = pageSender;
   setTrackedWindowId(windowId);
   const record = getOrCreateTabRecord(tabId, windowId);
-  markVideoElementReady(record);
+  markPlaybackMetricsReady(record);
   await collectPlaybackMetrics(tabId);
 }
 

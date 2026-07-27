@@ -8,6 +8,7 @@ import { renderTabList } from './render-tab-list.js';
 import { syncPopupLayout } from './popup-layout-view.js';
 import {
   initializePopupDom,
+  getPopupElement,
   setErrorMessage,
   setNoticeMessage,
   setStateMessage,
@@ -59,7 +60,7 @@ async function runWithPopupErrorLogging(task, context) {
 async function initializePopupPreferences() {
   startThemeSync();
   const options = await loadSortOptions();
-  const groupOtherTabsToggle = document.getElementById('groupOtherTabsToggle');
+  const groupOtherTabsToggle = getPopupElement('groupOtherTabsToggle');
 
   if (groupOtherTabsToggle) {
     groupOtherTabsToggle.checked = Boolean(options.groupOtherTabsBySite);
@@ -107,14 +108,14 @@ async function requestTabAction(type, data) {
   return false;
 }
 
-async function requestSort() {
-  if (popupState.isSorting) return;
-  applyPopupState({ isSorting: true });
+async function requestOrganise() {
+  if (popupState.isOrganising) return;
+  applyPopupState({ isOrganising: true });
   setErrorMessage('');
   setNoticeMessage('');
   syncPopupLayout();
   try {
-    const response = await runtimeClient.requestRuntimeMessage(RUNTIME_MESSAGE_TYPES.SORT_TABS);
+    const response = await runtimeClient.requestRuntimeMessage(RUNTIME_MESSAGE_TYPES.ORGANISE_TABS);
     if (response?.ok !== true) {
       setErrorMessage('Could not organise the tabs. Try again.');
       return;
@@ -126,9 +127,9 @@ async function requestSort() {
     }
   } catch (error) {
     setErrorMessage('Could not organise the tabs. Try again.');
-    runtimeClient.logPopupError('Sorting tabs failed', error);
+    runtimeClient.logPopupError('Organising tabs failed', error);
   } finally {
-    applyPopupState({ isSorting: false });
+    applyPopupState({ isOrganising: false });
     syncPopupLayout();
   }
 }
@@ -147,9 +148,9 @@ function createSnapshotMessageListener() {
 }
 
 function registerPopupControls() {
-  const sortButton = document.getElementById('sortButton');
-  if (sortButton) {
-    sortButton.addEventListener('click', requestSort);
+  const organiseButton = getPopupElement('organiseButton');
+  if (organiseButton) {
+    organiseButton.addEventListener('click', requestOrganise);
   }
 }
 

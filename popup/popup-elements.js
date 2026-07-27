@@ -4,8 +4,9 @@ function createPopupElements() {
     notice: null,
     stateMessage: null,
     status: null,
-    sortButton: null,
-    sortedBadge: null,
+    organiseButton: null,
+    organisedBadge: null,
+    groupOtherTabsToggle: null,
     table: null,
     nextStepColumn: null,
     loadStateColumn: null,
@@ -35,9 +36,10 @@ export function initializePopupDom(rootDocument = globalThis.document) {
   popupElements.error = runtimeDocument.getElementById('popupError');
   popupElements.notice = runtimeDocument.getElementById('popupNotice');
   popupElements.stateMessage = runtimeDocument.getElementById('popupStateMessage');
-  popupElements.status = runtimeDocument.getElementById('sortStatus');
-  popupElements.sortButton = runtimeDocument.getElementById('sortButton');
-  popupElements.sortedBadge = runtimeDocument.getElementById('sortedBadge');
+  popupElements.status = runtimeDocument.getElementById('organiseStatus');
+  popupElements.organiseButton = runtimeDocument.getElementById('organiseButton');
+  popupElements.organisedBadge = runtimeDocument.getElementById('organisedBadge');
+  popupElements.groupOtherTabsToggle = runtimeDocument.getElementById('groupOtherTabsToggle');
   popupElements.table = runtimeDocument.getElementById('tabsTable');
   popupElements.nextStepColumn = runtimeDocument.querySelector('.next-step');
   popupElements.loadStateColumn = runtimeDocument.querySelector('.load-state');

@@ -19,8 +19,8 @@ function makeRecord(overrides = {}) {
     isLive: false,
     isActive: false,
     isHidden: false,
-    pageRuntimeReady: true,
-    videoElementReady: true,
+    contentScriptReady: true,
+    playbackMetricsReady: true,
     remainingTimeStale: false,
     unsuspendedTimestamp: null,
     videoDetails: { remainingTime: null },
@@ -31,7 +31,7 @@ function makeRecord(overrides = {}) {
 test('stale rows without remaining time do not suggest viewing the tab', () => {
   const record = makeRecord({
     remainingTimeStale: true,
-    pageRuntimeReady: false,
+    contentScriptReady: false,
     unsuspendedTimestamp: Date.now() - (RECENTLY_UNSUSPENDED_MS + 1000),
   });
 
@@ -42,7 +42,7 @@ test('stale rows without remaining time do not suggest viewing the tab', () => {
 test('recently unsuspended rows avoid contradictory stale guidance', () => {
   const record = makeRecord({
     remainingTimeStale: true,
-    pageRuntimeReady: false,
+    contentScriptReady: false,
     unsuspendedTimestamp: Date.now(),
   });
 
@@ -54,16 +54,16 @@ test('recent watch URL transitions avoid reload guidance while runtime can catch
   const activeRecord = makeRecord({
     isActive: true,
     remainingTimeStale: true,
-    pageRuntimeReady: false,
-    videoElementReady: false,
+    contentScriptReady: false,
+    playbackMetricsReady: false,
     transitionStartedAt: Date.now(),
     videoDetails: null,
   });
   const inactiveRecord = makeRecord({
     isActive: false,
     remainingTimeStale: true,
-    pageRuntimeReady: false,
-    videoElementReady: false,
+    contentScriptReady: false,
+    playbackMetricsReady: false,
     transitionStartedAt: Date.now(),
     videoDetails: null,
   });
@@ -77,16 +77,16 @@ test('stalled watch URL transitions eventually ask for the useful action', () =>
   const activeRecord = makeRecord({
     isActive: true,
     remainingTimeStale: true,
-    pageRuntimeReady: false,
-    videoElementReady: false,
+    contentScriptReady: false,
+    playbackMetricsReady: false,
     transitionStartedAt: Date.now() - (RECENT_WATCH_TRANSITION_MS + 1000),
     videoDetails: null,
   });
   const inactiveRecord = makeRecord({
     isActive: false,
     remainingTimeStale: true,
-    pageRuntimeReady: false,
-    videoElementReady: false,
+    contentScriptReady: false,
+    playbackMetricsReady: false,
     transitionStartedAt: Date.now() - (RECENT_WATCH_TRANSITION_MS + 1000),
     videoDetails: null,
   });
@@ -99,7 +99,7 @@ test('stale rows with remaining time can still request an open tab when appropri
   const record = makeRecord({
     remainingTimeStale: true,
     videoDetails: { remainingTime: 320 },
-    pageRuntimeReady: true,
+    contentScriptReady: true,
     isActive: false,
   });
 
@@ -110,13 +110,13 @@ test('stale rows with remaining time can still request an open tab when appropri
 test('loading rows switch from waiting to open after the loading grace period', () => {
   const recentLoadingRecord = makeRecord({
     loadState: TAB_LOAD_STATES.LOADING,
-    pageRuntimeReady: false,
+    contentScriptReady: false,
     loadingStartedAt: Date.now() - (LOADING_GRACE_MS - 1000),
   });
 
   const stalledLoadingRecord = makeRecord({
     loadState: TAB_LOAD_STATES.LOADING,
-    pageRuntimeReady: false,
+    contentScriptReady: false,
     loadingStartedAt: Date.now() - (LOADING_GRACE_MS + 1000),
   });
 
@@ -128,7 +128,7 @@ test('active loading rows switch from waiting to reload after the loading grace 
   const activeStalledLoadingRecord = makeRecord({
     loadState: TAB_LOAD_STATES.LOADING,
     isActive: true,
-    pageRuntimeReady: false,
+    contentScriptReady: false,
     loadingStartedAt: Date.now() - (LOADING_GRACE_MS + 1000),
   });
 
@@ -138,10 +138,10 @@ test('active loading rows switch from waiting to reload after the loading grace 
 test('active watch rows wait through video data mismatches instead of asking for reload', () => {
   const activeAdRecord = makeRecord({
     isActive: true,
-    pageRuntimeReady: true,
-    videoElementReady: false,
+    contentScriptReady: true,
+    playbackMetricsReady: false,
     remainingTimeStale: true,
-    waitingForVideoSince: Date.now() - (MEDIA_WAIT_GRACE_MS - 1000),
+    metricsWaitStartedAt: Date.now() - (MEDIA_WAIT_GRACE_MS - 1000),
     videoDetails: { remainingTime: 45143, lengthSeconds: 45143 },
   });
 
@@ -152,10 +152,10 @@ test('active watch rows wait through video data mismatches instead of asking for
 test('active watch rows eventually ask for reload when video data stays stuck', () => {
   const activeStalledMediaRecord = makeRecord({
     isActive: true,
-    pageRuntimeReady: true,
-    videoElementReady: false,
+    contentScriptReady: true,
+    playbackMetricsReady: false,
     remainingTimeStale: true,
-    waitingForVideoSince: Date.now() - (MEDIA_WAIT_GRACE_MS + 1000),
+    metricsWaitStartedAt: Date.now() - (MEDIA_WAIT_GRACE_MS + 1000),
     videoDetails: { remainingTime: 45143, lengthSeconds: 45143 },
   });
 
@@ -165,7 +165,7 @@ test('active watch rows eventually ask for reload when video data stays stuck', 
 test('background unsuspended rows ask the user to view before reloading for missing time', () => {
   const record = makeRecord({
     isActive: false,
-    pageRuntimeReady: true,
+    contentScriptReady: true,
     videoDetails: { remainingTime: null },
   });
 
@@ -232,7 +232,7 @@ test('reload rows receive the reload-required styling hook', () => {
   try {
     const row = createFakeRow();
     const record = makeRecord({
-      pageRuntimeReady: false,
+      contentScriptReady: false,
       unsuspendedTimestamp: Date.now() - (RECENTLY_UNSUSPENDED_MS + 1000),
     });
 
@@ -253,8 +253,8 @@ test('wait rows render passive text instead of clickable actions', () => {
         'Wait for tab to load',
         makeRecord({
           loadState: TAB_LOAD_STATES.LOADING,
-          pageRuntimeReady: false,
-          videoElementReady: false,
+          contentScriptReady: false,
+          playbackMetricsReady: false,
           loadingStartedAt: Date.now() - (LOADING_GRACE_MS - 1000),
         }),
       ],
@@ -262,10 +262,10 @@ test('wait rows render passive text instead of clickable actions', () => {
         'Wait for video data',
         makeRecord({
           isActive: true,
-          pageRuntimeReady: true,
-          videoElementReady: false,
+          contentScriptReady: true,
+          playbackMetricsReady: false,
           remainingTimeStale: true,
-          waitingForVideoSince: Date.now() - (MEDIA_WAIT_GRACE_MS - 1000),
+          metricsWaitStartedAt: Date.now() - (MEDIA_WAIT_GRACE_MS - 1000),
           videoDetails: { remainingTime: 45143, lengthSeconds: 45143 },
         }),
       ],
@@ -295,7 +295,7 @@ test('action guidance renders a semantic button and awaits the action result', a
     renderTabRow(
       row,
       makeRecord({
-        pageRuntimeReady: false,
+        contentScriptReady: false,
         unsuspendedTimestamp: Date.now() - (RECENTLY_UNSUSPENDED_MS + 1000),
       }),
       false,

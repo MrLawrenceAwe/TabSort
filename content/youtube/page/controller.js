@@ -4,13 +4,12 @@ import {
   DEFAULT_PAGE_CONFIG,
   DEFAULT_PAGE_DEPENDENCIES,
 } from './config.js';
-import { createPageControllerState } from './state.js';
+import { createPageControllerState } from './controller-state.js';
 import { shouldSendContentScriptReadySignal } from './ready-signal.js';
-import { createVideoMetricsReadinessTracker } from '../media/readiness.js';
+import { createPlaybackReadinessTracker } from '../media/playback-readiness.js';
 import { createTitleObserver } from '../metadata/title-observer.js';
 import { handleCollectVideoMetricsMessage } from '../media/metrics.js';
-
-const YOUTUBE_VIDEO_PAGE_REGEX = /^https?:\/\/([^/]+\.)?youtube\.com\/(?:watch\?|shorts\/)/i;
+import { isYouTubeVideoPage } from '../../../shared/youtube/urls.js';
 
 export function createYouTubePageController({
   config = {},
@@ -22,7 +21,7 @@ export function createYouTubePageController({
     ...config,
   };
   const state = createPageControllerState();
-  const { lifecycle, videoMetricsReadiness: videoMetricsReadinessState, titleObserver: titleObserverState } = state;
+  const { lifecycle, playbackReadiness: playbackReadinessState, titleObserver: titleObserverState } = state;
 
   const getDocument = () => environment.document ?? globalThis.document;
   const getWindow = () => environment.window ?? globalThis.window;
@@ -66,7 +65,7 @@ export function createYouTubePageController({
     });
   }
 
-  function doesVideoDurationMatchPage(video) {
+  function doesMediaMatchPageMetadata(video) {
     if (!video || !pageConfig.isFiniteNumber(video.duration)) {
       return false;
     }
@@ -92,15 +91,15 @@ export function createYouTubePageController({
     );
   }
 
-  const videoMetricsReadiness = createVideoMetricsReadinessTracker({
+  const playbackReadiness = createPlaybackReadinessTracker({
     config: pageConfig,
     environment,
-    state: videoMetricsReadinessState,
+    state: playbackReadinessState,
     getCurrentPageUrl,
     getDocument,
     getMutationObserver,
     sendExtensionMessage,
-    doesVideoDurationMatchPage,
+    doesMediaMatchPageMetadata,
   });
   const titleObserver = createTitleObserver({
     state: titleObserverState,
@@ -110,7 +109,7 @@ export function createYouTubePageController({
   });
 
   function disposeObservers() {
-    videoMetricsReadiness.disposeVideoMetricsReadinessObservers();
+    playbackReadiness.disposePlaybackReadinessObservers();
     titleObserver.disposeTitleObservers();
   }
 
@@ -123,7 +122,12 @@ export function createYouTubePageController({
         logContentError('Cleaning up content script listener', error);
       }
     }
-    lifecycle.runtimeMessageListener = null;
+  }
+
+  function resetPlaybackReadinessState() {
+    playbackReadinessState.playbackReadyPageUrl = null;
+    playbackReadinessState.lastReadyVideo = null;
+    playbackReadinessState.lastReadyFingerprint = null;
   }
 
   function syncObservedPageUrl() {
@@ -132,14 +136,8 @@ export function createYouTubePageController({
       disposeObservers();
       lifecycle.observedPageUrl = currentUrl;
       lifecycle.lastScriptReadyUrl = null;
-      videoMetricsReadinessState.metricsReadyPageUrl = null;
-    } else if (!lifecycle.observedPageUrl && currentUrl) {
-      lifecycle.observedPageUrl = currentUrl;
+      playbackReadinessState.playbackReadyPageUrl = null;
     }
-  }
-
-  function isVideoPageUrl(url) {
-    return typeof url === 'string' && YOUTUBE_VIDEO_PAGE_REGEX.test(url);
   }
 
   function refreshPageState({ sendReadySignal = false, forceReadySignal = false } = {}) {
@@ -147,12 +145,12 @@ export function createYouTubePageController({
     if (sendReadySignal) {
       dispatchContentScriptReadySignal({ force: forceReadySignal });
     }
-    if (!isVideoPageUrl(getCurrentPageUrl())) {
+    if (!isYouTubeVideoPage(getCurrentPageUrl())) {
       disposeObservers();
       return;
     }
     publishPageVideoDetails();
-    videoMetricsReadiness.watchForVideoMount();
+    playbackReadiness.watchForVideoMount();
     titleObserver.watchTitleChanges();
   }
 
@@ -161,9 +159,7 @@ export function createYouTubePageController({
     disposeListeners();
     lifecycle.observedPageUrl = null;
     lifecycle.lastScriptReadyUrl = null;
-    videoMetricsReadinessState.metricsReadyPageUrl = null;
-    videoMetricsReadinessState.lastMetricsReadyVideo = null;
-    videoMetricsReadinessState.lastMetricsReadyFingerprint = null;
+    resetPlaybackReadinessState();
     lifecycle.initialized = false;
   }
 
@@ -175,16 +171,16 @@ export function createYouTubePageController({
 
     const runtimeWindow = getWindow();
     const runtimeDocument = getDocument();
-    lifecycle.runtimeMessageListener = (message, _sender, sendResponse) =>
+    const messageListener = (message, _sender, sendResponse) =>
       handleCollectVideoMetricsMessage(message, sendResponse, {
         config: pageConfig,
         environment,
         collectPageDetails,
-        isCurrentVideoMetricsReady: videoMetricsReadiness.isCurrentVideoMetricsReady,
-        markCurrentVideoMetricsReadyIfAvailable:
-          videoMetricsReadiness.markCurrentVideoMetricsReadyIfAvailable,
+        isCurrentPlaybackReady: playbackReadiness.isCurrentPlaybackReady,
+        markCurrentPlaybackReadyIfAvailable:
+          playbackReadiness.markCurrentPlaybackReadyIfAvailable,
       });
-    addRuntimeMessageListener(lifecycle.runtimeMessageListener);
+    addRuntimeMessageListener(messageListener);
 
     if (
       runtimeDocument?.readyState === 'complete' ||
@@ -213,9 +209,7 @@ export function createYouTubePageController({
     addWindowEventListener(runtimeWindow, 'pagehide', () => {
       disposeObservers();
       lifecycle.lastScriptReadyUrl = null;
-      videoMetricsReadinessState.metricsReadyPageUrl = null;
-      videoMetricsReadinessState.lastMetricsReadyVideo = null;
-      videoMetricsReadinessState.lastMetricsReadyFingerprint = null;
+      resetPlaybackReadinessState();
     });
   }
 
