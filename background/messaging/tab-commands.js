@@ -86,7 +86,7 @@ export async function handleSortTabs(message) {
   if (
     !reconciliation?.ok ||
     !reconciliation.applied ||
-    reconciliation.windowId !== targetWindowId
+    (isValidWindowId(targetWindowId) && reconciliation.windowId !== targetWindowId)
   ) {
     return {
       ok: false,
@@ -95,11 +95,12 @@ export async function handleSortTabs(message) {
     };
   }
 
-  const sortResult = await sortTabs(targetWindowId, {
+  const resolvedTargetWindowId = reconciliation.windowId;
+  const sortResult = await sortTabs(resolvedTargetWindowId, {
     expectedSyncToken: reconciliation.syncToken,
   });
   if (isSyncTokenCurrent(reconciliation.syncToken)) {
-    await reconcileWindowTabRecords(targetWindowId, { force: true });
+    await reconcileWindowTabRecords(resolvedTargetWindowId, { force: true });
   }
   return sortResult;
 }

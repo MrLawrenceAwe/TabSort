@@ -22,6 +22,20 @@ export function getSortButtonText(sortReadyTabCount, totalTabCount) {
   return sortReadyTabCount === totalTabCount ? 'Sort Tabs' : 'Organise Ready Tabs';
 }
 
+export function shouldShowSortButton(sortSummary, isSortComplete) {
+  const { counts, sortReadyTabs } = sortSummary;
+  const sortReadySubsetExists = counts.sortReady >= 2 && counts.sortReady < counts.tracked;
+  return (
+    counts.sortReady >= 2 &&
+    !isSortComplete &&
+    (
+      sortReadyTabs.outOfOrder ||
+      !sortReadyTabs.atFront ||
+      (sortReadySubsetExists && !sortReadyTabs.contiguous)
+    )
+  );
+}
+
 function updateSortButton(sortButton, shouldShowSort) {
   if (!sortButton) return;
   sortButton.classList.toggle('hide', !shouldShowSort);
@@ -60,15 +74,10 @@ export function syncPopupLayout() {
   const sortButton = getPopupElement('sortButton');
   const sortedBadge = getPopupElement('sortedBadge');
   const table = getPopupElement('table');
-  const { counts, sortReadyTabs } = popupState.sortSummary;
-
-  const sortReadySubsetExists = counts.sortReady >= 2 && counts.sortReady < counts.tracked;
-  const sortReadySubsetNeedsSorting =
-    sortReadySubsetExists && (!sortReadyTabs.contiguous || !sortReadyTabs.atFront);
-  const shouldShowSort =
-    counts.sortReady >= 2 &&
-    !popupState.isSortComplete &&
-    (sortReadyTabs.outOfOrder || sortReadySubsetNeedsSorting);
+  const shouldShowSort = shouldShowSortButton(
+    popupState.sortSummary,
+    popupState.isSortComplete,
+  );
 
   setOptionToggleVisibility(shouldShowSort);
 

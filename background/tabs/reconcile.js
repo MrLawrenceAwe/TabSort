@@ -8,6 +8,7 @@ import {
   isSyncTokenCurrent,
   nextSyncToken,
   replaceAllTabRecords,
+  replaceTabsInWindowOrder,
   setTrackedWindowId,
 } from '../windows/store.js';
 import { hasYouTubeVideoChanged, isYouTubeVideoPage } from '../youtube/urls.js';
@@ -17,6 +18,14 @@ function resolveWindowIdForQuery(windowId, { force = false } = {}) {
   if (isValidWindowId(windowId) && (force || currentWindowId == null)) return windowId;
   if (force && windowId == null) return null;
   return currentWindowId;
+}
+
+function resolveQueriedWindowId(resolvedWindowId, tabs) {
+  if (isValidWindowId(resolvedWindowId)) return resolvedWindowId;
+  const windowIds = new Set(
+    tabs.map((tab) => tab?.windowId).filter((windowId) => isValidWindowId(windowId)),
+  );
+  return windowIds.size === 1 ? windowIds.values().next().value : null;
 }
 
 export async function reconcileWindowTabRecords(windowId, options = {}) {
@@ -32,14 +41,17 @@ export async function reconcileWindowTabRecords(windowId, options = {}) {
   if (resolvedWindowId == null && tabs.length === 0) {
     return { ok: true, applied: false, reason: 'emptyWindow', windowId: null, syncToken };
   }
-  setTrackedWindowId(resolvedWindowId, options);
+  const queriedWindowId = resolveQueriedWindowId(resolvedWindowId, tabs);
+  if (!isValidWindowId(queriedWindowId)) {
+    return { ok: false, applied: false, reason: 'windowUnavailable', windowId: null };
+  }
+  setTrackedWindowId(queriedWindowId, options);
 
   if (
-    isValidWindowId(resolvedWindowId) &&
     isValidWindowId(getTrackedWindowId()) &&
-    resolvedWindowId !== getTrackedWindowId()
+    queriedWindowId !== getTrackedWindowId()
   ) {
-    return { ok: false, applied: false, reason: 'windowNotClaimed', windowId: resolvedWindowId };
+    return { ok: false, applied: false, reason: 'windowNotClaimed', windowId: queriedWindowId };
   }
 
   const previousTabRecords = getTabRecordsById();
@@ -61,7 +73,8 @@ export async function reconcileWindowTabRecords(windowId, options = {}) {
   if (!isSyncTokenCurrent(syncToken)) {
     return { ok: false, applied: false, reason: 'superseded', windowId: resolvedWindowId };
   }
+  replaceTabsInWindowOrder(tabs);
   replaceAllTabRecords(nextTabRecords);
   recomputeSortState();
-  return { ok: true, applied: true, windowId: resolvedWindowId, syncToken };
+  return { ok: true, applied: true, windowId: queriedWindowId, syncToken };
 }

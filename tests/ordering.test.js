@@ -8,6 +8,7 @@ import {
   createTabRecordFixture,
   resetTrackedWindowState,
   setTrackedTabRecords,
+  setTrackedWindowTabs,
 } from './helpers/background-test-helpers.js';
 
 ensureChromeApi();
@@ -139,4 +140,30 @@ test('pinned tracked tabs count toward popup totals without affecting sort summa
   assert.equal(trackedWindow.sortSummary.counts.sortReady, 2);
   assert.equal(trackedWindow.sortSummary.order.allSortableVideosReady, true);
   assert.deepEqual(trackedWindow.plannedVideoTabOrder, [2, 3]);
+});
+
+test('does not mark videos sorted while non-YouTube tabs remain in front', () => {
+  resetTrackedWindowState();
+  setTrackedTabRecords({
+    2: createTabRecordFixture(2, {
+      index: 1,
+      videoDetails: { remainingTime: 5 },
+      remainingTimeStale: false,
+    }),
+    3: createTabRecordFixture(3, {
+      index: 2,
+      videoDetails: { remainingTime: 15 },
+      remainingTimeStale: false,
+    }),
+  });
+  setTrackedWindowTabs([
+    { id: 1, index: 0, pinned: false, url: 'https://example.com' },
+    { id: 2, index: 1, pinned: false, url: 'https://www.youtube.com/watch?v=2' },
+    { id: 3, index: 2, pinned: false, url: 'https://www.youtube.com/watch?v=3' },
+  ]);
+
+  recomputeSortState();
+
+  assert.equal(trackedWindow.isSortComplete, false);
+  assert.equal(trackedWindow.sortSummary.sortReadyTabs.atFront, false);
 });
