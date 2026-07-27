@@ -18,21 +18,27 @@ function classifyRuntimeMessageFailure(runtimeError) {
   return MESSAGE_FAILURE_REASONS.CHROME_ERROR;
 }
 
-export async function moveTabsInOrder(tabIds, startIndex = 0) {
-  let targetIndex = startIndex;
-  const results = [];
-  for (const tabId of tabIds) {
-    if (typeof tabId !== 'number') continue;
-    try {
-      await chrome.tabs.move(tabId, { index: targetIndex });
-      results.push({ tabId, ok: true, index: targetIndex });
-      targetIndex += 1;
-    } catch (error) {
-      logDebug(`tabs.move failed for ${tabId}`, error);
-      results.push({ tabId, ok: false, error });
-    }
+export async function moveTabsInOrder(tabIds, startIndex = 0, currentTabIds = []) {
+  const desiredTabIds = tabIds.filter((tabId) => typeof tabId === 'number');
+  const currentOrder = currentTabIds.filter((tabId) => typeof tabId === 'number');
+  const orderAlreadyMatches =
+    desiredTabIds.length === currentOrder.length &&
+    desiredTabIds.every((tabId, index) => currentOrder[index] === tabId);
+  if (!desiredTabIds.length || orderAlreadyMatches) {
+    return { ok: true, movedCount: 0, failedCount: 0 };
   }
-  return results;
+
+  const movedCount =
+    desiredTabIds.length === currentOrder.length
+      ? desiredTabIds.filter((tabId, index) => currentOrder[index] !== tabId).length
+      : desiredTabIds.length;
+  try {
+    await chrome.tabs.move(desiredTabIds, { index: startIndex });
+    return { ok: true, movedCount, failedCount: 0 };
+  } catch (error) {
+    logDebug(`tabs.move failed for ${desiredTabIds.join(',')}`, error);
+    return { ok: false, movedCount: 0, failedCount: movedCount };
+  }
 }
 
 function queryTabs(query) {

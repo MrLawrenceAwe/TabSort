@@ -4,11 +4,11 @@ import {
   syncPopupLayout,
   setMetadataColumnsVisible,
 } from './popup-layout-view.js';
-import { setErrorMessage } from './popup-elements.js';
+import { setErrorMessage, setStateMessage } from './popup-elements.js';
 import { applyPopupState } from './popup-store.js';
 import { renderTabRow } from './tab-row-view.js';
 
-export function renderTabList(snapshot, { postRuntimeMessage } = {}) {
+export function renderTabList(snapshot, { requestTabAction } = {}) {
   if (!snapshot) return;
   setErrorMessage('');
 
@@ -20,6 +20,7 @@ export function renderTabList(snapshot, { postRuntimeMessage } = {}) {
   const trackedTabIdsInWindowOrder = snapshot.trackedTabIdsInWindowOrder || [];
   const sortSummary = createSortSummary(snapshot.sortSummary);
   const isSortComplete = snapshot.isSortComplete === true;
+  const hasTrackedTabs = trackedTabIdsInWindowOrder.some((tabId) => Boolean(tabRecords[tabId]));
 
   applyPopupState({
     isSortComplete,
@@ -38,10 +39,12 @@ export function renderTabList(snapshot, { postRuntimeMessage } = {}) {
       remainingTimeStale: Boolean(tabRecord.remainingTimeStale),
     };
     if (normalizedRecord.remainingTimeStale) row.classList.add('stale-remaining-row');
-    renderTabRow(row, normalizedRecord, isSortComplete, postRuntimeMessage);
+    renderTabRow(row, normalizedRecord, isSortComplete, requestTabAction);
     rowFragment.appendChild(row);
   }
   tbody.replaceChildren(rowFragment);
+  table.classList.toggle('hide', !hasTrackedTabs);
+  setStateMessage(hasTrackedTabs ? '' : 'No YouTube video tabs in this window.');
 
   if (sortSummary.order.allSortableVideosReady && !isSortComplete) {
     addClassToTabRows(table, 'all-sort-ready-row');

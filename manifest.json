@@ -3,6 +3,12 @@
     "name": "TabSort for YouTube",
     "version": "1.0.0",
     "description": "Sort YouTube watch tabs by remaining time.",
+    "icons": {
+      "16": "assets/icons/icon16.png",
+      "32": "assets/icons/icon32.png",
+      "48": "assets/icons/icon48.png",
+      "128": "assets/icons/icon128.png"
+    },
     "permissions": [
       "tabs",
       "alarms",
@@ -19,35 +25,17 @@
     },
     "action": {
       "default_popup": "popup/popup.html",
-      "default_title": "TabSort"
+      "default_title": "TabSort",
+      "default_icon": {
+        "16": "assets/icons/icon16.png",
+        "32": "assets/icons/icon32.png"
+      }
     },
     "content_scripts": [
       {
         "matches": ["*://*.youtube.com/*"],
-        "js": ["content/youtube/page/bootstrap.js"],
+        "js": ["dist/content-runtime.js"],
         "run_at": "document_end"
-      }
-    ],
-    "web_accessible_resources": [
-      {
-        "resources": [
-          "content/youtube/page/controller.js",
-          "content/youtube/page/ready-signal.js",
-          "content/youtube/page/config.js",
-          "content/youtube/page/state.js",
-          "content/youtube/page/runtime-bridge.js",
-          "content/youtube/media/elements.js",
-          "content/youtube/media/readiness.js",
-          "content/youtube/media/metrics.js",
-          "content/youtube/metadata/details.js",
-          "content/youtube/metadata/player-response.js",
-          "content/youtube/metadata/live-status.js",
-          "content/youtube/metadata/title-observer.js",
-          "shared/guards.js",
-          "shared/playback/constants.js",
-          "shared/messages.js"
-        ],
-        "matches": ["*://*.youtube.com/*"]
       }
     ]
   }

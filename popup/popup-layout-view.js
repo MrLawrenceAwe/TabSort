@@ -42,9 +42,15 @@ function updateSortButton(sortButton, shouldShowSort) {
   if (shouldShowSort) {
     const { sortReady, tracked } = popupState.sortSummary.counts;
     sortButton.classList.toggle('all-tabs-ready', sortReady === tracked);
-    sortButton.textContent = getSortButtonText(sortReady, tracked);
+    sortButton.disabled = popupState.isSorting;
+    sortButton.setAttribute?.('aria-busy', String(popupState.isSorting));
+    sortButton.textContent = popupState.isSorting
+      ? 'Sorting…'
+      : getSortButtonText(sortReady, tracked);
     return;
   }
+  sortButton.disabled = false;
+  sortButton.removeAttribute?.('aria-busy');
   sortButton.classList.remove('all-tabs-ready');
 }
 

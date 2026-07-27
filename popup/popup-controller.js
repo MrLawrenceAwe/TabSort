@@ -6,10 +6,16 @@ import { createTabSnapshotClient } from './tab-snapshot-client.js';
 import { createSnapshotPoller } from './snapshot-poller.js';
 import { renderTabList } from './render-tab-list.js';
 import { syncPopupLayout } from './popup-layout-view.js';
-import { initializePopupDom, setErrorMessage } from './popup-elements.js';
+import {
+  initializePopupDom,
+  setErrorMessage,
+  setNoticeMessage,
+  setStateMessage,
+} from './popup-elements.js';
 import {
   isSnapshotForActiveWindow,
   popupState,
+  applyPopupState,
   setActiveWindowId,
 } from './popup-store.js';
 import { startThemeSync } from './theme.js';
@@ -65,15 +71,66 @@ async function initializePopupPreferences() {
 
 function renderAndScheduleSnapshot(snapshot) {
   renderTabList(snapshot, {
-    postRuntimeMessage: runtimeClient.postRuntimeMessage,
+    requestTabAction,
   });
   snapshotPoller.scheduleIfNeeded(snapshot);
 }
 
 async function loadInitialSnapshot() {
   const snapshot = await snapshotClient.loadSnapshot();
-  if (!snapshot) return;
+  if (!snapshot) {
+    setStateMessage('Tab data is unavailable.');
+    return;
+  }
   renderAndScheduleSnapshot(snapshot);
+}
+
+const ACTION_ERROR_MESSAGES = Object.freeze({
+  invalidTabId: 'That tab is no longer available.',
+  tabNotTracked: 'That YouTube tab is no longer being tracked.',
+  windowMismatch: 'The tab moved to another window. Reopen the popup and try again.',
+  openFailed: 'Could not open that tab.',
+  reloadFailed: 'Could not reload that tab.',
+});
+
+async function requestTabAction(type, data) {
+  setErrorMessage('');
+  setNoticeMessage('');
+  try {
+    const response = await runtimeClient.requestRuntimeMessage(type, data);
+    if (response?.ok === true) return true;
+    setErrorMessage(ACTION_ERROR_MESSAGES[response?.error] || 'The tab action could not be completed.');
+  } catch (error) {
+    setErrorMessage('The tab action could not be completed. Try again.');
+    runtimeClient.logPopupError('Tab action failed', error);
+  }
+  return false;
+}
+
+async function requestSort() {
+  if (popupState.isSorting) return;
+  applyPopupState({ isSorting: true });
+  setErrorMessage('');
+  setNoticeMessage('');
+  syncPopupLayout();
+  try {
+    const response = await runtimeClient.requestRuntimeMessage(RUNTIME_MESSAGE_TYPES.SORT_TABS);
+    if (response?.ok !== true) {
+      setErrorMessage('Could not organise the tabs. Try again.');
+      return;
+    }
+    if (response.movedCount > 0) {
+      setNoticeMessage(
+        `Organised ${response.movedCount} tab${response.movedCount === 1 ? '' : 's'}.`,
+      );
+    }
+  } catch (error) {
+    setErrorMessage('Could not organise the tabs. Try again.');
+    runtimeClient.logPopupError('Sorting tabs failed', error);
+  } finally {
+    applyPopupState({ isSorting: false });
+    syncPopupLayout();
+  }
 }
 
 function createSnapshotMessageListener() {
@@ -92,9 +149,7 @@ function createSnapshotMessageListener() {
 function registerPopupControls() {
   const sortButton = document.getElementById('sortButton');
   if (sortButton) {
-    sortButton.addEventListener('click', () =>
-      runtimeClient.postRuntimeMessage(RUNTIME_MESSAGE_TYPES.SORT_TABS),
-    );
+    sortButton.addEventListener('click', requestSort);
   }
 }
 
@@ -112,6 +167,8 @@ export async function initializePopup() {
   initializePopupDom();
   syncPopupLayout();
   setErrorMessage('');
+  setNoticeMessage('');
+  setStateMessage('Loading YouTube tabs…');
 
   await runWithPopupErrorLogging(runtimeClient.syncActiveWindow, 'Failed to refresh active context');
   await runWithPopupErrorLogging(initializePopupPreferences, 'Failed to set up option controls');

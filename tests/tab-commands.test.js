@@ -6,6 +6,7 @@ import { trackedWindow } from '../background/windows/store.js';
 import {
   getWindowSnapshot,
   handleSortTabs,
+  openTab,
   reloadTab,
 } from '../background/messaging/tab-commands.js';
 import { reconcileWindowTabRecords } from '../background/tabs/reconcile.js';
@@ -31,9 +32,10 @@ test('reloadTab does not mutate record state when chrome.tabs.reload fails', { c
     throw new Error('reload failed');
   };
 
-  await reloadTab({ tabId: 1, windowId: 1 });
+  const result = await reloadTab({ tabId: 1, windowId: 1 });
 
   assert.deepEqual(trackedWindow.tabRecordsById[1], before);
+  assert.deepEqual(result, { ok: false, error: 'reloadFailed', tabId: 1 });
 });
 
 test('reloadTab marks record loading only after successful reload call', { concurrency: false }, async () => {
@@ -44,7 +46,7 @@ test('reloadTab marks record loading only after successful reload call', { concu
 
   globalThis.chrome.tabs.reload = async () => {};
 
-  await reloadTab({ tabId: 1, windowId: 1 });
+  const result = await reloadTab({ tabId: 1, windowId: 1 });
 
   const record = trackedWindow.tabRecordsById[1];
   assert.equal(record.loadState, TAB_LOAD_STATES.LOADING);
@@ -53,6 +55,33 @@ test('reloadTab marks record loading only after successful reload call', { concu
   assert.equal(record.videoDetails.remainingTime, null);
   assert.equal(typeof record.loadingStartedAt, 'number');
   assert.equal(typeof record.unsuspendedTimestamp, 'number');
+  assert.deepEqual(result, { ok: true, tabId: 1 });
+});
+
+test('tab actions reject records outside the popup window', { concurrency: false }, async () => {
+  resetTrackedWindowState(1);
+  setTrackedTabRecords({
+    1: createTabRecordFixture(1, { windowId: 1 }),
+  });
+  globalThis.chrome.tabs.update = async () => {
+    throw new Error('should not update a mismatched tab');
+  };
+
+  const result = await openTab({ tabId: 1, windowId: 2 });
+
+  assert.deepEqual(result, { ok: false, error: 'windowMismatch' });
+});
+
+test('openTab returns a structured success result', { concurrency: false }, async () => {
+  resetTrackedWindowState(1);
+  setTrackedTabRecords({
+    1: createTabRecordFixture(1, { windowId: 1 }),
+  });
+  globalThis.chrome.tabs.update = async () => {};
+
+  const result = await openTab({ tabId: 1, windowId: 1 });
+
+  assert.deepEqual(result, { ok: true, tabId: 1 });
 });
 
 test('handleSortTabs refreshes a newly targeted window before deriving its sort', { concurrency: false }, async () => {

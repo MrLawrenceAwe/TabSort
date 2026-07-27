@@ -1,15 +1,21 @@
 {
   "name": "tabsort",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "node scripts/build.mjs",
     "test": "node --test",
+    "test:e2e": "playwright test",
     "lint": "eslint .",
-    "check": "npm test && npm run lint && node scripts/check-static.mjs"
+    "validate:release": "node scripts/validate-release.mjs",
+    "package": "npm run build && npm run validate:release && node scripts/package-extension.mjs",
+    "check": "npm run build && npm test && npm run lint && node scripts/check-static.mjs && npm run validate:release"
   },
   "devDependencies": {
-    "eslint": "^9.39.4",
-    "eslint-plugin-import": "^2.32.0",
-    "globals": "^17.6.0"
+    "@playwright/test": "^1.62.0",
+    "esbuild": "^0.28.1",
+    "eslint": "^10.8.0",
+    "globals": "^17.8.0"
   }
 }

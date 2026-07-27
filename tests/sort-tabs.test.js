@@ -46,15 +46,13 @@ test('sortTabs returns move counts after sorting tabs', { concurrency: false }, 
 
   const result = await sortTabs(1);
 
-  assert.deepEqual(result, { ok: true, movedCount: 3, failedCount: 0 });
+  assert.deepEqual(result, { ok: true, movedCount: 2, failedCount: 0 });
   assert.deepEqual(moves, [
-    { tabId: 2, index: 0 },
-    { tabId: 1, index: 1 },
-    { tabId: 3, index: 2 },
+    { tabId: [2, 1, 3], index: 0 },
   ]);
 });
 
-test('sortTabs reports partial move failures', { concurrency: false }, async () => {
+test('sortTabs reports an atomic bulk move failure', { concurrency: false }, async () => {
   resetTrackedWindowState(1);
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
@@ -69,15 +67,42 @@ test('sortTabs reports partial move failures', { concurrency: false }, async () 
   setTrackedSortState({ plannedVideoTabOrder: [2, 1] });
   stubChromeTabQuery([createChromeTabFixture(1), createChromeTabFixture(2)]);
 
-  globalThis.chrome.tabs.move = async (tabId) => {
-    if (tabId === 1) throw new Error('move failed');
+  globalThis.chrome.tabs.move = async () => {
+    throw new Error('move failed');
   };
 
   const result = await sortTabs(1);
 
   assert.equal(result.ok, false);
-  assert.equal(result.movedCount, 1);
-  assert.equal(result.failedCount, 1);
+  assert.equal(result.movedCount, 0);
+  assert.equal(result.failedCount, 2);
+});
+
+test('sortTabs avoids Chrome move calls when the complete order already matches', { concurrency: false }, async () => {
+  resetTrackedWindowState(1);
+  setTrackedTabRecords({
+    1: createTabRecordFixture(1, {
+      videoDetails: { title: 'Video 1', remainingTime: 60, lengthSeconds: 120 },
+      remainingTimeStale: false,
+    }),
+    2: createTabRecordFixture(2, {
+      index: 1,
+      videoDetails: { title: 'Video 2', remainingTime: 120, lengthSeconds: 120 },
+      remainingTimeStale: false,
+    }),
+  });
+  setTrackedSortState({ plannedVideoTabOrder: [1, 2] });
+  stubChromeTabQuery([
+    createChromeTabFixture(1),
+    createChromeTabFixture(2, { index: 1 }),
+  ]);
+  globalThis.chrome.tabs.move = async () => {
+    throw new Error('already ordered tabs should not move');
+  };
+
+  const result = await sortTabs(1);
+
+  assert.deepEqual(result, { ok: true, movedCount: 0, failedCount: 0 });
 });
 
 test(

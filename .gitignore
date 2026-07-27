@@ -2,3 +2,6 @@
 node_modules/
 TODO.md
 .tools/
+output/
+release/
+test-results/

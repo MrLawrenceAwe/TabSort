@@ -1,6 +1,8 @@
 function createPopupElements() {
   return {
     error: null,
+    notice: null,
+    stateMessage: null,
     status: null,
     sortButton: null,
     sortedBadge: null,
@@ -31,6 +33,8 @@ export function initializePopupDom(rootDocument = globalThis.document) {
 
   popupDocument = runtimeDocument;
   popupElements.error = runtimeDocument.getElementById('popupError');
+  popupElements.notice = runtimeDocument.getElementById('popupNotice');
+  popupElements.stateMessage = runtimeDocument.getElementById('popupStateMessage');
   popupElements.status = runtimeDocument.getElementById('sortStatus');
   popupElements.sortButton = runtimeDocument.getElementById('sortButton');
   popupElements.sortedBadge = runtimeDocument.getElementById('sortedBadge');
@@ -55,4 +59,20 @@ export function setErrorMessage(message = '') {
   const nextMessage = typeof message === 'string' ? message.trim() : '';
   error.textContent = nextMessage;
   error.classList.toggle('hide', !nextMessage);
+}
+
+export function setNoticeMessage(message = '') {
+  const notice = getPopupElement('notice');
+  if (!notice) return;
+  const nextMessage = typeof message === 'string' ? message.trim() : '';
+  notice.textContent = nextMessage;
+  notice.classList.toggle('hide', !nextMessage);
+}
+
+export function setStateMessage(message = '') {
+  const stateMessage = getPopupElement('stateMessage');
+  if (!stateMessage) return;
+  const nextMessage = typeof message === 'string' ? message.trim() : '';
+  stateMessage.textContent = nextMessage;
+  stateMessage.classList.toggle('hide', !nextMessage);
 }

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">TabSort icon</title>
+  <rect width="128" height="128" rx="28" fill="#e62117"/>
+  <path d="M25 32h54M25 51h42M25 70h30" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="11"/>
+  <circle cx="83" cy="78" r="27" fill="#111827" stroke="#fff" stroke-width="6"/>
+  <path d="M83 62v17l11 7" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="7"/>
+</svg>
