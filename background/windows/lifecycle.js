@@ -4,7 +4,6 @@ import { recomputeSortState } from '../sorting/state.js';
 import {
   listTabIds,
   resetTrackedWindowStore,
-  setTrackedWindowId,
   trackedWindow,
 } from './store.js';
 import { collectPlaybackMetricsBatch } from '../playback/collect.js';
@@ -17,6 +16,7 @@ const PLAYBACK_REFRESH_ALARM = 'refreshRemaining';
 const REFRESH_INTERVAL_MINUTES = 1;
 const MIN_REFRESH_INTERVAL_MINUTES = 1;
 const refreshMinutes = Math.max(REFRESH_INTERVAL_MINUTES, MIN_REFRESH_INTERVAL_MINUTES);
+let focusSyncGeneration = 0;
 
 const getLastFocusedWindowId = () =>
   new Promise((resolve) => {
@@ -43,19 +43,23 @@ export function resetTrackedWindow() {
 
 export async function syncFocusedWindow(windowId) {
   if (!isValidWindowId(windowId)) return;
+  focusSyncGeneration += 1;
   if (windowId === trackedWindow.windowId) return;
-  setTrackedWindowId(windowId, { force: true });
   await reconcileWindowTabRecords(windowId, { force: true });
 }
 
-async function syncInitialWindowState() {
+export async function syncInitialWindowState() {
+  const initialFocusGeneration = focusSyncGeneration;
   const lastFocusedWindowId = await getLastFocusedWindowId();
+  if (initialFocusGeneration !== focusSyncGeneration) return;
   const targetWindowId =
     isValidWindowId(lastFocusedWindowId) && (await windowHasTrackedYouTubeTabs(lastFocusedWindowId))
       ? lastFocusedWindowId
       : null;
+  if (initialFocusGeneration !== focusSyncGeneration) return;
   await reconcileWindowTabRecords(targetWindowId, { force: true });
 
+  if (initialFocusGeneration !== focusSyncGeneration) return;
   const ids = listTabIds();
   if (ids.length) {
     await collectPlaybackMetricsBatch(ids);

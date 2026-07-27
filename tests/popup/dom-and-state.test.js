@@ -6,7 +6,12 @@ import {
   resetPopupDom,
   setErrorMessage,
 } from '../../popup/popup-elements.js';
-import { popupState, resetPopupState } from '../../popup/popup-store.js';
+import {
+  isSnapshotForActiveWindow,
+  popupState,
+  resetPopupState,
+  setActiveWindowId,
+} from '../../popup/popup-store.js';
 
 function createFakeElement() {
   return {
@@ -50,6 +55,15 @@ test('popup view model keeps sort summary flags available for view decisions', (
   resetPopupState();
   popupState.sortSummary.inactiveTabs.hasStaleRemainingTime = true;
   assert.equal(popupState.sortSummary.inactiveTabs.hasStaleRemainingTime, true);
+});
+
+test('popup accepts snapshot broadcasts only for its active window', () => {
+  resetPopupState();
+  setActiveWindowId(2);
+
+  assert.equal(isSnapshotForActiveWindow({ windowId: 2 }), true);
+  assert.equal(isSnapshotForActiveWindow({ windowId: 1 }), false);
+  assert.equal(isSnapshotForActiveWindow({}), false);
 });
 
 test('popup view can reset cached DOM references before reinitializing with a new document', () => {

@@ -23,9 +23,15 @@ export async function reconcileWindowTabRecords(windowId, options = {}) {
   const syncToken = nextSyncToken();
   const resolvedWindowId = resolveWindowIdForQuery(windowId, options);
   const tabs = await listWindowTabs(resolvedWindowId);
-  if (!isSyncTokenCurrent(syncToken)) return;
-  if (!Array.isArray(tabs)) return;
-  if (resolvedWindowId == null && tabs.length === 0) return;
+  if (!isSyncTokenCurrent(syncToken)) {
+    return { ok: false, applied: false, reason: 'superseded', windowId: resolvedWindowId };
+  }
+  if (!Array.isArray(tabs)) {
+    return { ok: false, applied: false, reason: 'tabsUnavailable', windowId: resolvedWindowId };
+  }
+  if (resolvedWindowId == null && tabs.length === 0) {
+    return { ok: true, applied: false, reason: 'emptyWindow', windowId: null, syncToken };
+  }
   setTrackedWindowId(resolvedWindowId, options);
 
   if (
@@ -33,7 +39,7 @@ export async function reconcileWindowTabRecords(windowId, options = {}) {
     isValidWindowId(getTrackedWindowId()) &&
     resolvedWindowId !== getTrackedWindowId()
   ) {
-    return;
+    return { ok: false, applied: false, reason: 'windowNotClaimed', windowId: resolvedWindowId };
   }
 
   const previousTabRecords = getTabRecordsById();
@@ -52,7 +58,10 @@ export async function reconcileWindowTabRecords(windowId, options = {}) {
     nextTabRecords[tab.id] = nextTabRecord;
   }
 
-  if (!isSyncTokenCurrent(syncToken)) return;
+  if (!isSyncTokenCurrent(syncToken)) {
+    return { ok: false, applied: false, reason: 'superseded', windowId: resolvedWindowId };
+  }
   replaceAllTabRecords(nextTabRecords);
   recomputeSortState();
+  return { ok: true, applied: true, windowId: resolvedWindowId, syncToken };
 }
