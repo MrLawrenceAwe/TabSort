@@ -175,3 +175,19 @@ test(
     assert.deepEqual(trackedWindow.plannedVideoTabOrder, [1]);
   },
 );
+
+test(
+  'reconcileWindowTabRecords resolves the concrete window for a last-focused query',
+  { concurrency: false },
+  async () => {
+    resetTrackedWindowState();
+    stubChromeTabQuery([createChromeTabFixture(7, { windowId: 4 })]);
+
+    const result = await reconcileWindowTabRecords(null, { force: true });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.windowId, 4);
+    assert.equal(trackedWindow.windowId, 4);
+    assert.equal(trackedWindow.tabRecordsById[7].windowId, 4);
+  },
+);

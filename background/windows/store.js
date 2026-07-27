@@ -20,6 +20,7 @@ export function cloneTabRecordsById(tabRecordsById = {}) {
 function createTrackedWindowStoreState() {
   return {
     tabRecordsById: {},
+    tabsInWindowOrder: [],
     plannedVideoTabOrder: [],
     trackedTabIdsInWindowOrder: [],
     isSortComplete: false,
@@ -81,6 +82,31 @@ export function listTabRecords() {
 
 export function listTabIds() {
   return Object.keys(trackedWindowState.tabRecordsById).map(Number);
+}
+
+export function getTabsInWindowOrder() {
+  return trackedWindowState.tabsInWindowOrder.map((tab) => ({ ...tab }));
+}
+
+export function replaceTabsInWindowOrder(tabs = []) {
+  trackedWindowState.tabsInWindowOrder = tabs
+    .filter((tab) => tab && typeof tab.id === 'number')
+    .map((tab) => ({
+      id: tab.id,
+      index: tab.index,
+      pinned: Boolean(tab.pinned),
+      url: tab.url ?? null,
+    }))
+    .sort((left, right) => left.index - right.index);
+  return getTabsInWindowOrder();
+}
+
+export function deleteTabFromWindowOrder(tabId) {
+  const previousLength = trackedWindowState.tabsInWindowOrder.length;
+  trackedWindowState.tabsInWindowOrder = trackedWindowState.tabsInWindowOrder.filter(
+    (tab) => tab.id !== tabId,
+  );
+  return trackedWindowState.tabsInWindowOrder.length !== previousLength;
 }
 
 export function canManageWindow(windowId) {

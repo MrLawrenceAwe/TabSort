@@ -5,6 +5,7 @@ import { recomputeSortState } from '../sorting/state.js';
 import { collectPlaybackMetrics } from '../playback/collect.js';
 import {
   canManageWindow,
+  deleteTabFromWindowOrder,
   deleteTabRecord,
   trackedWindow,
 } from '../windows/store.js';
@@ -113,6 +114,7 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
 
   chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     if (!canManageWindow(removeInfo?.windowId)) return;
+    deleteTabFromWindowOrder(tabId);
     deleteTabRecord(tabId);
     if (removeInfo?.isWindowClosing && removeInfo.windowId === trackedWindow.windowId) {
       if (typeof onTrackedWindowClosed === 'function') {

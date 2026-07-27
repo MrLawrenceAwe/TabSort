@@ -4,6 +4,7 @@ import {
   trackedWindow,
   resetTrackedWindowStore,
   replaceAllTabRecords,
+  replaceTabsInWindowOrder,
   setSortState,
   setTabRecord,
 } from '../../background/windows/store.js';
@@ -167,6 +168,10 @@ export function resetTrackedWindowState(windowId = null) {
 
 export function setTrackedTabRecords(tabRecordsById = {}) {
   return replaceAllTabRecords(tabRecordsById);
+}
+
+export function setTrackedWindowTabs(tabs = []) {
+  return replaceTabsInWindowOrder(tabs);
 }
 
 export function setTrackedSortState(sortState = {}) {
