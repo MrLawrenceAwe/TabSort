@@ -16,6 +16,10 @@ export function setActiveWindowId(windowId) {
   popupState.activeWindowId = typeof windowId === 'number' ? windowId : null;
 }
 
+export function isSnapshotForActiveWindow(snapshot) {
+  return snapshot?.windowId === popupState.activeWindowId;
+}
+
 export function applyPopupState(updates = {}) {
   Object.assign(popupState, updates);
 }

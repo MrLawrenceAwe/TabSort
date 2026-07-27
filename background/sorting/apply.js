@@ -2,10 +2,17 @@ import { isValidWindowId } from '../../shared/guards.js';
 import { loadSortOptions } from '../../shared/storage.js';
 import { hasReadyRemainingTime } from './readiness.js';
 import { listWindowTabs, moveTabsInOrder } from '../tabs/chrome-tabs.js';
-import { setTrackedWindowId, trackedWindow } from '../windows/store.js';
+import { isSyncTokenCurrent, trackedWindow } from '../windows/store.js';
 import { buildOtherTabOrder, buildYouTubeTabOrder } from './move-order.js';
 
-export async function sortTabs(windowId = trackedWindow.windowId) {
+export async function sortTabs(
+  windowId = trackedWindow.windowId,
+  { expectedSyncToken = null } = {},
+) {
+  if (expectedSyncToken != null && !isSyncTokenCurrent(expectedSyncToken)) {
+    return { ok: false, movedCount: 0, skippedReason: 'windowSyncSuperseded' };
+  }
+
   const plannedVideoTabOrder = trackedWindow.plannedVideoTabOrder.slice();
 
   const readyTabIds = plannedVideoTabOrder.filter((tabId) => {
@@ -18,9 +25,7 @@ export async function sortTabs(windowId = trackedWindow.windowId) {
   }
 
   const options = await loadSortOptions();
-  const targetWindowId = isValidWindowId(windowId)
-    ? setTrackedWindowId(windowId, { force: true })
-    : null;
+  const targetWindowId = isValidWindowId(windowId) ? windowId : null;
   const tabs = await listWindowTabs(targetWindowId);
   if (!Array.isArray(tabs) || tabs.length === 0) {
     return { ok: false, movedCount: 0, skippedReason: 'tabsUnavailable' };
@@ -44,6 +49,10 @@ export async function sortTabs(windowId = trackedWindow.windowId) {
   const initialTabIds = new Set(tabs.map((tab) => tab.id));
   if (!finalTabOrder.every((tabId) => initialTabIds.has(tabId))) {
     return { ok: false, movedCount: 0, skippedReason: 'staleSortOrder' };
+  }
+
+  if (expectedSyncToken != null && !isSyncTokenCurrent(expectedSyncToken)) {
+    return { ok: false, movedCount: 0, skippedReason: 'windowSyncSuperseded' };
   }
 
   const results = await moveTabsInOrder(finalTabOrder, pinnedCount);

@@ -5,6 +5,7 @@ import { setSnapshotSignature, trackedWindow } from './windows/store.js';
 
 export function buildTabSnapshot() {
   return {
+    windowId: trackedWindow.windowId,
     tabRecordsById: trackedWindow.tabRecordsById,
     plannedVideoTabOrder: [...trackedWindow.plannedVideoTabOrder],
     trackedTabIdsInWindowOrder: [...trackedWindow.trackedTabIdsInWindowOrder],

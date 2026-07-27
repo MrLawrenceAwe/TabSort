@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { sortTabs } from '../background/sorting/apply.js';
+import { nextSyncToken } from '../background/windows/store.js';
 import {
   ensureChromeApi,
   createChromeTabFixture,
@@ -78,3 +79,47 @@ test('sortTabs reports partial move failures', { concurrency: false }, async () 
   assert.equal(result.movedCount, 1);
   assert.equal(result.failedCount, 1);
 });
+
+test(
+  'sortTabs does not move tabs when its sync token is superseded during preparation',
+  { concurrency: false },
+  async () => {
+    resetTrackedWindowState(1);
+    setTrackedTabRecords({
+      1: createTabRecordFixture(1, {
+        videoDetails: { title: 'Video 1', remainingTime: 120, lengthSeconds: 120 },
+        remainingTimeStale: false,
+      }),
+      2: createTabRecordFixture(2, {
+        videoDetails: { title: 'Video 2', remainingTime: 60, lengthSeconds: 120 },
+        remainingTimeStale: false,
+      }),
+    });
+    setTrackedSortState({
+      trackedTabIdsInWindowOrder: [1, 2],
+      plannedVideoTabOrder: [2, 1],
+    });
+    stubChromeTabQuery([
+      createChromeTabFixture(1),
+      createChromeTabFixture(2, { index: 1 }),
+    ]);
+
+    const movedTabIds = [];
+    globalThis.chrome.tabs.move = async (tabId) => {
+      movedTabIds.push(tabId);
+    };
+
+    const expectedSyncToken = nextSyncToken();
+    const pendingSort = sortTabs(1, { expectedSyncToken });
+    nextSyncToken();
+
+    const result = await pendingSort;
+
+    assert.deepEqual(result, {
+      ok: false,
+      movedCount: 0,
+      skippedReason: 'windowSyncSuperseded',
+    });
+    assert.deepEqual(movedTabIds, []);
+  },
+);

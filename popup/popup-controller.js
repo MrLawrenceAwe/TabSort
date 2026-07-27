@@ -7,7 +7,11 @@ import { createSnapshotPoller } from './snapshot-poller.js';
 import { renderTabList } from './render-tab-list.js';
 import { syncPopupLayout } from './popup-layout-view.js';
 import { initializePopupDom, setErrorMessage } from './popup-elements.js';
-import { popupState, setActiveWindowId } from './popup-store.js';
+import {
+  isSnapshotForActiveWindow,
+  popupState,
+  setActiveWindowId,
+} from './popup-store.js';
 import { startThemeSync } from './theme.js';
 
 const SNAPSHOT_RETRY_DELAY_MS = 150;
@@ -75,6 +79,7 @@ async function loadInitialSnapshot() {
 function createSnapshotMessageListener() {
   return (message) => {
     if (message?.type === RUNTIME_MESSAGE_TYPES.TAB_SNAPSHOT_UPDATED && message.payload) {
+      if (!isSnapshotForActiveWindow(message.payload)) return;
       Promise.resolve().then(() => {
         renderAndScheduleSnapshot(message.payload);
       }).catch((error) => {
