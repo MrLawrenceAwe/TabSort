@@ -603,9 +603,26 @@
   }
 
   // shared/youtube/urls.js
-  var YOUTUBE_WATCH_URL_REGEX = /^https?:\/\/([^/]+\.)?youtube\.com\/watch\?/i;
-  var YOUTUBE_SHORTS_URL_REGEX = /^https?:\/\/([^/]+\.)?youtube\.com\/shorts\//i;
-  var isYouTubeVideoPage = (url) => typeof url === "string" && (YOUTUBE_WATCH_URL_REGEX.test(url) || YOUTUBE_SHORTS_URL_REGEX.test(url));
+  var YOUTUBE_DOMAIN_REGEX = /(^|\.)youtube\.com$/i;
+  var isYouTubeVideoPage = (url) => getYouTubeVideoId(url) != null;
+  function getYouTubeVideoId(url) {
+    if (typeof url !== "string" || !url) return null;
+    try {
+      const parsed = new URL(url);
+      if (!YOUTUBE_DOMAIN_REGEX.test(parsed.hostname || "")) return null;
+      if (/^\/watch$/i.test(parsed.pathname)) {
+        const videoId = parsed.searchParams.get("v");
+        return videoId || null;
+      }
+      const shortsMatch = parsed.pathname.match(/^\/shorts\/([^/?#]+)/i);
+      if (shortsMatch?.[1]) {
+        return shortsMatch[1];
+      }
+    } catch (_) {
+      return null;
+    }
+    return null;
+  }
 
   // content/youtube/page/controller.js
   function createYouTubePageController({

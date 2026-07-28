@@ -342,6 +342,43 @@ test('handlePageVideoDetails preserves ready state when only watch URL parameter
   assert.equal(record.remainingTimeStale, false);
 });
 
+test('handlePageVideoDetails invalidates playback state when a live stream ends', async () => {
+  resetTrackedWindowState(1);
+  setTrackedTabRecords({
+    7: createTabRecordFixture(7, {
+      url: 'https://www.youtube.com/watch?v=live',
+      playbackMetricsReady: true,
+      isLive: true,
+      videoDetails: { title: 'Live stream', remainingTime: null, lengthSeconds: null },
+      remainingTimeStale: false,
+    }),
+  });
+
+  await handlePageVideoDetails(
+    {
+      details: {
+        url: 'https://www.youtube.com/watch?v=live',
+        title: 'Ended stream',
+        isLive: false,
+      },
+    },
+    {
+      tab: {
+        id: 7,
+        windowId: 1,
+        url: 'https://www.youtube.com/watch?v=live',
+      },
+    },
+  );
+
+  const record = trackedWindow.tabRecordsById[7];
+  assert.equal(record.isLive, false);
+  assert.equal(record.playbackMetricsReady, false);
+  assert.equal(record.videoDetails.remainingTime, null);
+  assert.equal(record.remainingTimeStale, true);
+  assert.equal(typeof record.metricsWaitStartedAt, 'number');
+});
+
 test(
   'same-video parameter navigation keeps ready remaining time through runtime refresh',
   { concurrency: false },
