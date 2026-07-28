@@ -32,7 +32,7 @@ test('loads the bundled runtime and reports tracked YouTube tabs in the popup', 
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${extensionId}/popup/popup.html`);
 
-    await expect(popup.getByRole('heading', { name: 'TabSort for YouTube' })).toBeVisible();
+    await expect(popup.getByRole('heading', { name: 'YouTube tabs' })).toBeVisible();
     await expect(popup.getByText('No YouTube video tabs in this window.')).toBeVisible();
 
     const firstVideo = await context.newPage();
