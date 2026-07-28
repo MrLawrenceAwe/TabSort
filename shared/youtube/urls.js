@@ -1,9 +1,6 @@
-const YOUTUBE_WATCH_URL_REGEX = /^https?:\/\/([^/]+\.)?youtube\.com\/watch\?/i;
-const YOUTUBE_SHORTS_URL_REGEX = /^https?:\/\/([^/]+\.)?youtube\.com\/shorts\//i;
 const YOUTUBE_DOMAIN_REGEX = /(^|\.)youtube\.com$/i;
 
-export const isYouTubeVideoPage = (url) =>
-  typeof url === 'string' && (YOUTUBE_WATCH_URL_REGEX.test(url) || YOUTUBE_SHORTS_URL_REGEX.test(url));
+export const isYouTubeVideoPage = (url) => getYouTubeVideoId(url) != null;
 
 export function getYouTubeVideoId(url) {
   if (typeof url !== 'string' || !url) return null;

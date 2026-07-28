@@ -70,7 +70,15 @@ export function applyVideoDetailsFromPage(record, details = {}, { urlChanged = f
   if (details.url) record.url = details.url;
   record.videoDetails = record.videoDetails || {};
   if (details.title) record.videoDetails.title = details.title;
-  if (typeof details.isLive === 'boolean') record.isLive = details.isLive;
+  const wasLive = record.isLive;
+  if (typeof details.isLive === 'boolean') {
+    record.isLive = details.isLive;
+  }
+  if (wasLive && !record.isLive) {
+    resetPlaybackReadiness(record, { metricsWaitStartedAt: nowMs() });
+    clearRemainingTime(record);
+    markRemainingTimeAsStale(record);
+  }
 
   if (isFiniteNumber(details.lengthSeconds)) {
     record.videoDetails.lengthSeconds = details.lengthSeconds;
