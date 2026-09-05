@@ -34,10 +34,10 @@
 
 /* Chrome measures this document to size the toolbar popup.
    A viewport-relative cap feeds the initial tiny viewport back into sizing. */
-html { width: 460px; }
+html { width: 600px; }
 
 body {
-    width: 460px;
+    width: 600px;
     margin: 0;
     padding: 18px;
     background: var(--background);
