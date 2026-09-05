@@ -72,7 +72,7 @@ test('loads the bundled runtime and reports tracked YouTube tabs in the popup', 
             remainingSecondsStale: true, videoDetails: { title: 'Waiting video' },
           },
         },
-        sortSummary: { trackedCount: 2, sortableCount: 2, readyCount: 1, readyPrefixMatchesPlan: true },
+        sortSummary: { sortableCount: 2, readyCount: 1, readyPrefixMatchesPlan: true },
         isTargetOrderApplied: false,
       });
     });

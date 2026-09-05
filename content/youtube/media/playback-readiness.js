@@ -119,8 +119,7 @@ export function createPlaybackReadinessTracker({
       state.videoMountCheckScheduled = false;
       attachPlaybackReadyListener();
       if (isCurrentPlaybackReady() && state.videoMountObserver) {
-        state.videoMountObserver.disconnect();
-        state.videoMountObserver = null;
+        disposeVideoMountObserver();
       }
     });
   }
@@ -166,10 +165,7 @@ export function createPlaybackReadinessTracker({
   function watchForVideoMount() {
     attachPlaybackReadyListener();
     if (isCurrentPlaybackReady()) {
-      if (state.videoMountObserver) {
-        state.videoMountObserver.disconnect();
-        state.videoMountObserver = null;
-      }
+      disposeVideoMountObserver();
       return;
     }
 
@@ -186,24 +182,19 @@ export function createPlaybackReadinessTracker({
         childList: true,
         subtree: true,
       });
-      return;
     }
+  }
 
-    attachPlaybackReadyListener();
-    if (isCurrentPlaybackReady()) {
-      state.videoMountObserver.disconnect();
-      state.videoMountObserver = null;
-    }
+  function disposeVideoMountObserver() {
+    state.videoMountObserver?.disconnect();
+    state.videoMountObserver = null;
   }
 
   function dispose() {
     clearPlaybackReadyListener();
     state.videoMountCheckScheduled = false;
     state.videoMountCheckToken += 1;
-    if (state.videoMountObserver) {
-      state.videoMountObserver.disconnect();
-      state.videoMountObserver = null;
-    }
+    disposeVideoMountObserver();
   }
 
   function resetForNavigation() {

@@ -57,13 +57,6 @@ export async function reloadTab(message) {
   return { ok: true, tabId };
 }
 
-export async function syncWindowTabs(message) {
-  return reconcileWindowTabRecords(
-    message.windowId,
-    isValidWindowId(message.windowId) ? { force: true } : undefined,
-  );
-}
-
 export async function getWindowSnapshot(message) {
   const requestedWindowId = isValidWindowId(message.windowId) ? message.windowId : null;
   const reconciliation = await reconcileWindowTabRecords(

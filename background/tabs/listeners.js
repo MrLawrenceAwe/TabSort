@@ -2,7 +2,7 @@ import { isFiniteNumber, isValidWindowId } from '../../shared/guards.js';
 import { logDebug, logWarn, withErrorLogging } from '../../shared/log.js';
 import { getTab } from './chrome-tabs.js';
 import { updateSortStateAndBroadcast } from '../sorting/update-sort-state.js';
-import { collectPlaybackMetrics } from '../playback/collect.js';
+import { collectPlaybackMetricsBatch } from '../playback/collect.js';
 import {
   canManageWindow,
   deleteTabFromOrderedWindow,
@@ -19,27 +19,15 @@ function getPendingKey(windowId) {
   return isValidWindowId(windowId) ? String(windowId) : 'last-focused';
 }
 
-function scheduleWindowReconcile(windowId, { force = false, afterReconcile } = {}) {
+function scheduleWindowReconcile(windowId, { refreshTabId } = {}) {
   const key = getPendingKey(windowId);
-  const existing = pendingReconcilesByWindow.get(key);
-  if (existing) {
-    clearTimeout(existing.timerId);
-    existing.force = existing.force || force;
-    if (typeof afterReconcile === 'function') {
-      existing.afterReconcile.push(afterReconcile);
-    }
-    existing.timerId = setTimeout(() => {
-      flushWindowReconcile(key).catch((error) => logDebug('scheduled reconcile failed', error));
-    }, RECONCILE_DEBOUNCE_MS);
-    return;
-  }
-
-  const pending = {
+  const pending = pendingReconcilesByWindow.get(key) ?? {
     windowId,
-    force,
-    afterReconcile: typeof afterReconcile === 'function' ? [afterReconcile] : [],
+    refreshTabIds: new Set(),
     timerId: null,
   };
+  if (isFiniteNumber(refreshTabId)) pending.refreshTabIds.add(refreshTabId);
+  clearTimeout(pending.timerId);
   pending.timerId = setTimeout(() => {
     flushWindowReconcile(key).catch((error) => logDebug('scheduled reconcile failed', error));
   }, RECONCILE_DEBOUNCE_MS);
@@ -50,10 +38,9 @@ async function flushWindowReconcile(key) {
   const pending = pendingReconcilesByWindow.get(key);
   if (!pending) return;
   pendingReconcilesByWindow.delete(key);
-  await reconcileWindowTabRecords(pending.windowId, pending.force ? { force: true } : undefined);
-  for (const callback of pending.afterReconcile) {
-    await callback();
-  }
+  const reconciliation = await reconcileWindowTabRecords(pending.windowId);
+  if (!reconciliation.applied) return;
+  await collectPlaybackMetricsBatch(pending.refreshTabIds);
 }
 
 function syncForWindowChange(label, resolveWindowId) {
@@ -77,9 +64,7 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
         changeInfo.url
       ) {
         scheduleWindowReconcile(tab.windowId, {
-          afterReconcile: isYouTubeVideoPage(tab.url)
-            ? () => collectPlaybackMetrics(tabId)
-            : undefined,
+          refreshTabId: isYouTubeVideoPage(tab.url) ? tabId : undefined,
         });
       }
     }),
@@ -95,11 +80,7 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
       if (!canManageWindow(activeInfo.windowId)) return;
       if (!isFiniteNumber(activeInfo.tabId)) return;
       scheduleWindowReconcile(activeInfo.windowId, {
-        afterReconcile: async () => {
-          const tab = await getTab(activeInfo.tabId);
-          if (!isYouTubeVideoPage(tab?.url)) return;
-          await collectPlaybackMetrics(activeInfo.tabId);
-        },
+        refreshTabId: activeInfo.tabId,
       });
     }),
   );
@@ -151,7 +132,7 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
         }
 
         scheduleWindowReconcile(windowIdForUpdate, {
-          afterReconcile: () => collectPlaybackMetrics(details.tabId),
+          refreshTabId: details.tabId,
         });
       }),
       { url: [{ hostContains: 'youtube.com' }] },

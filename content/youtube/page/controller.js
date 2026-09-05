@@ -213,9 +213,3 @@ export function createYouTubePageController({
     reset,
   };
 }
-
-const defaultYouTubePageController = createYouTubePageController();
-
-export function bootstrapYouTubePageController() {
-  defaultYouTubePageController.bootstrap();
-}
