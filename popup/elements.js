@@ -3,6 +3,7 @@ function createPopupElements() {
     error: null,
     notice: null,
     stateMessage: null,
+    backlogSummary: null,
     status: null,
     organiseButton: null,
     organisedBadge: null,
@@ -35,6 +36,7 @@ export function initializePopupDom(rootDocument = globalThis.document) {
   popupElements.error = runtimeDocument.getElementById('popupError');
   popupElements.notice = runtimeDocument.getElementById('popupNotice');
   popupElements.stateMessage = runtimeDocument.getElementById('popupStateMessage');
+  popupElements.backlogSummary = runtimeDocument.getElementById('backlogSummary');
   popupElements.status = runtimeDocument.getElementById('organiseStatus');
   popupElements.organiseButton = runtimeDocument.getElementById('organiseButton');
   popupElements.organisedBadge = runtimeDocument.getElementById('organisedBadge');
@@ -64,3 +66,4 @@ function setMessage(elementKey, message) {
 export const setErrorMessage = (message = '') => setMessage('error', message);
 export const setNoticeMessage = (message = '') => setMessage('notice', message);
 export const setStateMessage = (message = '') => setMessage('stateMessage', message);
+export const setBacklogSummary = (message = '') => setMessage('backlogSummary', message);
