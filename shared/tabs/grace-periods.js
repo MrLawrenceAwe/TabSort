@@ -1,12 +1,12 @@
 import { isFiniteNumber } from '../guards.js';
 
-export const RECENTLY_UNSUSPENDED_MS = 5000;
+export const RECENTLY_LOADED_MS = 5000;
 export const RECENT_WATCH_TRANSITION_MS = 5000;
 export const MEDIA_WAIT_GRACE_MS = 15000;
 export const LOADING_GRACE_MS = 5000;
 
 export function hasRemainingTime(tabRecord) {
-  return isFiniteNumber(tabRecord?.videoDetails?.remainingTime);
+  return isFiniteNumber(tabRecord?.videoDetails?.remainingSeconds);
 }
 
 export function isRecentTimestamp(timestamp, nowMs, graceMs) {
@@ -21,11 +21,11 @@ export function hasRecentWatchTransition(tabRecord, nowMs) {
   );
 }
 
-export function isRecentlyUnsuspended(tabRecord, nowMs) {
+export function isRecentlyLoaded(tabRecord, nowMs) {
   return isRecentTimestamp(
-    tabRecord?.unsuspendedTimestamp,
+    tabRecord?.loadedAt,
     nowMs,
-    RECENTLY_UNSUSPENDED_MS,
+    RECENTLY_LOADED_MS,
   );
 }
 
@@ -38,5 +38,5 @@ export function canLoadingStillSettle(tabRecord, nowMs) {
 }
 
 export function canWatchTransitionStillSettle(tabRecord, nowMs) {
-  return isRecentlyUnsuspended(tabRecord, nowMs) || hasRecentWatchTransition(tabRecord, nowMs);
+  return isRecentlyLoaded(tabRecord, nowMs) || hasRecentWatchTransition(tabRecord, nowMs);
 }

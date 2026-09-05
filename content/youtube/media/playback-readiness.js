@@ -1,16 +1,27 @@
+import { isFiniteNumber } from '../../../shared/guards.js';
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../../shared/messages.js';
 import { getPrimaryVideoElement } from './elements.js';
 
 export function createPlaybackReadinessTracker({
   config,
   environment,
-  state,
   getCurrentPageUrl,
   getDocument,
   getMutationObserver,
   sendExtensionMessage,
   doesMediaMatchPageMetadata,
 }) {
+  const state = {
+    videoMountObserver: null,
+    playbackReadyPageUrl: null,
+    lastReadyVideo: null,
+    lastReadyFingerprint: null,
+    playbackReadyListenerVideo: null,
+    playbackReadyListenerCleanup: null,
+    videoMountCheckScheduled: false,
+    videoMountCheckToken: 0,
+  };
+
   function isCurrentPlaybackReady() {
     const currentUrl = getCurrentPageUrl();
     return Boolean(currentUrl) && currentUrl === state.playbackReadyPageUrl;
@@ -22,7 +33,7 @@ export function createPlaybackReadinessTracker({
       (typeof video.currentSrc === 'string' && video.currentSrc) ||
       (typeof video.src === 'string' && video.src) ||
       '';
-    const duration = config.isFiniteNumber(video.duration)
+    const duration = isFiniteNumber(video.duration)
       ? String(Math.round(video.duration * 1000))
       : '';
     return `${source}|${duration}`;
@@ -39,7 +50,7 @@ export function createPlaybackReadinessTracker({
   function canMarkPlaybackReady(video, observedFreshMediaEvent = false) {
     return (
       video?.readyState >= config.mediaReadyStateThreshold &&
-      config.isFiniteNumber(video.duration) &&
+      isFiniteNumber(video.duration) &&
       hasFreshMediaEvidence(video, observedFreshMediaEvent) &&
       doesMediaMatchPageMetadata(video)
     );
@@ -126,27 +137,27 @@ export function createPlaybackReadinessTracker({
     const events = ['loadedmetadata', 'loadeddata', 'durationchange', 'canplay'];
     let observedFreshMediaEvent = false;
     const cleanup = () => {
-      events.forEach((eventName) => video.removeEventListener(eventName, onAny));
+      events.forEach((eventName) => video.removeEventListener(eventName, onMediaReadyEvent));
       if (state.playbackReadyListenerVideo === video) {
         state.playbackReadyListenerVideo = null;
         state.playbackReadyListenerCleanup = null;
       }
     };
-    const maybeSend = () => {
+    const tryMarkPlaybackReady = () => {
       if (canMarkPlaybackReady(video, observedFreshMediaEvent)) {
         markPlaybackReady(video);
         return true;
       }
       return false;
     };
-    const onAny = () => {
+    const onMediaReadyEvent = () => {
       observedFreshMediaEvent = true;
-      maybeSend();
+      tryMarkPlaybackReady();
     };
 
-    if (maybeSend()) return true;
+    if (tryMarkPlaybackReady()) return true;
 
-    events.forEach((eventName) => video.addEventListener(eventName, onAny));
+    events.forEach((eventName) => video.addEventListener(eventName, onMediaReadyEvent));
     state.playbackReadyListenerVideo = video;
     state.playbackReadyListenerCleanup = cleanup;
     return true;
@@ -185,7 +196,7 @@ export function createPlaybackReadinessTracker({
     }
   }
 
-  function disposePlaybackReadinessObservers() {
+  function dispose() {
     clearPlaybackReadyListener();
     state.videoMountCheckScheduled = false;
     state.videoMountCheckToken += 1;
@@ -195,8 +206,23 @@ export function createPlaybackReadinessTracker({
     }
   }
 
+  function resetForNavigation() {
+    dispose();
+    state.playbackReadyPageUrl = null;
+    // Keep previous media evidence so a reused video element cannot mark the
+    // next page ready until its source/duration changes or a fresh event arrives.
+  }
+
+  function reset() {
+    resetForNavigation();
+    state.lastReadyVideo = null;
+    state.lastReadyFingerprint = null;
+  }
+
   return {
-    disposePlaybackReadinessObservers,
+    dispose,
+    resetForNavigation,
+    reset,
     isCurrentPlaybackReady,
     markCurrentPlaybackReadyIfAvailable,
     watchForVideoMount,

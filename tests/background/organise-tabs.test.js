@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { organiseTabs } from '../background/sorting/execute-sort.js';
-import { nextSyncToken } from '../background/windows/store.js';
+import { organiseTabs } from '../../background/sorting/execute-sort.js';
+import { nextSyncToken } from '../../background/windows/store.js';
 import {
   ensureChromeApi,
   createChromeTabFixture,
@@ -11,7 +11,7 @@ import {
   setTrackedSortState,
   setTrackedTabRecords,
   stubChromeTabQuery,
-} from './helpers/background-test-helpers.js';
+} from '../helpers/background-test-helpers.js';
 
 ensureChromeApi({ tabs: true });
 
@@ -20,13 +20,13 @@ test('organiseTabs returns move counts after organising tabs', { concurrency: fa
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
       index: 0,
-      videoDetails: { title: 'Video 1', remainingTime: 120, lengthSeconds: 120 },
-      remainingTimeStale: false,
+      videoDetails: { title: 'Video 1', remainingSeconds: 120, lengthSeconds: 120 },
+      remainingSecondsStale: false,
     }),
     2: createTabRecordFixture(2, {
       index: 1,
-      videoDetails: { title: 'Video 2', remainingTime: 60, lengthSeconds: 120 },
-      remainingTimeStale: false,
+      videoDetails: { title: 'Video 2', remainingSeconds: 60, lengthSeconds: 120 },
+      remainingSecondsStale: false,
     }),
   });
   setTrackedSortState({
@@ -56,12 +56,12 @@ test('organiseTabs reports an atomic bulk move failure', { concurrency: false },
   resetTrackedWindowState(1);
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
-      videoDetails: { title: 'Video 1', remainingTime: 120, lengthSeconds: 120 },
-      remainingTimeStale: false,
+      videoDetails: { title: 'Video 1', remainingSeconds: 120, lengthSeconds: 120 },
+      remainingSecondsStale: false,
     }),
     2: createTabRecordFixture(2, {
-      videoDetails: { title: 'Video 2', remainingTime: 60, lengthSeconds: 120 },
-      remainingTimeStale: false,
+      videoDetails: { title: 'Video 2', remainingSeconds: 60, lengthSeconds: 120 },
+      remainingSecondsStale: false,
     }),
   });
   setTrackedSortState({ targetVideoTabOrder: [2, 1] });
@@ -82,13 +82,13 @@ test('organiseTabs avoids Chrome move calls when the complete order already matc
   resetTrackedWindowState(1);
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
-      videoDetails: { title: 'Video 1', remainingTime: 60, lengthSeconds: 120 },
-      remainingTimeStale: false,
+      videoDetails: { title: 'Video 1', remainingSeconds: 60, lengthSeconds: 120 },
+      remainingSecondsStale: false,
     }),
     2: createTabRecordFixture(2, {
       index: 1,
-      videoDetails: { title: 'Video 2', remainingTime: 120, lengthSeconds: 120 },
-      remainingTimeStale: false,
+      videoDetails: { title: 'Video 2', remainingSeconds: 120, lengthSeconds: 120 },
+      remainingSecondsStale: false,
     }),
   });
   setTrackedSortState({ targetVideoTabOrder: [1, 2] });
@@ -112,12 +112,12 @@ test(
     resetTrackedWindowState(1);
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
-        videoDetails: { title: 'Video 1', remainingTime: 120, lengthSeconds: 120 },
-        remainingTimeStale: false,
+        videoDetails: { title: 'Video 1', remainingSeconds: 120, lengthSeconds: 120 },
+        remainingSecondsStale: false,
       }),
       2: createTabRecordFixture(2, {
-        videoDetails: { title: 'Video 2', remainingTime: 60, lengthSeconds: 120 },
-        remainingTimeStale: false,
+        videoDetails: { title: 'Video 2', remainingSeconds: 60, lengthSeconds: 120 },
+        remainingSecondsStale: false,
       }),
     });
     setTrackedSortState({

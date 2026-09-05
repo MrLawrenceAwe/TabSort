@@ -31,32 +31,18 @@ function createTrackedWindowStoreState() {
 
 const trackedWindowState = createTrackedWindowStoreState();
 
-export const trackedWindow = Object.freeze({
-  get tabRecordsById() {
-    return cloneTabRecordsById(trackedWindowState.tabRecordsById);
-  },
-  get targetVideoTabOrder() {
-    return [...trackedWindowState.targetVideoTabOrder];
-  },
-  get trackedTabOrder() {
-    return [...trackedWindowState.trackedTabOrder];
-  },
-  get isTargetOrderApplied() {
-    return trackedWindowState.isTargetOrderApplied;
-  },
-  get sortSummary() {
-    return createSortSummary(trackedWindowState.sortSummary);
-  },
-  get windowId() {
-    return trackedWindowState.windowId;
-  },
-  get snapshotSignature() {
-    return trackedWindowState.snapshotSignature;
-  },
-  get syncToken() {
-    return trackedWindowState.syncToken;
-  },
-});
+export function getSortState() {
+  return {
+    targetVideoTabOrder: [...trackedWindowState.targetVideoTabOrder],
+    trackedTabOrder: [...trackedWindowState.trackedTabOrder],
+    isTargetOrderApplied: trackedWindowState.isTargetOrderApplied,
+    sortSummary: createSortSummary(trackedWindowState.sortSummary),
+  };
+}
+
+export function getSnapshotSignature() {
+  return trackedWindowState.snapshotSignature;
+}
 
 export function getTrackedWindowId() {
   return isValidWindowId(trackedWindowState.windowId) ? trackedWindowState.windowId : null;
@@ -111,7 +97,6 @@ export function resetTrackedWindowStore({ windowId = null } = {}) {
   const nextState = createTrackedWindowStoreState();
   nextState.windowId = isValidWindowId(windowId) ? windowId : null;
   Object.assign(trackedWindowState, nextState);
-  return trackedWindow;
 }
 
 export function replaceAllTabRecords(tabRecordsById = {}) {

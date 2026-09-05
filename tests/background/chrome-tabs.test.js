@@ -6,8 +6,8 @@ import {
   listWindowTabs,
   MESSAGE_FAILURE_REASONS,
   sendMessageToTab,
-} from '../background/tabs/chrome-tabs.js';
-import { ensureChromeApi } from './helpers/background-test-helpers.js';
+} from '../../background/tabs/chrome-tabs.js';
+import { ensureChromeApi } from '../helpers/background-test-helpers.js';
 
 ensureChromeApi({ tabs: true });
 
@@ -90,12 +90,12 @@ test('executeScriptInTab reports successful Chrome scripting injection', async (
     },
   };
 
-  const result = await executeScriptInTab(7, ['../content/youtube/page/bootstrap.js']);
+  const result = await executeScriptInTab(7, ['../../content/youtube/page/bootstrap.js']);
 
   assert.deepEqual(calls, [
     {
       target: { tabId: 7 },
-      files: ['../content/youtube/page/bootstrap.js'],
+      files: ['../../content/youtube/page/bootstrap.js'],
     },
   ]);
   assert.equal(result.ok, true);

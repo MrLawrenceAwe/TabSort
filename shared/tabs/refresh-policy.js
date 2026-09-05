@@ -1,15 +1,15 @@
-import { TAB_LOAD_STATES } from '../tabs/load-states.js';
+import { TAB_LOAD_STATES } from './load-states.js';
 import {
   canLoadingStillSettle,
   canMediaStillSettle,
   canWatchTransitionStillSettle,
-} from './readiness-grace-periods.js';
+} from './grace-periods.js';
 
 export function shouldPollRecord(record, { now = Date.now } = {}) {
   if (!record || record.isLive) return false;
 
   const nowMs = now();
-  if (record.loadState === TAB_LOAD_STATES.UNSUSPENDED && record.remainingTimeStale) {
+  if (record.loadState === TAB_LOAD_STATES.LOADED && record.remainingSecondsStale) {
     const waitingForContentScript =
       !record.contentScriptReady && canWatchTransitionStillSettle(record, nowMs);
     const waitingForVideoElement =
@@ -24,7 +24,7 @@ export function shouldPollRecord(record, { now = Date.now } = {}) {
 }
 
 export function shouldRefreshRecordMetrics(record, options = {}) {
-  if (!record || record.isLive || record.loadState !== TAB_LOAD_STATES.UNSUSPENDED) return false;
+  if (!record || record.isLive || record.loadState !== TAB_LOAD_STATES.LOADED) return false;
   if (shouldPollRecord(record, options)) return true;
-  return Boolean(record.remainingTimeStale && record.isActive && !record.isHidden);
+  return Boolean(record.remainingSecondsStale && record.isActive && !record.isHidden);
 }

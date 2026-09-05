@@ -1,6 +1,6 @@
 import { isFiniteNumber } from '../../shared/guards.js';
 import { createSortSummary } from '../../shared/sorting/summary.js';
-import { hasReadyRemainingTime } from './sort-readiness.js';
+import { hasReadyRemainingTime } from '../../shared/tabs/sort-readiness.js';
 import { buildYouTubeTabOrder } from './move-order.js';
 
 function tabIdsEqual(left, right) {
@@ -22,11 +22,10 @@ export function deriveSortState(records, { orderedWindowTabs = [] } = {}) {
   const sortableTabIds = tabIdsByPosition(sortableRecords);
   const readyRecords = sortableRecords.filter(hasReadyRemainingTime);
   const readyTabIds = new Set(readyRecords.map((record) => record.id));
-  const readyTabIdsInCurrentOrder = sortableTabIds.filter((id) => readyTabIds.has(id));
   const readyTabIdsByRemainingTime = readyRecords
     .slice()
     .sort((left, right) =>
-      left.videoDetails.remainingTime - right.videoDetails.remainingTime)
+      left.videoDetails.remainingSeconds - right.videoDetails.remainingSeconds)
     .map((record) => record.id);
   const waitingTabIds = sortableTabIds.filter((id) => !readyTabIds.has(id));
   const targetVideoTabOrder = [...readyTabIdsByRemainingTime, ...waitingTabIds];
@@ -41,24 +40,12 @@ export function deriveSortState(records, { orderedWindowTabs = [] } = {}) {
     ? buildYouTubeTabOrder(unpinnedTabs, targetVideoTabOrder)
     : [];
 
-  let readyTabsAreContiguous = true;
-  let readyTabsAreAtFront = true;
-  let encounteredReady = false;
-  let encounteredWaiting = false;
-  for (const id of sortableTabIds) {
-    if (readyTabIds.has(id)) {
-      if (encounteredWaiting) readyTabsAreAtFront = false;
-      if (encounteredReady && encounteredWaiting) readyTabsAreContiguous = false;
-      encounteredReady = true;
-    } else if (encounteredReady) {
-      encounteredWaiting = true;
-    }
-  }
-  if (hasTabStripState && readyTabIdsByRemainingTime.length > 0) {
-    readyTabsAreAtFront = readyTabIdsByRemainingTime.every(
-      (id, index) => unpinnedTabIds[index] === id,
-    );
-  }
+  // Compare against the complete unpinned strip when available. Without it,
+  // compare against tracked sortable tabs, including waiting tabs at the front.
+  const currentOrder = hasTabStripState ? unpinnedTabIds : sortableTabIds;
+  const readyPrefixMatchesPlan = readyTabIdsByRemainingTime.every(
+    (id, index) => currentOrder[index] === id,
+  );
 
   const allSortableTabsReady = sortableRecords.length > 1 && waitingTabIds.length === 0;
   const youtubeTabStripMatchesPlan =
@@ -76,11 +63,7 @@ export function deriveSortState(records, { orderedWindowTabs = [] } = {}) {
       trackedCount: records.length,
       sortableCount: sortableRecords.length,
       readyCount: readyRecords.length,
-      readyTabsContiguous: readyTabsAreContiguous,
-      readyTabsAtFront: readyTabsAreAtFront,
-      readyTabsOutOfOrder:
-        readyTabIdsInCurrentOrder.length >= 2 &&
-        !tabIdsEqual(readyTabIdsInCurrentOrder, readyTabIdsByRemainingTime),
+      readyPrefixMatchesPlan,
       allSortableTabsReady,
     }),
   };

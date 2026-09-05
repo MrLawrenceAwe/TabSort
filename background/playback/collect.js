@@ -6,7 +6,7 @@ import { tryInjectYouTubeBootstrap } from '../youtube/inject.js';
 import { derivePlaybackUpdate } from './derive-update.js';
 import { applyVideoMetricsUnavailable } from '../tabs/video-state.js';
 import { applyPlaybackStateUpdate } from './apply-update.js';
-import { recomputeSortState } from '../sorting/update-sort-state.js';
+import { updateSortStateAndBroadcast } from '../sorting/update-sort-state.js';
 import {
   getTrackedWindowId,
   getMutableTabRecord,
@@ -22,13 +22,13 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function loadTabRecordContext(tabId) {
   const initialRecord = getMutableTabRecord(tabId);
-  if (!initialRecord || initialRecord.loadState !== TAB_LOAD_STATES.UNSUSPENDED) {
+  if (!initialRecord || initialRecord.loadState !== TAB_LOAD_STATES.LOADED) {
     return null;
   }
 
   const tab = await getTab(tabId);
   const record = getMutableTabRecord(tabId);
-  if (!record || record.loadState !== TAB_LOAD_STATES.UNSUSPENDED) {
+  if (!record || record.loadState !== TAB_LOAD_STATES.LOADED) {
     return null;
   }
   const trackedWindowId = getTrackedWindowId();
@@ -76,7 +76,7 @@ export async function collectPlaybackMetrics(tabId, { recompute = true } = {}) {
 
     if (!result || result.ok !== true) {
       applyVideoMetricsUnavailable(record);
-      if (recompute) recomputeSortState();
+      if (recompute) updateSortStateAndBroadcast();
       return true;
     }
 
@@ -93,7 +93,7 @@ export async function collectPlaybackMetrics(tabId, { recompute = true } = {}) {
     }
 
     applyPlaybackStateUpdate(record, playbackUpdate, currentTabUrl);
-    if (recompute) recomputeSortState();
+    if (recompute) updateSortStateAndBroadcast();
     return true;
   } catch (error) {
     logDebug(`collectPlaybackMetrics failed for ${tabId}`, error);
@@ -126,6 +126,6 @@ export async function collectPlaybackMetricsBatch(
   }
 
   await Promise.all(Array.from({ length: workerCount }, runWorker));
-  if (changed) recomputeSortState();
+  if (changed) updateSortStateAndBroadcast();
   return changed;
 }

@@ -1,17 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { createYouTubePageController } from '../content/youtube/page/controller.js';
-import { shouldSendContentScriptReadySignal } from '../content/youtube/page/ready-signal.js';
-import { collectPageDetails } from '../content/youtube/metadata/collect-page-details.js';
-import { inferIsLiveNow } from '../content/youtube/metadata/live-status.js';
-import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
+import { createYouTubePageController } from '../../content/youtube/page/controller.js';
+import { shouldSendContentScriptReadySignal } from '../../content/youtube/page/ready-signal.js';
+import { collectPageDetails } from '../../content/youtube/metadata/collect-page-details.js';
+import { inferIsLiveNow } from '../../content/youtube/metadata/live-status.js';
+import { RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import {
   FakeMutationObserver,
   createFakeVideo,
   installRuntimeTestDom,
   resetGlobals,
-} from './helpers/content-runtime-fixtures.js';
+} from '../helpers/content-runtime-fixtures.js';
 test('shouldSendContentScriptReadySignal allows first-load, force-refresh, and URL-change signals', () => {
   assert.equal(
     shouldSendContentScriptReadySignal('https://www.youtube.com/watch?v=one', null),
@@ -270,6 +270,9 @@ test('content script session reset removes listeners before a second bootstrap',
     runtime.bootstrap();
     assert.equal(getRuntimeMessageListenerCount(), 1);
     assert.equal(windowTarget.listeners.size, 3);
+    assert.equal(installRuntimeTestDom.messages.filter(
+      (message) => message.type === RUNTIME_MESSAGE_TYPES.PLAYBACK_METRICS_READY,
+    ).length, 1);
 
     runtime.reset();
     assert.equal(getRuntimeMessageListenerCount(), 0);
@@ -278,6 +281,9 @@ test('content script session reset removes listeners before a second bootstrap',
     runtime.bootstrap();
     assert.equal(getRuntimeMessageListenerCount(), 1);
     assert.equal(windowTarget.listeners.size, 3);
+    assert.equal(installRuntimeTestDom.messages.filter(
+      (message) => message.type === RUNTIME_MESSAGE_TYPES.PLAYBACK_METRICS_READY,
+    ).length, 2, 'full reset allows the same video to become ready again');
   } finally {
     runtime.reset();
     resetGlobals();

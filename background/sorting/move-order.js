@@ -32,17 +32,15 @@ export function buildOtherTabOrder(unpinnedTabs, groupBySite) {
     return otherTabs.map((tab) => tab.id);
   }
 
-  const domainOrder = [];
   const domainToTabIds = new Map();
 
   for (const tab of otherTabs) {
     const key = getSiteKey(tab.url);
     if (!domainToTabIds.has(key)) {
       domainToTabIds.set(key, []);
-      domainOrder.push(key);
     }
     domainToTabIds.get(key).push(tab.id);
   }
 
-  return domainOrder.flatMap((key) => domainToTabIds.get(key) || []);
+  return [...domainToTabIds.values()].flat();
 }

@@ -1,4 +1,4 @@
-import { shouldPollRecord } from '../shared/tab-readiness/refresh-policy.js';
+import { shouldPollRecord } from '../shared/tabs/refresh-policy.js';
 
 export function shouldPollSnapshot(snapshot, { now = Date.now } = {}) {
   const tabRecordsById = snapshot?.tabRecordsById;

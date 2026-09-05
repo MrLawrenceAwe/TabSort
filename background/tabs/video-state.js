@@ -3,13 +3,13 @@ import { isFiniteNumber } from '../../shared/guards.js';
 import { nowMs } from '../../shared/time.js';
 
 export function clearRemainingTime(record) {
-  if (record?.videoDetails && record.videoDetails.remainingTime != null) {
-    record.videoDetails.remainingTime = null;
+  if (record?.videoDetails && record.videoDetails.remainingSeconds != null) {
+    record.videoDetails.remainingSeconds = null;
   }
 }
 
 export function markRemainingTimeAsStale(record) {
-  record.remainingTimeStale = true;
+  record.remainingSecondsStale = true;
 }
 
 export function resetPlaybackReadiness(record, { metricsWaitStartedAt = null } = {}) {
@@ -47,14 +47,14 @@ export function applyTabReloadStarted(record) {
   const timestamp = nowMs();
   record.loadState = TAB_LOAD_STATES.LOADING;
   record.loadingStartedAt = timestamp;
-  record.unsuspendedTimestamp = timestamp;
+  record.loadedAt = null;
   applyVideoMetricsUnavailable(record);
 }
 
-export function applyContentScriptReady(record, { urlChanged = false, url = null } = {}) {
+export function applyContentScriptReady(record, { videoChanged = false, url = null } = {}) {
   if (!record) return;
   const timestamp = nowMs();
-  if (urlChanged) {
+  if (videoChanged) {
     applyVideoIdentityChanged(record, { contentScriptReady: true, timestamp });
   }
   if (url) record.url = url;
@@ -64,9 +64,9 @@ export function applyContentScriptReady(record, { urlChanged = false, url = null
   }
 }
 
-export function applyVideoDetailsFromPage(record, details = {}, { urlChanged = false } = {}) {
+export function applyVideoDetailsFromPage(record, details = {}, { videoChanged = false } = {}) {
   if (!record) return;
-  if (urlChanged) applyVideoIdentityChanged(record);
+  if (videoChanged) applyVideoIdentityChanged(record);
   if (details.url) record.url = details.url;
   record.videoDetails = record.videoDetails || {};
   if (details.title) record.videoDetails.title = details.title;
@@ -82,15 +82,15 @@ export function applyVideoDetailsFromPage(record, details = {}, { urlChanged = f
 
   if (isFiniteNumber(details.lengthSeconds)) {
     record.videoDetails.lengthSeconds = details.lengthSeconds;
-    if (!record.isLive && record.videoDetails.remainingTime == null) {
-      record.videoDetails.remainingTime = details.lengthSeconds;
-      record.remainingTimeStale = true;
+    if (!record.isLive && record.videoDetails.remainingSeconds == null) {
+      record.videoDetails.remainingSeconds = details.lengthSeconds;
+      record.remainingSecondsStale = true;
     }
   }
 
   if (record.isLive) {
     clearRemainingTime(record);
-    record.remainingTimeStale = false;
+    record.remainingSecondsStale = false;
     record.metricsWaitStartedAt = null;
   }
 }

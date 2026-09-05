@@ -24,11 +24,11 @@ export function createTabRecord(tabId, windowId, defaults = {}) {
     isHidden: Boolean(defaults.isHidden),
     videoDetails: cloneVideoDetails(defaults.videoDetails),
     loadingStartedAt: defaults.loadingStartedAt ?? null,
-    unsuspendedTimestamp: defaults.unsuspendedTimestamp ?? null,
+    loadedAt: defaults.loadedAt ?? null,
     transitionStartedAt: defaults.transitionStartedAt ?? null,
     metricsWaitStartedAt: defaults.metricsWaitStartedAt ?? null,
-    remainingTimeStale:
-      defaults.remainingTimeStale == null ? true : Boolean(defaults.remainingTimeStale),
+    remainingSecondsStale:
+      defaults.remainingSecondsStale == null ? true : Boolean(defaults.remainingSecondsStale),
   };
 }
 

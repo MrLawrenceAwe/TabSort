@@ -53,26 +53,14 @@ export function getPopupElement(key) {
   return popupElements[key];
 }
 
-export function setErrorMessage(message = '') {
-  const error = getPopupElement('error');
-  if (!error) return;
-  const nextMessage = typeof message === 'string' ? message.trim() : '';
-  error.textContent = nextMessage;
-  error.classList.toggle('hide', !nextMessage);
+function setMessage(elementKey, message) {
+  const element = getPopupElement(elementKey);
+  if (!element) return;
+  const text = typeof message === 'string' ? message.trim() : '';
+  element.textContent = text;
+  element.classList.toggle('hide', !text);
 }
 
-export function setNoticeMessage(message = '') {
-  const notice = getPopupElement('notice');
-  if (!notice) return;
-  const nextMessage = typeof message === 'string' ? message.trim() : '';
-  notice.textContent = nextMessage;
-  notice.classList.toggle('hide', !nextMessage);
-}
-
-export function setStateMessage(message = '') {
-  const stateMessage = getPopupElement('stateMessage');
-  if (!stateMessage) return;
-  const nextMessage = typeof message === 'string' ? message.trim() : '';
-  stateMessage.textContent = nextMessage;
-  stateMessage.classList.toggle('hide', !nextMessage);
-}
+export const setErrorMessage = (message = '') => setMessage('error', message);
+export const setNoticeMessage = (message = '') => setMessage('notice', message);
+export const setStateMessage = (message = '') => setMessage('stateMessage', message);

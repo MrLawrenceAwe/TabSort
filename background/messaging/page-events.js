@@ -5,7 +5,7 @@ import {
   applyVideoDetailsFromPage,
   markPlaybackMetricsReady,
 } from '../tabs/video-state.js';
-import { recomputeSortState } from '../sorting/update-sort-state.js';
+import { updateSortStateAndBroadcast } from '../sorting/update-sort-state.js';
 import { collectPlaybackMetrics } from '../playback/collect.js';
 import {
   deleteTabRecord,
@@ -24,7 +24,7 @@ function isSenderInTrackedWindow(windowId) {
 function removeTabRecordWhenSenderLeavesVideoPage(tabId) {
   if (!isFiniteNumber(tabId)) return false;
   if (!deleteTabRecord(tabId)) return false;
-  recomputeSortState();
+  updateSortStateAndBroadcast();
   return true;
 }
 
@@ -59,8 +59,8 @@ export async function handleContentScriptReady(_message, sender) {
     isActive: sender?.tab?.active,
     isHidden: sender?.tab?.hidden,
   });
-  applyContentScriptReady(record, { urlChanged: videoChanged, url: senderUrl });
-  recomputeSortState();
+  applyContentScriptReady(record, { videoChanged: videoChanged, url: senderUrl });
+  updateSortStateAndBroadcast();
   return { type: 'contentScriptReadyAck' };
 }
 
@@ -82,7 +82,7 @@ export async function handlePageVideoDetails(message, sender) {
 
   setTrackedWindowId(windowId);
   const record = getOrCreateTabRecord(tabId, windowId, { url: detailUrl });
-  const urlChanged = hasYouTubeVideoChanged(record.url, detailUrl);
-  applyVideoDetailsFromPage(record, details, { urlChanged });
-  recomputeSortState();
+  const videoChanged = hasYouTubeVideoChanged(record.url, detailUrl);
+  applyVideoDetailsFromPage(record, details, { videoChanged });
+  updateSortStateAndBroadcast();
 }

@@ -2,9 +2,7 @@ const EMPTY_SORT_SUMMARY = Object.freeze({
   trackedCount: 0,
   sortableCount: 0,
   readyCount: 0,
-  readyTabsContiguous: true,
-  readyTabsAtFront: true,
-  readyTabsOutOfOrder: false,
+  readyPrefixMatchesPlan: true,
   allSortableTabsReady: false,
 });
 

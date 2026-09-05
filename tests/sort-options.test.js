@@ -3,10 +3,9 @@ import assert from 'node:assert/strict';
 
 import {
   DEFAULT_SORT_OPTIONS,
-  getStorageArea,
   loadSortOptions,
   saveSortOptions,
-} from '../shared/storage.js';
+} from '../shared/sort-options.js';
 
 function withMissingChrome(fn) {
   const hadChrome = Object.prototype.hasOwnProperty.call(globalThis, 'chrome');
@@ -43,12 +42,6 @@ function withChromeStorage(storage, fn) {
       }
     });
 }
-
-test('getStorageArea returns null when chrome is unavailable', async () => {
-  await withMissingChrome(() => {
-    assert.equal(getStorageArea(), null);
-  });
-});
 
 test('loadSortOptions falls back to defaults when chrome is unavailable', async () => {
   await withMissingChrome(async () => {

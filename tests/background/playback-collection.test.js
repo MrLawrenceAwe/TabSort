@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import {
   getMutableTabRecord,
-  trackedWindow,
+  getTabRecordsById,
 } from '../../background/windows/store.js';
 import {
   collectPlaybackMetrics,
@@ -44,8 +44,8 @@ test(
     assert.equal(getMutableTabRecord(1), replacementRecord);
     assert.equal(replacementRecord.contentScriptReady, true);
     assert.equal(replacementRecord.videoDetails.lengthSeconds, 120);
-    assert.equal(replacementRecord.videoDetails.remainingTime, 100);
-    assert.equal(replacementRecord.remainingTimeStale, false);
+    assert.equal(replacementRecord.videoDetails.remainingSeconds, 100);
+    assert.equal(replacementRecord.remainingSecondsStale, false);
   },
 );
 
@@ -57,8 +57,8 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
-        videoDetails: { title: 'Old Video', remainingTime: 45, lengthSeconds: 120 },
-        remainingTimeStale: false,
+        videoDetails: { title: 'Old Video', remainingSeconds: 45, lengthSeconds: 120 },
+        remainingSecondsStale: false,
         contentScriptReady: false,
       }),
     });
@@ -75,12 +75,12 @@ test(
 
     await collectPlaybackMetrics(1);
 
-    const record = trackedWindow.tabRecordsById[1];
+    const record = getTabRecordsById()[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
     assert.equal(record.videoDetails.title, 'New Video');
     assert.equal(record.videoDetails.lengthSeconds, 400);
-    assert.equal(record.videoDetails.remainingTime, 390);
-    assert.equal(record.remainingTimeStale, false);
+    assert.equal(record.videoDetails.remainingSeconds, 390);
+    assert.equal(record.remainingSecondsStale, false);
   },
 );
 
@@ -117,17 +117,17 @@ test(
       contentScriptReady: false,
       playbackMetricsReady: false,
       videoDetails: null,
-      remainingTimeStale: true,
+      remainingSecondsStale: true,
     }));
 
     await collectPromise;
 
-    const record = trackedWindow.tabRecordsById[1];
+    const record = getTabRecordsById()[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
     assert.equal(record.videoDetails, null);
     assert.equal(record.contentScriptReady, false);
     assert.equal(record.playbackMetricsReady, false);
-    assert.equal(record.remainingTimeStale, true);
+    assert.equal(record.remainingSecondsStale, true);
   },
 );
 
@@ -141,8 +141,8 @@ test(
         url: 'https://www.youtube.com/watch?v=new',
         contentScriptReady: true,
         playbackMetricsReady: false,
-        videoDetails: { title: 'New Video', remainingTime: null, lengthSeconds: null },
-        remainingTimeStale: true,
+        videoDetails: { title: 'New Video', remainingSeconds: null, lengthSeconds: null },
+        remainingSecondsStale: true,
       }),
     });
 
@@ -159,13 +159,13 @@ test(
 
     await collectPlaybackMetrics(1);
 
-    const record = trackedWindow.tabRecordsById[1];
+    const record = getTabRecordsById()[1];
     assert.equal(record.contentScriptReady, true);
     assert.equal(record.playbackMetricsReady, false);
     assert.equal(typeof record.metricsWaitStartedAt, 'number');
     assert.equal(record.videoDetails.lengthSeconds, 400);
-    assert.equal(record.videoDetails.remainingTime, 400);
-    assert.equal(record.remainingTimeStale, true);
+    assert.equal(record.videoDetails.remainingSeconds, 400);
+    assert.equal(record.remainingSecondsStale, true);
   },
 );
 
@@ -179,8 +179,8 @@ test(
         url: 'https://www.youtube.com/watch?v=archive',
         contentScriptReady: true,
         playbackMetricsReady: false,
-        videoDetails: { title: 'Archived Stream', remainingTime: null, lengthSeconds: null },
-        remainingTimeStale: true,
+        videoDetails: { title: 'Archived Stream', remainingSeconds: null, lengthSeconds: null },
+        remainingSecondsStale: true,
       }),
     });
 
@@ -188,13 +188,13 @@ test(
 
     await collectPlaybackMetrics(1);
 
-    const record = trackedWindow.tabRecordsById[1];
+    const record = getTabRecordsById()[1];
     assert.equal(record.contentScriptReady, true);
     assert.equal(record.playbackMetricsReady, true);
     assert.equal(record.metricsWaitStartedAt, null);
     assert.equal(record.videoDetails.lengthSeconds, 6211);
-    assert.equal(record.videoDetails.remainingTime, 6211);
-    assert.equal(record.remainingTimeStale, false);
+    assert.equal(record.videoDetails.remainingSeconds, 6211);
+    assert.equal(record.remainingSecondsStale, false);
   },
 );
 
@@ -208,8 +208,8 @@ test(
         url: 'https://www.youtube.com/watch?v=archive',
         contentScriptReady: true,
         playbackMetricsReady: false,
-        videoDetails: { title: 'Archived Stream', remainingTime: null, lengthSeconds: 0 },
-        remainingTimeStale: true,
+        videoDetails: { title: 'Archived Stream', remainingSeconds: null, lengthSeconds: 0 },
+        remainingSecondsStale: true,
       }),
     });
 
@@ -217,12 +217,12 @@ test(
 
     await collectPlaybackMetrics(1);
 
-    const record = trackedWindow.tabRecordsById[1];
+    const record = getTabRecordsById()[1];
     assert.equal(record.contentScriptReady, true);
     assert.equal(record.playbackMetricsReady, true);
     assert.equal(record.videoDetails.lengthSeconds, 6211);
-    assert.equal(record.videoDetails.remainingTime, 6211);
-    assert.equal(record.remainingTimeStale, false);
+    assert.equal(record.videoDetails.remainingSeconds, 6211);
+    assert.equal(record.remainingSecondsStale, false);
   },
 );
 
@@ -236,8 +236,8 @@ test(
         url: 'https://www.youtube.com/watch?v=archive',
         contentScriptReady: true,
         playbackMetricsReady: false,
-        videoDetails: { title: 'Archived Stream', remainingTime: null, lengthSeconds: 0 },
-        remainingTimeStale: true,
+        videoDetails: { title: 'Archived Stream', remainingSeconds: null, lengthSeconds: 0 },
+        remainingSecondsStale: true,
       }),
     });
 
@@ -248,12 +248,12 @@ test(
 
     await collectPlaybackMetrics(1);
 
-    const record = trackedWindow.tabRecordsById[1];
+    const record = getTabRecordsById()[1];
     assert.equal(record.contentScriptReady, true);
     assert.equal(record.playbackMetricsReady, false);
     assert.equal(record.videoDetails.lengthSeconds, null);
-    assert.equal(record.videoDetails.remainingTime, null);
-    assert.equal(record.remainingTimeStale, true);
+    assert.equal(record.videoDetails.remainingSeconds, null);
+    assert.equal(record.remainingSecondsStale, true);
   },
 );
 
@@ -267,8 +267,8 @@ test(
         url: 'https://www.youtube.com/watch?v=archive',
         contentScriptReady: true,
         playbackMetricsReady: false,
-        videoDetails: { title: 'Archived Stream', remainingTime: null, lengthSeconds: null },
-        remainingTimeStale: true,
+        videoDetails: { title: 'Archived Stream', remainingSeconds: null, lengthSeconds: null },
+        remainingSecondsStale: true,
       }),
     });
 
@@ -279,12 +279,12 @@ test(
 
     await collectPlaybackMetrics(1);
 
-    const record = trackedWindow.tabRecordsById[1];
+    const record = getTabRecordsById()[1];
     assert.equal(record.contentScriptReady, true);
     assert.equal(record.playbackMetricsReady, false);
     assert.equal(record.videoDetails.lengthSeconds, 6211);
-    assert.equal(record.videoDetails.remainingTime, 6211);
-    assert.equal(record.remainingTimeStale, true);
+    assert.equal(record.videoDetails.remainingSeconds, 6211);
+    assert.equal(record.remainingSecondsStale, true);
   },
 );
 
@@ -300,10 +300,10 @@ test(
         playbackMetricsReady: true,
         videoDetails: {
           title: 'OpenAI vs. Anthropic\'s Direct Faceoff + Future of Agents - With Aaron Levie',
-          remainingTime: 3364,
+          remainingSeconds: 3364,
           lengthSeconds: 3364,
         },
-        remainingTimeStale: false,
+        remainingSecondsStale: false,
       }),
     });
 
@@ -320,13 +320,13 @@ test(
 
     await collectPlaybackMetrics(1);
 
-    const record = trackedWindow.tabRecordsById[1];
+    const record = getTabRecordsById()[1];
     assert.equal(record.contentScriptReady, true);
     assert.equal(record.playbackMetricsReady, false);
     assert.equal(typeof record.metricsWaitStartedAt, 'number');
     assert.equal(record.videoDetails.lengthSeconds, 3364);
-    assert.equal(record.videoDetails.remainingTime, 3364);
-    assert.equal(record.remainingTimeStale, true);
+    assert.equal(record.videoDetails.remainingSeconds, 3364);
+    assert.equal(record.remainingSecondsStale, true);
   },
 );
 
@@ -372,9 +372,9 @@ test(
 
     assert.equal(changed, true);
     assert.equal(broadcastCount, 1);
-    assert.equal(trackedWindow.tabRecordsById[1].videoDetails.remainingTime, 110);
-    assert.equal(trackedWindow.tabRecordsById[2].videoDetails.remainingTime, 100);
-    assert.equal(trackedWindow.tabRecordsById[3].videoDetails.remainingTime, 90);
+    assert.equal(getTabRecordsById()[1].videoDetails.remainingSeconds, 110);
+    assert.equal(getTabRecordsById()[2].videoDetails.remainingSeconds, 100);
+    assert.equal(getTabRecordsById()[3].videoDetails.remainingSeconds, 90);
   },
 );
 
@@ -420,7 +420,7 @@ test(
 
     await collectPlaybackMetrics(1);
 
-    const record = trackedWindow.tabRecordsById[1];
+    const record = getTabRecordsById()[1];
     assert.equal(sendCount, 2);
     assert.deepEqual(injected, [
       {
@@ -428,8 +428,8 @@ test(
         files: ['dist/content-runtime.js'],
       },
     ]);
-    assert.equal(record.videoDetails.remainingTime, 100);
-    assert.equal(record.remainingTimeStale, false);
+    assert.equal(record.videoDetails.remainingSeconds, 100);
+    assert.equal(record.remainingSecondsStale, false);
   },
 );
 
@@ -473,9 +473,9 @@ test(
 
     await collectPlaybackMetrics(1);
 
-    const record = trackedWindow.tabRecordsById[1];
+    const record = getTabRecordsById()[1];
     assert.equal(sendCount, 3);
-    assert.equal(record.videoDetails.remainingTime, 100);
-    assert.equal(record.remainingTimeStale, false);
+    assert.equal(record.videoDetails.remainingSeconds, 100);
+    assert.equal(record.remainingSecondsStale, false);
   },
 );

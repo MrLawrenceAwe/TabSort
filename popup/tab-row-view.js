@@ -1,14 +1,15 @@
+import { hasReadyRemainingTime } from '../shared/tabs/sort-readiness.js';
 import { isFiniteNumber } from '../shared/guards.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import {
   determineTabGuidance,
   getTabGuidanceLabel,
   TAB_GUIDANCE,
-} from '../shared/tab-readiness/action-guidance.js';
+} from '../shared/tabs/guidance.js';
 
 const COLUMNS = Object.freeze([
-  { key: 'remainingStatus', getter: formatRemainingStatus },
-  { key: 'index', getter: formatIndex },
+  { key: 'remaining-time', getter: formatRemainingStatus },
+  { key: 'tab-position', getter: formatPosition },
 ]);
 
 export function renderTabRow(row, tabRecord, isTargetOrderApplied, requestTabAction) {
@@ -24,24 +25,24 @@ export function renderTabRow(row, tabRecord, isTargetOrderApplied, requestTabAct
     insertGuidanceCell(row, tabRecord, guidance, requestTabAction);
   }
 
-  insertInfoCells(row, tabRecord, isTargetOrderApplied, guidance);
+  insertInfoCells(row, tabRecord, guidance);
 
-  const remaining = tabRecord?.videoDetails?.remainingTime;
-  const hasRemainingTime = isFiniteNumber(remaining) && !tabRecord.remainingTimeStale;
-  if (hasRemainingTime && !isTargetOrderApplied) row.classList.add('ready-row');
+  const isReadyToSort = !tabRecord.pinned && !tabRecord.isLive && hasReadyRemainingTime(tabRecord);
+  if (isReadyToSort && !isTargetOrderApplied) row.classList.add('ready-row');
 }
 
-function insertInfoCells(row, record, isTargetOrderApplied, guidance) {
+function insertInfoCells(row, record, guidance) {
   COLUMNS.forEach((column) => {
     const cell = row.insertCell(row.cells.length);
     cell.className = column.key;
     const value = column.getter(record, guidance);
-    cell.textContent = isTargetOrderApplied ? value : toDisplayText(value);
+    cell.textContent = value;
   });
 }
 
 function insertGuidanceCell(row, record, guidance, requestTabAction) {
   const cell = row.insertCell(1);
+  cell.className = 'next-step';
   if (
     guidance === TAB_GUIDANCE.NONE ||
     guidance === TAB_GUIDANCE.WAIT_FOR_LOAD ||
@@ -57,7 +58,7 @@ function insertGuidanceCell(row, record, guidance, requestTabAction) {
     getTabGuidanceLabel(guidance),
     guidance === TAB_GUIDANCE.RELOAD_TAB
       ? RUNTIME_MESSAGE_TYPES.RELOAD_TAB
-      : RUNTIME_MESSAGE_TYPES.OPEN_TAB,
+      : RUNTIME_MESSAGE_TYPES.ACTIVATE_TAB,
     record.id,
     requestTabAction,
   );
@@ -75,7 +76,7 @@ function createActionButton(runtimeDocument, text, actionType, tabId, requestTab
     actionButton.setAttribute?.('aria-busy', 'true');
     actionButton.textContent = actionType === RUNTIME_MESSAGE_TYPES.RELOAD_TAB
       ? 'Reloading…'
-      : 'Opening…';
+      : 'Switching…';
     const didSucceed = await requestTabAction?.(actionType, { tabId });
     if (!didSucceed) {
       actionButton.disabled = false;
@@ -89,10 +90,10 @@ function createActionButton(runtimeDocument, text, actionType, tabId, requestTab
 export function formatRemainingStatus(record, requiredAction = determineTabGuidance(record)) {
   if (record.isLive) return 'Live Stream';
 
-  const remaining = record?.videoDetails?.remainingTime;
+  const remaining = record?.videoDetails?.remainingSeconds;
   const hasRemainingTime = isFiniteNumber(remaining);
 
-  if (record.remainingTimeStale) {
+  if (record.remainingSecondsStale) {
     return requiredAction === TAB_GUIDANCE.VIEW_TAB_TO_REFRESH_TIME
       ? getTabGuidanceLabel(TAB_GUIDANCE.VIEW_TAB_TO_REFRESH_TIME)
       : 'unavailable';
@@ -101,13 +102,9 @@ export function formatRemainingStatus(record, requiredAction = determineTabGuida
   return hasRemainingTime ? formatRemaining(remaining) : 'unavailable';
 }
 
-function formatIndex(record) {
+function formatPosition(record) {
   const tabIndex = record.index;
   return isFiniteNumber(tabIndex) ? tabIndex + 1 : '';
-}
-
-function toDisplayText(value) {
-  return value ? getTabGuidanceLabel(value) || value : '';
 }
 
 function formatRemaining(seconds) {

@@ -1,15 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { TAB_LOAD_STATES } from '../shared/tabs/load-states.js';
-import { trackedWindow } from '../background/windows/store.js';
+import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
+import {
+  getTabRecordsById,
+  getTrackedWindowId,
+} from '../../background/windows/store.js';
 import {
   getWindowSnapshot,
   handleOrganiseTabs,
-  openTab,
+  activateTab,
   reloadTab,
-} from '../background/messaging/tab-commands.js';
-import { reconcileWindowTabRecords } from '../background/tabs/reconcile.js';
+} from '../../background/messaging/tab-commands.js';
+import { reconcileWindowTabRecords } from '../../background/tabs/reconcile.js';
 import {
   ensureChromeApi,
   createChromeTabFixture,
@@ -17,16 +20,16 @@ import {
   resetTrackedWindowState,
   setTrackedSortState,
   setTrackedTabRecords,
-} from './helpers/background-test-helpers.js';
+} from '../helpers/background-test-helpers.js';
 
 ensureChromeApi({ tabs: true });
 
 test('reloadTab does not mutate record state when chrome.tabs.reload fails', { concurrency: false }, async () => {
   resetTrackedWindowState();
   setTrackedTabRecords({
-    1: createTabRecordFixture(1, { videoDetails: { remainingTime: 100 }, remainingTimeStale: false }),
+    1: createTabRecordFixture(1, { videoDetails: { remainingSeconds: 100 }, remainingSecondsStale: false }),
   });
-  const before = JSON.parse(JSON.stringify(trackedWindow.tabRecordsById[1]));
+  const before = JSON.parse(JSON.stringify(getTabRecordsById()[1]));
 
   globalThis.chrome.tabs.reload = async () => {
     throw new Error('reload failed');
@@ -34,27 +37,27 @@ test('reloadTab does not mutate record state when chrome.tabs.reload fails', { c
 
   const result = await reloadTab({ tabId: 1, windowId: 1 });
 
-  assert.deepEqual(trackedWindow.tabRecordsById[1], before);
+  assert.deepEqual(getTabRecordsById()[1], before);
   assert.deepEqual(result, { ok: false, error: 'reloadFailed', tabId: 1 });
 });
 
 test('reloadTab marks record loading only after successful reload call', { concurrency: false }, async () => {
   resetTrackedWindowState();
   setTrackedTabRecords({
-    1: createTabRecordFixture(1, { videoDetails: { remainingTime: 100 }, remainingTimeStale: false }),
+    1: createTabRecordFixture(1, { videoDetails: { remainingSeconds: 100 }, remainingSecondsStale: false }),
   });
 
   globalThis.chrome.tabs.reload = async () => {};
 
   const result = await reloadTab({ tabId: 1, windowId: 1 });
 
-  const record = trackedWindow.tabRecordsById[1];
+  const record = getTabRecordsById()[1];
   assert.equal(record.loadState, TAB_LOAD_STATES.LOADING);
   assert.equal(record.contentScriptReady, false);
-  assert.equal(record.remainingTimeStale, true);
-  assert.equal(record.videoDetails.remainingTime, null);
+  assert.equal(record.remainingSecondsStale, true);
+  assert.equal(record.videoDetails.remainingSeconds, null);
   assert.equal(typeof record.loadingStartedAt, 'number');
-  assert.equal(typeof record.unsuspendedTimestamp, 'number');
+  assert.equal(record.loadedAt, null);
   assert.deepEqual(result, { ok: true, tabId: 1 });
 });
 
@@ -67,19 +70,19 @@ test('tab actions reject records outside the popup window', { concurrency: false
     throw new Error('should not update a mismatched tab');
   };
 
-  const result = await openTab({ tabId: 1, windowId: 2 });
+  const result = await activateTab({ tabId: 1, windowId: 2 });
 
   assert.deepEqual(result, { ok: false, error: 'windowMismatch' });
 });
 
-test('openTab returns a structured success result', { concurrency: false }, async () => {
+test('activateTab returns a structured success result', { concurrency: false }, async () => {
   resetTrackedWindowState(1);
   setTrackedTabRecords({
     1: createTabRecordFixture(1, { windowId: 1 }),
   });
   globalThis.chrome.tabs.update = async () => {};
 
-  const result = await openTab({ tabId: 1, windowId: 1 });
+  const result = await activateTab({ tabId: 1, windowId: 1 });
 
   assert.deepEqual(result, { ok: true, tabId: 1 });
 });
@@ -88,12 +91,12 @@ test('handleOrganiseTabs refreshes a newly targeted window before deriving its s
   resetTrackedWindowState(1);
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
-      videoDetails: { remainingTime: 120 },
-      remainingTimeStale: false,
+      videoDetails: { remainingSeconds: 120 },
+      remainingSecondsStale: false,
     }),
     2: createTabRecordFixture(2, {
-      videoDetails: { remainingTime: 60 },
-      remainingTimeStale: false,
+      videoDetails: { remainingSeconds: 60 },
+      remainingSecondsStale: false,
     }),
   });
   setTrackedSortState({ targetVideoTabOrder: [2, 1] });
@@ -120,8 +123,8 @@ test('handleOrganiseTabs refreshes a newly targeted window before deriving its s
   });
   assert.deepEqual(movedTabIds, []);
   assert.deepEqual(queriedWindowIds, [2, 2]);
-  assert.equal(trackedWindow.windowId, 2);
-  assert.deepEqual(Object.keys(trackedWindow.tabRecordsById).map(Number), [10, 11]);
+  assert.equal(getTrackedWindowId(), 2);
+  assert.deepEqual(Object.keys(getTabRecordsById()).map(Number), [10, 11]);
 });
 
 test(
@@ -199,6 +202,6 @@ test(
       skippedReason: 'superseded',
     });
     assert.deepEqual(movedTabIds, []);
-    assert.equal(trackedWindow.windowId, 2);
+    assert.equal(getTrackedWindowId(), 2);
   },
 );

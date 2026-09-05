@@ -7,8 +7,9 @@ import {
 } from '../../background/windows/lifecycle.js';
 import {
   canManageWindow,
+  getTabRecordsById,
+  getTrackedWindowId,
   replaceAllTabRecords,
-  trackedWindow,
 } from '../../background/windows/store.js';
 import {
   createChromeTabFixture,
@@ -30,7 +31,7 @@ test(
 
     await syncFocusedWindow(2);
 
-    assert.equal(trackedWindow.windowId, 2);
+    assert.equal(getTrackedWindowId(), 2);
     assert.equal(canManageWindow(2), true);
     assert.equal(canManageWindow(1), false);
   },
@@ -48,9 +49,9 @@ test(
 
     await syncFocusedWindow(2);
 
-    assert.equal(trackedWindow.windowId, 1);
-    assert.deepEqual(Object.keys(trackedWindow.tabRecordsById), ['10']);
-    assert.equal(trackedWindow.tabRecordsById[10].windowId, 1);
+    assert.equal(getTrackedWindowId(), 1);
+    assert.deepEqual(Object.keys(getTabRecordsById()), ['10']);
+    assert.equal(getTabRecordsById()[10].windowId, 1);
   },
 );
 
@@ -85,7 +86,7 @@ test(
     ]);
     await initialSync;
 
-    assert.equal(trackedWindow.windowId, 2);
-    assert.deepEqual(Object.keys(trackedWindow.tabRecordsById), ['20']);
+    assert.equal(getTrackedWindowId(), 2);
+    assert.deepEqual(Object.keys(getTabRecordsById()), ['20']);
   },
 );

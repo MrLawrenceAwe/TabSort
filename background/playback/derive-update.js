@@ -115,36 +115,36 @@ export function derivePlaybackUpdate({
       playbackEvidenceIsUsable,
     isLive,
     resolvedLengthSeconds: isFiniteNumber(resolvedLengthSeconds) ? resolvedLengthSeconds : null,
-    remainingTime: null,
-    remainingTimeStale: true,
+    remainingSeconds: null,
+    remainingSecondsStale: true,
   };
 
   if (isLive) {
-    update.remainingTimeStale = false;
+    update.remainingSecondsStale = false;
     return update;
   }
 
   if (!isFiniteNumber(resolvedLengthSeconds)) {
-    update.remainingTimeStale = !update.playbackMetricsReady;
+    update.remainingSecondsStale = !update.playbackMetricsReady;
     return update;
   }
 
   if (hasMediaDurationMismatch(metricsPayload, record, resolvedLengthSeconds)) {
     update.playbackMetricsReady = false;
-    update.remainingTime = resolvedLengthSeconds;
+    update.remainingSeconds = resolvedLengthSeconds;
     return update;
   }
 
   if (!update.playbackMetricsReady) {
-    update.remainingTime = resolvedLengthSeconds;
+    update.remainingSeconds = resolvedLengthSeconds;
     return update;
   }
 
-  update.remainingTime = deriveRemainingTimeSeconds(
+  update.remainingSeconds = deriveRemainingTimeSeconds(
     resolvedLengthSeconds,
     currentTimeSeconds,
     playbackRate,
   );
-  update.remainingTimeStale = !isFiniteNumber(currentTimeSeconds);
+  update.remainingSecondsStale = !isFiniteNumber(currentTimeSeconds);
   return update;
 }
