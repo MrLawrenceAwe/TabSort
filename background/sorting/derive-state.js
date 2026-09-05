@@ -60,11 +60,9 @@ export function deriveSortState(records, { orderedWindowTabs = [] } = {}) {
     targetVideoTabOrder,
     isTargetOrderApplied,
     sortSummary: createSortSummary({
-      trackedCount: records.length,
       sortableCount: sortableRecords.length,
       readyCount: readyRecords.length,
       readyPrefixMatchesPlan,
-      allSortableTabsReady,
     }),
   };
 }

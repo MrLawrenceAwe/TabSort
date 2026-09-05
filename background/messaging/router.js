@@ -4,7 +4,6 @@ import {
   handleOrganiseTabs,
   getWindowSnapshot,
   reloadTab,
-  syncWindowTabs,
 } from './tab-commands.js';
 import {
   handlePageVideoDetails,
@@ -30,7 +29,6 @@ function createAsyncResponder(sendResponse) {
 
 function createMessageHandlers(message, sender) {
   return {
-    [RUNTIME_MESSAGE_TYPES.SYNC_TRACKED_TABS]: () => syncWindowTabs(message),
     [RUNTIME_MESSAGE_TYPES.GET_TAB_SNAPSHOT]: () => getWindowSnapshot(message),
     [RUNTIME_MESSAGE_TYPES.ORGANISE_TABS]: () => handleOrganiseTabs(message),
     [RUNTIME_MESSAGE_TYPES.PING]: async () => ({ ok: true }),

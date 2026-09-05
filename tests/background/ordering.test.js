@@ -71,7 +71,6 @@ test('marks window as sorted only when all actionable tabs are known and ordered
   updateSortStateAndBroadcast();
 
   assert.equal(getSortState().isTargetOrderApplied, true);
-  assert.equal(getSortState().sortSummary.allSortableTabsReady, true);
 
 });
 
@@ -88,7 +87,6 @@ test('does not call a single sortable tab a completed sort', () => {
   updateSortStateAndBroadcast();
 
   assert.equal(getSortState().isTargetOrderApplied, false);
-  assert.equal(getSortState().sortSummary.allSortableTabsReady, false);
 });
 
 test('detects a ready prefix that differs from the sort plan', () => {
@@ -137,11 +135,9 @@ test('live tabs do not block sorted readiness for VOD tabs with known remaining 
   updateSortStateAndBroadcast();
 
   assert.equal(getSortState().isTargetOrderApplied, true);
-  assert.equal(getSortState().sortSummary.trackedCount, 3);
   assert.equal(getSortState().sortSummary.sortableCount, 2);
   assert.equal(getSortState().sortSummary.readyCount, 2);
   assert.equal(getSortState().sortSummary.readyPrefixMatchesPlan, true);
-  assert.equal(getSortState().sortSummary.allSortableTabsReady, true);
   assert.deepEqual(getSortState().targetVideoTabOrder, [1, 2]);
 });
 
@@ -169,11 +165,9 @@ test('pinned tracked tabs are excluded from sortable readiness totals', () => {
   updateSortStateAndBroadcast();
 
   assert.equal(getSortState().isTargetOrderApplied, true);
-  assert.equal(getSortState().sortSummary.trackedCount, 3);
   assert.equal(getSortState().sortSummary.sortableCount, 2);
   assert.equal(getSortState().sortSummary.readyCount, 2);
   assert.equal(getSortState().sortSummary.readyPrefixMatchesPlan, true);
-  assert.equal(getSortState().sortSummary.allSortableTabsReady, true);
   assert.deepEqual(getSortState().targetVideoTabOrder, [2, 3]);
 });
 

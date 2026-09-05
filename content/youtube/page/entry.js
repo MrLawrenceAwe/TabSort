@@ -1,3 +1,3 @@
-import { bootstrapYouTubePageController } from './controller.js';
+import { createYouTubePageController } from './controller.js';
 
-bootstrapYouTubePageController();
+createYouTubePageController().bootstrap();

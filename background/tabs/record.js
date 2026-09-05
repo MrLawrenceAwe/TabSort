@@ -46,26 +46,11 @@ export function getOrCreateTabRecord(tabId, windowId, defaults = {}) {
     record.windowId = windowId;
   }
 
-  if (defaults && typeof defaults === 'object') {
-    for (const [key, value] of Object.entries(defaults)) {
-      if (value === undefined) continue;
-      if (key === 'id') continue;
-      if (key === 'windowId') {
-        if (record.windowId == null && windowId == null) {
-          record.windowId = value;
-        }
-        continue;
-      }
-      if (key === 'index') {
-        if (!isFiniteNumber(record.index) || record.index === FALLBACK_TAB_INDEX) {
-          record.index = isFiniteNumber(value) ? value : FALLBACK_TAB_INDEX;
-        }
-        continue;
-      }
-      if (record[key] === undefined) {
-        record[key] = value;
-      }
-    }
+  if (
+    (!isFiniteNumber(record.index) || record.index === FALLBACK_TAB_INDEX) &&
+    isFiniteNumber(defaults.index)
+  ) {
+    record.index = defaults.index;
   }
 
   return record;

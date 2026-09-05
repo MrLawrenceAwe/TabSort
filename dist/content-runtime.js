@@ -11,7 +11,6 @@
     PING: "ping",
     RELOAD_TAB: "reloadTab",
     ORGANISE_TABS: "organiseTabs",
-    SYNC_TRACKED_TABS: "syncTrackedTabs",
     TAB_SNAPSHOT_UPDATED: "tabSnapshotUpdated"
   });
   function createRuntimeMessage(type, data = {}) {
@@ -387,8 +386,7 @@
         state.videoMountCheckScheduled = false;
         attachPlaybackReadyListener();
         if (isCurrentPlaybackReady() && state.videoMountObserver) {
-          state.videoMountObserver.disconnect();
-          state.videoMountObserver = null;
+          disposeVideoMountObserver();
         }
       });
     }
@@ -428,10 +426,7 @@
     function watchForVideoMount() {
       attachPlaybackReadyListener();
       if (isCurrentPlaybackReady()) {
-        if (state.videoMountObserver) {
-          state.videoMountObserver.disconnect();
-          state.videoMountObserver = null;
-        }
+        disposeVideoMountObserver();
         return;
       }
       const MutationObserverCtor = getMutationObserver();
@@ -446,22 +441,17 @@
           childList: true,
           subtree: true
         });
-        return;
       }
-      attachPlaybackReadyListener();
-      if (isCurrentPlaybackReady()) {
-        state.videoMountObserver.disconnect();
-        state.videoMountObserver = null;
-      }
+    }
+    function disposeVideoMountObserver() {
+      state.videoMountObserver?.disconnect();
+      state.videoMountObserver = null;
     }
     function dispose() {
       clearPlaybackReadyListener();
       state.videoMountCheckScheduled = false;
       state.videoMountCheckToken += 1;
-      if (state.videoMountObserver) {
-        state.videoMountObserver.disconnect();
-        state.videoMountObserver = null;
-      }
+      disposeVideoMountObserver();
     }
     function resetForNavigation() {
       dispose();
@@ -784,11 +774,7 @@
       reset
     };
   }
-  var defaultYouTubePageController = createYouTubePageController();
-  function bootstrapYouTubePageController() {
-    defaultYouTubePageController.bootstrap();
-  }
 
   // content/youtube/page/entry.js
-  bootstrapYouTubePageController();
+  createYouTubePageController().bootstrap();
 })();

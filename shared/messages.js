@@ -9,7 +9,6 @@ export const RUNTIME_MESSAGE_TYPES = Object.freeze({
   PING: 'ping',
   RELOAD_TAB: 'reloadTab',
   ORGANISE_TABS: 'organiseTabs',
-  SYNC_TRACKED_TABS: 'syncTrackedTabs',
   TAB_SNAPSHOT_UPDATED: 'tabSnapshotUpdated',
 });
 

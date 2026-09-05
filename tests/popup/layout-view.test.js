@@ -14,7 +14,6 @@ test('getOrganiseButtonText distinguishes partial and full organisation', () => 
 
 test('shows the organise button when ready videos are behind other tabs', () => {
   const sortSummary = createSortSummary({
-    trackedCount: 2,
     sortableCount: 2,
     readyCount: 2,
     readyPrefixMatchesPlan: false,

@@ -35,10 +35,12 @@ distribution workflow.
 
 - `background/` owns the tracked window, tab reconciliation, playback updates, sorting,
   and extension message handlers. Store reads return defensive copies; mutation uses
-  explicit write functions and `getMutableTabRecord()`.
+  explicit write functions and `getMutableTabRecord()`. Tab event bursts reconcile once
+  per window and batch playback collection by unique tab ID.
 - `content/youtube/` collects page metadata and playback evidence. Each observer owns
   its state. Navigation resets preserve previous media evidence until new media arrives;
   a full controller reset clears it. Numeric configuration is separate from injected dependencies.
+  The page entry point creates and bootstraps the controller.
 - `popup/` separates the controller, state store, DOM elements, layout, and tab views.
   CSS follows the system colour scheme and highlights ready, sortable video rows.
 - `shared/tabs/` contains load states, readiness grace periods, guidance, and refresh policy.
