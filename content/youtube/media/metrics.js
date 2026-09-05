@@ -1,5 +1,5 @@
 import { RUNTIME_MESSAGE_TYPES } from '../../../shared/messages.js';
-import { toFiniteNumber, toPositiveFiniteNumber } from '../../../shared/guards.js';
+import { isFiniteNumber, toFiniteNumber, toPositiveFiniteNumber } from '../../../shared/guards.js';
 import { getPrimaryVideoElement } from './elements.js';
 
 function getYouTubePlayer(environment = globalThis) {
@@ -19,7 +19,6 @@ function getVideoCurrentTimeSeconds(video, player) {
 }
 
 export function collectVideoMetrics({
-  config,
   environment,
   collectPageDetails,
   isCurrentPlaybackReady,
@@ -33,12 +32,12 @@ export function collectVideoMetrics({
     title: details.title || null,
     url: details.url,
     playbackMetricsReady: isCurrentPlaybackReady(),
-    lengthSeconds: config.isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
+    lengthSeconds: isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
     isLive: Boolean(details.isLive),
     duration: getVideoDurationSeconds(video, player),
     currentTime: getVideoCurrentTimeSeconds(video, player),
     playbackRate:
-      video && config.isFiniteNumber(video.playbackRate) && video.playbackRate > 0
+      video && isFiniteNumber(video.playbackRate) && video.playbackRate > 0
         ? video.playbackRate
         : 1,
   };

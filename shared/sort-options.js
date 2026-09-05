@@ -15,10 +15,6 @@ function getStorageCandidates() {
   return candidates;
 }
 
-export function getStorageArea() {
-  return getStorageCandidates()[0]?.area ?? null;
-}
-
 function loadOptionsFromArea({ area, name }) {
   return new Promise((resolve) => {
     try {

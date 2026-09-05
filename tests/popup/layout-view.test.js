@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   getOrganiseButtonText,
   shouldShowOrganiseButton,
-} from '../../popup/popup-layout-view.js';
+} from '../../popup/layout-view.js';
 import { createSortSummary } from '../../shared/sorting/summary.js';
 
 test('getOrganiseButtonText distinguishes partial and full organisation', () => {
@@ -17,10 +17,20 @@ test('shows the organise button when ready videos are behind other tabs', () => 
     trackedCount: 2,
     sortableCount: 2,
     readyCount: 2,
-    readyTabsContiguous: true,
-    readyTabsAtFront: false,
-    readyTabsOutOfOrder: false,
+    readyPrefixMatchesPlan: false,
   });
 
   assert.equal(shouldShowOrganiseButton(sortSummary, false), true);
+});
+
+test('organise button requires two ready tabs and an unapplied ready prefix', () => {
+  assert.equal(shouldShowOrganiseButton(createSortSummary({
+    readyCount: 1, readyPrefixMatchesPlan: false,
+  }), false), false);
+  assert.equal(shouldShowOrganiseButton(createSortSummary({
+    readyCount: 2, sortableCount: 3, readyPrefixMatchesPlan: true,
+  }), false), false);
+  assert.equal(shouldShowOrganiseButton(createSortSummary({
+    readyCount: 2, sortableCount: 3, readyPrefixMatchesPlan: false,
+  }), false), true);
 });

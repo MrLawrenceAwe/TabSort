@@ -1,10 +1,8 @@
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../../shared/messages.js';
 import { createExtensionRuntimeBridge } from './runtime-bridge.js';
-import {
-  DEFAULT_PAGE_CONFIG,
-  DEFAULT_PAGE_DEPENDENCIES,
-} from './config.js';
-import { createPageControllerState } from './controller-state.js';
+import { DEFAULT_PAGE_CONFIG } from './config.js';
+import { isFiniteNumber } from '../../../shared/guards.js';
+import { inferIsLiveNow } from '../metadata/live-status.js';
 import { shouldSendContentScriptReadySignal } from './ready-signal.js';
 import { createPlaybackReadinessTracker } from '../media/playback-readiness.js';
 import { createTitleObserver } from '../metadata/title-observer.js';
@@ -13,15 +11,20 @@ import { isYouTubeVideoPage } from '../../../shared/youtube/urls.js';
 
 export function createYouTubePageController({
   config = {},
+  dependencies = {},
   environment = globalThis,
 } = {}) {
   const pageConfig = {
     ...DEFAULT_PAGE_CONFIG,
-    ...DEFAULT_PAGE_DEPENDENCIES,
     ...config,
   };
-  const state = createPageControllerState();
-  const { lifecycle, playbackReadiness: playbackReadinessState, titleObserver: titleObserverState } = state;
+  const pageDependencies = { inferIsLiveNow, ...dependencies };
+  const lifecycle = {
+    initialized: false,
+    observedPageUrl: null,
+    lastScriptReadyUrl: null,
+    cleanupCallbacks: [],
+  };
 
   const getDocument = () => environment.document ?? globalThis.document;
   const getWindow = () => environment.window ?? globalThis.window;
@@ -36,7 +39,7 @@ export function createYouTubePageController({
     publishPageVideoDetails,
     sendExtensionMessage,
   } = createExtensionRuntimeBridge({
-    config: pageConfig,
+    dependencies: pageDependencies,
     environment,
     getChrome,
     getLocation,
@@ -44,7 +47,7 @@ export function createYouTubePageController({
 
   function registerCleanup(cleanup) {
     if (typeof cleanup !== 'function') return;
-    lifecycle.cleanupFns.push(cleanup);
+    lifecycle.cleanupCallbacks.push(cleanup);
   }
 
   function addWindowEventListener(target, type, listener, options) {
@@ -66,11 +69,11 @@ export function createYouTubePageController({
   }
 
   function doesMediaMatchPageMetadata(video) {
-    if (!video || !pageConfig.isFiniteNumber(video.duration)) {
+    if (!video || !isFiniteNumber(video.duration)) {
       return false;
     }
     const details = collectPageDetails();
-    if (!pageConfig.isFiniteNumber(details.lengthSeconds)) {
+    if (!isFiniteNumber(details.lengthSeconds)) {
       return true;
     }
     return (
@@ -94,7 +97,6 @@ export function createYouTubePageController({
   const playbackReadiness = createPlaybackReadinessTracker({
     config: pageConfig,
     environment,
-    state: playbackReadinessState,
     getCurrentPageUrl,
     getDocument,
     getMutationObserver,
@@ -102,20 +104,19 @@ export function createYouTubePageController({
     doesMediaMatchPageMetadata,
   });
   const titleObserver = createTitleObserver({
-    state: titleObserverState,
     getDocument,
     getMutationObserver,
     publishPageVideoDetails,
   });
 
   function disposeObservers() {
-    playbackReadiness.disposePlaybackReadinessObservers();
-    titleObserver.disposeTitleObservers();
+    playbackReadiness.dispose();
+    titleObserver.dispose();
   }
 
   function disposeListeners() {
-    while (lifecycle.cleanupFns.length) {
-      const cleanup = lifecycle.cleanupFns.pop();
+    while (lifecycle.cleanupCallbacks.length) {
+      const cleanup = lifecycle.cleanupCallbacks.pop();
       try {
         cleanup?.();
       } catch (error) {
@@ -124,19 +125,13 @@ export function createYouTubePageController({
     }
   }
 
-  function resetPlaybackReadinessState() {
-    playbackReadinessState.playbackReadyPageUrl = null;
-    playbackReadinessState.lastReadyVideo = null;
-    playbackReadinessState.lastReadyFingerprint = null;
-  }
-
   function syncObservedPageUrl() {
     const currentUrl = getCurrentPageUrl();
     if (currentUrl && currentUrl !== lifecycle.observedPageUrl) {
-      disposeObservers();
+      titleObserver.dispose();
       lifecycle.observedPageUrl = currentUrl;
       lifecycle.lastScriptReadyUrl = null;
-      playbackReadinessState.playbackReadyPageUrl = null;
+      playbackReadiness.resetForNavigation();
     }
   }
 
@@ -155,11 +150,11 @@ export function createYouTubePageController({
   }
 
   function reset() {
-    disposeObservers();
+    titleObserver.dispose();
     disposeListeners();
     lifecycle.observedPageUrl = null;
     lifecycle.lastScriptReadyUrl = null;
-    resetPlaybackReadinessState();
+    playbackReadiness.reset();
     lifecycle.initialized = false;
   }
 
@@ -173,7 +168,6 @@ export function createYouTubePageController({
     const runtimeDocument = getDocument();
     const messageListener = (message, _sender, sendResponse) =>
       handleCollectVideoMetricsMessage(message, sendResponse, {
-        config: pageConfig,
         environment,
         collectPageDetails,
         isCurrentPlaybackReady: playbackReadiness.isCurrentPlaybackReady,
@@ -207,9 +201,9 @@ export function createYouTubePageController({
     });
 
     addWindowEventListener(runtimeWindow, 'pagehide', () => {
-      disposeObservers();
+      titleObserver.dispose();
       lifecycle.lastScriptReadyUrl = null;
-      resetPlaybackReadinessState();
+      playbackReadiness.reset();
     });
   }
 

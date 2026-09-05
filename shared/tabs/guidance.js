@@ -1,24 +1,24 @@
-import { TAB_LOAD_STATES } from '../tabs/load-states.js';
+import { TAB_LOAD_STATES } from './load-states.js';
 import {
   LOADING_GRACE_MS,
   MEDIA_WAIT_GRACE_MS,
-  RECENTLY_UNSUSPENDED_MS,
+  RECENTLY_LOADED_MS,
   RECENT_WATCH_TRANSITION_MS,
   canMediaStillSettle,
   canWatchTransitionStillSettle,
   hasRemainingTime,
-} from './readiness-grace-periods.js';
+} from './grace-periods.js';
 
 export {
   LOADING_GRACE_MS,
   MEDIA_WAIT_GRACE_MS,
-  RECENTLY_UNSUSPENDED_MS,
+  RECENTLY_LOADED_MS,
   RECENT_WATCH_TRANSITION_MS,
 };
 
 export const TAB_GUIDANCE = {
   RELOAD_TAB: 'reloadTab',
-  OPEN_TAB: 'openTab',
+  ACTIVATE_TAB: 'activateTab',
   WAIT_FOR_LOAD: 'waitForLoad',
   WAIT_FOR_VIDEO_DATA: 'waitForVideoData',
   VIEW_TAB_TO_LOAD_TIME: 'viewTabToLoadTime',
@@ -28,17 +28,17 @@ export const TAB_GUIDANCE = {
 
 const TAB_GUIDANCE_LABELS = {
   [TAB_GUIDANCE.RELOAD_TAB]: 'Reload tab',
-  [TAB_GUIDANCE.OPEN_TAB]: 'Open tab',
+  [TAB_GUIDANCE.ACTIVATE_TAB]: 'View tab',
   [TAB_GUIDANCE.WAIT_FOR_LOAD]: 'Wait for tab to load',
   [TAB_GUIDANCE.WAIT_FOR_VIDEO_DATA]: 'Wait for video data',
-  [TAB_GUIDANCE.VIEW_TAB_TO_LOAD_TIME]: 'Open tab to read remaining time',
-  [TAB_GUIDANCE.VIEW_TAB_TO_REFRESH_TIME]: 'Open tab to update remaining time',
+  [TAB_GUIDANCE.VIEW_TAB_TO_LOAD_TIME]: 'View tab to read remaining time',
+  [TAB_GUIDANCE.VIEW_TAB_TO_REFRESH_TIME]: 'View tab to update remaining time',
   [TAB_GUIDANCE.NONE]: '',
 };
 
 function resolveGuidanceForMissingRemainingTime(tabRecord, transitionCanSettle, nowMs) {
   switch (tabRecord.loadState) {
-    case TAB_LOAD_STATES.UNSUSPENDED:
+    case TAB_LOAD_STATES.LOADED:
       if (tabRecord.isActive) {
         if (tabRecord.contentScriptReady && !tabRecord.playbackMetricsReady) {
           return canMediaStillSettle(tabRecord, nowMs)
@@ -52,14 +52,14 @@ function resolveGuidanceForMissingRemainingTime(tabRecord, transitionCanSettle, 
       if (transitionCanSettle && !tabRecord.contentScriptReady) return TAB_GUIDANCE.NONE;
       if (!tabRecord.contentScriptReady) return TAB_GUIDANCE.RELOAD_TAB;
       return TAB_GUIDANCE.VIEW_TAB_TO_LOAD_TIME;
-    case TAB_LOAD_STATES.SUSPENDED:
-      return TAB_GUIDANCE.OPEN_TAB;
+    case TAB_LOAD_STATES.DISCARDED:
+      return TAB_GUIDANCE.ACTIVATE_TAB;
     case TAB_LOAD_STATES.LOADING:
       if (
         typeof tabRecord.loadingStartedAt === 'number' &&
         nowMs - tabRecord.loadingStartedAt >= LOADING_GRACE_MS
       ) {
-        return tabRecord.isActive ? TAB_GUIDANCE.RELOAD_TAB : TAB_GUIDANCE.OPEN_TAB;
+        return tabRecord.isActive ? TAB_GUIDANCE.RELOAD_TAB : TAB_GUIDANCE.ACTIVATE_TAB;
       }
       return TAB_GUIDANCE.WAIT_FOR_LOAD;
     default:
@@ -79,7 +79,7 @@ export function determineTabGuidance(tabRecord, { now = Date.now } = {}) {
     return resolveGuidanceForMissingRemainingTime(tabRecord, transitionCanSettle, nowMs);
   }
 
-  if (tabRecord?.remainingTimeStale) {
+  if (tabRecord?.remainingSecondsStale) {
     if (!tabRecord.contentScriptReady || tabRecord.isActive) {
       return resolveGuidanceForMissingRemainingTime(tabRecord, transitionCanSettle, nowMs);
     }

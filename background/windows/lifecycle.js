@@ -1,16 +1,16 @@
 import { isValidWindowId } from '../../shared/guards.js';
 import { logDebug, logListenerError, withErrorLogging } from '../../shared/log.js';
-import { recomputeSortState } from '../sorting/update-sort-state.js';
+import { updateSortStateAndBroadcast } from '../sorting/update-sort-state.js';
 import {
+  getTrackedWindowId,
   listTabIds,
   resetTrackedWindowStore,
-  trackedWindow,
 } from './store.js';
 import { collectPlaybackMetricsBatch } from '../playback/collect.js';
 import { reconcileWindowTabRecords } from '../tabs/reconcile.js';
 import { listWindowTabs } from '../tabs/chrome-tabs.js';
 import { isYouTubeVideoPage } from '../../shared/youtube/urls.js';
-import { shouldRefreshRecordMetrics } from '../../shared/tab-readiness/refresh-policy.js';
+import { shouldRefreshRecordMetrics } from '../../shared/tabs/refresh-policy.js';
 
 const PLAYBACK_REFRESH_ALARM = 'refreshRemaining';
 const REFRESH_INTERVAL_MINUTES = 1;
@@ -38,13 +38,13 @@ const getLastFocusedWindowId = () =>
 
 export function resetTrackedWindow() {
   resetTrackedWindowStore();
-  recomputeSortState();
+  updateSortStateAndBroadcast();
 }
 
 export async function syncFocusedWindow(windowId) {
   if (!isValidWindowId(windowId)) return;
   focusSyncGeneration += 1;
-  if (windowId === trackedWindow.windowId) return;
+  if (windowId === getTrackedWindowId()) return;
   await reconcileWindowTabRecords(windowId, { force: true });
 }
 
@@ -104,7 +104,7 @@ export function initializeWindowLifecycle() {
   chrome.alarms.onAlarm.addListener(
     withErrorLogging('alarms.onAlarm', async (alarm) => {
       if (alarm.name !== PLAYBACK_REFRESH_ALARM) return;
-      await reconcileWindowTabRecords(trackedWindow.windowId, { force: true });
+      await reconcileWindowTabRecords(getTrackedWindowId(), { force: true });
       const ids = listTabIds();
       await collectPlaybackMetricsBatch(ids, { shouldRefresh: shouldRefreshRecordMetrics });
     }),
@@ -112,7 +112,7 @@ export function initializeWindowLifecycle() {
 
   chrome.windows.onRemoved.addListener(
     withErrorLogging('windows.onRemoved', async (windowId) => {
-      if (windowId === trackedWindow.windowId) {
+      if (windowId === getTrackedWindowId()) {
         resetTrackedWindow();
       }
     }),

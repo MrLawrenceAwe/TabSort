@@ -16,10 +16,10 @@ distribution workflow.
 
 - Open some YouTube watch or shorts pages in the same Chrome window, then click the TabSort extension.
 - The popup lists each tracked video tab, shows whether its remaining time is known, and highlights tabs that are ready.
-- Follow the suggested action links (reload/open) if a tab is missing metadata.
+- Follow the suggested action buttons (Reload tab/View tab) if a tab is missing metadata.
 - When at least two tabs have known remaining time and the ready subset is not already grouped at the front, the **Organise** button appears; click it to move the ready tabs to the front in remaining-time order.
 - When you organise, all YouTube tabs (watch, home, shorts, etc.) move to the front with tracked video pages first; tick the popup option if you also want other tabs grouped by site.
-- If the popup warns that a background tab needs viewing, open that tab once so Chrome exposes the accurate remaining time.
+- If the popup warns that a background tab needs viewing, view that tab once so Chrome exposes the accurate remaining time.
 
 ## Development
 
@@ -30,6 +30,29 @@ distribution workflow.
   smoke test. Install its browser once with `npx playwright install chromium`.
 - `npm run check` builds and runs tests, linting, static import checks, and release validation.
 - `npm run package` creates `release/tabsort-v<version>.zip`.
+
+### Code organisation
+
+- `background/` owns the tracked window, tab reconciliation, playback updates, sorting,
+  and extension message handlers. Store reads return defensive copies; mutation uses
+  explicit write functions and `getMutableTabRecord()`.
+- `content/youtube/` collects page metadata and playback evidence. Each observer owns
+  its state. Navigation resets preserve previous media evidence until new media arrives;
+  a full controller reset clears it. Numeric configuration is separate from injected dependencies.
+- `popup/` separates the controller, state store, DOM elements, layout, and tab views.
+  CSS follows the system colour scheme and highlights ready, sortable video rows.
+- `shared/tabs/` contains load states, readiness grace periods, guidance, and refresh policy.
+  `shared/sort-options.js` persists the grouping preference.
+- `tests/background/`, `tests/youtube/`, and `tests/popup/` mirror the runtime boundaries.
+
+Tab records use `loaded`, `loading`, and `discarded` load states. `loadedAt` records an
+observed completion after loading or discarding, not the start of a reload. Video changes
+refer to YouTube video identity, so extra URL parameters do not invalidate playback data.
+`videoDetails.remainingSeconds` is the estimated wall-clock playback time remaining,
+adjusted for playback speed; `remainingSecondsStale` indicates whether it can be trusted.
+The sorting summary's `readyPrefixMatchesPlan` means ready videos occupy the front of
+the unpinned tab strip in remaining-time order. Popup snapshots contain display state;
+the target video order stays in the background store. Tab activation uses `activateTab`.
 
 The package and manifest versions must match. CI verifies the committed bundle, runs the
 Chromium smoke test, and uploads the packaged extension as a workflow artifact.

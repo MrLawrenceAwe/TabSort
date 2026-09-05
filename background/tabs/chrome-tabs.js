@@ -145,7 +145,7 @@ export function executeScriptInTab(tabId, files) {
 export { MESSAGE_FAILURE_REASONS };
 
 export function getTabLoadState(tab) {
-  if (tab.discarded) return TAB_LOAD_STATES.SUSPENDED;
+  if (tab.discarded) return TAB_LOAD_STATES.DISCARDED;
   if (tab.status === 'loading') return TAB_LOAD_STATES.LOADING;
-  return TAB_LOAD_STATES.UNSUSPENDED;
+  return TAB_LOAD_STATES.LOADED;
 }

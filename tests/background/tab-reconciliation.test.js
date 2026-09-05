@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
-import { trackedWindow } from '../../background/windows/store.js';
+import {
+  getSortState,
+  getTabRecordsById,
+  getTrackedWindowId,
+} from '../../background/windows/store.js';
 import { reconcileWindowTabRecords } from '../../background/tabs/reconcile.js';
 import {
   ensureChromeApi,
@@ -18,7 +22,7 @@ import {
 ensureChromeApi({ tabs: true });
 
 test(
-  'reconcileWindowTabRecords does not mark already-open unsuspended tabs as recently unsuspended on initial rehydrate',
+  'reconcileWindowTabRecords does not mark already-open loaded tabs as recently loaded on initial rehydrate',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
@@ -27,21 +31,21 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    const record = trackedWindow.tabRecordsById[1];
-    assert.equal(record.loadState, TAB_LOAD_STATES.UNSUSPENDED);
-    assert.equal(record.unsuspendedTimestamp, null);
+    const record = getTabRecordsById()[1];
+    assert.equal(record.loadState, TAB_LOAD_STATES.LOADED);
+    assert.equal(record.loadedAt, null);
   },
 );
 
 test(
-  'reconcileWindowTabRecords keeps the recent unsuspend grace for real suspended-to-unsuspended transitions',
+  'reconcileWindowTabRecords keeps the recent load grace for real discarded-to-loaded transitions',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
-        loadState: TAB_LOAD_STATES.SUSPENDED,
-        unsuspendedTimestamp: null,
+        loadState: TAB_LOAD_STATES.DISCARDED,
+        loadedAt: null,
       }),
     });
 
@@ -49,9 +53,9 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    const record = trackedWindow.tabRecordsById[1];
-    assert.equal(record.loadState, TAB_LOAD_STATES.UNSUSPENDED);
-    assert.equal(typeof record.unsuspendedTimestamp, 'number');
+    const record = getTabRecordsById()[1];
+    assert.equal(record.loadState, TAB_LOAD_STATES.LOADED);
+    assert.equal(typeof record.loadedAt, 'number');
   },
 );
 
@@ -65,8 +69,8 @@ test(
         url: 'https://www.youtube.com/watch?v=old',
         playbackMetricsReady: true,
         contentScriptReady: true,
-        videoDetails: { title: 'Old Video', remainingTime: 45, lengthSeconds: 120 },
-        remainingTimeStale: false,
+        videoDetails: { title: 'Old Video', remainingSeconds: 45, lengthSeconds: 120 },
+        remainingSecondsStale: false,
       }),
     });
 
@@ -74,13 +78,13 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    const record = trackedWindow.tabRecordsById[1];
+    const record = getTabRecordsById()[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
     assert.equal(record.contentScriptReady, false);
     assert.equal(record.playbackMetricsReady, false);
     assert.equal(record.videoDetails, null);
     assert.equal(record.isLive, false);
-    assert.equal(record.remainingTimeStale, true);
+    assert.equal(record.remainingSecondsStale, true);
     assert.equal(typeof record.transitionStartedAt, 'number');
   },
 );
@@ -95,8 +99,8 @@ test(
         url: 'https://www.youtube.com/watch?v=same',
         playbackMetricsReady: true,
         contentScriptReady: true,
-        videoDetails: { title: 'Same Video', remainingTime: 45, lengthSeconds: 120 },
-        remainingTimeStale: false,
+        videoDetails: { title: 'Same Video', remainingSeconds: 45, lengthSeconds: 120 },
+        remainingSecondsStale: false,
       }),
     });
 
@@ -108,16 +112,16 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    const record = trackedWindow.tabRecordsById[1];
+    const record = getTabRecordsById()[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=same&list=abc123&index=10');
     assert.equal(record.contentScriptReady, true);
     assert.equal(record.playbackMetricsReady, true);
     assert.deepEqual(record.videoDetails, {
       title: 'Same Video',
-      remainingTime: 45,
+      remainingSeconds: 45,
       lengthSeconds: 120,
     });
-    assert.equal(record.remainingTimeStale, false);
+    assert.equal(record.remainingSecondsStale, false);
   },
 );
 
@@ -128,8 +132,8 @@ test(
     resetTrackedWindowState(1);
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
-        videoDetails: { title: 'Video 1', remainingTime: 90, lengthSeconds: 120 },
-        remainingTimeStale: false,
+        videoDetails: { title: 'Video 1', remainingSeconds: 90, lengthSeconds: 120 },
+        remainingSecondsStale: false,
       }),
     });
     setTrackedSortState({ trackedTabOrder: [1] });
@@ -144,10 +148,10 @@ test(
 
     await reconcileWindowTabRecords(1, { force: true });
 
-    assert.deepEqual(Object.keys(trackedWindow.tabRecordsById), ['1']);
-    assert.deepEqual(trackedWindow.trackedTabOrder, [1]);
-    assert.deepEqual(trackedWindow.targetVideoTabOrder, [1]);
-    assert.equal(trackedWindow.tabRecordsById[1].videoDetails.remainingTime, 90);
+    assert.deepEqual(Object.keys(getTabRecordsById()), ['1']);
+    assert.deepEqual(getSortState().trackedTabOrder, [1]);
+    assert.deepEqual(getSortState().targetVideoTabOrder, [1]);
+    assert.equal(getTabRecordsById()[1].videoDetails.remainingSeconds, 90);
   },
 );
 
@@ -158,8 +162,8 @@ test(
     resetTrackedWindowState(1);
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
-        videoDetails: { title: 'Window 1 Video', remainingTime: 90, lengthSeconds: 120 },
-        remainingTimeStale: false,
+        videoDetails: { title: 'Window 1 Video', remainingSeconds: 90, lengthSeconds: 120 },
+        remainingSecondsStale: false,
       }),
     });
     setTrackedSortState({ trackedTabOrder: [1] });
@@ -169,10 +173,10 @@ test(
 
     await reconcileWindowTabRecords(2, { force: true });
 
-    assert.equal(trackedWindow.windowId, 1);
-    assert.deepEqual(Object.keys(trackedWindow.tabRecordsById), ['1']);
-    assert.deepEqual(trackedWindow.trackedTabOrder, [1]);
-    assert.deepEqual(trackedWindow.targetVideoTabOrder, [1]);
+    assert.equal(getTrackedWindowId(), 1);
+    assert.deepEqual(Object.keys(getTabRecordsById()), ['1']);
+    assert.deepEqual(getSortState().trackedTabOrder, [1]);
+    assert.deepEqual(getSortState().targetVideoTabOrder, [1]);
   },
 );
 
@@ -187,7 +191,7 @@ test(
 
     assert.equal(result.ok, true);
     assert.equal(result.windowId, 4);
-    assert.equal(trackedWindow.windowId, 4);
-    assert.equal(trackedWindow.tabRecordsById[7].windowId, 4);
+    assert.equal(getTrackedWindowId(), 4);
+    assert.equal(getTabRecordsById()[7].windowId, 4);
   },
 );

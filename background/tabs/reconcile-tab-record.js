@@ -3,13 +3,13 @@ import { nowMs } from '../../shared/time.js';
 import { createTabRecord } from './record.js';
 import { clearRemainingTime } from './video-state.js';
 
-export function buildTabRecord(
+export function reconcileTabRecord(
   tab,
   previousRecord = {},
   nextLoadState,
-  { urlChanged = false } = {},
+  { videoChanged = false } = {},
 ) {
-  const isUnsuspended = nextLoadState === TAB_LOAD_STATES.UNSUSPENDED;
+  const isLoaded = nextLoadState === TAB_LOAD_STATES.LOADED;
   const loadStateChanged = previousRecord.loadState && previousRecord.loadState !== nextLoadState;
   const timestamp = nowMs();
 
@@ -19,22 +19,22 @@ export function buildTabRecord(
     pinned: Boolean(tab.pinned),
     loadState: nextLoadState,
     contentScriptReady:
-      isUnsuspended && !urlChanged ? Boolean(previousRecord.contentScriptReady) : false,
+      isLoaded && !videoChanged ? Boolean(previousRecord.contentScriptReady) : false,
     playbackMetricsReady:
-      isUnsuspended && !urlChanged ? Boolean(previousRecord.playbackMetricsReady) : false,
-    isLive: urlChanged ? false : Boolean(previousRecord.isLive),
+      isLoaded && !videoChanged ? Boolean(previousRecord.playbackMetricsReady) : false,
+    isLive: videoChanged ? false : Boolean(previousRecord.isLive),
     isActive: Boolean(tab.active),
     isHidden: Boolean(tab.hidden),
-    videoDetails: urlChanged ? null : previousRecord.videoDetails || null,
+    videoDetails: videoChanged ? null : previousRecord.videoDetails || null,
     loadingStartedAt: previousRecord.loadingStartedAt ?? null,
-    unsuspendedTimestamp: previousRecord.unsuspendedTimestamp || null,
-    transitionStartedAt: previousRecord.transitionStartedAt || null,
-    metricsWaitStartedAt: urlChanged ? null : previousRecord.metricsWaitStartedAt ?? null,
-    remainingTimeStale:
-      !isUnsuspended ||
-      Boolean(previousRecord.remainingTimeStale) ||
+    loadedAt: previousRecord.loadedAt ?? null,
+    transitionStartedAt: previousRecord.transitionStartedAt ?? null,
+    metricsWaitStartedAt: videoChanged ? null : previousRecord.metricsWaitStartedAt ?? null,
+    remainingSecondsStale:
+      !isLoaded ||
+      Boolean(previousRecord.remainingSecondsStale) ||
       loadStateChanged ||
-      urlChanged,
+      videoChanged,
   });
 
   if (nextLoadState === TAB_LOAD_STATES.LOADING) {
@@ -46,17 +46,17 @@ export function buildTabRecord(
   }
 
   if (
-    (previousRecord.loadState === TAB_LOAD_STATES.SUSPENDED ||
+    (previousRecord.loadState === TAB_LOAD_STATES.DISCARDED ||
       previousRecord.loadState === TAB_LOAD_STATES.LOADING) &&
-    nextLoadState === TAB_LOAD_STATES.UNSUSPENDED
+    nextLoadState === TAB_LOAD_STATES.LOADED
   ) {
-    record.unsuspendedTimestamp = timestamp;
+    record.loadedAt = timestamp;
     record.transitionStartedAt = timestamp;
-  } else if (urlChanged) {
+  } else if (videoChanged) {
     record.transitionStartedAt = timestamp;
   }
 
-  if ((!isUnsuspended || urlChanged) && record.videoDetails) {
+  if ((!isLoaded || videoChanged) && record.videoDetails) {
     clearRemainingTime(record);
   }
 

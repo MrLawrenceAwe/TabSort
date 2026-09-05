@@ -6,7 +6,7 @@ import {
   setSortState,
 } from '../windows/store.js';
 
-export function recomputeSortState() {
+export function updateSortStateAndBroadcast() {
   const records = listTabRecords();
   const derivedState = deriveSortState(records, {
     orderedWindowTabs: getOrderedWindowTabs(),

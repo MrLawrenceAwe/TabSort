@@ -1,13 +1,13 @@
 import { isFiniteNumber, isValidWindowId } from '../../shared/guards.js';
 import { logDebug, logWarn, withErrorLogging } from '../../shared/log.js';
 import { getTab } from './chrome-tabs.js';
-import { recomputeSortState } from '../sorting/update-sort-state.js';
+import { updateSortStateAndBroadcast } from '../sorting/update-sort-state.js';
 import { collectPlaybackMetrics } from '../playback/collect.js';
 import {
   canManageWindow,
   deleteTabFromOrderedWindow,
   deleteTabRecord,
-  trackedWindow,
+  getTrackedWindowId,
 } from '../windows/store.js';
 import { reconcileWindowTabRecords } from './reconcile.js';
 import { isYouTubeVideoPage } from '../../shared/youtube/urls.js';
@@ -116,13 +116,13 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
     if (!canManageWindow(removeInfo?.windowId)) return;
     deleteTabFromOrderedWindow(tabId);
     deleteTabRecord(tabId);
-    if (removeInfo?.isWindowClosing && removeInfo.windowId === trackedWindow.windowId) {
+    if (removeInfo?.isWindowClosing && removeInfo.windowId === getTrackedWindowId()) {
       if (typeof onTrackedWindowClosed === 'function') {
         onTrackedWindowClosed();
       }
       return;
     }
-    recomputeSortState();
+    updateSortStateAndBroadcast();
   });
 
   if (chrome.webNavigation?.onHistoryStateUpdated) {
@@ -136,8 +136,8 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
           try {
             const tab = await getTab(details.tabId);
             if (
-              trackedWindow.windowId != null &&
-              tab.windowId !== trackedWindow.windowId
+              getTrackedWindowId() != null &&
+              tab.windowId !== getTrackedWindowId()
             ) {
               return;
             }
@@ -146,8 +146,8 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
             logDebug(`getTab failed for history update ${details.tabId}`, error);
             return;
           }
-        } else if (trackedWindow.windowId != null) {
-          windowIdForUpdate = trackedWindow.windowId;
+        } else if (getTrackedWindowId() != null) {
+          windowIdForUpdate = getTrackedWindowId();
         }
 
         scheduleWindowReconcile(windowIdForUpdate, {

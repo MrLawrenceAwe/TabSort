@@ -1,7 +1,7 @@
 (() => {
   // shared/messages.js
   var RUNTIME_MESSAGE_TYPES = Object.freeze({
-    OPEN_TAB: "openTab",
+    ACTIVATE_TAB: "activateTab",
     COLLECT_VIDEO_METRICS: "collectVideoMetrics",
     GET_TAB_SNAPSHOT: "getTabSnapshot",
     LOG_POPUP_MESSAGE: "logPopupMessage",
@@ -162,7 +162,7 @@
   }
 
   // content/youtube/page/runtime-bridge.js
-  function createExtensionRuntimeBridge({ config, environment, getChrome, getLocation }) {
+  function createExtensionRuntimeBridge({ dependencies, environment, getChrome, getLocation }) {
     function logContentError(context, error) {
       const message = error instanceof Error ? error.message : String(error);
       console.warn(`[TabSort] ${context}: ${message}`);
@@ -186,7 +186,7 @@
     function collectPageDetails2() {
       return collectPageDetails({
         environment,
-        inferIsLiveNow: config.inferIsLiveNow,
+        inferIsLiveNow: dependencies.inferIsLiveNow,
         logContentError
       });
     }
@@ -215,6 +215,13 @@
 
   // shared/playback/constants.js
   var MEDIA_DURATION_SYNC_TOLERANCE_SECONDS = 2;
+
+  // content/youtube/page/config.js
+  var DEFAULT_MEDIA_READY_STATE_THRESHOLD = 2;
+  var DEFAULT_PAGE_CONFIG = {
+    mediaReadyStateThreshold: DEFAULT_MEDIA_READY_STATE_THRESHOLD,
+    mediaDurationSyncToleranceSeconds: MEDIA_DURATION_SYNC_TOLERANCE_SECONDS
+  };
 
   // content/youtube/metadata/live-status.js
   function toBooleanFlag(value) {
@@ -249,54 +256,6 @@
     const hasFiniteLength = Number.isFinite(numericLength) && numericLength > 0;
     if ((hasLiveStreamabilitySignal || isLiveContent) && !hasFiniteLength) return true;
     return false;
-  }
-
-  // content/youtube/page/config.js
-  var DEFAULT_MEDIA_READY_STATE_THRESHOLD = 2;
-  var DEFAULT_PAGE_CONFIG = {
-    mediaReadyStateThreshold: DEFAULT_MEDIA_READY_STATE_THRESHOLD,
-    mediaDurationSyncToleranceSeconds: MEDIA_DURATION_SYNC_TOLERANCE_SECONDS
-  };
-  var DEFAULT_PAGE_DEPENDENCIES = {
-    isFiniteNumber,
-    inferIsLiveNow
-  };
-
-  // content/youtube/page/controller-state.js
-  function createPlaybackReadinessState() {
-    return {
-      videoMountObserver: null,
-      playbackReadyPageUrl: null,
-      lastReadyVideo: null,
-      lastReadyFingerprint: null,
-      playbackReadyListenerVideo: null,
-      playbackReadyListenerCleanup: null,
-      videoMountCheckScheduled: false,
-      videoMountCheckToken: 0
-    };
-  }
-  function createTitleObserverState() {
-    return {
-      titleElementObserver: null,
-      titleTextObserver: null,
-      observedTitleElement: null,
-      lastKnownTitleText: null
-    };
-  }
-  function createControllerLifecycleState() {
-    return {
-      initialized: false,
-      observedPageUrl: null,
-      lastScriptReadyUrl: null,
-      cleanupFns: []
-    };
-  }
-  function createPageControllerState() {
-    return {
-      lifecycle: createControllerLifecycleState(),
-      playbackReadiness: createPlaybackReadinessState(),
-      titleObserver: createTitleObserverState()
-    };
   }
 
   // content/youtube/page/ready-signal.js
@@ -338,13 +297,22 @@
   function createPlaybackReadinessTracker({
     config,
     environment,
-    state,
     getCurrentPageUrl,
     getDocument,
     getMutationObserver,
     sendExtensionMessage,
     doesMediaMatchPageMetadata
   }) {
+    const state = {
+      videoMountObserver: null,
+      playbackReadyPageUrl: null,
+      lastReadyVideo: null,
+      lastReadyFingerprint: null,
+      playbackReadyListenerVideo: null,
+      playbackReadyListenerCleanup: null,
+      videoMountCheckScheduled: false,
+      videoMountCheckToken: 0
+    };
     function isCurrentPlaybackReady() {
       const currentUrl = getCurrentPageUrl();
       return Boolean(currentUrl) && currentUrl === state.playbackReadyPageUrl;
@@ -352,7 +320,7 @@
     function getVideoFingerprint(video) {
       if (!video || typeof video !== "object") return "";
       const source = typeof video.currentSrc === "string" && video.currentSrc || typeof video.src === "string" && video.src || "";
-      const duration = config.isFiniteNumber(video.duration) ? String(Math.round(video.duration * 1e3)) : "";
+      const duration = isFiniteNumber(video.duration) ? String(Math.round(video.duration * 1e3)) : "";
       return `${source}|${duration}`;
     }
     function hasFreshMediaEvidence(video, observedFreshMediaEvent) {
@@ -363,7 +331,7 @@
       return Boolean(fingerprint) && fingerprint !== state.lastReadyFingerprint;
     }
     function canMarkPlaybackReady(video, observedFreshMediaEvent = false) {
-      return video?.readyState >= config.mediaReadyStateThreshold && config.isFiniteNumber(video.duration) && hasFreshMediaEvidence(video, observedFreshMediaEvent) && doesMediaMatchPageMetadata(video);
+      return video?.readyState >= config.mediaReadyStateThreshold && isFiniteNumber(video.duration) && hasFreshMediaEvidence(video, observedFreshMediaEvent) && doesMediaMatchPageMetadata(video);
     }
     function clearPlaybackReadyListener() {
       if (typeof state.playbackReadyListenerCleanup === "function") {
@@ -434,25 +402,25 @@
       const events = ["loadedmetadata", "loadeddata", "durationchange", "canplay"];
       let observedFreshMediaEvent = false;
       const cleanup = () => {
-        events.forEach((eventName) => video.removeEventListener(eventName, onAny));
+        events.forEach((eventName) => video.removeEventListener(eventName, onMediaReadyEvent));
         if (state.playbackReadyListenerVideo === video) {
           state.playbackReadyListenerVideo = null;
           state.playbackReadyListenerCleanup = null;
         }
       };
-      const maybeSend = () => {
+      const tryMarkPlaybackReady = () => {
         if (canMarkPlaybackReady(video, observedFreshMediaEvent)) {
           markPlaybackReady(video);
           return true;
         }
         return false;
       };
-      const onAny = () => {
+      const onMediaReadyEvent = () => {
         observedFreshMediaEvent = true;
-        maybeSend();
+        tryMarkPlaybackReady();
       };
-      if (maybeSend()) return true;
-      events.forEach((eventName) => video.addEventListener(eventName, onAny));
+      if (tryMarkPlaybackReady()) return true;
+      events.forEach((eventName) => video.addEventListener(eventName, onMediaReadyEvent));
       state.playbackReadyListenerVideo = video;
       state.playbackReadyListenerCleanup = cleanup;
       return true;
@@ -486,7 +454,7 @@
         state.videoMountObserver = null;
       }
     }
-    function disposePlaybackReadinessObservers() {
+    function dispose() {
       clearPlaybackReadyListener();
       state.videoMountCheckScheduled = false;
       state.videoMountCheckToken += 1;
@@ -495,8 +463,19 @@
         state.videoMountObserver = null;
       }
     }
+    function resetForNavigation() {
+      dispose();
+      state.playbackReadyPageUrl = null;
+    }
+    function reset() {
+      resetForNavigation();
+      state.lastReadyVideo = null;
+      state.lastReadyFingerprint = null;
+    }
     return {
-      disposePlaybackReadinessObservers,
+      dispose,
+      resetForNavigation,
+      reset,
       isCurrentPlaybackReady,
       markCurrentPlaybackReadyIfAvailable,
       watchForVideoMount
@@ -505,11 +484,16 @@
 
   // content/youtube/metadata/title-observer.js
   function createTitleObserver({
-    state,
     getDocument,
     getMutationObserver,
     publishPageVideoDetails
   }) {
+    const state = {
+      titleElementObserver: null,
+      titleTextObserver: null,
+      observedTitleElement: null,
+      lastKnownTitleText: null
+    };
     function observeTitleElement(titleElement) {
       if (!titleElement || titleElement === state.observedTitleElement) return;
       const shouldSendUpdate = state.observedTitleElement !== null;
@@ -545,7 +529,7 @@
       });
       state.titleElementObserver.observe(target, { childList: true, subtree: true });
     }
-    function disposeTitleObservers() {
+    function dispose() {
       if (state.titleElementObserver) {
         state.titleElementObserver.disconnect();
         state.titleElementObserver = null;
@@ -558,7 +542,7 @@
       state.lastKnownTitleText = null;
     }
     return {
-      disposeTitleObservers,
+      dispose,
       watchTitleChanges
     };
   }
@@ -575,7 +559,6 @@
     return toFiniteNumber(video?.currentTime) ?? toFiniteNumber(player?.getCurrentTime?.());
   }
   function collectVideoMetrics({
-    config,
     environment,
     collectPageDetails: collectPageDetails2,
     isCurrentPlaybackReady,
@@ -589,11 +572,11 @@
       title: details.title || null,
       url: details.url,
       playbackMetricsReady: isCurrentPlaybackReady(),
-      lengthSeconds: config.isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
+      lengthSeconds: isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
       isLive: Boolean(details.isLive),
       duration: getVideoDurationSeconds(video, player),
       currentTime: getVideoCurrentTimeSeconds(video, player),
-      playbackRate: video && config.isFiniteNumber(video.playbackRate) && video.playbackRate > 0 ? video.playbackRate : 1
+      playbackRate: video && isFiniteNumber(video.playbackRate) && video.playbackRate > 0 ? video.playbackRate : 1
     };
   }
   function handleCollectVideoMetricsMessage(message, sendResponse, options) {
@@ -627,15 +610,20 @@
   // content/youtube/page/controller.js
   function createYouTubePageController({
     config = {},
+    dependencies = {},
     environment = globalThis
   } = {}) {
     const pageConfig = {
       ...DEFAULT_PAGE_CONFIG,
-      ...DEFAULT_PAGE_DEPENDENCIES,
       ...config
     };
-    const state = createPageControllerState();
-    const { lifecycle, playbackReadiness: playbackReadinessState, titleObserver: titleObserverState } = state;
+    const pageDependencies = { inferIsLiveNow, ...dependencies };
+    const lifecycle = {
+      initialized: false,
+      observedPageUrl: null,
+      lastScriptReadyUrl: null,
+      cleanupCallbacks: []
+    };
     const getDocument = () => environment.document ?? globalThis.document;
     const getWindow = () => environment.window ?? globalThis.window;
     const getLocation = () => environment.location ?? globalThis.location;
@@ -649,14 +637,14 @@
       publishPageVideoDetails,
       sendExtensionMessage
     } = createExtensionRuntimeBridge({
-      config: pageConfig,
+      dependencies: pageDependencies,
       environment,
       getChrome,
       getLocation
     });
     function registerCleanup(cleanup) {
       if (typeof cleanup !== "function") return;
-      lifecycle.cleanupFns.push(cleanup);
+      lifecycle.cleanupCallbacks.push(cleanup);
     }
     function addWindowEventListener(target, type, listener, options) {
       if (!target?.addEventListener) return;
@@ -675,11 +663,11 @@
       });
     }
     function doesMediaMatchPageMetadata(video) {
-      if (!video || !pageConfig.isFiniteNumber(video.duration)) {
+      if (!video || !isFiniteNumber(video.duration)) {
         return false;
       }
       const details = collectPageDetails2();
-      if (!pageConfig.isFiniteNumber(details.lengthSeconds)) {
+      if (!isFiniteNumber(details.lengthSeconds)) {
         return true;
       }
       return Math.abs(video.duration - details.lengthSeconds) <= pageConfig.mediaDurationSyncToleranceSeconds;
@@ -698,7 +686,6 @@
     const playbackReadiness = createPlaybackReadinessTracker({
       config: pageConfig,
       environment,
-      state: playbackReadinessState,
       getCurrentPageUrl,
       getDocument,
       getMutationObserver,
@@ -706,18 +693,17 @@
       doesMediaMatchPageMetadata
     });
     const titleObserver = createTitleObserver({
-      state: titleObserverState,
       getDocument,
       getMutationObserver,
       publishPageVideoDetails
     });
     function disposeObservers() {
-      playbackReadiness.disposePlaybackReadinessObservers();
-      titleObserver.disposeTitleObservers();
+      playbackReadiness.dispose();
+      titleObserver.dispose();
     }
     function disposeListeners() {
-      while (lifecycle.cleanupFns.length) {
-        const cleanup = lifecycle.cleanupFns.pop();
+      while (lifecycle.cleanupCallbacks.length) {
+        const cleanup = lifecycle.cleanupCallbacks.pop();
         try {
           cleanup?.();
         } catch (error) {
@@ -725,18 +711,13 @@
         }
       }
     }
-    function resetPlaybackReadinessState() {
-      playbackReadinessState.playbackReadyPageUrl = null;
-      playbackReadinessState.lastReadyVideo = null;
-      playbackReadinessState.lastReadyFingerprint = null;
-    }
     function syncObservedPageUrl() {
       const currentUrl = getCurrentPageUrl();
       if (currentUrl && currentUrl !== lifecycle.observedPageUrl) {
-        disposeObservers();
+        titleObserver.dispose();
         lifecycle.observedPageUrl = currentUrl;
         lifecycle.lastScriptReadyUrl = null;
-        playbackReadinessState.playbackReadyPageUrl = null;
+        playbackReadiness.resetForNavigation();
       }
     }
     function refreshPageState({ sendReadySignal = false, forceReadySignal = false } = {}) {
@@ -753,11 +734,11 @@
       titleObserver.watchTitleChanges();
     }
     function reset() {
-      disposeObservers();
+      titleObserver.dispose();
       disposeListeners();
       lifecycle.observedPageUrl = null;
       lifecycle.lastScriptReadyUrl = null;
-      resetPlaybackReadinessState();
+      playbackReadiness.reset();
       lifecycle.initialized = false;
     }
     function bootstrap() {
@@ -767,7 +748,6 @@
       const runtimeWindow = getWindow();
       const runtimeDocument = getDocument();
       const messageListener = (message, _sender, sendResponse) => handleCollectVideoMetricsMessage(message, sendResponse, {
-        config: pageConfig,
         environment,
         collectPageDetails: collectPageDetails2,
         isCurrentPlaybackReady: playbackReadiness.isCurrentPlaybackReady,
@@ -793,9 +773,9 @@
         }
       });
       addWindowEventListener(runtimeWindow, "pagehide", () => {
-        disposeObservers();
+        titleObserver.dispose();
         lifecycle.lastScriptReadyUrl = null;
-        resetPlaybackReadinessState();
+        playbackReadiness.reset();
       });
     }
     return {

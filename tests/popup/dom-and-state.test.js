@@ -5,13 +5,13 @@ import {
   initializePopupDom,
   resetPopupDom,
   setErrorMessage,
-} from '../../popup/popup-elements.js';
+} from '../../popup/elements.js';
 import {
   isSnapshotForActiveWindow,
   popupState,
   resetPopupState,
   setActiveWindowId,
-} from '../../popup/popup-store.js';
+} from '../../popup/store.js';
 
 function createFakeElement() {
   return {
@@ -56,8 +56,8 @@ function createFakeDocument() {
 
 test('popup view model keeps flat sort summary fields available for view decisions', () => {
   resetPopupState();
-  popupState.sortSummary.readyTabsAtFront = false;
-  assert.equal(popupState.sortSummary.readyTabsAtFront, false);
+  popupState.sortSummary.readyPrefixMatchesPlan = false;
+  assert.equal(popupState.sortSummary.readyPrefixMatchesPlan, false);
 });
 
 test('popup accepts snapshot broadcasts only for its active window', () => {

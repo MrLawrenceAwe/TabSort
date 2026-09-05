@@ -1,18 +1,18 @@
 import { isFiniteNumber, isValidWindowId } from '../../shared/guards.js';
 import { buildTabSnapshot } from '../tab-snapshot.js';
 import { applyTabReloadStarted } from '../tabs/video-state.js';
-import { recomputeSortState } from '../sorting/update-sort-state.js';
+import { updateSortStateAndBroadcast } from '../sorting/update-sort-state.js';
 import { organiseTabs } from '../sorting/execute-sort.js';
 import { reloadChromeTab, updateTab } from '../tabs/chrome-tabs.js';
 import { collectPlaybackMetricsBatch } from '../playback/collect.js';
 import {
   getMutableTabRecord,
+  getTrackedWindowId,
   isSyncTokenCurrent,
   listTabIds,
-  trackedWindow,
 } from '../windows/store.js';
 import { reconcileWindowTabRecords } from '../tabs/reconcile.js';
-import { shouldRefreshRecordMetrics } from '../../shared/tab-readiness/refresh-policy.js';
+import { shouldRefreshRecordMetrics } from '../../shared/tabs/refresh-policy.js';
 
 function resolveTabAction(message) {
   const tabId = message.tabId;
@@ -33,14 +33,14 @@ function resolveTabAction(message) {
   return { record, tabId };
 }
 
-export async function openTab(message) {
+export async function activateTab(message) {
   const action = resolveTabAction(message);
   if (action.error) return { ok: false, error: action.error };
   const { tabId } = action;
-  const didOpen = await updateTab(tabId, { active: true });
-  return didOpen
+  const didActivate = await updateTab(tabId, { active: true });
+  return didActivate
     ? { ok: true, tabId }
-    : { ok: false, error: 'openFailed', tabId };
+    : { ok: false, error: 'activateFailed', tabId };
 }
 
 export async function reloadTab(message) {
@@ -53,7 +53,7 @@ export async function reloadTab(message) {
   }
 
   applyTabReloadStarted(record);
-  recomputeSortState();
+  updateSortStateAndBroadcast();
   return { ok: true, tabId };
 }
 
@@ -86,7 +86,7 @@ export async function getWindowSnapshot(message) {
   await collectPlaybackMetricsBatch(ids, { shouldRefresh: shouldRefreshRecordMetrics });
   if (
     !isSyncTokenCurrent(reconciliation.syncToken) ||
-    (requestedWindowId != null && trackedWindow.windowId !== requestedWindowId)
+    (requestedWindowId != null && getTrackedWindowId() !== requestedWindowId)
   ) {
     return { ok: false, error: 'windowSyncSuperseded', windowId: requestedWindowId };
   }
@@ -96,7 +96,7 @@ export async function getWindowSnapshot(message) {
 export async function handleOrganiseTabs(message) {
   const targetWindowId = isValidWindowId(message.windowId)
     ? message.windowId
-    : trackedWindow.windowId;
+    : getTrackedWindowId();
   const reconciliation = await reconcileWindowTabRecords(
     targetWindowId,
     isValidWindowId(targetWindowId) ? { force: true } : undefined,

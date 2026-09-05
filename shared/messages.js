@@ -1,5 +1,5 @@
 export const RUNTIME_MESSAGE_TYPES = Object.freeze({
-  OPEN_TAB: 'openTab',
+  ACTIVATE_TAB: 'activateTab',
   COLLECT_VIDEO_METRICS: 'collectVideoMetrics',
   GET_TAB_SNAPSHOT: 'getTabSnapshot',
   LOG_POPUP_MESSAGE: 'logPopupMessage',

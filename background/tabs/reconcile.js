@@ -1,7 +1,7 @@
 import { isValidWindowId } from '../../shared/guards.js';
 import { getTabLoadState, listWindowTabs } from './chrome-tabs.js';
-import { recomputeSortState } from '../sorting/update-sort-state.js';
-import { buildTabRecord } from './build-tab-record.js';
+import { updateSortStateAndBroadcast } from '../sorting/update-sort-state.js';
+import { reconcileTabRecord } from './reconcile-tab-record.js';
 import {
   getTabRecordsById,
   getTrackedWindowId,
@@ -61,10 +61,10 @@ export async function reconcileWindowTabRecords(windowId, options = {}) {
     if (!isYouTubeVideoPage(tab.url)) continue;
 
     const previousTabRecord = previousTabRecords[tab.id] || {};
-    const urlChanged = hasYouTubeVideoChanged(previousTabRecord.url, tab.url);
+    const videoChanged = hasYouTubeVideoChanged(previousTabRecord.url, tab.url);
     const nextLoadState = getTabLoadState(tab);
-    const nextTabRecord = buildTabRecord(tab, previousTabRecord, nextLoadState, {
-      urlChanged,
+    const nextTabRecord = reconcileTabRecord(tab, previousTabRecord, nextLoadState, {
+      videoChanged,
     });
 
     nextTabRecords[tab.id] = nextTabRecord;
@@ -75,6 +75,6 @@ export async function reconcileWindowTabRecords(windowId, options = {}) {
   }
   replaceOrderedWindowTabs(tabs);
   replaceAllTabRecords(nextTabRecords);
-  recomputeSortState();
+  updateSortStateAndBroadcast();
   return { ok: true, applied: true, windowId: queriedWindowId, syncToken };
 }

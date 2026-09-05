@@ -1,7 +1,7 @@
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../../shared/messages.js';
 import { collectPageDetails as collectYouTubePageDetails } from '../metadata/collect-page-details.js';
 
-export function createExtensionRuntimeBridge({ config, environment, getChrome, getLocation }) {
+export function createExtensionRuntimeBridge({ dependencies, environment, getChrome, getLocation }) {
   function logContentError(context, error) {
     const message = error instanceof Error ? error.message : String(error);
     console.warn(`[TabSort] ${context}: ${message}`);
@@ -29,7 +29,7 @@ export function createExtensionRuntimeBridge({ config, environment, getChrome, g
   function collectPageDetails() {
     return collectYouTubePageDetails({
       environment,
-      inferIsLiveNow: config.inferIsLiveNow,
+      inferIsLiveNow: dependencies.inferIsLiveNow,
       logContentError,
     });
   }

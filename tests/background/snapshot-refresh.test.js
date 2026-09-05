@@ -26,11 +26,11 @@ test(
         contentScriptReady: true,
         playbackMetricsReady: false,
         metricsWaitStartedAt: now,
-        remainingTimeStale: true,
+        remainingSecondsStale: true,
       }),
       2: createTabRecordFixture(2, {
-        videoDetails: { title: 'Video 2', remainingTime: 90, lengthSeconds: 120 },
-        remainingTimeStale: false,
+        videoDetails: { title: 'Video 2', remainingSeconds: 90, lengthSeconds: 120 },
+        remainingSecondsStale: false,
       }),
     });
 
@@ -62,8 +62,8 @@ test(
     const snapshot = await getWindowSnapshot({ windowId: 1 });
 
     assert.deepEqual(refreshedTabIds, [1]);
-    assert.equal(snapshot.tabRecordsById[1].videoDetails.remainingTime, 100);
-    assert.equal(snapshot.tabRecordsById[2].videoDetails.remainingTime, 90);
+    assert.equal(snapshot.tabRecordsById[1].videoDetails.remainingSeconds, 100);
+    assert.equal(snapshot.tabRecordsById[2].videoDetails.remainingSeconds, 90);
   },
 );
 
@@ -79,7 +79,7 @@ test(
         playbackMetricsReady: false,
         transitionStartedAt: Date.now() - 10_000,
         metricsWaitStartedAt: null,
-        remainingTimeStale: true,
+        remainingSecondsStale: true,
         videoDetails: null,
       }),
     });
@@ -115,7 +115,7 @@ test(
 
     assert.deepEqual(refreshedTabIds, [1]);
     assert.equal(snapshot.tabRecordsById[1].playbackMetricsReady, true);
-    assert.equal(snapshot.tabRecordsById[1].videoDetails.remainingTime, 6211);
-    assert.equal(snapshot.tabRecordsById[1].remainingTimeStale, false);
+    assert.equal(snapshot.tabRecordsById[1].videoDetails.remainingSeconds, 6211);
+    assert.equal(snapshot.tabRecordsById[1].remainingSecondsStale, false);
   },
 );

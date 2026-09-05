@@ -56,6 +56,36 @@ test('loads the bundled runtime and reports tracked YouTube tabs in the popup', 
       };
     })).toEqual({ width: 460, hasHorizontalOverflow: false });
 
+    // Exercise the popup view with a deterministic ready subset so theme changes
+    // and highlighting are checked independently of media-loading timing.
+    await popup.evaluate(async () => {
+      const { renderTabList } = await import(chrome.runtime.getURL('popup/tab-list-view.js'));
+      renderTabList({
+        trackedTabOrder: [1, 2],
+        tabRecordsById: {
+          1: {
+            id: 1, index: 0, loadState: 'loaded', contentScriptReady: true,
+            remainingSecondsStale: false, videoDetails: { title: 'Ready video', remainingSeconds: 20 },
+          },
+          2: {
+            id: 2, index: 1, loadState: 'loaded', contentScriptReady: true,
+            remainingSecondsStale: true, videoDetails: { title: 'Waiting video' },
+          },
+        },
+        sortSummary: { trackedCount: 2, sortableCount: 2, readyCount: 1, readyPrefixMatchesPlan: true },
+        isTargetOrderApplied: false,
+      });
+    });
+    await expect(popup.locator('#tabsTable .ready-row')).toHaveCount(1);
+    for (const [colorScheme, background, readyBackground] of [
+      ['light', 'rgb(252, 252, 250)', 'rgb(238, 245, 239)'],
+      ['dark', 'rgb(25, 25, 25)', 'rgb(32, 43, 35)'],
+    ]) {
+      await popup.emulateMedia({ colorScheme });
+      await expect(popup.locator('body')).toHaveCSS('background-color', background);
+      await expect(popup.locator('.ready-row')).toHaveCSS('background-color', readyBackground);
+    }
+
   } finally {
     await context.close();
     rmSync(userDataDirectory, { recursive: true, force: true });

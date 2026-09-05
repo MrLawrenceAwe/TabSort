@@ -1,6 +1,6 @@
 import { RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import {
-  openTab,
+  activateTab,
   handleOrganiseTabs,
   getWindowSnapshot,
   reloadTab,
@@ -34,7 +34,7 @@ function createMessageHandlers(message, sender) {
     [RUNTIME_MESSAGE_TYPES.GET_TAB_SNAPSHOT]: () => getWindowSnapshot(message),
     [RUNTIME_MESSAGE_TYPES.ORGANISE_TABS]: () => handleOrganiseTabs(message),
     [RUNTIME_MESSAGE_TYPES.PING]: async () => ({ ok: true }),
-    [RUNTIME_MESSAGE_TYPES.OPEN_TAB]: () => openTab(message),
+    [RUNTIME_MESSAGE_TYPES.ACTIVATE_TAB]: () => activateTab(message),
     [RUNTIME_MESSAGE_TYPES.RELOAD_TAB]: () => reloadTab(message),
     [RUNTIME_MESSAGE_TYPES.LOG_POPUP_MESSAGE]: async () => {
       const level = message.level === 'error' ? 'error' : 'log';

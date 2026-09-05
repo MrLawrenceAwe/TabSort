@@ -1,9 +1,15 @@
 export function createTitleObserver({
-  state,
   getDocument,
   getMutationObserver,
   publishPageVideoDetails,
 }) {
+  const state = {
+    titleElementObserver: null,
+    titleTextObserver: null,
+    observedTitleElement: null,
+    lastKnownTitleText: null,
+  };
+
   function observeTitleElement(titleElement) {
     if (!titleElement || titleElement === state.observedTitleElement) return;
     const shouldSendUpdate = state.observedTitleElement !== null;
@@ -45,7 +51,7 @@ export function createTitleObserver({
     state.titleElementObserver.observe(target, { childList: true, subtree: true });
   }
 
-  function disposeTitleObservers() {
+  function dispose() {
     if (state.titleElementObserver) {
       state.titleElementObserver.disconnect();
       state.titleElementObserver = null;
@@ -59,7 +65,7 @@ export function createTitleObserver({
   }
 
   return {
-    disposeTitleObservers,
+    dispose,
     watchTitleChanges,
   };
 }

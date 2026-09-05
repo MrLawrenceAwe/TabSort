@@ -1,25 +1,24 @@
 import { POPUP_LOG_LEVELS, toErrorMessage } from '../shared/log.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
-import { loadSortOptions, saveSortOptions } from '../shared/storage.js';
+import { loadSortOptions, saveSortOptions } from '../shared/sort-options.js';
 import { createRuntimeClient } from './runtime-client.js';
 import { createTabSnapshotClient } from './tab-snapshot-client.js';
 import { createSnapshotPoller } from './snapshot-poller.js';
-import { renderTabList } from './render-tab-list.js';
-import { syncPopupLayout } from './popup-layout-view.js';
+import { renderTabList } from './tab-list-view.js';
+import { syncPopupLayout } from './layout-view.js';
 import {
   initializePopupDom,
   getPopupElement,
   setErrorMessage,
   setNoticeMessage,
   setStateMessage,
-} from './popup-elements.js';
+} from './elements.js';
 import {
   isSnapshotForActiveWindow,
   popupState,
   applyPopupState,
   setActiveWindowId,
-} from './popup-store.js';
-import { startThemeSync } from './theme.js';
+} from './store.js';
 
 const SNAPSHOT_RETRY_DELAY_MS = 150;
 const SNAPSHOT_MAX_ATTEMPTS = 2;
@@ -58,7 +57,6 @@ async function runWithPopupErrorLogging(task, context) {
 }
 
 async function initializePopupPreferences() {
-  startThemeSync();
   const options = await loadSortOptions();
   const groupOtherTabsToggle = getPopupElement('groupOtherTabsToggle');
 
@@ -90,7 +88,7 @@ const ACTION_ERROR_MESSAGES = Object.freeze({
   invalidTabId: 'That tab is no longer available.',
   tabNotTracked: 'That YouTube tab is no longer being tracked.',
   windowMismatch: 'The tab moved to another window. Reopen the popup and try again.',
-  openFailed: 'Could not open that tab.',
+  activateFailed: 'Could not view that tab.',
   reloadFailed: 'Could not reload that tab.',
 });
 

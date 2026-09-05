@@ -1,10 +1,10 @@
 import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
 import { createSortSummary } from '../../shared/sorting/summary.js';
 import {
-  trackedWindow,
-  resetTrackedWindowStore,
+  getSortState,
   replaceAllTabRecords,
   replaceOrderedWindowTabs,
+  resetTrackedWindowStore,
   setSortState,
   setTabRecord,
 } from '../../background/windows/store.js';
@@ -172,13 +172,7 @@ export function setTrackedWindowTabs(tabs = []) {
 }
 
 export function setTrackedSortState(sortState = {}) {
-  setSortState({
-    trackedTabOrder: trackedWindow.trackedTabOrder,
-    targetVideoTabOrder: trackedWindow.targetVideoTabOrder,
-    isTargetOrderApplied: trackedWindow.isTargetOrderApplied,
-    sortSummary: trackedWindow.sortSummary || createSortSummary(),
-    ...sortState,
-  });
+  setSortState({ ...getSortState(), ...sortState });
 }
 
 export function setTrackedTabRecord(tabId, record) {
@@ -190,18 +184,18 @@ export function createTabRecordFixture(id = 1, overrides = {}) {
     url: `https://www.youtube.com/watch?v=${id}`,
     index: 0,
     pinned: false,
-    loadState: TAB_LOAD_STATES.UNSUSPENDED,
+    loadState: TAB_LOAD_STATES.LOADED,
     contentScriptReady: true,
     playbackMetricsReady: true,
     isLive: false,
     isActive: false,
     isHidden: false,
-    videoDetails: { title: `Video ${id}`, remainingTime: null, lengthSeconds: null },
+    videoDetails: { title: `Video ${id}`, remainingSeconds: null, lengthSeconds: null },
     loadingStartedAt: null,
-    unsuspendedTimestamp: null,
+    loadedAt: null,
     transitionStartedAt: null,
     metricsWaitStartedAt: null,
-    remainingTimeStale: true,
+    remainingSecondsStale: true,
     ...overrides,
   });
 }

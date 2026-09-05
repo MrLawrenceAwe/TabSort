@@ -1,22 +1,28 @@
 import { isValidWindowId } from '../../shared/guards.js';
-import { loadSortOptions } from '../../shared/storage.js';
-import { hasReadyRemainingTime } from './sort-readiness.js';
+import { loadSortOptions } from '../../shared/sort-options.js';
+import { hasReadyRemainingTime } from '../../shared/tabs/sort-readiness.js';
 import { listWindowTabs, moveTabsInOrder } from '../tabs/chrome-tabs.js';
-import { isSyncTokenCurrent, trackedWindow } from '../windows/store.js';
+import {
+  getSortState,
+  getTabRecordsById,
+  getTrackedWindowId,
+  isSyncTokenCurrent,
+} from '../windows/store.js';
 import { buildOtherTabOrder, buildYouTubeTabOrder } from './move-order.js';
 
 export async function organiseTabs(
-  windowId = trackedWindow.windowId,
+  windowId = getTrackedWindowId(),
   { expectedSyncToken = null } = {},
 ) {
   if (expectedSyncToken != null && !isSyncTokenCurrent(expectedSyncToken)) {
     return { ok: false, movedCount: 0, skippedReason: 'windowSyncSuperseded' };
   }
 
-  const targetVideoTabOrder = trackedWindow.targetVideoTabOrder.slice();
+  const targetVideoTabOrder = getSortState().targetVideoTabOrder;
 
+  const tabRecordsById = getTabRecordsById();
   const readyTabIds = targetVideoTabOrder.filter((tabId) => {
-    const record = trackedWindow.tabRecordsById[tabId];
+    const record = tabRecordsById[tabId];
     return hasReadyRemainingTime(record);
   });
 
