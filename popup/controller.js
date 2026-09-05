@@ -167,7 +167,7 @@ export async function initializePopup() {
   syncPopupLayout();
   setErrorMessage('');
   setNoticeMessage('');
-  setStateMessage('Loading YouTube tabs…');
+  setStateMessage('Loading YouTube Watch Tabs…');
 
   await runWithPopupErrorLogging(runtimeClient.syncActiveWindow, 'Failed to refresh active context');
   await runWithPopupErrorLogging(initializePopupPreferences, 'Failed to set up option controls');
