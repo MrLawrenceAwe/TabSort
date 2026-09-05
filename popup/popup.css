@@ -66,6 +66,13 @@ h1 {
     letter-spacing: -0.4px;
 }
 
+.backlog-summary {
+    margin: -10px 0 16px;
+    color: var(--muted);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
 button { font: inherit; }
 
 .action-button {

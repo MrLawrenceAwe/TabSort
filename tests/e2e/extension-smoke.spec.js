@@ -54,7 +54,7 @@ test('loads the bundled runtime and reports tracked YouTube tabs in the popup', 
         width: view.innerWidth,
         hasHorizontalOverflow: view.document.documentElement.scrollWidth > view.innerWidth,
       };
-    })).toEqual({ width: 460, hasHorizontalOverflow: false });
+    })).toEqual({ width: 600, hasHorizontalOverflow: false });
 
     // Exercise the popup view with a deterministic ready subset so theme changes
     // and highlighting are checked independently of media-loading timing.
@@ -77,6 +77,7 @@ test('loads the bundled runtime and reports tracked YouTube tabs in the popup', 
       });
     });
     await expect(popup.locator('#tabsTable .ready-row')).toHaveCount(1);
+    await expect(popup.locator('#backlogSummary')).toHaveText('2 videos · 1m remaining · 1 unknown');
     for (const [colorScheme, background, readyBackground] of [
       ['light', 'rgb(252, 252, 250)', 'rgb(238, 245, 239)'],
       ['dark', 'rgb(25, 25, 25)', 'rgb(32, 43, 35)'],

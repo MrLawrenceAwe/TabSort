@@ -30,6 +30,7 @@ function createFakeDocument() {
     ['popupError', createFakeElement()],
     ['popupNotice', createFakeElement()],
     ['popupStateMessage', createFakeElement()],
+    ['backlogSummary', createFakeElement()],
     ['organiseStatus', createFakeElement()],
     ['organiseButton', createFakeElement()],
     ['organisedBadge', createFakeElement()],
