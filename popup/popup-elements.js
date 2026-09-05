@@ -9,7 +9,6 @@ function createPopupElements() {
     groupOtherTabsToggle: null,
     table: null,
     nextStepColumn: null,
-    loadStateColumn: null,
     initialized: false,
   };
 }
@@ -42,7 +41,6 @@ export function initializePopupDom(rootDocument = globalThis.document) {
   popupElements.groupOtherTabsToggle = runtimeDocument.getElementById('groupOtherTabsToggle');
   popupElements.table = runtimeDocument.getElementById('tabsTable');
   popupElements.nextStepColumn = runtimeDocument.querySelector('.next-step');
-  popupElements.loadStateColumn = runtimeDocument.querySelector('.load-state');
   popupElements.initialized = true;
 }
 

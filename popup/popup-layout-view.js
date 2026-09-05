@@ -61,9 +61,7 @@ function clearReadyRows(table) {
 
 export function setMetadataColumnsVisible(visible) {
   const nextStep = getPopupElement('nextStepColumn');
-  const loadState = getPopupElement('loadStateColumn');
   nextStep?.classList.toggle('hide', !visible);
-  loadState?.classList.toggle('hide', !visible);
 }
 
 function setOptionToggleVisibility(visible) {
