@@ -6,20 +6,15 @@ import {
   TAB_GUIDANCE,
 } from '../shared/tab-readiness/action-guidance.js';
 
-const COLUMNS = Object.freeze({
-  organised: [
-    { key: 'remainingStatus', getter: formatRemainingStatus },
-    { key: 'index', getter: formatIndex },
-  ],
-  pending: [
-    { key: 'remainingStatus', getter: formatRemainingStatus },
-    { key: 'index', getter: formatIndex },
-    { key: 'status', getter: (record) => record.loadState },
-  ],
-});
+const COLUMNS = Object.freeze([
+  { key: 'remainingStatus', getter: formatRemainingStatus },
+  { key: 'index', getter: formatIndex },
+]);
 
 export function renderTabRow(row, tabRecord, isTargetOrderApplied, requestTabAction) {
-  row.insertCell(0).textContent = tabRecord.videoDetails?.title ?? tabRecord.url;
+  const titleCell = row.insertCell(0);
+  titleCell.textContent = tabRecord.videoDetails?.title ?? tabRecord.url;
+  titleCell.title = titleCell.textContent;
 
   const guidance = determineTabGuidance(tabRecord);
   if (guidance === TAB_GUIDANCE.RELOAD_TAB) {
@@ -37,12 +32,9 @@ export function renderTabRow(row, tabRecord, isTargetOrderApplied, requestTabAct
 }
 
 function insertInfoCells(row, record, isTargetOrderApplied, guidance) {
-  const columns = isTargetOrderApplied
-    ? COLUMNS.organised
-    : COLUMNS.pending;
-
-  columns.forEach((column) => {
+  COLUMNS.forEach((column) => {
     const cell = row.insertCell(row.cells.length);
+    cell.className = column.key;
     const value = column.getter(record, guidance);
     cell.textContent = isTargetOrderApplied ? value : toDisplayText(value);
   });

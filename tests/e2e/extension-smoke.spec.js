@@ -44,6 +44,18 @@ test('loads the bundled runtime and reports tracked YouTube tabs in the popup', 
     await expect(popup.locator('#tabsTable tbody tr')).toHaveCount(2);
     await expect(popup.getByText('Fixture smoke-one')).toBeVisible();
     await expect(popup.getByText('Fixture smoke-two')).toBeVisible();
+
+    // Toolbar popups size themselves from their document, unlike a normal tab.
+    await serviceWorker.evaluate(() => chrome.action.openPopup());
+    await expect.poll(() => popup.evaluate(() => {
+      const view = chrome.extension.getViews({ type: 'popup' })[0];
+      if (!view) return null;
+      return {
+        width: view.innerWidth,
+        hasHorizontalOverflow: view.document.documentElement.scrollWidth > view.innerWidth,
+      };
+    })).toEqual({ width: 460, hasHorizontalOverflow: false });
+
   } finally {
     await context.close();
     rmSync(userDataDirectory, { recursive: true, force: true });

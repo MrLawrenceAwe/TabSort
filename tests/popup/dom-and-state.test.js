@@ -43,7 +43,7 @@ function createFakeDocument() {
       return elements.get(id) ?? null;
     },
     querySelector(selector) {
-      if (selector === '.next-step' || selector === '.load-state') {
+      if (selector === '.next-step') {
         return createFakeElement();
       }
       return null;

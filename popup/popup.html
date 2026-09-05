@@ -10,17 +10,16 @@
     <main>
         <header>
             <div id="headerContainer">
+              <h1>YouTube tabs</h1>
               <div class="header-actions">
                 <button id="organiseButton" class="action-button hide">Organise Tabs</button>
                 <div id="organisedBadge" class="tabs-organised hide"><span aria-hidden="true">✓</span> Tabs organised</div>
               </div>
           </div>
-          <div id="headerBorder"></div>
         </header>
         <section>
             <div id="popupError" class="message-banner error-message hide" role="alert"></div>
             <div id="popupNotice" class="message-banner notice-message hide" role="status" aria-live="polite"></div>
-            <h2>YouTube tabs</h2>
             <p id="popupStateMessage" class="state-message" role="status" aria-live="polite">Loading YouTube tabs…</p>
             <div class="table-scroll">
             <table id="tabsTable" class="hide">
@@ -31,7 +30,6 @@
                     <th class="next-step">Next step</th>
                     <th class="remaining-time">Remaining</th>
                     <th class="tab-index">Position</th>
-                    <th class="load-state">Load state</th>
                 </tr>
               </thead>
               <tbody></tbody>
