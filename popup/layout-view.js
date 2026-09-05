@@ -1,12 +1,28 @@
 import { getPopupElement } from './elements.js';
 import { popupState } from './store.js';
 
+export function hasReadyTabsInOrder(sortSummary, isTargetOrderApplied) {
+  return isTargetOrderApplied || (
+    sortSummary.readyCount >= 2 && sortSummary.readyPrefixMatchesPlan
+  );
+}
+
+export function getOrganisedBadgeText(sortSummary, isTargetOrderApplied) {
+  return isTargetOrderApplied ? 'Tabs organised' : 'Ready tabs already in order';
+}
+
 function updateStatus(status) {
   if (!status) return;
   const { readyCount, sortableCount } = popupState.sortSummary;
+  const readyTabsInOrder = hasReadyTabsInOrder(
+    popupState.sortSummary,
+    popupState.isTargetOrderApplied,
+  );
   if (!popupState.isTargetOrderApplied) {
-    status.classList.toggle('hide', sortableCount <= 1);
-    status.textContent = `${readyCount} of ${sortableCount} sortable tabs ready.`;
+    status.classList.toggle('hide', sortableCount <= 1 && !readyTabsInOrder);
+    status.textContent = readyTabsInOrder
+      ? 'Ready tabs are already in order.'
+      : `${readyCount} of ${sortableCount} sortable tabs ready.`;
     return;
   }
   status.classList.add('hide');
@@ -14,7 +30,14 @@ function updateStatus(status) {
 
 function updateOrganisedBadge(organisedBadge) {
   if (!organisedBadge) return;
-  organisedBadge.classList.toggle('hide', !popupState.isTargetOrderApplied);
+  const readyTabsInOrder = hasReadyTabsInOrder(
+    popupState.sortSummary,
+    popupState.isTargetOrderApplied,
+  );
+  organisedBadge.classList.toggle('hide', !readyTabsInOrder);
+  organisedBadge.textContent = readyTabsInOrder
+    ? `✓ ${getOrganisedBadgeText(popupState.sortSummary, popupState.isTargetOrderApplied)}`
+    : '';
 }
 
 export function getOrganiseButtonText(readyCount, sortableCount) {
@@ -67,4 +90,3 @@ export function syncPopupLayout() {
   updateOrganisedBadge(organisedBadge);
   updateOrganiseButton(organiseButton, shouldShowOrganise);
 }
-
