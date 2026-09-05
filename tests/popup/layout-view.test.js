@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  getOrganisedBadgeText,
   getOrganiseButtonText,
+  hasReadyTabsInOrder,
   shouldShowOrganiseButton,
 } from '../../popup/layout-view.js';
 import { createSortSummary } from '../../shared/sorting/summary.js';
@@ -32,4 +34,17 @@ test('organise button requires two ready tabs and an unapplied ready prefix', ()
   assert.equal(shouldShowOrganiseButton(createSortSummary({
     readyCount: 2, sortableCount: 3, readyPrefixMatchesPlan: false,
   }), false), true);
+});
+
+test('identifies ready tabs that are already in their intended order', () => {
+  const partiallyReadyInOrder = createSortSummary({
+    readyCount: 2,
+    sortableCount: 3,
+    readyPrefixMatchesPlan: true,
+  });
+
+  assert.equal(hasReadyTabsInOrder(partiallyReadyInOrder, false), true);
+  assert.equal(getOrganisedBadgeText(partiallyReadyInOrder, false), 'Ready tabs already in order');
+  assert.equal(getOrganisedBadgeText(partiallyReadyInOrder, true), 'Tabs organised');
+  assert.equal(hasReadyTabsInOrder(createSortSummary({ readyCount: 1 }), false), false);
 });

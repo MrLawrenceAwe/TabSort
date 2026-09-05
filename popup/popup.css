@@ -97,7 +97,8 @@ input:focus-visible {
 
 .table-scroll {
     max-height: 360px;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
 }
@@ -130,9 +131,9 @@ input:focus-visible {
 }
 
 #tabsTable th:first-child,
-#tabsTable td:first-child { padding-left: 0; }
+#tabsTable td:first-child { padding-left: 12px; }
 #tabsTable th:last-child,
-#tabsTable td:last-child { padding-right: 0; text-align: right; }
+#tabsTable td:last-child { padding-right: 16px; text-align: right; }
 #tabsTable tbody tr:last-child td { border-bottom: 0; }
 #tabsTable tbody .ready-row { background: var(--ready-background); }
 #tabsTable tbody tr:hover { background: var(--hover); }
@@ -144,9 +145,9 @@ input:focus-visible {
     white-space: nowrap;
 }
 
-.next-step { width: 25%; }
-.remaining-time { width: 21%; }
-.tab-position { width: 8%; }
+.next-step { width: 18%; }
+.remaining-time { width: 17%; }
+.tab-position { width: 12%; }
 
 #tabsTable td.remaining-time,
 #tabsTable td.tab-position {
