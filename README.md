@@ -16,6 +16,9 @@ distribution workflow.
 
 - Open some YouTube watch or shorts pages in the same Chrome window, then click the TabSort extension.
 - The popup lists each tracked video tab, shows whether its remaining time is known, and highlights tabs that are ready.
+- Click **Prepare tabs** to visit unready videos one at a time, including sleeping tabs. TabSort waits for valid playback data before continuing and skips tabs still unavailable after 15 seconds. Ready, pinned, and live tabs are excluded.
+- Preparation continues when the toolbar popup closes. A separate progress window shows counts and a **Stop** button; closing it also stops the run. Switching tabs manually or changing the tracked browser window stops preparation. TabSort does not click Play; a video that still needs interaction may be skipped.
+- The Remaining column explains blockers: **Sleeping**, **Loading tab**, **Loading video**, **Needs viewing**, or **Couldn’t read time**.
 - Follow the suggested action buttons (Reload tab/View tab) if a tab is missing metadata.
 - When at least two tabs have known remaining time and the ready subset is not already grouped at the front, the **Organise** button appears; click it to move the ready tabs to the front in remaining-time order.
 - When you organise, all YouTube tabs (watch, home, shorts, etc.) move to the front with tracked video pages first; tick the popup option if you also want other tabs grouped by site.

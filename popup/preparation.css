@@ -1,0 +1,7 @@
+:root { color-scheme: light dark; font: 13px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+body { margin: 20px; }
+h1 { font-size: 18px; margin: 0 0 12px; }
+p { margin: 8px 0; }
+#current { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#hint { opacity: .7; font-size: 12px; }
+button { font: inherit; padding: 6px 18px; cursor: pointer; }

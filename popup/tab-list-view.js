@@ -35,6 +35,7 @@ export function renderTabList(snapshot, { requestTabAction } = {}) {
   applyPopupState({
     isTargetOrderApplied,
     sortSummary,
+    preparation: snapshot.preparation ?? { status: 'idle' },
   });
 
   setNextStepHeaderVisible(!isTargetOrderApplied);

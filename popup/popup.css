@@ -236,3 +236,5 @@ footer:has(.status-message:not(.hide):not(:empty), .option-toggle:not(.hide)) {
     white-space: nowrap;
     border: 0;
 }
+
+#preparationStatus { flex-basis: 100%; margin: 0; }

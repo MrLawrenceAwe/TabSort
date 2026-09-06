@@ -19,9 +19,9 @@ function updateStatus(status) {
     popupState.isTargetOrderApplied,
   );
   if (!popupState.isTargetOrderApplied) {
-    status.classList.toggle('hide', sortableCount <= 1 && !readyTabsInOrder);
+    status.classList.toggle('hide', sortableCount === 0);
     status.textContent = readyTabsInOrder
-      ? 'Ready tabs are already in order.'
+      ? `${readyCount} of ${sortableCount} sortable tabs ready · Ready tabs in order.`
       : `${readyCount} of ${sortableCount} sortable tabs ready.`;
     return;
   }
@@ -54,7 +54,7 @@ function updateOrganiseButton(organiseButton, shouldShow) {
   organiseButton.classList.toggle('hide', !shouldShow);
   if (shouldShow) {
     const { readyCount, sortableCount } = popupState.sortSummary;
-    organiseButton.disabled = popupState.isOrganising;
+    organiseButton.disabled = popupState.isOrganising || (popupState.isStartingPreparation || popupState.preparation.status === 'running');
     organiseButton.setAttribute?.('aria-busy', String(popupState.isOrganising));
     organiseButton.textContent = popupState.isOrganising
       ? 'Organising…'
@@ -83,6 +83,22 @@ export function syncPopupLayout() {
     popupState.sortSummary,
     popupState.isTargetOrderApplied,
   );
+
+  const preparation = popupState.preparation;
+  const running = preparation.status === 'running';
+  const prepareButton = getPopupElement('prepareButton');
+  if (prepareButton) {
+    prepareButton.classList.toggle('hide', running || popupState.sortSummary.readyCount >= popupState.sortSummary.sortableCount);
+    prepareButton.disabled = popupState.isStartingPreparation || popupState.isOrganising;
+    prepareButton.textContent = popupState.isStartingPreparation ? 'Starting…' : 'Prepare tabs';
+  }
+  getPopupElement('stopPreparationButton')?.classList.toggle('hide', !running);
+  const preparationStatus = getPopupElement('preparationStatus');
+  if (preparationStatus) {
+    preparationStatus.classList.toggle('hide', preparation.status === 'idle');
+    preparationStatus.textContent = preparation.status === 'idle' ? '' :
+      `${running ? 'Preparing' : preparation.status === 'complete' ? 'Finished' : 'Stopped'}: ${preparation.completed} of ${preparation.total} checked · ${preparation.ready} ready · ${preparation.skipped} skipped`;
+  }
 
   setOptionToggleVisibility(shouldShowOrganise);
 
