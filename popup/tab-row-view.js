@@ -93,13 +93,13 @@ export function formatRemainingStatus(record, requiredAction = determineTabGuida
   const remaining = record?.videoDetails?.remainingSeconds;
   const hasRemainingTime = isFiniteNumber(remaining);
 
-  if (record.remainingSecondsStale) {
-    return requiredAction === TAB_GUIDANCE.VIEW_TAB_TO_REFRESH_TIME
-      ? getTabGuidanceLabel(TAB_GUIDANCE.VIEW_TAB_TO_REFRESH_TIME)
-      : 'unavailable';
-  }
-
-  return hasRemainingTime ? formatRemaining(remaining) : 'unavailable';
+  if (hasReadyRemainingTime(record) && hasRemainingTime) return formatRemaining(remaining);
+  if (record.loadState === 'discarded') return 'Sleeping';
+  if (record.loadState === 'loading') return 'Loading tab';
+  if (requiredAction === TAB_GUIDANCE.RELOAD_TAB) return 'Couldn’t read time';
+  if (requiredAction === TAB_GUIDANCE.VIEW_TAB_TO_LOAD_TIME ||
+      requiredAction === TAB_GUIDANCE.VIEW_TAB_TO_REFRESH_TIME) return 'Needs viewing';
+  return 'Loading video';
 }
 
 function formatPosition(record) {

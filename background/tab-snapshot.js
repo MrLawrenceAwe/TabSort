@@ -1,3 +1,4 @@
+import { getPreparation } from './preparation/state.js';
 import { logDebug } from '../shared/log.js';
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import {
@@ -12,6 +13,7 @@ export function buildTabSnapshot() {
   const { trackedTabOrder, isTargetOrderApplied, sortSummary } = getSortState();
   return {
     windowId: getTrackedWindowId(),
+    preparation: getPreparation(),
     tabRecordsById: getTabRecordsById(),
     trackedTabOrder,
     isTargetOrderApplied,

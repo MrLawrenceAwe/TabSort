@@ -1,3 +1,4 @@
+import { syncPopupLayout } from '../../popup/layout-view.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
@@ -86,4 +87,18 @@ test('popup view can reset cached DOM references before reinitializing with a ne
 
   assert.equal(firstDocument.elements.get('popupError').textContent, 'First error');
   assert.equal(secondDocument.elements.get('popupError').textContent, 'Second error');
+});
+
+
+test('ordered ready subset keeps the unfinished readiness count visible', () => {
+  const document = createFakeDocument();
+  resetPopupDom();
+  resetPopupState();
+  initializePopupDom(document);
+  popupState.sortSummary = { readyCount: 2, sortableCount: 10, readyPrefixMatchesPlan: true };
+  syncPopupLayout();
+  assert.equal(document.elements.get('organiseStatus').textContent,
+    '2 of 10 sortable tabs ready · Ready tabs in order.');
+  resetPopupDom();
+  resetPopupState();
 });

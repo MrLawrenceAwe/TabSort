@@ -72,7 +72,7 @@ function renderAndScheduleSnapshot(snapshot) {
   renderTabList(snapshot, {
     requestTabAction,
   });
-  snapshotPoller.scheduleIfNeeded(snapshot);
+  if (popupState.preparation.status !== 'running') snapshotPoller.scheduleIfNeeded(snapshot);
 }
 
 async function loadInitialSnapshot() {
@@ -106,8 +106,31 @@ async function requestTabAction(type, data) {
   return false;
 }
 
+async function requestPrepare() {
+  if (popupState.isStartingPreparation || popupState.preparation.status === 'running') return;
+  applyPopupState({ isStartingPreparation: true });
+  snapshotPoller.clear();
+  setErrorMessage('');
+  setNoticeMessage('');
+  syncPopupLayout();
+  try {
+    const response = await runtimeClient.requestRuntimeMessage(RUNTIME_MESSAGE_TYPES.START_PREPARATION);
+    if (response?.ok !== true) setErrorMessage('Could not start preparation. Reopen TabSort and try again.');
+  } catch (error) {
+    setErrorMessage('Could not start preparation. Try again.');
+    runtimeClient.logPopupError('Starting preparation failed', error);
+  } finally {
+    applyPopupState({ isStartingPreparation: false });
+    syncPopupLayout();
+  }
+}
+
+async function requestStopPreparation() {
+  await requestTabAction(RUNTIME_MESSAGE_TYPES.STOP_PREPARATION);
+}
+
 async function requestOrganise() {
-  if (popupState.isOrganising) return;
+  if (popupState.isOrganising || (popupState.isStartingPreparation || popupState.preparation.status === 'running')) return;
   applyPopupState({ isOrganising: true });
   setErrorMessage('');
   setNoticeMessage('');
@@ -146,6 +169,8 @@ function createSnapshotMessageListener() {
 }
 
 function registerPopupControls() {
+  getPopupElement('prepareButton')?.addEventListener('click', requestPrepare);
+  getPopupElement('stopPreparationButton')?.addEventListener('click', requestStopPreparation);
   const organiseButton = getPopupElement('organiseButton');
   if (organiseButton) {
     organiseButton.addEventListener('click', requestOrganise);

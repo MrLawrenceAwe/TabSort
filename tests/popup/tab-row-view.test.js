@@ -36,7 +36,7 @@ test('stale rows without remaining time do not suggest viewing the tab', () => {
   });
 
   assert.equal(determineTabGuidance(record), TAB_GUIDANCE.RELOAD_TAB);
-  assert.equal(formatRemainingStatus(record), 'unavailable');
+  assert.equal(formatRemainingStatus(record), 'Couldn’t read time');
 });
 
 test('recently loaded rows avoid contradictory stale guidance', () => {
@@ -47,7 +47,7 @@ test('recently loaded rows avoid contradictory stale guidance', () => {
   });
 
   assert.equal(determineTabGuidance(record), TAB_GUIDANCE.NONE);
-  assert.equal(formatRemainingStatus(record), 'unavailable');
+  assert.equal(formatRemainingStatus(record), 'Loading video');
 });
 
 test('recent watch URL transitions avoid reload guidance while runtime can catch up', () => {
@@ -70,7 +70,7 @@ test('recent watch URL transitions avoid reload guidance while runtime can catch
 
   assert.equal(determineTabGuidance(activeRecord), TAB_GUIDANCE.NONE);
   assert.equal(determineTabGuidance(inactiveRecord), TAB_GUIDANCE.NONE);
-  assert.equal(formatRemainingStatus(activeRecord), 'unavailable');
+  assert.equal(formatRemainingStatus(activeRecord), 'Loading video');
 });
 
 test('stalled watch URL transitions eventually ask for the useful action', () => {
@@ -104,7 +104,7 @@ test('stale rows with remaining time can still request viewing the tab when appr
   });
 
   assert.equal(determineTabGuidance(record), TAB_GUIDANCE.VIEW_TAB_TO_REFRESH_TIME);
-  assert.equal(formatRemainingStatus(record), 'View tab to update remaining time');
+  assert.equal(formatRemainingStatus(record), 'Needs viewing');
 });
 
 test('loading rows switch from waiting to view after the loading grace period', () => {
@@ -146,7 +146,7 @@ test('active watch rows wait through video data mismatches instead of asking for
   });
 
   assert.equal(determineTabGuidance(activeAdRecord), TAB_GUIDANCE.WAIT_FOR_VIDEO_DATA);
-  assert.equal(formatRemainingStatus(activeAdRecord), 'unavailable');
+  assert.equal(formatRemainingStatus(activeAdRecord), 'Loading video');
 });
 
 test('active watch rows eventually ask for reload when video data stays stuck', () => {
@@ -344,4 +344,10 @@ test('action guidance renders a semantic button and awaits the action result', a
   } finally {
     globalThis.document = previousDocument;
   }
+});
+
+
+test('remaining status distinguishes sleeping and loading tabs even with cached time', () => {
+  assert.equal(formatRemainingStatus(makeRecord({ loadState: 'discarded', videoDetails: { remainingSeconds: 100 } })), 'Sleeping');
+  assert.equal(formatRemainingStatus(makeRecord({ loadState: 'loading', videoDetails: { remainingSeconds: 100 } })), 'Loading tab');
 });
