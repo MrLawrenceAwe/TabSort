@@ -11,6 +11,7 @@ function createPopupElements() {
     preparationStatus: null,
     organisedBadge: null,
     groupOtherTabsToggle: null,
+    openTikTokPipToggle: null,
     table: null,
     nextStepColumn: null,
     initialized: false,
@@ -47,6 +48,7 @@ export function initializePopupDom(rootDocument = globalThis.document) {
   popupElements.organiseButton = runtimeDocument.getElementById('organiseButton');
   popupElements.organisedBadge = runtimeDocument.getElementById('organisedBadge');
   popupElements.groupOtherTabsToggle = runtimeDocument.getElementById('groupOtherTabsToggle');
+  popupElements.openTikTokPipToggle = runtimeDocument.getElementById('openTikTokPipToggle');
   popupElements.table = runtimeDocument.getElementById('tabsTable');
   popupElements.nextStepColumn = runtimeDocument.querySelector('.next-step');
   popupElements.initialized = true;

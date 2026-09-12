@@ -8,6 +8,7 @@ import {
   getTrackedWindowId,
 } from '../../background/windows/store.js';
 import { reconcileWindowTabRecords } from '../../background/tabs/reconcile.js';
+import { savePreparedTab } from '../../background/preparation/prepared-tabs.js';
 import {
   ensureChromeApi,
   createChromeTabFixture,
@@ -20,6 +21,36 @@ import {
 } from '../helpers/background-test-helpers.js';
 
 ensureChromeApi({ tabs: true });
+
+test('prepared sleeping tabs remain sortable after visiting another window', async () => {
+  const saved = {};
+  chrome.storage = { session: {
+    set: async values => Object.assign(saved, values),
+    get: async () => ({ ...saved }),
+  } };
+  resetTrackedWindowState(1);
+  setTrackedTabRecords({
+    1: createTabRecordFixture(1, {
+      loadState: TAB_LOAD_STATES.DISCARDED,
+      videoDetails: { title: 'Prepared video', remainingSeconds: 45, lengthSeconds: 120 },
+      remainingSecondsStale: false,
+      autoPreparedRemainingTime: true,
+    }),
+  });
+  await savePreparedTab(getTabRecordsById()[1]);
+  stubChromeTabQuery([createChromeTabFixture(1, { discarded: true })]);
+  await reconcileWindowTabRecords(1, { force: true });
+  stubChromeTabQuery([createChromeTabFixture(2, { windowId: 2, url: 'https://example.com/' })]);
+  await reconcileWindowTabRecords(2, { force: true });
+  stubChromeTabQuery([createChromeTabFixture(1, { discarded: true })]);
+  await reconcileWindowTabRecords(1, { force: true });
+  assert.equal(getSortState().sortSummary.readyCount, 1);
+  assert.equal(getTabRecordsById()[1].videoDetails.title, 'Prepared video');
+  resetTrackedWindowState(1);
+  await reconcileWindowTabRecords(1, { force: true });
+  assert.equal(getSortState().sortSummary.readyCount, 1);
+  delete chrome.storage;
+});
 
 test(
   'reconcileWindowTabRecords does not mark already-open loaded tabs as recently loaded on initial rehydrate',
@@ -56,6 +87,55 @@ test(
     const record = getTabRecordsById()[1];
     assert.equal(record.loadState, TAB_LOAD_STATES.LOADED);
     assert.equal(typeof record.loadedAt, 'number');
+  },
+);
+
+test(
+  'reconcileWindowTabRecords keeps a trusted remaining time when a loaded tab is discarded',
+  { concurrency: false },
+  async () => {
+    resetTrackedWindowState();
+    setTrackedTabRecords({
+      1: createTabRecordFixture(1, {
+        loadState: TAB_LOAD_STATES.LOADED,
+        videoDetails: { title: 'Prepared video', remainingSeconds: 45, lengthSeconds: 120 },
+        remainingSecondsStale: false,
+        autoPreparedRemainingTime: true,
+      }),
+    });
+
+    stubChromeTabQuery([createChromeTabFixture(1, { discarded: true })]);
+
+    await reconcileWindowTabRecords(1, { force: true });
+
+    const record = getTabRecordsById()[1];
+    assert.equal(record.loadState, TAB_LOAD_STATES.DISCARDED);
+    assert.equal(record.videoDetails.remainingSeconds, 45);
+    assert.equal(record.remainingSecondsStale, false);
+    assert.equal(record.autoPreparedRemainingTime, true);
+    assert.equal(getSortState().sortSummary.readyCount, 1);
+  },
+);
+
+test(
+  'reconcileWindowTabRecords invalidates an ordinary discarded tab without a preparation marker',
+  { concurrency: false },
+  async () => {
+    resetTrackedWindowState();
+    setTrackedTabRecords({
+      1: createTabRecordFixture(1, {
+        videoDetails: { title: 'Ordinary video', remainingSeconds: 45, lengthSeconds: 120 },
+        remainingSecondsStale: false,
+      }),
+    });
+
+    stubChromeTabQuery([createChromeTabFixture(1, { discarded: true })]);
+    await reconcileWindowTabRecords(1, { force: true });
+
+    const record = getTabRecordsById()[1];
+    assert.equal(record.videoDetails.remainingSeconds, null);
+    assert.equal(record.remainingSecondsStale, true);
+    assert.equal(record.autoPreparedRemainingTime, false);
   },
 );
 

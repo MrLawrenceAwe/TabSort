@@ -7,10 +7,11 @@ function harness(overrides = {}) {
   const tabs = new Map([1, 2, 3].map(id => [id, { identity: String(id), active: false, loaded: true, ready: false }]));
   const activated = [];
   const refreshed = [];
+  const settled = [];
   let done;
   const finished = new Promise(resolve => { done = resolve; });
   const controller = createPreparationController({
-    now: () => time, timeoutMs: 30, pollMs: 10,
+    now: () => time, timeoutMs: 60, pollMs: 10, settleMs: 10,
     delay: async ms => { time += ms; },
     inspect: async id => tabs.get(id),
     activate: async id => {
@@ -20,11 +21,15 @@ function harness(overrides = {}) {
       return true;
     },
     refresh: async id => { refreshed.push(id); tabs.get(id).ready = true; },
+    settle: async (id, _windowId, returnTabId, result) => {
+      settled.push({ id, returnTabId, ...result });
+      return returnTabId ?? 99;
+    },
     publish: state => { if (state.status !== 'running') done(state); },
     ...overrides,
   });
   const items = [1, 2, 3].map(id => ({ id, identity: String(id), title: `Video ${id}` }));
-  return { controller, tabs, activated, refreshed, items, finished };
+  return { controller, tabs, activated, refreshed, settled, items, finished };
 }
 
 test('preparation activates each tab and waits for playback readiness before advancing', async () => {
@@ -34,9 +39,10 @@ test('preparation activates each tab and waits for playback readiness before adv
   assert.equal(h.controller.start(1, h.items).ok, false);
   const result = await h.finished;
   assert.deepEqual(h.activated, [1, 3]);
-  assert.deepEqual(h.refreshed, [1, 3]);
+  assert.deepEqual([...new Set(h.refreshed)], [1, 3]);
   assert.equal(result.status, 'complete');
   assert.equal(result.ready, 3);
+  assert.deepEqual(h.settled.map(entry => entry.id), [1, 3]);
 });
 
 test('stalled tabs time out and do not prevent subsequent tabs from being visited', async () => {
@@ -95,9 +101,34 @@ test('a sleeping tab is activated and allowed to load before collecting playback
     },
   });
   h.tabs.get(1).loaded = false;
-  h.controller.start(1, h.items.slice(0, 1));
+  h.tabs.get(1).discarded = true;
+  h.controller.start(1, h.items.slice(0, 1), 99);
   const result = await h.finished;
   assert.deepEqual(h.activated, [1]);
-  assert.deepEqual(h.refreshed, [1]);
+  assert.deepEqual([...new Set(h.refreshed)], [1]);
   assert.equal(result.ready, 1);
+  assert.deepEqual(h.settled, [{
+    id: 1, returnTabId: 99, prepared: true, wasDiscarded: true,
+  }]);
+});
+
+test('preparation waits again when YouTube restores a saved playback position', async () => {
+  let refreshCount = 0;
+  const h = harness({
+    timeoutMs: 120,
+    settleMs: 20,
+    refresh: async id => {
+      refreshCount += 1;
+      const tab = h.tabs.get(id);
+      tab.ready = true;
+      tab.remainingSeconds = refreshCount < 3 ? 100 : 40;
+    },
+  });
+
+  h.controller.start(1, h.items.slice(0, 1), 99);
+  const result = await h.finished;
+
+  assert.equal(result.ready, 1);
+  assert.ok(refreshCount >= 4);
+  assert.equal(h.settled[0].prepared, true);
 });

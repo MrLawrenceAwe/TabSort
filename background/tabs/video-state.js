@@ -30,6 +30,7 @@ export function markPlaybackMetricsReady(record) {
 
 export function applyVideoMetricsUnavailable(record) {
   if (!record) return;
+  record.autoPreparedRemainingTime = false;
   record.contentScriptReady = false;
   resetPlaybackReadiness(record);
   clearRemainingTime(record);

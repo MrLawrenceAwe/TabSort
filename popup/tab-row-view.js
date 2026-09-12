@@ -93,7 +93,12 @@ export function formatRemainingStatus(record, requiredAction = determineTabGuida
   const remaining = record?.videoDetails?.remainingSeconds;
   const hasRemainingTime = isFiniteNumber(remaining);
 
-  if (hasReadyRemainingTime(record) && hasRemainingTime) return formatRemaining(remaining);
+  if (hasReadyRemainingTime(record) && hasRemainingTime) {
+    const formatted = formatRemaining(remaining);
+    return record.loadState === 'discarded'
+      ? `${formatted} · Auto-prepared · sleeping`
+      : formatted;
+  }
   if (record.loadState === 'discarded') return 'Sleeping';
   if (record.loadState === 'loading') return 'Loading tab';
   if (requiredAction === TAB_GUIDANCE.RELOAD_TAB) return 'Couldn’t read time';

@@ -93,6 +93,16 @@ export async function updateTab(tabId, updateProperties) {
   }
 }
 
+export async function discardTab(tabId) {
+  try {
+    const tab = await chrome.tabs.discard(tabId);
+    return Boolean(tab?.discarded);
+  } catch (error) {
+    logDebug(`tabs.discard failed for ${tabId}`, error);
+    return false;
+  }
+}
+
 export async function reloadChromeTab(tabId) {
   try {
     await chrome.tabs.reload(tabId);

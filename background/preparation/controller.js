@@ -1,7 +1,8 @@
 // One run at a time. Cancellation is checked after every asynchronous boundary.
-export function createPreparationController({ inspect, activate, refresh, publish,
+export function createPreparationController({ inspect, activate, refresh, settle, publish,
   now = Date.now, delay = ms => new Promise(resolve => setTimeout(resolve, ms)),
-  timeoutMs = 15000, pollMs = 500 }) {
+  timeoutMs = 15000, pollMs = 500, settleMs = 3000,
+  resumeJumpToleranceSeconds = 5 }) {
   let current = null;
   let state = { status: 'idle', total: 0, completed: 0, ready: 0, skipped: 0, currentTabId: null };
   const snapshot = () => ({ ...state });
@@ -14,15 +15,9 @@ export function createPreparationController({ inspect, activate, refresh, publis
     return snapshot();
   }
   async function run(job) {
-    let previousId = null;
     try {
       for (const item of job.items) {
         if (current !== job) return;
-        if (previousId != null) {
-          const previous = await inspect(previousId, job.windowId);
-          if (current !== job) return;
-          if (previous && !previous.active) { stop('Stopped because you switched tabs'); return; }
-        }
         const initial = await inspect(item.id, job.windowId);
         if (current !== job) return;
         if (!initial || initial.identity !== item.identity || initial.excluded) {
@@ -37,18 +32,53 @@ export function createPreparationController({ inspect, activate, refresh, publis
           if (current !== job) return;
           let ready = false;
           if (activated) {
-            previousId = item.id;
             const deadline = now() + timeoutMs;
+            let readySince = null;
+            let lastRemainingSeconds = null;
+            let lastSampleAt = null;
             while (current === job && now() < deadline) {
               const tab = await inspect(item.id, job.windowId);
               if (current !== job) return;
               if (!tab || tab.identity !== item.identity || tab.excluded) break;
               if (!tab.active) { stop('Stopped because you switched tabs'); return; }
-              if (tab.ready) { ready = true; break; }
+              const sampledAt = now();
+              if (tab.ready) {
+                if (readySince == null) readySince = sampledAt;
+                if (
+                  Number.isFinite(tab.remainingSeconds) &&
+                  Number.isFinite(lastRemainingSeconds) &&
+                  lastSampleAt != null
+                ) {
+                  const elapsedSeconds = Math.max(0, (sampledAt - lastSampleAt) / 1000);
+                  const allowedChange = resumeJumpToleranceSeconds + elapsedSeconds * 2;
+                  if (Math.abs(tab.remainingSeconds - lastRemainingSeconds) > allowedChange) {
+                    readySince = sampledAt;
+                  }
+                }
+                lastRemainingSeconds = tab.remainingSeconds;
+                lastSampleAt = sampledAt;
+                if (sampledAt - readySince >= settleMs) { ready = true; break; }
+              } else {
+                readySince = null;
+                lastRemainingSeconds = null;
+                lastSampleAt = null;
+              }
               if (tab.loaded) await refresh(item.id, job.windowId, Math.max(1, deadline - now()));
               if (current !== job) return;
               await delay(pollMs);
             }
+            if (current !== job) return;
+            const settled = await settle(
+              item.id, job.windowId, job.returnTabId, {
+                prepared: ready,
+                wasDiscarded: initial.discarded,
+              },
+            );
+            if (typeof settled !== 'number') {
+              stop('Stopped because the original tab is no longer available');
+              return;
+            }
+            job.returnTabId = settled;
           }
           if (current !== job) return;
           if (ready) state.ready += 1;
@@ -69,9 +99,9 @@ export function createPreparationController({ inspect, activate, refresh, publis
   }
   return {
     snapshot, stop,
-    start(windowId, items) {
+    start(windowId, items, returnTabId) {
       if (current) return { ok: false, error: 'alreadyPreparing' };
-      const job = { windowId, items };
+      const job = { windowId, items, returnTabId };
       current = job;
       state = { status: 'running', windowId, total: items.length, completed: 0,
         ready: 0, skipped: 0, currentTabId: null, title: '' };

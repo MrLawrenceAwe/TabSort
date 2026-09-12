@@ -36,6 +36,7 @@ function createFakeDocument() {
     ['organiseButton', createFakeElement()],
     ['organisedBadge', createFakeElement()],
     ['groupOtherTabsToggle', createFakeElement()],
+    ['openTikTokPipToggle', createFakeElement()],
     ['tabsTable', createFakeElement()],
   ]);
 

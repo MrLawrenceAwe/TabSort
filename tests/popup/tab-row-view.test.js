@@ -235,7 +235,7 @@ test('highlighting identifies sortable ready rows and clears when the order is a
       [{ pinned: true }, false, false],
       [{ isLive: true }, false, false],
       [{ remainingSecondsStale: true }, false, false],
-      [{ loadState: TAB_LOAD_STATES.DISCARDED }, false, false],
+      [{ loadState: TAB_LOAD_STATES.DISCARDED, autoPreparedRemainingTime: true }, false, true],
       [{}, true, false],
     ]) {
       const row = createFakeRow();
@@ -347,7 +347,15 @@ test('action guidance renders a semantic button and awaits the action result', a
 });
 
 
-test('remaining status distinguishes sleeping and loading tabs even with cached time', () => {
-  assert.equal(formatRemainingStatus(makeRecord({ loadState: 'discarded', videoDetails: { remainingSeconds: 100 } })), 'Sleeping');
+test('remaining status labels auto-prepared sleeping tabs', () => {
+  assert.equal(formatRemainingStatus(makeRecord({
+    loadState: 'discarded',
+    autoPreparedRemainingTime: true,
+    videoDetails: { remainingSeconds: 100 },
+  })), '1m 40s · Auto-prepared · sleeping');
+  assert.equal(formatRemainingStatus(makeRecord({
+    loadState: 'discarded',
+    videoDetails: { remainingSeconds: 100 },
+  })), 'Sleeping');
   assert.equal(formatRemainingStatus(makeRecord({ loadState: 'loading', videoDetails: { remainingSeconds: 100 } })), 'Loading tab');
 });

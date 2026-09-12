@@ -12,6 +12,7 @@ import {
   setTrackedWindowId,
 } from '../windows/store.js';
 import { hasYouTubeVideoChanged, isYouTubeVideoPage } from '../../shared/youtube/urls.js';
+import { readPreparedTabs, restorePreparedTab } from '../preparation/prepared-tabs.js';
 
 function resolveWindowIdForQuery(windowId, { force = false } = {}) {
   const currentWindowId = getTrackedWindowId();
@@ -32,6 +33,7 @@ export async function reconcileWindowTabRecords(windowId, options = {}) {
   const syncToken = nextSyncToken();
   const resolvedWindowId = resolveWindowIdForQuery(windowId, options);
   const tabs = await listWindowTabs(resolvedWindowId);
+  const preparedTabs = await readPreparedTabs();
   if (!isSyncTokenCurrent(syncToken)) {
     return { ok: false, applied: false, reason: 'superseded', windowId: resolvedWindowId };
   }
@@ -67,7 +69,7 @@ export async function reconcileWindowTabRecords(windowId, options = {}) {
       videoChanged,
     });
 
-    nextTabRecords[tab.id] = nextTabRecord;
+    nextTabRecords[tab.id] = restorePreparedTab(tab, nextTabRecord, preparedTabs);
   }
 
   if (!isSyncTokenCurrent(syncToken)) {

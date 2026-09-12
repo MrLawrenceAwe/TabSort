@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  discardTab,
   executeScriptInTab,
   listWindowTabs,
   MESSAGE_FAILURE_REASONS,
@@ -10,6 +11,18 @@ import {
 import { ensureChromeApi } from '../helpers/background-test-helpers.js';
 
 ensureChromeApi({ tabs: true });
+
+test('discardTab returns a sleeping tab to Chrome successfully', async () => {
+  globalThis.chrome.tabs.discard = async tabId => ({ id: tabId, discarded: true });
+
+  assert.equal(await discardTab(7), true);
+});
+
+test('discardTab reports Chrome failures without throwing', async () => {
+  globalThis.chrome.tabs.discard = async () => { throw new Error('cannot discard active tab'); };
+
+  assert.equal(await discardTab(7), false);
+});
 
 test('listWindowTabs uses the last focused window when no explicit id is provided', async () => {
   const queries = [];

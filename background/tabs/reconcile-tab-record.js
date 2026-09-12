@@ -10,7 +10,10 @@ export function reconcileTabRecord(
   { videoChanged = false } = {},
 ) {
   const isLoaded = nextLoadState === TAB_LOAD_STATES.LOADED;
+  const isDiscarded = nextLoadState === TAB_LOAD_STATES.DISCARDED;
   const loadStateChanged = previousRecord.loadState && previousRecord.loadState !== nextLoadState;
+  const keepsAutoPreparedTime =
+    isDiscarded && !videoChanged && Boolean(previousRecord.autoPreparedRemainingTime);
   const timestamp = nowMs();
 
   const record = createTabRecord(tab.id, tab.windowId, {
@@ -30,10 +33,12 @@ export function reconcileTabRecord(
     loadedAt: previousRecord.loadedAt ?? null,
     transitionStartedAt: previousRecord.transitionStartedAt ?? null,
     metricsWaitStartedAt: videoChanged ? null : previousRecord.metricsWaitStartedAt ?? null,
+    autoPreparedRemainingTime:
+      !videoChanged && Boolean(previousRecord.autoPreparedRemainingTime),
     remainingSecondsStale:
-      !isLoaded ||
+      (!isLoaded && !keepsAutoPreparedTime) ||
       Boolean(previousRecord.remainingSecondsStale) ||
-      loadStateChanged ||
+      (loadStateChanged && !keepsAutoPreparedTime) ||
       videoChanged,
   });
 
@@ -56,7 +61,7 @@ export function reconcileTabRecord(
     record.transitionStartedAt = timestamp;
   }
 
-  if ((!isLoaded || videoChanged) && record.videoDetails) {
+  if ((!isLoaded && !keepsAutoPreparedTime || videoChanged) && record.videoDetails) {
     clearRemainingTime(record);
   }
 

@@ -132,6 +132,34 @@ test(
 );
 
 test(
+  'collectPlaybackMetrics leaves auto-prepared time intact once Chrome has discarded the tab',
+  { concurrency: false },
+  async () => {
+    resetTrackedWindowState();
+    setTrackedTabRecords({
+      1: createTabRecordFixture(1, {
+        autoPreparedRemainingTime: true,
+        videoDetails: { title: 'Prepared Video', remainingSeconds: 45, lengthSeconds: 120 },
+        remainingSecondsStale: false,
+      }),
+    });
+
+    stubChromeTabGetSequence([{ tabId: 1, discarded: true }]);
+    let messageCount = 0;
+    globalThis.chrome.tabs.sendMessage = () => { messageCount += 1; };
+
+    const changed = await collectPlaybackMetrics(1);
+
+    const record = getTabRecordsById()[1];
+    assert.equal(changed, false);
+    assert.equal(messageCount, 0);
+    assert.equal(record.autoPreparedRemainingTime, true);
+    assert.equal(record.videoDetails.remainingSeconds, 45);
+    assert.equal(record.remainingSecondsStale, false);
+  },
+);
+
+test(
   'collectPlaybackMetrics keeps remaining time stale until the current page reports media ready',
   { concurrency: false },
   async () => {
