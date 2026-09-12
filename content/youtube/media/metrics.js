@@ -32,10 +32,10 @@ export function collectVideoMetrics({
     title: details.title || null,
     url: details.url,
     playbackMetricsReady: isCurrentPlaybackReady(),
-    lengthSeconds: isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
+    metadataDurationSeconds: isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
     isLive: Boolean(details.isLive),
-    duration: getVideoDurationSeconds(video, player),
-    currentTime: getVideoCurrentTimeSeconds(video, player),
+    mediaDurationSeconds: getVideoDurationSeconds(video, player),
+    positionSeconds: getVideoCurrentTimeSeconds(video, player),
     playbackRate:
       video && isFiniteNumber(video.playbackRate) && video.playbackRate > 0
         ? video.playbackRate

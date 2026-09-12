@@ -196,7 +196,7 @@ test('handleContentScriptReady clears stale sort data on watch-to-watch SPA navi
   assert.equal(record.isLive, false);
   assert.equal(record.remainingSecondsStale, true);
   assert.deepEqual(getSortState().targetVideoTabOrder, [7]);
-  assert.equal(getSortState().isTargetOrderApplied, false);
+  assert.equal(getSortState().allVideosReadyAndOrdered, false);
 });
 
 test('handlePlaybackMetricsReady removes tracked rows when a stale event arrives off watch/shorts', async () => {
@@ -437,9 +437,9 @@ test(
         title: 'Video',
         url: sender.tab.url,
         playbackMetricsReady: false,
-        lengthSeconds: 300,
-        duration: 300,
-        currentTime: 180,
+        metadataDurationSeconds: 300,
+        mediaDurationSeconds: 300,
+        positionSeconds: 180,
         playbackRate: 1,
         isLive: false,
       });

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { setImmediate } from 'node:timers/promises';
 import { registerTabAndNavigationListeners } from '../../background/tabs/listeners.js';
-import { saveAutoPreparedTab } from '../../background/auto-preparation/auto-prepared-tabs.js';
+import { saveAutoPreparedTab } from '../../background/auto-preparation/session-cache.js';
 import { getSortState, getTabRecord } from '../../background/windows/store.js';
 import {
   createChromeTabFixture,
@@ -38,7 +38,7 @@ test('Chrome tab replacement transfers prepared time to the new sleeping tab ID'
   await setImmediate();
   assert.equal(getSortState().sortSummary.readyCount, 1);
   assert.equal(getTabRecord(200).videoDetails.remainingSeconds, 123);
-  assert.equal(getTabRecord(200).autoPreparedRemainingTime, true);
+  assert.equal(getTabRecord(200).hasAutoPreparedTime, true);
   assert.equal(saved['autoPreparedTab:100'], undefined);
 });
 

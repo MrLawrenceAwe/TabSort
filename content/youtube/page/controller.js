@@ -3,11 +3,18 @@ import { createExtensionRuntimeBridge } from './runtime-bridge.js';
 import { DEFAULT_PAGE_CONFIG } from './config.js';
 import { isFiniteNumber } from '../../../shared/guards.js';
 import { inferIsLiveNow } from '../metadata/live-status.js';
-import { shouldSendContentScriptReadySignal } from './ready-signal.js';
 import { createPlaybackReadinessTracker } from '../media/playback-readiness.js';
 import { createTitleObserver } from '../metadata/title-observer.js';
 import { handleCollectVideoMetricsMessage } from '../media/metrics.js';
 import { isYouTubeVideoPage } from '../../../shared/youtube/urls.js';
+
+export function shouldSendContentScriptReadySignal(
+  currentUrl,
+  lastScriptReadyUrl,
+  { force = false } = {},
+) {
+  return Boolean(currentUrl) && (force || currentUrl !== lastScriptReadyUrl);
+}
 
 export function createYouTubePageController({
   config = {},

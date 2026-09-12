@@ -2,7 +2,7 @@ import { createSortSummary } from '../shared/sorting/summary.js';
 
 export const popupState = {
   sortSummary: createSortSummary(),
-  isTargetOrderApplied: false,
+  allVideosReadyAndOrdered: false,
   isOrganising: false,
   isStartingAutoPreparation: false,
   autoPreparation: { status: 'idle' },
@@ -11,7 +11,7 @@ export const popupState = {
 
 export function resetPopupState() {
   popupState.sortSummary = createSortSummary();
-  popupState.isTargetOrderApplied = false;
+  popupState.allVideosReadyAndOrdered = false;
   popupState.isOrganising = false;
   popupState.isStartingAutoPreparation = false;
   popupState.autoPreparation = { status: 'idle' };

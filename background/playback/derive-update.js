@@ -31,7 +31,7 @@ function shouldIgnoreStaleMetricsPayload({ payloadUrl, requestedUrl, currentTabU
 }
 
 function resolveVideoLengthSeconds(metricsPayload, record) {
-  const pageLengthSeconds = toPositiveFiniteNumber(metricsPayload.lengthSeconds);
+  const pageLengthSeconds = toPositiveFiniteNumber(metricsPayload.metadataDurationSeconds);
   if (pageLengthSeconds != null) {
     return pageLengthSeconds;
   }
@@ -41,17 +41,17 @@ function resolveVideoLengthSeconds(metricsPayload, record) {
     return recordedLengthSeconds;
   }
 
-  return toPositiveFiniteNumber(metricsPayload.duration) ?? NaN;
+  return toPositiveFiniteNumber(metricsPayload.mediaDurationSeconds) ?? NaN;
 }
 
 function hasMediaDurationMismatch(metricsPayload, record, resolvedLengthSeconds) {
-  const videoDurationSeconds = toFiniteNumber(metricsPayload.duration);
+  const videoDurationSeconds = toFiniteNumber(metricsPayload.mediaDurationSeconds);
   if (videoDurationSeconds == null || !isFiniteNumber(resolvedLengthSeconds)) {
     return false;
   }
 
   const authoritativeLengthSeconds =
-    toPositiveFiniteNumber(metricsPayload.lengthSeconds) ??
+    toPositiveFiniteNumber(metricsPayload.metadataDurationSeconds) ??
     toPositiveFiniteNumber(record?.videoDetails?.lengthSeconds);
 
   if (authoritativeLengthSeconds == null) {
@@ -65,8 +65,8 @@ function hasMediaDurationMismatch(metricsPayload, record, resolvedLengthSeconds)
 }
 
 function hasUsablePlaybackEvidence(metricsPayload) {
-  const videoDurationSeconds = toPositiveFiniteNumber(metricsPayload.duration);
-  const currentTimeSeconds = toFiniteNumber(metricsPayload.currentTime);
+  const videoDurationSeconds = toPositiveFiniteNumber(metricsPayload.mediaDurationSeconds);
+  const currentTimeSeconds = toFiniteNumber(metricsPayload.positionSeconds);
   return videoDurationSeconds != null && currentTimeSeconds != null;
 }
 
@@ -96,7 +96,7 @@ export function derivePlaybackUpdate({
   }
 
   const resolvedLengthSeconds = resolveVideoLengthSeconds(metricsPayload, record);
-  const currentTimeSeconds = Number(metricsPayload.currentTime ?? NaN);
+  const currentTimeSeconds = Number(metricsPayload.positionSeconds ?? NaN);
   const playbackRate = Number(metricsPayload.playbackRate ?? 1);
   const isLive =
     metricsPayload.isLive === true ? true : metricsPayload.isLive === false ? false : record.isLive;

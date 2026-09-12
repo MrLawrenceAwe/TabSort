@@ -11,7 +11,7 @@ import {
   isSyncTokenCurrent,
   listTabIds,
 } from '../windows/store.js';
-import { reconcileWindowTabRecords } from '../tabs/reconcile.js';
+import { reconcileWindowTabRecords } from '../tabs/reconcile-window.js';
 import { shouldRefreshRecordMetrics } from '../../shared/tabs/refresh-policy.js';
 
 function resolveTabAction(message) {

@@ -18,7 +18,7 @@ test('shows the organise button when ready videos are behind other tabs', () => 
   const sortSummary = createSortSummary({
     sortableCount: 2,
     readyCount: 2,
-    readyPrefixMatchesPlan: false,
+    readyTabsLeadInOrder: false,
   });
 
   assert.equal(shouldShowOrganiseButton(sortSummary, false), true);
@@ -26,13 +26,13 @@ test('shows the organise button when ready videos are behind other tabs', () => 
 
 test('organise button requires two ready tabs and an unapplied ready prefix', () => {
   assert.equal(shouldShowOrganiseButton(createSortSummary({
-    readyCount: 1, readyPrefixMatchesPlan: false,
+    readyCount: 1, readyTabsLeadInOrder: false,
   }), false), false);
   assert.equal(shouldShowOrganiseButton(createSortSummary({
-    readyCount: 2, sortableCount: 3, readyPrefixMatchesPlan: true,
+    readyCount: 2, sortableCount: 3, readyTabsLeadInOrder: true,
   }), false), false);
   assert.equal(shouldShowOrganiseButton(createSortSummary({
-    readyCount: 2, sortableCount: 3, readyPrefixMatchesPlan: false,
+    readyCount: 2, sortableCount: 3, readyTabsLeadInOrder: false,
   }), false), true);
 });
 
@@ -40,11 +40,11 @@ test('identifies ready tabs that are already in their intended order', () => {
   const partiallyReadyInOrder = createSortSummary({
     readyCount: 2,
     sortableCount: 3,
-    readyPrefixMatchesPlan: true,
+    readyTabsLeadInOrder: true,
   });
 
   assert.equal(hasReadyTabsInOrder(partiallyReadyInOrder, false), true);
-  assert.equal(getOrganisedBadgeText(partiallyReadyInOrder, false), 'Ready tabs already in order');
-  assert.equal(getOrganisedBadgeText(partiallyReadyInOrder, true), 'Tabs organised');
+  assert.equal(getOrganisedBadgeText(false), 'Ready tabs already in order');
+  assert.equal(getOrganisedBadgeText(true), 'YouTube tabs organised');
   assert.equal(hasReadyTabsInOrder(createSortSummary({ readyCount: 1 }), false), false);
 });

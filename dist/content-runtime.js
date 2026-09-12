@@ -260,11 +260,6 @@
     return false;
   }
 
-  // content/youtube/page/ready-signal.js
-  function shouldSendContentScriptReadySignal(currentUrl, lastScriptReadyUrl, { force = false } = {}) {
-    return Boolean(currentUrl) && (force || currentUrl !== lastScriptReadyUrl);
-  }
-
   // content/youtube/media/elements.js
   function getPrimaryVideoElement(environment = globalThis) {
     const runtimeDocument = environment.document ?? globalThis.document;
@@ -565,10 +560,10 @@
       title: details.title || null,
       url: details.url,
       playbackMetricsReady: isCurrentPlaybackReady(),
-      lengthSeconds: isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
+      metadataDurationSeconds: isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
       isLive: Boolean(details.isLive),
-      duration: getVideoDurationSeconds(video, player),
-      currentTime: getVideoCurrentTimeSeconds(video, player),
+      mediaDurationSeconds: getVideoDurationSeconds(video, player),
+      positionSeconds: getVideoCurrentTimeSeconds(video, player),
       playbackRate: video && isFiniteNumber(video.playbackRate) && video.playbackRate > 0 ? video.playbackRate : 1
     };
   }
@@ -601,6 +596,9 @@
   }
 
   // content/youtube/page/controller.js
+  function shouldSendContentScriptReadySignal(currentUrl, lastScriptReadyUrl, { force = false } = {}) {
+    return Boolean(currentUrl) && (force || currentUrl !== lastScriptReadyUrl);
+  }
   function createYouTubePageController({
     config = {},
     dependencies = {},

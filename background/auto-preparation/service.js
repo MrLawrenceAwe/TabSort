@@ -7,17 +7,34 @@ import {
   getTrackedWindowId,
   listTabRecords,
 } from '../windows/store.js';
-import { reconcileWindowTabRecords } from '../tabs/reconcile.js';
+import { reconcileWindowTabRecords } from '../tabs/reconcile-window.js';
 import { collectPlaybackMetrics } from '../playback/collect.js';
 import { broadcastSnapshotUpdate } from '../tab-snapshot.js';
 import { updateSortStateAndBroadcast } from '../sorting/update-sort-state.js';
 import { hasReadyRemainingTime } from '../../shared/tabs/sort-readiness.js';
 import { getYouTubeVideoId } from '../../shared/youtube/urls.js';
 import { openTikTokPipForAutoPreparation } from '../integrations/tiktok-pip.js';
-import { saveAutoPreparedTab } from './auto-prepared-tabs.js';
+import { saveAutoPreparedTab } from './session-cache.js';
 
 function requireWindow(windowId) {
   if (getTrackedWindowId() !== windowId) throw new Error('Stopped because the tracked window changed');
+}
+
+async function restoreReturnTab(tabId, windowId, returnTabId) {
+  let nextReturnTabId = returnTabId;
+  let restored = await updateTab(nextReturnTabId, { active: true });
+  if (!restored) {
+    const fallbackTabs = await listWindowTabs(windowId);
+    const fallback =
+      fallbackTabs?.find(tab => tab.id !== tabId && !tab.discarded) ??
+      fallbackTabs?.find(tab => tab.id !== tabId);
+    if (!fallback) return null;
+    nextReturnTabId = fallback.id;
+    restored = fallback.active || await updateTab(nextReturnTabId, { active: true });
+  }
+  requireWindow(windowId);
+  if (!restored) return null;
+  return nextReturnTabId;
 }
 
 const controller = createAutoPreparationController({
@@ -28,13 +45,13 @@ const controller = createAutoPreparationController({
     requireWindow(windowId);
     if (tab.windowId !== windowId) return null;
     const record = getTabRecord(tabId);
-    const identity = getYouTubeVideoId(tab.url);
+    const videoId = getYouTubeVideoId(tab.url);
     return {
-      active: tab.active, discarded: tab.discarded, identity,
-      excluded: tab.pinned || record?.isLive || !identity,
+      active: tab.active, discarded: tab.discarded, videoId,
+      excluded: tab.pinned || record?.isLive || !videoId,
       loaded: !tab.discarded && tab.status === 'complete',
       ready: !tab.discarded && tab.status === 'complete' &&
-        identity === getYouTubeVideoId(record?.url) && hasReadyRemainingTime(record),
+        videoId === getYouTubeVideoId(record?.url) && hasReadyRemainingTime(record),
       remainingSeconds: record?.videoDetails?.remainingSeconds,
     };
   },
@@ -56,40 +73,29 @@ const controller = createAutoPreparationController({
       ]);
     } finally { clearTimeout(timer); }
   },
-  async settle(tabId, windowId, returnTabId, { autoPrepared, wasDiscarded }) {
+  async finishTabPreparation(tabId, windowId, returnTabId, { autoPrepared, wasDiscarded }) {
     requireWindow(windowId);
     const autoPreparedRecord = getTabRecord(tabId);
     const autoPreparedRemainingSeconds = autoPreparedRecord?.videoDetails?.remainingSeconds;
-    const autoPreparedIdentity = getYouTubeVideoId(autoPreparedRecord?.url);
+    const autoPreparedVideoId = getYouTubeVideoId(autoPreparedRecord?.url);
     if (autoPrepared && wasDiscarded) {
       // Persist before discarding; focus changes may replace the live records.
       await saveAutoPreparedTab(autoPreparedRecord);
       const record = getMutableTabRecord(tabId);
-      if (record) record.autoPreparedRemainingTime = true;
+      if (record) record.hasAutoPreparedTime = true;
     }
     if (tabId === returnTabId) return returnTabId;
-    let nextReturnTabId = returnTabId;
-    let restored = await updateTab(nextReturnTabId, { active: true });
-    if (!restored) {
-      const fallbackTabs = await listWindowTabs(windowId);
-      const fallback =
-        fallbackTabs?.find(tab => tab.id !== tabId && !tab.discarded) ??
-        fallbackTabs?.find(tab => tab.id !== tabId);
-      if (!fallback) return null;
-      nextReturnTabId = fallback.id;
-      restored = fallback.active || await updateTab(nextReturnTabId, { active: true });
-    }
-    requireWindow(windowId);
-    if (!restored) return null;
+    const nextReturnTabId = await restoreReturnTab(tabId, windowId, returnTabId);
+    if (nextReturnTabId == null) return null;
     if (wasDiscarded) {
       const discarded = await discardTab(tabId);
       if (discarded && autoPrepared && Number.isFinite(autoPreparedRemainingSeconds)) {
         const record = getMutableTabRecord(tabId);
-        if (record && getYouTubeVideoId(record.url) === autoPreparedIdentity) {
+        if (record && getYouTubeVideoId(record.url) === autoPreparedVideoId) {
           record.videoDetails = record.videoDetails || {};
           record.videoDetails.remainingSeconds = autoPreparedRemainingSeconds;
           record.remainingSecondsStale = false;
-          record.autoPreparedRemainingTime = true;
+          record.hasAutoPreparedTime = true;
           updateSortStateAndBroadcast();
         }
       }
@@ -118,7 +124,7 @@ export async function startAutoPreparation(message) {
     const items = listTabRecords()
       .filter(record => !record.pinned && !record.isLive && !hasReadyRemainingTime(record))
       .sort((a, b) => a.index - b.index)
-      .map(record => ({ id: record.id, identity: getYouTubeVideoId(record.url),
+      .map(record => ({ id: record.id, videoId: getYouTubeVideoId(record.url),
         title: record.videoDetails?.title || 'YouTube video' }));
     if (!items.length) return { ok: false, error: 'noUnreadyTabs' };
     const existing = getProgressWindowId();
@@ -126,7 +132,7 @@ export async function startAutoPreparation(message) {
       try { await chrome.windows.remove(existing); } catch { /* Already closed. */ }
     }
     const progress = await chrome.windows.create({
-      url: chrome.runtime.getURL('popup/auto-preparation.html'),
+      url: chrome.runtime.getURL('preparation-progress/index.html'),
       type: 'popup', focused: false, width: 440, height: 260,
     });
     setProgressWindowId(progress.id);

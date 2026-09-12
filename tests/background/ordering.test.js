@@ -32,7 +32,7 @@ test('ready prefix compares both placement and time order with or without tab-st
   for (const [label, records, expected] of cases) {
     for (const orderedWindowTabs of [[], records]) {
       const state = deriveSortState(records, { orderedWindowTabs });
-      assert.equal(state.sortSummary.readyPrefixMatchesPlan, expected, label);
+      assert.equal(state.sortSummary.readyTabsLeadInOrder, expected, label);
     }
   }
 
@@ -40,10 +40,10 @@ test('ready prefix compares both placement and time order with or without tab-st
   const otherTab = { id: 1, index: 0, url: 'https://example.com' };
   assert.equal(deriveSortState(records, {
     orderedWindowTabs: [otherTab, ...records],
-  }).sortSummary.readyPrefixMatchesPlan, false);
+  }).sortSummary.readyTabsLeadInOrder, false);
   assert.equal(deriveSortState(records, {
     orderedWindowTabs: [{ ...otherTab, pinned: true }, ...records],
-  }).sortSummary.readyPrefixMatchesPlan, true);
+  }).sortSummary.readyTabsLeadInOrder, true);
 });
 
 test('orders known remaining-time tabs before unknown tabs', () => {
@@ -58,7 +58,7 @@ test('orders known remaining-time tabs before unknown tabs', () => {
 
   assert.deepEqual(getSortState().targetVideoTabOrder, [3, 1, 2]);
   assert.deepEqual(getSortState().trackedTabOrder, [1, 2, 3]);
-  assert.equal(getSortState().isTargetOrderApplied, false);
+  assert.equal(getSortState().allVideosReadyAndOrdered, false);
 });
 
 test('marks window as sorted only when all actionable tabs are known and ordered', () => {
@@ -70,7 +70,7 @@ test('marks window as sorted only when all actionable tabs are known and ordered
 
   updateSortStateAndBroadcast();
 
-  assert.equal(getSortState().isTargetOrderApplied, true);
+  assert.equal(getSortState().allVideosReadyAndOrdered, true);
 
 });
 
@@ -86,7 +86,7 @@ test('does not call a single sortable tab a completed sort', () => {
 
   updateSortStateAndBroadcast();
 
-  assert.equal(getSortState().isTargetOrderApplied, false);
+  assert.equal(getSortState().allVideosReadyAndOrdered, false);
 });
 
 test('detects a ready prefix that differs from the sort plan', () => {
@@ -101,7 +101,7 @@ test('detects a ready prefix that differs from the sort plan', () => {
   updateSortStateAndBroadcast();
 
   assert.equal(getSortState().sortSummary.readyCount, 2);
-  assert.equal(getSortState().sortSummary.readyPrefixMatchesPlan, false);
+  assert.equal(getSortState().sortSummary.readyTabsLeadInOrder, false);
 
 });
 
@@ -134,10 +134,10 @@ test('live tabs do not block sorted readiness for VOD tabs with known remaining 
 
   updateSortStateAndBroadcast();
 
-  assert.equal(getSortState().isTargetOrderApplied, true);
+  assert.equal(getSortState().allVideosReadyAndOrdered, true);
   assert.equal(getSortState().sortSummary.sortableCount, 2);
   assert.equal(getSortState().sortSummary.readyCount, 2);
-  assert.equal(getSortState().sortSummary.readyPrefixMatchesPlan, true);
+  assert.equal(getSortState().sortSummary.readyTabsLeadInOrder, true);
   assert.deepEqual(getSortState().targetVideoTabOrder, [1, 2]);
 });
 
@@ -164,10 +164,10 @@ test('pinned tracked tabs are excluded from sortable readiness totals', () => {
 
   updateSortStateAndBroadcast();
 
-  assert.equal(getSortState().isTargetOrderApplied, true);
+  assert.equal(getSortState().allVideosReadyAndOrdered, true);
   assert.equal(getSortState().sortSummary.sortableCount, 2);
   assert.equal(getSortState().sortSummary.readyCount, 2);
-  assert.equal(getSortState().sortSummary.readyPrefixMatchesPlan, true);
+  assert.equal(getSortState().sortSummary.readyTabsLeadInOrder, true);
   assert.deepEqual(getSortState().targetVideoTabOrder, [2, 3]);
 });
 
@@ -193,6 +193,6 @@ test('does not mark videos sorted while non-YouTube tabs remain in front', () =>
 
   updateSortStateAndBroadcast();
 
-  assert.equal(getSortState().isTargetOrderApplied, false);
+  assert.equal(getSortState().allVideosReadyAndOrdered, false);
 
 });

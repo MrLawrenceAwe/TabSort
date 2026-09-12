@@ -19,6 +19,9 @@ if (manifest.version !== packageMetadata.version) {
 const requiredFiles = new Set([
   manifest.background?.service_worker,
   manifest.action?.default_popup,
+  'preparation-progress/index.html',
+  'preparation-progress/controller.js',
+  'preparation-progress/styles.css',
   ...Object.values(manifest.icons || {}),
   ...Object.values(manifest.action?.default_icon || {}),
   ...(manifest.content_scripts || []).flatMap((entry) => entry.js || []),

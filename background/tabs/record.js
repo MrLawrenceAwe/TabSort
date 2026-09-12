@@ -29,7 +29,7 @@ export function createTabRecord(tabId, windowId, defaults = {}) {
     metricsWaitStartedAt: defaults.metricsWaitStartedAt ?? null,
     remainingSecondsStale:
       defaults.remainingSecondsStale == null ? true : Boolean(defaults.remainingSecondsStale),
-    autoPreparedRemainingTime: Boolean(defaults.autoPreparedRemainingTime),
+    hasAutoPreparedTime: Boolean(defaults.hasAutoPreparedTime),
   };
 }
 

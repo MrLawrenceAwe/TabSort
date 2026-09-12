@@ -12,7 +12,7 @@ import {
   activateTab,
   reloadTab,
 } from '../../background/messaging/tab-commands.js';
-import { reconcileWindowTabRecords } from '../../background/tabs/reconcile.js';
+import { reconcileWindowTabRecords } from '../../background/tabs/reconcile-window.js';
 import {
   ensureChromeApi,
   createChromeTabFixture,

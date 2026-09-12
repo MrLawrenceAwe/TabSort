@@ -68,8 +68,8 @@ test(
       createPlaybackMetricsFixture({
         title: 'New Video',
         url: 'https://www.youtube.com/watch?v=new',
-        lengthSeconds: 400,
-        currentTime: 10,
+        metadataDurationSeconds: 400,
+        positionSeconds: 10,
       }),
     );
 
@@ -138,7 +138,7 @@ test(
     resetTrackedWindowState();
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
-        autoPreparedRemainingTime: true,
+        hasAutoPreparedTime: true,
         videoDetails: { title: 'Prepared Video', remainingSeconds: 45, lengthSeconds: 120 },
         remainingSecondsStale: false,
       }),
@@ -153,7 +153,7 @@ test(
     const record = getTabRecordsById()[1];
     assert.equal(changed, false);
     assert.equal(messageCount, 0);
-    assert.equal(record.autoPreparedRemainingTime, true);
+    assert.equal(record.hasAutoPreparedTime, true);
     assert.equal(record.videoDetails.remainingSeconds, 45);
     assert.equal(record.remainingSecondsStale, false);
   },
@@ -180,8 +180,8 @@ test(
         title: 'New Video',
         url: 'https://www.youtube.com/watch?v=new',
         playbackMetricsReady: false,
-        lengthSeconds: 400,
-        currentTime: 10,
+        metadataDurationSeconds: 400,
+        positionSeconds: 10,
       }),
     );
 
@@ -271,7 +271,7 @@ test(
 
     stubChromeTabMetrics({
       url: 'https://www.youtube.com/watch?v=archive',
-      metrics: { duration: 0, currentTime: 0 },
+      metrics: { mediaDurationSeconds: 0, positionSeconds: 0 },
     });
 
     await collectPlaybackMetrics(1);
@@ -302,7 +302,7 @@ test(
 
     stubChromeTabMetrics({
       url: 'https://www.youtube.com/watch?v=archive',
-      metrics: { duration: 6211, currentTime: null },
+      metrics: { mediaDurationSeconds: 6211, positionSeconds: null },
     });
 
     await collectPlaybackMetrics(1);
@@ -340,9 +340,9 @@ test(
       createPlaybackMetricsFixture({
         title: 'OpenAI vs. Anthropic\'s Direct Faceoff + Future of Agents - With Aaron Levie',
         url: 'https://www.youtube.com/watch?v=previous',
-        lengthSeconds: null,
-        duration: 72,
-        currentTime: 72,
+        metadataDurationSeconds: null,
+        mediaDurationSeconds: 72,
+        positionSeconds: 72,
       }),
     );
 
@@ -383,8 +383,8 @@ test(
         title: `Video ${tabId}`,
         url: `https://www.youtube.com/watch?v=${tabId}`,
         playbackMetricsReady: true,
-        lengthSeconds: 120,
-        currentTime: tabId * 10,
+        metadataDurationSeconds: 120,
+        positionSeconds: tabId * 10,
         playbackRate: 1,
         isLive: false,
       });

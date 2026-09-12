@@ -21,7 +21,7 @@ function createTrackedWindowStoreState() {
     orderedWindowTabs: [],
     targetVideoTabOrder: [],
     trackedTabOrder: [],
-    isTargetOrderApplied: false,
+    allVideosReadyAndOrdered: false,
     sortSummary: createSortSummary(),
     windowId: null,
     snapshotSignature: null,
@@ -35,7 +35,7 @@ export function getSortState() {
   return {
     targetVideoTabOrder: [...trackedWindowState.targetVideoTabOrder],
     trackedTabOrder: [...trackedWindowState.trackedTabOrder],
-    isTargetOrderApplied: trackedWindowState.isTargetOrderApplied,
+    allVideosReadyAndOrdered: trackedWindowState.allVideosReadyAndOrdered,
     sortSummary: createSortSummary(trackedWindowState.sortSummary),
   };
 }
@@ -137,12 +137,12 @@ export function isSyncTokenCurrent(syncToken) {
 export function setSortState({
   trackedTabOrder = [],
   targetVideoTabOrder = [],
-  isTargetOrderApplied = false,
+  allVideosReadyAndOrdered = false,
   sortSummary = createSortSummary(),
 } = {}) {
   trackedWindowState.targetVideoTabOrder = [...targetVideoTabOrder];
   trackedWindowState.trackedTabOrder = [...trackedTabOrder];
-  trackedWindowState.isTargetOrderApplied = Boolean(isTargetOrderApplied);
+  trackedWindowState.allVideosReadyAndOrdered = Boolean(allVideosReadyAndOrdered);
   trackedWindowState.sortSummary = createSortSummary(sortSummary);
 }
 

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   saveAutoPreparedTab, removeAutoPreparedTab, readAutoPreparedTabs, restoreAutoPreparedTab,
-} from '../../background/auto-preparation/auto-prepared-tabs.js';
+} from '../../background/auto-preparation/session-cache.js';
 
 test('saved auto-preparation survives record loss but cannot be reused for awake or different videos', async () => {
   const storage = {};

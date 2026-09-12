@@ -7,8 +7,8 @@ import {
   getTabRecordsById,
   getTrackedWindowId,
 } from '../../background/windows/store.js';
-import { reconcileWindowTabRecords } from '../../background/tabs/reconcile.js';
-import { saveAutoPreparedTab } from '../../background/auto-preparation/auto-prepared-tabs.js';
+import { reconcileWindowTabRecords } from '../../background/tabs/reconcile-window.js';
+import { saveAutoPreparedTab } from '../../background/auto-preparation/session-cache.js';
 import {
   ensureChromeApi,
   createChromeTabFixture,
@@ -34,7 +34,7 @@ test('auto-prepared sleeping tabs remain sortable after visiting another window'
       loadState: TAB_LOAD_STATES.DISCARDED,
       videoDetails: { title: 'Prepared video', remainingSeconds: 45, lengthSeconds: 120 },
       remainingSecondsStale: false,
-      autoPreparedRemainingTime: true,
+      hasAutoPreparedTime: true,
     }),
   });
   await saveAutoPreparedTab(getTabRecordsById()[1]);
@@ -100,7 +100,7 @@ test(
         loadState: TAB_LOAD_STATES.LOADED,
         videoDetails: { title: 'Prepared video', remainingSeconds: 45, lengthSeconds: 120 },
         remainingSecondsStale: false,
-        autoPreparedRemainingTime: true,
+        hasAutoPreparedTime: true,
       }),
     });
 
@@ -112,7 +112,7 @@ test(
     assert.equal(record.loadState, TAB_LOAD_STATES.DISCARDED);
     assert.equal(record.videoDetails.remainingSeconds, 45);
     assert.equal(record.remainingSecondsStale, false);
-    assert.equal(record.autoPreparedRemainingTime, true);
+    assert.equal(record.hasAutoPreparedTime, true);
     assert.equal(getSortState().sortSummary.readyCount, 1);
   },
 );
@@ -135,7 +135,7 @@ test(
     const record = getTabRecordsById()[1];
     assert.equal(record.videoDetails.remainingSeconds, null);
     assert.equal(record.remainingSecondsStale, true);
-    assert.equal(record.autoPreparedRemainingTime, false);
+    assert.equal(record.hasAutoPreparedTime, false);
   },
 );
 

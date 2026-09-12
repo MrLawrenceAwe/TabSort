@@ -1,13 +1,8 @@
+import { RECENTLY_LOADED_MS, RECENT_WATCH_TRANSITION_MS, MEDIA_WAIT_GRACE_MS, LOADING_GRACE_MS } from '../../shared/tabs/grace-periods.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
-import {
-  LOADING_GRACE_MS,
-  MEDIA_WAIT_GRACE_MS,
-  RECENTLY_LOADED_MS,
-  RECENT_WATCH_TRANSITION_MS,
-} from '../../shared/tabs/guidance.js';
 import {
   shouldPollSnapshot,
   shouldRetrySnapshotLoad,

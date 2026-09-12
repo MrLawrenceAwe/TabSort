@@ -1,3 +1,5 @@
+import { getSiteKey } from '../urls.js';
+
 const YOUTUBE_DOMAIN_REGEX = /(^|\.)youtube\.com$/i;
 
 export const isYouTubeVideoPage = (url) => getYouTubeVideoId(url) != null;
@@ -34,16 +36,6 @@ export function hasYouTubeVideoChanged(previousUrl, nextUrl) {
   }
 
   return Boolean(previousUrl) && Boolean(nextUrl) && previousUrl !== nextUrl;
-}
-
-export function getSiteKey(url) {
-  if (typeof url !== 'string' || !url) return '';
-  try {
-    const parsed = new URL(url);
-    return parsed.hostname || url;
-  } catch (_) {
-    return url;
-  }
 }
 
 export function isYouTubeSite(url) {

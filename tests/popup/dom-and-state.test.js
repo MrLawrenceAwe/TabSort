@@ -59,8 +59,8 @@ function createFakeDocument() {
 
 test('popup view model keeps flat sort summary fields available for view decisions', () => {
   resetPopupState();
-  popupState.sortSummary.readyPrefixMatchesPlan = false;
-  assert.equal(popupState.sortSummary.readyPrefixMatchesPlan, false);
+  popupState.sortSummary.readyTabsLeadInOrder = false;
+  assert.equal(popupState.sortSummary.readyTabsLeadInOrder, false);
 });
 
 test('popup accepts snapshot broadcasts only for its active window', () => {
@@ -96,7 +96,7 @@ test('ordered ready subset keeps the unfinished readiness count visible', () => 
   resetPopupDom();
   resetPopupState();
   initializePopupDom(document);
-  popupState.sortSummary = { readyCount: 2, sortableCount: 10, readyPrefixMatchesPlan: true };
+  popupState.sortSummary = { readyCount: 2, sortableCount: 10, readyTabsLeadInOrder: true };
   syncPopupLayout();
   assert.equal(document.elements.get('organiseStatus').textContent,
     '2 of 10 sortable tabs ready · Ready tabs in order.');

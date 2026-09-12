@@ -1,17 +1,20 @@
+import { createSortSummary } from '../shared/sorting/summary.js';
+import { createBacklogSummary, formatBacklogSummary } from './backlog-summary.js';
 import { POPUP_LOG_LEVELS, toErrorMessage } from '../shared/log.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
-import { loadSortOptions, saveSortOptions } from '../shared/sort-options.js';
+import { loadPreferences, savePreferences } from '../shared/preferences.js';
 import { createRuntimeClient } from './runtime-client.js';
 import { createTabSnapshotClient } from './tab-snapshot-client.js';
 import { createSnapshotPoller } from './snapshot-poller.js';
 import { renderTabList } from './tab-list-view.js';
-import { syncPopupLayout } from './layout-view.js';
+import { syncPopupLayout, setNextStepHeaderVisible } from './layout-view.js';
 import {
   initializePopupDom,
   getPopupElement,
   setErrorMessage,
   setNoticeMessage,
   setStateMessage,
+  setBacklogSummary,
 } from './elements.js';
 import {
   isSnapshotForActiveWindow,
@@ -57,28 +60,45 @@ async function runWithPopupErrorLogging(task, context) {
 }
 
 async function initializePopupPreferences() {
-  const options = await loadSortOptions();
+  const options = await loadPreferences();
   const groupOtherTabsToggle = getPopupElement('groupOtherTabsToggle');
   const openTikTokPipToggle = getPopupElement('openTikTokPipToggle');
 
   if (groupOtherTabsToggle) {
     groupOtherTabsToggle.checked = Boolean(options.groupOtherTabsBySite);
     groupOtherTabsToggle.addEventListener('change', () => {
-      saveSortOptions({ groupOtherTabsBySite: groupOtherTabsToggle.checked });
+      savePreferences({ groupOtherTabsBySite: groupOtherTabsToggle.checked });
     });
   }
   if (openTikTokPipToggle) {
     openTikTokPipToggle.checked = Boolean(options.openTikTokPipOnAutoPrepare);
     openTikTokPipToggle.addEventListener('change', () => {
-      saveSortOptions({ openTikTokPipOnAutoPrepare: openTikTokPipToggle.checked });
+      savePreferences({ openTikTokPipOnAutoPrepare: openTikTokPipToggle.checked });
     });
   }
 }
 
-function renderAndScheduleSnapshot(snapshot) {
-  renderTabList(snapshot, {
-    requestTabAction,
+export function applyTabSnapshot(snapshot) {
+  if (!snapshot) return;
+  const records = (snapshot.trackedTabOrder ?? [])
+    .map(tabId => snapshot.tabRecordsById?.[tabId])
+    .filter(Boolean);
+  const allVideosReadyAndOrdered = snapshot.allVideosReadyAndOrdered === true;
+  applyPopupState({
+    allVideosReadyAndOrdered,
+    sortSummary: createSortSummary(snapshot.sortSummary),
+    autoPreparation: snapshot.autoPreparation ?? { status: 'idle' },
   });
+  setErrorMessage('');
+  setNextStepHeaderVisible(!allVideosReadyAndOrdered);
+  renderTabList(records, { allVideosReadyAndOrdered, requestTabAction });
+  setStateMessage(records.length ? '' : 'No YouTube video tabs in this window.');
+  setBacklogSummary(formatBacklogSummary(createBacklogSummary(records)));
+  syncPopupLayout();
+}
+
+function renderAndScheduleSnapshot(snapshot) {
+  applyTabSnapshot(snapshot);
   if (popupState.autoPreparation.status !== 'running') snapshotPoller.scheduleIfNeeded(snapshot);
 }
 
@@ -202,7 +222,7 @@ export async function initializePopup() {
   syncPopupLayout();
   setErrorMessage('');
   setNoticeMessage('');
-  setStateMessage('Loading YouTube Watch Tabs…');
+  setStateMessage('Loading YouTube video tabs…');
 
   await runWithPopupErrorLogging(runtimeClient.syncActiveWindow, 'Failed to refresh active context');
   await runWithPopupErrorLogging(initializePopupPreferences, 'Failed to set up option controls');

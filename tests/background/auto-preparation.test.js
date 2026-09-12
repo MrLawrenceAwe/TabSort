@@ -4,10 +4,10 @@ import { createAutoPreparationController } from '../../background/auto-preparati
 
 function harness(overrides = {}) {
   let time = 0;
-  const tabs = new Map([1, 2, 3].map(id => [id, { identity: String(id), active: false, loaded: true, ready: false }]));
+  const tabs = new Map([1, 2, 3].map(id => [id, { videoId: String(id), active: false, loaded: true, ready: false }]));
   const activated = [];
   const refreshed = [];
-  const settled = [];
+  const finishedTabs = [];
   let done;
   const finished = new Promise(resolve => { done = resolve; });
   const controller = createAutoPreparationController({
@@ -21,15 +21,15 @@ function harness(overrides = {}) {
       return true;
     },
     refresh: async id => { refreshed.push(id); tabs.get(id).ready = true; },
-    settle: async (id, _windowId, returnTabId, result) => {
-      settled.push({ id, returnTabId, ...result });
+    finishTabPreparation: async (id, _windowId, returnTabId, result) => {
+      finishedTabs.push({ id, returnTabId, ...result });
       return returnTabId ?? 99;
     },
     publish: state => { if (state.status !== 'running') done(state); },
     ...overrides,
   });
-  const items = [1, 2, 3].map(id => ({ id, identity: String(id), title: `Video ${id}` }));
-  return { controller, tabs, activated, refreshed, settled, items, finished };
+  const items = [1, 2, 3].map(id => ({ id, videoId: String(id), title: `Video ${id}` }));
+  return { controller, tabs, activated, refreshed, finishedTabs, items, finished };
 }
 
 test('auto-preparation activates each tab and waits for playback readiness before advancing', async () => {
@@ -42,7 +42,7 @@ test('auto-preparation activates each tab and waits for playback readiness befor
   assert.deepEqual([...new Set(h.refreshed)], [1, 3]);
   assert.equal(result.status, 'complete');
   assert.equal(result.ready, 3);
-  assert.deepEqual(h.settled.map(entry => entry.id), [1, 3]);
+  assert.deepEqual(h.finishedTabs.map(entry => entry.id), [1, 3]);
 });
 
 test('stalled tabs time out and do not prevent subsequent tabs from being visited', async () => {
@@ -78,7 +78,7 @@ test('manual tab switching stops auto-preparation instead of taking focus back',
 test('removed, navigated and excluded tabs are skipped before activation', async () => {
   const h = harness();
   h.tabs.delete(1);
-  h.tabs.get(2).identity = 'different-video';
+  h.tabs.get(2).videoId = 'different-video';
   h.tabs.get(3).excluded = true;
   h.controller.start(1, h.items);
   assert.equal((await h.finished).skipped, 3);
@@ -107,7 +107,7 @@ test('a sleeping tab is activated and allowed to load before collecting playback
   assert.deepEqual(h.activated, [1]);
   assert.deepEqual([...new Set(h.refreshed)], [1]);
   assert.equal(result.ready, 1);
-  assert.deepEqual(h.settled, [{
+  assert.deepEqual(h.finishedTabs, [{
     id: 1, returnTabId: 99, autoPrepared: true, wasDiscarded: true,
   }]);
 });
@@ -130,5 +130,5 @@ test('auto-preparation waits again when YouTube restores a saved playback positi
 
   assert.equal(result.ready, 1);
   assert.ok(refreshCount >= 4);
-  assert.equal(h.settled[0].autoPrepared, true);
+  assert.equal(h.finishedTabs[0].autoPrepared, true);
 });

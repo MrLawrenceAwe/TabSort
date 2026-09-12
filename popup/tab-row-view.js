@@ -12,7 +12,7 @@ const COLUMNS = Object.freeze([
   { key: 'tab-position', getter: formatPosition },
 ]);
 
-export function renderTabRow(row, tabRecord, isTargetOrderApplied, requestTabAction) {
+export function renderTabRow(row, tabRecord, allVideosReadyAndOrdered, requestTabAction) {
   const titleCell = row.insertCell(0);
   titleCell.textContent = tabRecord.videoDetails?.title ?? tabRecord.url;
   titleCell.title = titleCell.textContent;
@@ -21,14 +21,14 @@ export function renderTabRow(row, tabRecord, isTargetOrderApplied, requestTabAct
   if (guidance === TAB_GUIDANCE.RELOAD_TAB) {
     row.classList.add('reload-required-row');
   }
-  if (!isTargetOrderApplied) {
+  if (!allVideosReadyAndOrdered) {
     insertGuidanceCell(row, tabRecord, guidance, requestTabAction);
   }
 
   insertInfoCells(row, tabRecord, guidance);
 
   const isReadyToSort = !tabRecord.pinned && !tabRecord.isLive && hasReadyRemainingTime(tabRecord);
-  if (isReadyToSort && !isTargetOrderApplied) row.classList.add('ready-row');
+  if (isReadyToSort && !allVideosReadyAndOrdered) row.classList.add('ready-row');
 }
 
 function insertInfoCells(row, record, guidance) {

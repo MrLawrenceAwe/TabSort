@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  DEFAULT_SORT_OPTIONS,
-  loadSortOptions,
-  saveSortOptions,
-} from '../shared/sort-options.js';
+  DEFAULT_PREFERENCES,
+  loadPreferences,
+  savePreferences,
+} from '../shared/preferences.js';
 
 function withMissingChrome(fn) {
   const hadChrome = Object.prototype.hasOwnProperty.call(globalThis, 'chrome');
@@ -43,20 +43,20 @@ function withChromeStorage(storage, fn) {
     });
 }
 
-test('loadSortOptions falls back to defaults when chrome is unavailable', async () => {
+test('loadPreferences falls back to defaults when chrome is unavailable', async () => {
   await withMissingChrome(async () => {
-    const options = await loadSortOptions();
-    assert.deepEqual(options, DEFAULT_SORT_OPTIONS);
+    const options = await loadPreferences();
+    assert.deepEqual(options, DEFAULT_PREFERENCES);
   });
 });
 
-test('saveSortOptions resolves when chrome is unavailable', async () => {
+test('savePreferences resolves when chrome is unavailable', async () => {
   await withMissingChrome(async () => {
-    await assert.doesNotReject(() => saveSortOptions({ groupOtherTabsBySite: true }));
+    await assert.doesNotReject(() => savePreferences({ groupOtherTabsBySite: true }));
   });
 });
 
-test('loadSortOptions falls back to local storage when sync storage fails', async () => {
+test('loadPreferences falls back to local storage when sync storage fails', async () => {
   const calls = [];
   await withChromeStorage(
     {
@@ -76,7 +76,7 @@ test('loadSortOptions falls back to local storage when sync storage fails', asyn
       },
     },
     async () => {
-      assert.deepEqual(await loadSortOptions(), {
+      assert.deepEqual(await loadPreferences(), {
         groupOtherTabsBySite: true,
         openTikTokPipOnAutoPrepare: false,
       });
@@ -85,7 +85,7 @@ test('loadSortOptions falls back to local storage when sync storage fails', asyn
   assert.deepEqual(calls, ['sync', 'local']);
 });
 
-test('saveSortOptions falls back to local storage when sync storage fails', async () => {
+test('savePreferences falls back to local storage when sync storage fails', async () => {
   const calls = [];
   const update = { groupOtherTabsBySite: true };
   await withChromeStorage(
@@ -105,7 +105,7 @@ test('saveSortOptions falls back to local storage when sync storage fails', asyn
         },
       },
     },
-    () => saveSortOptions(update),
+    () => savePreferences(update),
   );
   assert.deepEqual(calls, [
     ['sync', update],

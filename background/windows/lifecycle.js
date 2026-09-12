@@ -9,7 +9,7 @@ import {
   resetTrackedWindowStore,
 } from './store.js';
 import { collectPlaybackMetricsBatch } from '../playback/collect.js';
-import { reconcileWindowTabRecords } from '../tabs/reconcile.js';
+import { reconcileWindowTabRecords } from '../tabs/reconcile-window.js';
 import { listWindowTabs } from '../tabs/chrome-tabs.js';
 import { isYouTubeVideoPage } from '../../shared/youtube/urls.js';
 import { shouldRefreshRecordMetrics } from '../../shared/tabs/refresh-policy.js';
