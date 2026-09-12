@@ -22,6 +22,14 @@ export async function removeAutoPreparedTab(tabId) {
   await chrome.storage?.session?.remove(keyFor(tabId));
 }
 
+export async function transferAutoPreparedTab(addedTabId, removedTabId) {
+  const saved = await chrome.storage.session.get(keyFor(removedTabId));
+  const record = saved[keyFor(removedTabId)];
+  if (!record) return;
+  await chrome.storage.session.set({ [keyFor(addedTabId)]: record });
+  await removeAutoPreparedTab(removedTabId);
+}
+
 export async function readAutoPreparedTabs() {
   return await chrome.storage?.session?.get(null) ?? {};
 }
