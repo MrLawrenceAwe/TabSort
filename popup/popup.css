@@ -237,4 +237,4 @@ footer:has(.status-message:not(.hide):not(:empty), .option-toggle:not(.hide)) {
     border: 0;
 }
 
-#preparationStatus { flex-basis: 100%; margin: 0; }
+#autoPreparationStatus { flex-basis: 100%; margin: 0; }

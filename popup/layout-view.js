@@ -54,7 +54,7 @@ function updateOrganiseButton(organiseButton, shouldShow) {
   organiseButton.classList.toggle('hide', !shouldShow);
   if (shouldShow) {
     const { readyCount, sortableCount } = popupState.sortSummary;
-    organiseButton.disabled = popupState.isOrganising || (popupState.isStartingPreparation || popupState.preparation.status === 'running');
+    organiseButton.disabled = popupState.isOrganising || (popupState.isStartingAutoPreparation || popupState.autoPreparation.status === 'running');
     organiseButton.setAttribute?.('aria-busy', String(popupState.isOrganising));
     organiseButton.textContent = popupState.isOrganising
       ? 'Organising…'
@@ -84,20 +84,20 @@ export function syncPopupLayout() {
     popupState.isTargetOrderApplied,
   );
 
-  const preparation = popupState.preparation;
-  const running = preparation.status === 'running';
-  const prepareButton = getPopupElement('prepareButton');
-  if (prepareButton) {
-    prepareButton.classList.toggle('hide', running || popupState.sortSummary.readyCount >= popupState.sortSummary.sortableCount);
-    prepareButton.disabled = popupState.isStartingPreparation || popupState.isOrganising;
-    prepareButton.textContent = popupState.isStartingPreparation ? 'Starting…' : 'Prepare tabs';
+  const autoPreparation = popupState.autoPreparation;
+  const running = autoPreparation.status === 'running';
+  const autoPrepareButton = getPopupElement('autoPrepareButton');
+  if (autoPrepareButton) {
+    autoPrepareButton.classList.toggle('hide', running || popupState.sortSummary.readyCount >= popupState.sortSummary.sortableCount);
+    autoPrepareButton.disabled = popupState.isStartingAutoPreparation || popupState.isOrganising;
+    autoPrepareButton.textContent = popupState.isStartingAutoPreparation ? 'Starting auto-preparation…' : 'Auto-prepare tabs';
   }
-  getPopupElement('stopPreparationButton')?.classList.toggle('hide', !running);
-  const preparationStatus = getPopupElement('preparationStatus');
-  if (preparationStatus) {
-    preparationStatus.classList.toggle('hide', preparation.status === 'idle');
-    preparationStatus.textContent = preparation.status === 'idle' ? '' :
-      `${running ? 'Preparing' : preparation.status === 'complete' ? 'Finished' : 'Stopped'}: ${preparation.completed} of ${preparation.total} checked · ${preparation.ready} ready · ${preparation.skipped} skipped`;
+  getPopupElement('stopAutoPreparationButton')?.classList.toggle('hide', !running);
+  const autoPreparationStatus = getPopupElement('autoPreparationStatus');
+  if (autoPreparationStatus) {
+    autoPreparationStatus.classList.toggle('hide', autoPreparation.status === 'idle');
+    autoPreparationStatus.textContent = autoPreparation.status === 'idle' ? '' :
+      `${running ? 'Auto-preparing' : autoPreparation.status === 'complete' ? 'Auto-preparation finished' : 'Auto-preparation stopped'}: ${autoPreparation.completed} of ${autoPreparation.total} checked · ${autoPreparation.ready} ready · ${autoPreparation.skipped} skipped`;
   }
 
   setOptionToggleVisibility(shouldShowOrganise);

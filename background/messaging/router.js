@@ -1,5 +1,5 @@
-import { startPreparation, stopPreparation } from '../preparation/service.js';
-import { getPreparation } from '../preparation/state.js';
+import { startAutoPreparation, stopAutoPreparation } from '../auto-preparation/service.js';
+import { getAutoPreparation } from '../auto-preparation/state.js';
 import { RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import {
   activateTab,
@@ -31,9 +31,9 @@ function createAsyncResponder(sendResponse) {
 
 function createMessageHandlers(message, sender) {
   return {
-    [RUNTIME_MESSAGE_TYPES.START_PREPARATION]: () => startPreparation(message),
-    [RUNTIME_MESSAGE_TYPES.STOP_PREPARATION]: () => stopPreparation(),
-    [RUNTIME_MESSAGE_TYPES.GET_PREPARATION]: () => ({ ok: true, preparation: getPreparation() }),
+    [RUNTIME_MESSAGE_TYPES.START_AUTO_PREPARATION]: () => startAutoPreparation(message),
+    [RUNTIME_MESSAGE_TYPES.STOP_AUTO_PREPARATION]: () => stopAutoPreparation(),
+    [RUNTIME_MESSAGE_TYPES.GET_AUTO_PREPARATION]: () => ({ ok: true, autoPreparation: getAutoPreparation() }),
     [RUNTIME_MESSAGE_TYPES.GET_TAB_SNAPSHOT]: () => getWindowSnapshot(message),
     [RUNTIME_MESSAGE_TYPES.ORGANISE_TABS]: () => handleOrganiseTabs(message),
     [RUNTIME_MESSAGE_TYPES.PING]: async () => ({ ok: true }),

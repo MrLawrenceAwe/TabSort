@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createPreparationController } from '../../background/preparation/controller.js';
+import { createAutoPreparationController } from '../../background/auto-preparation/controller.js';
 
 function harness(overrides = {}) {
   let time = 0;
@@ -10,7 +10,7 @@ function harness(overrides = {}) {
   const settled = [];
   let done;
   const finished = new Promise(resolve => { done = resolve; });
-  const controller = createPreparationController({
+  const controller = createAutoPreparationController({
     now: () => time, timeoutMs: 60, pollMs: 10, settleMs: 10,
     delay: async ms => { time += ms; },
     inspect: async id => tabs.get(id),
@@ -32,7 +32,7 @@ function harness(overrides = {}) {
   return { controller, tabs, activated, refreshed, settled, items, finished };
 }
 
-test('preparation activates each tab and waits for playback readiness before advancing', async () => {
+test('auto-preparation activates each tab and waits for playback readiness before advancing', async () => {
   const h = harness();
   h.tabs.get(2).ready = true;
   assert.equal(h.controller.start(1, h.items).ok, true);
@@ -68,7 +68,7 @@ test('Stop prevents further activation even while a read is in flight', async ()
   assert.equal(h.controller.snapshot().status, 'stopped');
 });
 
-test('manual tab switching stops preparation instead of taking focus back', async () => {
+test('manual tab switching stops auto-preparation instead of taking focus back', async () => {
   const h = harness({ refresh: async id => { h.tabs.get(id).active = false; } });
   h.controller.start(1, h.items);
   assert.equal((await h.finished).status, 'stopped');
@@ -108,11 +108,11 @@ test('a sleeping tab is activated and allowed to load before collecting playback
   assert.deepEqual([...new Set(h.refreshed)], [1]);
   assert.equal(result.ready, 1);
   assert.deepEqual(h.settled, [{
-    id: 1, returnTabId: 99, prepared: true, wasDiscarded: true,
+    id: 1, returnTabId: 99, autoPrepared: true, wasDiscarded: true,
   }]);
 });
 
-test('preparation waits again when YouTube restores a saved playback position', async () => {
+test('auto-preparation waits again when YouTube restores a saved playback position', async () => {
   let refreshCount = 0;
   const h = harness({
     timeoutMs: 120,
@@ -130,5 +130,5 @@ test('preparation waits again when YouTube restores a saved playback position', 
 
   assert.equal(result.ready, 1);
   assert.ok(refreshCount >= 4);
-  assert.equal(h.settled[0].prepared, true);
+  assert.equal(h.settled[0].autoPrepared, true);
 });

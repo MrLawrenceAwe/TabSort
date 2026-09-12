@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { openTikTokPipForPreparation } from '../../background/integrations/tiktok-pip.js';
+import { openTikTokPipForAutoPreparation } from '../../background/integrations/tiktok-pip.js';
 
 test('requests TikTok PiP from the installed companion extension', async () => {
   const calls = [];
@@ -15,16 +15,16 @@ test('requests TikTok PiP from the installed companion extension', async () => {
     },
   };
 
-  const result = await openTikTokPipForPreparation(7);
+  const result = await openTikTokPipForAutoPreparation(7);
 
   assert.deepEqual(result, { ok: true, status: 'opened' });
   assert.deepEqual(calls, [{
     extensionId: 'cfjneijpfcflfdhikjdjihaddnbbkdnp',
-    message: { type: 'OPEN_FOR_TABSORT_PREPARATION', windowId: 7 },
+    message: { type: 'OPEN_FOR_TABSORT_AUTO_PREPARATION', windowId: 7 },
   }]);
 });
 
-test('reports an unavailable TikTok extension without rejecting preparation', async () => {
+test('reports an unavailable TikTok extension without rejecting auto-preparation', async () => {
   globalThis.chrome = {
     runtime: {
       lastError: null,
@@ -36,7 +36,7 @@ test('reports an unavailable TikTok extension without rejecting preparation', as
     },
   };
 
-  assert.deepEqual(await openTikTokPipForPreparation(7), {
+  assert.deepEqual(await openTikTokPipForAutoPreparation(7), {
     ok: false,
     error: 'extensionUnavailable',
   });

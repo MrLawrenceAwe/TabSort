@@ -1,10 +1,11 @@
 import { getYouTubeVideoId } from '../../shared/youtube/urls.js';
 
-const keyFor = tabId => `preparedTab:${tabId}`;
+const AUTO_PREPARED_KEY_PREFIX = 'autoPreparedTab:';
+const keyFor = tabId => `${AUTO_PREPARED_KEY_PREFIX}${tabId}`;
 
 // Session storage survives service-worker suspension and is independent of
 // whichever browser window the popup is currently tracking.
-export async function savePreparedTab(record) {
+export async function saveAutoPreparedTab(record) {
   const identity = getYouTubeVideoId(record?.url);
   if (!identity || record.remainingSecondsStale ||
       !Number.isFinite(record.videoDetails?.remainingSeconds)) return false;
@@ -17,22 +18,22 @@ export async function savePreparedTab(record) {
   return true;
 }
 
-export async function removePreparedTab(tabId) {
+export async function removeAutoPreparedTab(tabId) {
   await chrome.storage?.session?.remove(keyFor(tabId));
 }
 
-export async function readPreparedTabs() {
+export async function readAutoPreparedTabs() {
   return await chrome.storage?.session?.get(null) ?? {};
 }
 
-export function restorePreparedTab(tab, record, saved) {
-  const prepared = saved[keyFor(tab.id)];
-  if (!tab.discarded || !prepared ||
-      prepared.identity !== getYouTubeVideoId(tab.url) ||
-      !Number.isFinite(prepared.videoDetails?.remainingSeconds)) return record;
+export function restoreAutoPreparedTab(tab, record, saved) {
+  const autoPrepared = saved[keyFor(tab.id)];
+  if (!tab.discarded || !autoPrepared ||
+      autoPrepared.identity !== getYouTubeVideoId(tab.url) ||
+      !Number.isFinite(autoPrepared.videoDetails?.remainingSeconds)) return record;
   return {
     ...record,
-    videoDetails: { ...prepared.videoDetails },
+    videoDetails: { ...autoPrepared.videoDetails },
     remainingSecondsStale: false,
     autoPreparedRemainingTime: true,
   };

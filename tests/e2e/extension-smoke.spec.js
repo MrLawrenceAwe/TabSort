@@ -78,7 +78,7 @@ test('loads the bundled runtime and reports tracked YouTube tabs in the popup', 
     });
     await expect(popup.locator('#tabsTable .ready-row')).toHaveCount(1);
     await expect(popup.locator('td.remaining-time').nth(1)).toHaveText('Needs viewing');
-    await expect(popup.getByRole('button', { name: 'Prepare tabs', exact: true })).toBeVisible();
+    await expect(popup.getByRole('button', { name: 'Auto-prepare tabs', exact: true })).toBeVisible();
     await expect(popup.locator('#backlogSummary')).toHaveText('2 videos · 1m remaining · 1 unknown');
     for (const [colorScheme, background, readyBackground] of [
       ['light', 'rgb(252, 252, 250)', 'rgb(238, 245, 239)'],
@@ -95,8 +95,8 @@ test('loads the bundled runtime and reports tracked YouTube tabs in the popup', 
   }
 });
 
-test('prepares deferred media after activation, survives popup closure, and stops before visiting another tab', async () => {
-  const userDataDirectory = mkdtempSync(join(tmpdir(), 'tabsort-prepare-'));
+test('auto-prepares deferred media after activation, survives popup closure, and stops before visiting another tab', async () => {
+  const userDataDirectory = mkdtempSync(join(tmpdir(), 'tabsort-auto-prepare-'));
   const context = await chromium.launchPersistentContext(userDataDirectory, {
     headless: false,
     args: [`--disable-extensions-except=${projectRoot}`, `--load-extension=${projectRoot}`],
@@ -138,12 +138,12 @@ test('prepares deferred media after activation, survives popup closure, and stop
     const ids = await worker.evaluate(async () => (await chrome.tabs.query({ url: 'https://www.youtube.com/*' })).map(tab => tab.id));
     await popup.reload();
     await expect(popup.locator('#organiseStatus')).toContainText('0 of 2');
-    await popup.getByRole('button', { name: 'Prepare tabs', exact: true }).click();
-    await expect.poll(() => context.pages().some(page => page.url().endsWith('/preparation.html'))).toBe(true);
-    const progress = context.pages().find(page => page.url().endsWith('/preparation.html'));
+    await popup.getByRole('button', { name: 'Auto-prepare tabs', exact: true }).click();
+    await expect.poll(() => context.pages().some(page => page.url().endsWith('/auto-preparation.html'))).toBe(true);
+    const progress = context.pages().find(page => page.url().endsWith('/auto-preparation.html'));
     await popup.close();
     await expect(progress.locator('#progress')).toHaveText('2 of 2 checked · 2 ready · 0 skipped', { timeout: 10000 });
-    await expect(progress.getByRole('heading')).toHaveText('Preparation finished');
+    await expect(progress.getByRole('heading')).toHaveText('Auto-preparation finished');
     await expect.poll(() => progress.evaluate(async ids => {
       const { windowId } = await chrome.tabs.get(ids[0]);
       const snapshot = await chrome.runtime.sendMessage({ type: 'getTabSnapshot', windowId });
@@ -160,9 +160,9 @@ test('prepares deferred media after activation, survives popup closure, and stop
     await secondStalled.goto('https://www.youtube.com/watch?v=stalled-two');
     const stalledIds = await worker.evaluate(async () => (await chrome.tabs.query({ url: 'https://www.youtube.com/watch?v=stalled-*' })).map(tab => tab.id));
     await reopened.reload();
-    await reopened.getByRole('button', { name: 'Prepare tabs', exact: true }).click();
-    await expect.poll(() => context.pages().some(page => page.url().endsWith('/preparation.html'))).toBe(true);
-    const stopWindow = context.pages().find(page => page.url().endsWith('/preparation.html'));
+    await reopened.getByRole('button', { name: 'Auto-prepare tabs', exact: true }).click();
+    await expect.poll(() => context.pages().some(page => page.url().endsWith('/auto-preparation.html'))).toBe(true);
+    const stopWindow = context.pages().find(page => page.url().endsWith('/auto-preparation.html'));
     await expect.poll(() => worker.evaluate(async id => (await chrome.tabs.get(id)).active, stalledIds[0])).toBe(true);
     await stopWindow.getByRole('button', { name: 'Stop', exact: true }).click();
     await expect(stopWindow.getByRole('heading')).toHaveText('Stopped');

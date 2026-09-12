@@ -6,9 +6,9 @@ function createPopupElements() {
     backlogSummary: null,
     status: null,
     organiseButton: null,
-    prepareButton: null,
-    stopPreparationButton: null,
-    preparationStatus: null,
+    autoPrepareButton: null,
+    stopAutoPreparationButton: null,
+    autoPreparationStatus: null,
     organisedBadge: null,
     groupOtherTabsToggle: null,
     openTikTokPipToggle: null,
@@ -42,9 +42,9 @@ export function initializePopupDom(rootDocument = globalThis.document) {
   popupElements.stateMessage = runtimeDocument.getElementById('popupStateMessage');
   popupElements.backlogSummary = runtimeDocument.getElementById('backlogSummary');
   popupElements.status = runtimeDocument.getElementById('organiseStatus');
-  popupElements.prepareButton = runtimeDocument.getElementById('prepareButton');
-  popupElements.stopPreparationButton = runtimeDocument.getElementById('stopPreparationButton');
-  popupElements.preparationStatus = runtimeDocument.getElementById('preparationStatus');
+  popupElements.autoPrepareButton = runtimeDocument.getElementById('autoPrepareButton');
+  popupElements.stopAutoPreparationButton = runtimeDocument.getElementById('stopAutoPreparationButton');
+  popupElements.autoPreparationStatus = runtimeDocument.getElementById('autoPreparationStatus');
   popupElements.organiseButton = runtimeDocument.getElementById('organiseButton');
   popupElements.organisedBadge = runtimeDocument.getElementById('organisedBadge');
   popupElements.groupOtherTabsToggle = runtimeDocument.getElementById('groupOtherTabsToggle');

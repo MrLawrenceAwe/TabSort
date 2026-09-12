@@ -11,7 +11,7 @@ import {
 } from '../windows/store.js';
 import { reconcileWindowTabRecords } from './reconcile.js';
 import { isYouTubeVideoPage } from '../../shared/youtube/urls.js';
-import { removePreparedTab } from '../preparation/prepared-tabs.js';
+import { removeAutoPreparedTab } from '../auto-preparation/auto-prepared-tabs.js';
 
 const RECONCILE_DEBOUNCE_MS = 200;
 const pendingReconcilesByWindow = new Map();
@@ -59,7 +59,7 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
       if (!tab) return;
       if (changeInfo.discarded === false || changeInfo.url ||
           (changeInfo.status === 'loading' && !tab.discarded)) {
-        void removePreparedTab(tabId).catch(error => logDebug('prepared tab cleanup failed', error));
+        void removeAutoPreparedTab(tabId).catch(error => logDebug('autoPrepared tab cleanup failed', error));
       }
       if (!canManageWindow(tab.windowId)) return;
       if (
@@ -100,7 +100,7 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
   );
 
   chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-    void removePreparedTab(tabId).catch(error => logDebug('prepared tab cleanup failed', error));
+    void removeAutoPreparedTab(tabId).catch(error => logDebug('autoPrepared tab cleanup failed', error));
     if (!canManageWindow(removeInfo?.windowId)) return;
     deleteTabFromOrderedWindow(tabId);
     deleteTabRecord(tabId);
