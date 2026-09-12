@@ -1,14 +1,15 @@
+import { formatPreparationCounts } from '../shared/auto-preparation.js';
 import { getPopupElement } from './elements.js';
 import { popupState } from './store.js';
 
-export function hasReadyTabsInOrder(sortSummary, isTargetOrderApplied) {
-  return isTargetOrderApplied || (
-    sortSummary.readyCount >= 2 && sortSummary.readyPrefixMatchesPlan
+export function hasReadyTabsInOrder(sortSummary, allVideosReadyAndOrdered) {
+  return allVideosReadyAndOrdered || (
+    sortSummary.readyCount >= 2 && sortSummary.readyTabsLeadInOrder
   );
 }
 
-export function getOrganisedBadgeText(sortSummary, isTargetOrderApplied) {
-  return isTargetOrderApplied ? 'Tabs organised' : 'Ready tabs already in order';
+export function getOrganisedBadgeText(allVideosReadyAndOrdered) {
+  return allVideosReadyAndOrdered ? 'YouTube tabs organised' : 'Ready tabs already in order';
 }
 
 function updateStatus(status) {
@@ -16,9 +17,9 @@ function updateStatus(status) {
   const { readyCount, sortableCount } = popupState.sortSummary;
   const readyTabsInOrder = hasReadyTabsInOrder(
     popupState.sortSummary,
-    popupState.isTargetOrderApplied,
+    popupState.allVideosReadyAndOrdered,
   );
-  if (!popupState.isTargetOrderApplied) {
+  if (!popupState.allVideosReadyAndOrdered) {
     status.classList.toggle('hide', sortableCount === 0);
     status.textContent = readyTabsInOrder
       ? `${readyCount} of ${sortableCount} sortable tabs ready · Ready tabs in order.`
@@ -32,11 +33,11 @@ function updateOrganisedBadge(organisedBadge) {
   if (!organisedBadge) return;
   const readyTabsInOrder = hasReadyTabsInOrder(
     popupState.sortSummary,
-    popupState.isTargetOrderApplied,
+    popupState.allVideosReadyAndOrdered,
   );
   organisedBadge.classList.toggle('hide', !readyTabsInOrder);
   organisedBadge.textContent = readyTabsInOrder
-    ? `✓ ${getOrganisedBadgeText(popupState.sortSummary, popupState.isTargetOrderApplied)}`
+    ? `✓ ${getOrganisedBadgeText(popupState.allVideosReadyAndOrdered)}`
     : '';
 }
 
@@ -44,9 +45,9 @@ export function getOrganiseButtonText(readyCount, sortableCount) {
   return readyCount === sortableCount ? 'Organise Tabs' : 'Organise Ready Tabs';
 }
 
-export function shouldShowOrganiseButton(sortSummary, isTargetOrderApplied) {
+export function shouldShowOrganiseButton(sortSummary, allVideosReadyAndOrdered) {
   return sortSummary.readyCount >= 2 &&
-    !isTargetOrderApplied && !sortSummary.readyPrefixMatchesPlan;
+    !allVideosReadyAndOrdered && !sortSummary.readyTabsLeadInOrder;
 }
 
 function updateOrganiseButton(organiseButton, shouldShow) {
@@ -81,7 +82,7 @@ export function syncPopupLayout() {
   const organisedBadge = getPopupElement('organisedBadge');
   const shouldShowOrganise = shouldShowOrganiseButton(
     popupState.sortSummary,
-    popupState.isTargetOrderApplied,
+    popupState.allVideosReadyAndOrdered,
   );
 
   const autoPreparation = popupState.autoPreparation;
@@ -97,7 +98,7 @@ export function syncPopupLayout() {
   if (autoPreparationStatus) {
     autoPreparationStatus.classList.toggle('hide', autoPreparation.status === 'idle');
     autoPreparationStatus.textContent = autoPreparation.status === 'idle' ? '' :
-      `${running ? 'Auto-preparing' : autoPreparation.status === 'complete' ? 'Auto-preparation finished' : 'Auto-preparation stopped'}: ${autoPreparation.completed} of ${autoPreparation.total} checked · ${autoPreparation.ready} ready · ${autoPreparation.skipped} skipped`;
+      `${running ? 'Auto-preparing' : autoPreparation.status === 'complete' ? 'Auto-preparation finished' : 'Auto-preparation stopped'}: ${formatPreparationCounts(autoPreparation)}`;
   }
 
   setOptionToggleVisibility(shouldShowOrganise);

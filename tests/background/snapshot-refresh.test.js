@@ -52,8 +52,8 @@ test(
         title: `Video ${tabId}`,
         url: `https://www.youtube.com/watch?v=${tabId}`,
         playbackMetricsReady: true,
-        lengthSeconds: 120,
-        currentTime: 20,
+        metadataDurationSeconds: 120,
+        positionSeconds: 20,
         playbackRate: 1,
         isLive: false,
       });
@@ -103,9 +103,9 @@ test(
         title: 'Archived Stream',
         url: 'https://www.youtube.com/watch?v=archive',
         playbackMetricsReady: false,
-        lengthSeconds: null,
-        duration: 6211,
-        currentTime: 0,
+        metadataDurationSeconds: null,
+        mediaDurationSeconds: 6211,
+        positionSeconds: 0,
         playbackRate: 1,
         isLive: false,
       });

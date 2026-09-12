@@ -1,7 +1,7 @@
 const EMPTY_SORT_SUMMARY = Object.freeze({
   sortableCount: 0,
   readyCount: 0,
-  readyPrefixMatchesPlan: true,
+  readyTabsLeadInOrder: true,
 });
 
 export function createSortSummary(source = EMPTY_SORT_SUMMARY) {

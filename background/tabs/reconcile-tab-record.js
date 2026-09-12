@@ -1,5 +1,4 @@
 import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
-import { nowMs } from '../../shared/time.js';
 import { createTabRecord } from './record.js';
 import { clearRemainingTime } from './video-state.js';
 
@@ -13,8 +12,8 @@ export function reconcileTabRecord(
   const isDiscarded = nextLoadState === TAB_LOAD_STATES.DISCARDED;
   const loadStateChanged = previousRecord.loadState && previousRecord.loadState !== nextLoadState;
   const keepsAutoPreparedTime =
-    isDiscarded && !videoChanged && Boolean(previousRecord.autoPreparedRemainingTime);
-  const timestamp = nowMs();
+    isDiscarded && !videoChanged && Boolean(previousRecord.hasAutoPreparedTime);
+  const timestamp = Date.now();
 
   const record = createTabRecord(tab.id, tab.windowId, {
     url: tab.url,
@@ -33,8 +32,8 @@ export function reconcileTabRecord(
     loadedAt: previousRecord.loadedAt ?? null,
     transitionStartedAt: previousRecord.transitionStartedAt ?? null,
     metricsWaitStartedAt: videoChanged ? null : previousRecord.metricsWaitStartedAt ?? null,
-    autoPreparedRemainingTime:
-      !videoChanged && Boolean(previousRecord.autoPreparedRemainingTime),
+    hasAutoPreparedTime:
+      !videoChanged && Boolean(previousRecord.hasAutoPreparedTime),
     remainingSecondsStale:
       (!isLoaded && !keepsAutoPreparedTime) ||
       Boolean(previousRecord.remainingSecondsStale) ||

@@ -32,7 +32,7 @@ test('loads the bundled runtime and reports tracked YouTube tabs in the popup', 
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${extensionId}/popup/popup.html`);
 
-    await expect(popup.getByRole('heading', { name: 'YouTube Watch Tabs' })).toBeVisible();
+    await expect(popup.getByRole('heading', { name: 'YouTube video tabs' })).toBeVisible();
     await expect(popup.getByText('No YouTube video tabs in this window.')).toBeVisible();
 
     const firstVideo = await context.newPage();
@@ -59,8 +59,8 @@ test('loads the bundled runtime and reports tracked YouTube tabs in the popup', 
     // Exercise the popup view with a deterministic ready subset so theme changes
     // and highlighting are checked independently of media-loading timing.
     await popup.evaluate(async () => {
-      const { renderTabList } = await import(chrome.runtime.getURL('popup/tab-list-view.js'));
-      renderTabList({
+      const { applyTabSnapshot } = await import(chrome.runtime.getURL('popup/controller.js'));
+      applyTabSnapshot({
         trackedTabOrder: [1, 2],
         tabRecordsById: {
           1: {
@@ -72,8 +72,8 @@ test('loads the bundled runtime and reports tracked YouTube tabs in the popup', 
             remainingSecondsStale: true, videoDetails: { title: 'Waiting video' },
           },
         },
-        sortSummary: { sortableCount: 2, readyCount: 1, readyPrefixMatchesPlan: true },
-        isTargetOrderApplied: false,
+        sortSummary: { sortableCount: 2, readyCount: 1, readyTabsLeadInOrder: true },
+        allVideosReadyAndOrdered: false,
       });
     });
     await expect(popup.locator('#tabsTable .ready-row')).toHaveCount(1);
@@ -139,8 +139,8 @@ test('auto-prepares deferred media after activation, survives popup closure, and
     await popup.reload();
     await expect(popup.locator('#organiseStatus')).toContainText('0 of 2');
     await popup.getByRole('button', { name: 'Auto-prepare tabs', exact: true }).click();
-    await expect.poll(() => context.pages().some(page => page.url().endsWith('/auto-preparation.html'))).toBe(true);
-    const progress = context.pages().find(page => page.url().endsWith('/auto-preparation.html'));
+    await expect.poll(() => context.pages().some(page => page.url().endsWith('/preparation-progress/index.html'))).toBe(true);
+    const progress = context.pages().find(page => page.url().endsWith('/preparation-progress/index.html'));
     await popup.close();
     await expect(progress.locator('#progress')).toHaveText('2 of 2 checked · 2 ready · 0 skipped', { timeout: 10000 });
     await expect(progress.getByRole('heading')).toHaveText('Auto-preparation finished');
@@ -161,8 +161,8 @@ test('auto-prepares deferred media after activation, survives popup closure, and
     const stalledIds = await worker.evaluate(async () => (await chrome.tabs.query({ url: 'https://www.youtube.com/watch?v=stalled-*' })).map(tab => tab.id));
     await reopened.reload();
     await reopened.getByRole('button', { name: 'Auto-prepare tabs', exact: true }).click();
-    await expect.poll(() => context.pages().some(page => page.url().endsWith('/auto-preparation.html'))).toBe(true);
-    const stopWindow = context.pages().find(page => page.url().endsWith('/auto-preparation.html'));
+    await expect.poll(() => context.pages().some(page => page.url().endsWith('/preparation-progress/index.html'))).toBe(true);
+    const stopWindow = context.pages().find(page => page.url().endsWith('/preparation-progress/index.html'));
     await expect.poll(() => worker.evaluate(async id => (await chrome.tabs.get(id)).active, stalledIds[0])).toBe(true);
     await stopWindow.getByRole('button', { name: 'Stop', exact: true }).click();
     await expect(stopWindow.getByRole('heading')).toHaveText('Stopped');

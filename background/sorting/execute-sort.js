@@ -1,5 +1,5 @@
 import { isValidWindowId } from '../../shared/guards.js';
-import { loadSortOptions } from '../../shared/sort-options.js';
+import { loadPreferences } from '../../shared/preferences.js';
 import { hasReadyRemainingTime } from '../../shared/tabs/sort-readiness.js';
 import { listWindowTabs, moveTabsInOrder } from '../tabs/chrome-tabs.js';
 import {
@@ -30,7 +30,7 @@ export async function organiseTabs(
     return { ok: true, movedCount: 0, skippedReason: 'notEnoughReadyTabs' };
   }
 
-  const options = await loadSortOptions();
+  const options = await loadPreferences();
   const targetWindowId = isValidWindowId(windowId) ? windowId : null;
   const tabs = await listWindowTabs(targetWindowId);
   if (!Array.isArray(tabs) || tabs.length === 0) {

@@ -12,7 +12,7 @@ import {
   setTrackedWindowId,
 } from '../windows/store.js';
 import { hasYouTubeVideoChanged, isYouTubeVideoPage } from '../../shared/youtube/urls.js';
-import { readAutoPreparedTabs, restoreAutoPreparedTab } from '../auto-preparation/auto-prepared-tabs.js';
+import { readAutoPreparedTabs, restoreAutoPreparedTab } from '../auto-preparation/session-cache.js';
 
 function resolveWindowIdForQuery(windowId, { force = false } = {}) {
   const currentWindowId = getTrackedWindowId();

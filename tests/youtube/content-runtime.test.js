@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { createYouTubePageController } from '../../content/youtube/page/controller.js';
-import { shouldSendContentScriptReadySignal } from '../../content/youtube/page/ready-signal.js';
+import { createYouTubePageController, shouldSendContentScriptReadySignal } from '../../content/youtube/page/controller.js';
 import { collectPageDetails } from '../../content/youtube/metadata/collect-page-details.js';
 import { inferIsLiveNow } from '../../content/youtube/metadata/live-status.js';
 import { RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
@@ -217,8 +216,8 @@ test(
       );
 
       assert.equal(response?.playbackMetricsReady, false);
-      assert.equal(response?.duration, 6211);
-      assert.equal(response?.currentTime, 0);
+      assert.equal(response?.mediaDurationSeconds, 6211);
+      assert.equal(response?.positionSeconds, 0);
     } finally {
       runtime.reset();
       resetGlobals();

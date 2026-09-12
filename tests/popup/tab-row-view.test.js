@@ -1,12 +1,9 @@
+import { RECENTLY_LOADED_MS, RECENT_WATCH_TRANSITION_MS, MEDIA_WAIT_GRACE_MS, LOADING_GRACE_MS } from '../../shared/tabs/grace-periods.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
 import {
-  RECENTLY_LOADED_MS,
-  RECENT_WATCH_TRANSITION_MS,
-  MEDIA_WAIT_GRACE_MS,
-  LOADING_GRACE_MS,
   determineTabGuidance,
   TAB_GUIDANCE,
 } from '../../shared/tabs/guidance.js';
@@ -235,7 +232,7 @@ test('highlighting identifies sortable ready rows and clears when the order is a
       [{ pinned: true }, false, false],
       [{ isLive: true }, false, false],
       [{ remainingSecondsStale: true }, false, false],
-      [{ loadState: TAB_LOAD_STATES.DISCARDED, autoPreparedRemainingTime: true }, false, true],
+      [{ loadState: TAB_LOAD_STATES.DISCARDED, hasAutoPreparedTime: true }, false, true],
       [{}, true, false],
     ]) {
       const row = createFakeRow();
@@ -350,7 +347,7 @@ test('action guidance renders a semantic button and awaits the action result', a
 test('remaining status labels auto-prepared sleeping tabs', () => {
   assert.equal(formatRemainingStatus(makeRecord({
     loadState: 'discarded',
-    autoPreparedRemainingTime: true,
+    hasAutoPreparedTime: true,
     videoDetails: { remainingSeconds: 100 },
   })), '1m 40s · Auto-prepared · sleeping');
   assert.equal(formatRemainingStatus(makeRecord({

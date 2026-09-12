@@ -9,9 +9,9 @@ import {
   deleteTabRecord,
   getTrackedWindowId,
 } from '../windows/store.js';
-import { reconcileWindowTabRecords } from './reconcile.js';
+import { reconcileWindowTabRecords } from './reconcile-window.js';
 import { isYouTubeVideoPage } from '../../shared/youtube/urls.js';
-import { removeAutoPreparedTab, transferAutoPreparedTab } from '../auto-preparation/auto-prepared-tabs.js';
+import { removeAutoPreparedTab, transferAutoPreparedTab } from '../auto-preparation/session-cache.js';
 
 const RECONCILE_DEBOUNCE_MS = 200;
 const pendingReconcilesByWindow = new Map();

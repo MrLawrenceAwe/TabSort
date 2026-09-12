@@ -1,4 +1,3 @@
-import { nowMs } from '../../shared/time.js';
 import {
   markPlaybackMetricsReady,
   resetPlaybackReadiness,
@@ -7,14 +6,14 @@ import {
 export function applyPlaybackStateUpdate(record, playbackUpdate, currentTabUrl) {
   if (!record || !playbackUpdate) return;
 
-  record.autoPreparedRemainingTime = false;
+  record.hasAutoPreparedTime = false;
   record.contentScriptReady = playbackUpdate.contentScriptReady;
   if (playbackUpdate.playbackMetricsReady) {
     markPlaybackMetricsReady(record);
   } else {
     resetPlaybackReadiness(record, { metricsWaitStartedAt: record.metricsWaitStartedAt });
     if (record.contentScriptReady && typeof record.metricsWaitStartedAt !== 'number') {
-      record.metricsWaitStartedAt = nowMs();
+      record.metricsWaitStartedAt = Date.now();
     }
   }
   record.videoDetails = record.videoDetails || {};

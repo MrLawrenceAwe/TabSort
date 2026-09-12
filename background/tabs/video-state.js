@@ -1,6 +1,5 @@
 import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
 import { isFiniteNumber } from '../../shared/guards.js';
-import { nowMs } from '../../shared/time.js';
 
 export function clearRemainingTime(record) {
   if (record?.videoDetails && record.videoDetails.remainingSeconds != null) {
@@ -30,7 +29,7 @@ export function markPlaybackMetricsReady(record) {
 
 export function applyVideoMetricsUnavailable(record) {
   if (!record) return;
-  record.autoPreparedRemainingTime = false;
+  record.hasAutoPreparedTime = false;
   record.contentScriptReady = false;
   resetPlaybackReadiness(record);
   clearRemainingTime(record);
@@ -45,7 +44,7 @@ function applyVideoIdentityChanged(record, { contentScriptReady = false, timesta
 
 export function applyTabReloadStarted(record) {
   if (!record) return;
-  const timestamp = nowMs();
+  const timestamp = Date.now();
   record.loadState = TAB_LOAD_STATES.LOADING;
   record.loadingStartedAt = timestamp;
   record.loadedAt = null;
@@ -54,7 +53,7 @@ export function applyTabReloadStarted(record) {
 
 export function applyContentScriptReady(record, { videoChanged = false, url = null } = {}) {
   if (!record) return;
-  const timestamp = nowMs();
+  const timestamp = Date.now();
   if (videoChanged) {
     applyVideoIdentityChanged(record, { contentScriptReady: true, timestamp });
   }
@@ -76,7 +75,7 @@ export function applyVideoDetailsFromPage(record, details = {}, { videoChanged =
     record.isLive = details.isLive;
   }
   if (wasLive && !record.isLive) {
-    resetPlaybackReadiness(record, { metricsWaitStartedAt: nowMs() });
+    resetPlaybackReadiness(record, { metricsWaitStartedAt: Date.now() });
     clearRemainingTime(record);
     markRemainingTimeAsStale(record);
   }

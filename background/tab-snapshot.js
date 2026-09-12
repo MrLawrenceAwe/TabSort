@@ -10,13 +10,13 @@ import {
 } from './windows/store.js';
 
 export function buildTabSnapshot() {
-  const { trackedTabOrder, isTargetOrderApplied, sortSummary } = getSortState();
+  const { trackedTabOrder, allVideosReadyAndOrdered, sortSummary } = getSortState();
   return {
     windowId: getTrackedWindowId(),
     autoPreparation: getAutoPreparation(),
     tabRecordsById: getTabRecordsById(),
     trackedTabOrder,
-    isTargetOrderApplied,
+    allVideosReadyAndOrdered,
     sortSummary,
   };
 }

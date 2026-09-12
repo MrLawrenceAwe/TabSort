@@ -6,12 +6,12 @@ const keyFor = tabId => `${AUTO_PREPARED_KEY_PREFIX}${tabId}`;
 // Session storage survives service-worker suspension and is independent of
 // whichever browser window the popup is currently tracking.
 export async function saveAutoPreparedTab(record) {
-  const identity = getYouTubeVideoId(record?.url);
-  if (!identity || record.remainingSecondsStale ||
+  const videoId = getYouTubeVideoId(record?.url);
+  if (!videoId || record.remainingSecondsStale ||
       !Number.isFinite(record.videoDetails?.remainingSeconds)) return false;
   await chrome.storage.session.set({
     [keyFor(record.id)]: {
-      identity,
+      identity: videoId,
       videoDetails: { ...record.videoDetails },
     },
   });
@@ -43,6 +43,6 @@ export function restoreAutoPreparedTab(tab, record, saved) {
     ...record,
     videoDetails: { ...autoPrepared.videoDetails },
     remainingSecondsStale: false,
-    autoPreparedRemainingTime: true,
+    hasAutoPreparedTime: true,
   };
 }

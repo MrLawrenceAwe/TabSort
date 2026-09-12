@@ -1,20 +1,10 @@
 import { TAB_LOAD_STATES } from './load-states.js';
 import {
   LOADING_GRACE_MS,
-  MEDIA_WAIT_GRACE_MS,
-  RECENTLY_LOADED_MS,
-  RECENT_WATCH_TRANSITION_MS,
   canMediaStillSettle,
   canWatchTransitionStillSettle,
   hasRemainingTime,
 } from './grace-periods.js';
-
-export {
-  LOADING_GRACE_MS,
-  MEDIA_WAIT_GRACE_MS,
-  RECENTLY_LOADED_MS,
-  RECENT_WATCH_TRANSITION_MS,
-};
 
 export const TAB_GUIDANCE = {
   RELOAD_TAB: 'reloadTab',

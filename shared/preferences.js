@@ -1,4 +1,4 @@
-export const DEFAULT_SORT_OPTIONS = Object.freeze({
+export const DEFAULT_PREFERENCES = Object.freeze({
   groupOtherTabsBySite: false,
   openTikTokPipOnAutoPrepare: false,
 });
@@ -19,14 +19,14 @@ function getStorageCandidates() {
 function loadOptionsFromArea({ area, name }) {
   return new Promise((resolve) => {
     try {
-      area.get(DEFAULT_SORT_OPTIONS, (items) => {
+      area.get(DEFAULT_PREFERENCES, (items) => {
         const runtimeError = getRuntimeLastError();
         if (runtimeError) {
           console.warn(`[TabSort] ${name} storage get failed: ${runtimeError.message}`);
           resolve(null);
           return;
         }
-        resolve({ ...DEFAULT_SORT_OPTIONS, ...items });
+        resolve({ ...DEFAULT_PREFERENCES, ...items });
       });
     } catch (error) {
       console.warn(`[TabSort] ${name} storage get threw: ${error.message}`);
@@ -35,12 +35,12 @@ function loadOptionsFromArea({ area, name }) {
   });
 }
 
-export async function loadSortOptions() {
+export async function loadPreferences() {
   for (const candidate of getStorageCandidates()) {
     const options = await loadOptionsFromArea(candidate);
     if (options) return options;
   }
-  return { ...DEFAULT_SORT_OPTIONS };
+  return { ...DEFAULT_PREFERENCES };
 }
 
 function saveOptionsToArea({ area, name }, update) {
@@ -62,7 +62,7 @@ function saveOptionsToArea({ area, name }, update) {
   });
 }
 
-export async function saveSortOptions(update) {
+export async function savePreferences(update) {
   if (!update || typeof update !== 'object') return;
   for (const candidate of getStorageCandidates()) {
     if (await saveOptionsToArea(candidate, update)) return;

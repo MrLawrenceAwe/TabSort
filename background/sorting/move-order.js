@@ -1,4 +1,5 @@
-import { getSiteKey, isYouTubeVideoPage, isYouTubeSite } from '../../shared/youtube/urls.js';
+import { getSiteKey } from '../../shared/urls.js';
+import { isYouTubeVideoPage, isYouTubeSite } from '../../shared/youtube/urls.js';
 
 export function buildYouTubeTabOrder(unpinnedTabs, orderedTrackedTabIds) {
   const youtubeTabs = unpinnedTabs

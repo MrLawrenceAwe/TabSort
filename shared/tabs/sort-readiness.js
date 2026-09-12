@@ -5,7 +5,7 @@ export function hasReadyRemainingTime(record) {
   if (!record) return false;
   const canUseRecordedTime =
     record.loadState === TAB_LOAD_STATES.LOADED ||
-    (record.loadState === TAB_LOAD_STATES.DISCARDED && record.autoPreparedRemainingTime);
+    (record.loadState === TAB_LOAD_STATES.DISCARDED && record.hasAutoPreparedTime);
   if (!canUseRecordedTime) return false;
   if (record.remainingSecondsStale) return false;
   const remainingSeconds = record?.videoDetails?.remainingSeconds;
