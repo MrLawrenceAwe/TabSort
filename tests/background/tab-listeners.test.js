@@ -2,12 +2,45 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { setImmediate } from 'node:timers/promises';
 import { registerTabAndNavigationListeners } from '../../background/tabs/listeners.js';
+import { saveAutoPreparedTab } from '../../background/auto-preparation/auto-prepared-tabs.js';
+import { getSortState, getTabRecord } from '../../background/windows/store.js';
 import {
   createChromeTabFixture,
   createPlaybackMetricsFixture,
   ensureChromeApi,
   resetTrackedWindowState,
 } from '../helpers/background-test-helpers.js';
+
+test('Chrome tab replacement transfers prepared time to the new sleeping tab ID', async (t) => {
+  ensureChromeApi({ tabs: true });
+  resetTrackedWindowState(1);
+  const saved = {};
+  chrome.storage = { session: {
+    get: async () => ({ ...saved }),
+    set: async values => Object.assign(saved, values),
+    remove: async key => { delete saved[key]; },
+  } };
+  t.after(() => { delete chrome.storage; delete chrome.tabs.onReplaced; });
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const listeners = {};
+  for (const event of ['onReplaced', 'onUpdated', 'onMoved', 'onActivated', 'onDetached', 'onAttached', 'onRemoved']) {
+    chrome.tabs[event] = { addListener: listener => { listeners[event] = listener; } };
+  }
+  chrome.webNavigation = { onHistoryStateUpdated: { addListener() {} } };
+  const tab = createChromeTabFixture(200, { discarded: true, url: 'https://www.youtube.com/watch?v=same' });
+  chrome.tabs.get = (_id, callback) => callback(tab);
+  chrome.tabs.query = (_query, callback) => callback([tab]);
+  await saveAutoPreparedTab({ id: 100, url: tab.url, remainingSecondsStale: false,
+    videoDetails: { title: 'Prepared before discard', remainingSeconds: 123 } });
+  registerTabAndNavigationListeners();
+  await listeners.onReplaced(200, 100);
+  t.mock.timers.tick(200);
+  await setImmediate();
+  assert.equal(getSortState().sortSummary.readyCount, 1);
+  assert.equal(getTabRecord(200).videoDetails.remainingSeconds, 123);
+  assert.equal(getTabRecord(200).autoPreparedRemainingTime, true);
+  assert.equal(saved['autoPreparedTab:100'], undefined);
+});
 
 for (const queryFails of [false, true]) {
   test(queryFails

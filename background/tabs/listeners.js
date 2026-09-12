@@ -11,7 +11,7 @@ import {
 } from '../windows/store.js';
 import { reconcileWindowTabRecords } from './reconcile.js';
 import { isYouTubeVideoPage } from '../../shared/youtube/urls.js';
-import { removeAutoPreparedTab } from '../auto-preparation/auto-prepared-tabs.js';
+import { removeAutoPreparedTab, transferAutoPreparedTab } from '../auto-preparation/auto-prepared-tabs.js';
 
 const RECONCILE_DEBOUNCE_MS = 200;
 const pendingReconcilesByWindow = new Map();
@@ -54,6 +54,13 @@ function syncForWindowChange(label, resolveWindowId) {
 }
 
 export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}) {
+  chrome.tabs.onReplaced?.addListener(
+    withErrorLogging('tabs.onReplaced', async (addedTabId, removedTabId) => {
+      await transferAutoPreparedTab(addedTabId, removedTabId);
+      const tab = await getTab(addedTabId);
+      if (canManageWindow(tab.windowId)) scheduleWindowReconcile(tab.windowId);
+    }),
+  );
   chrome.tabs.onUpdated.addListener(
     withErrorLogging('tabs.onUpdated', async (tabId, changeInfo, tab) => {
       if (!tab) return;
