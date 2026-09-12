@@ -104,8 +104,9 @@ export function createChromeTabGetFixture({
   url = `https://www.youtube.com/watch?v=${tabId}`,
   active = false,
   hidden = false,
+  discarded = false,
 } = {}) {
-  return { id: tabId, windowId, url, active, hidden };
+  return { id: tabId, windowId, url, active, hidden, discarded };
 }
 
 export function stubChromeTabGetSequence(tabs, { async = false } = {}) {

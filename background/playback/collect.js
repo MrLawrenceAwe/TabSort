@@ -27,6 +27,7 @@ async function loadTabRecordContext(tabId) {
   }
 
   const tab = await getTab(tabId);
+  if (tab?.discarded === true) return null;
   const record = getMutableTabRecord(tabId);
   if (!record || record.loadState !== TAB_LOAD_STATES.LOADED) {
     return null;

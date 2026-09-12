@@ -48,3 +48,29 @@ for (const queryFails of [false, true]) {
     assert.deepEqual(collected.sort(), queryFails ? [] : [1, 2]);
   });
 }
+
+test('discard events reconcile auto-prepared tabs without probing their unloaded pages', async (t) => {
+  ensureChromeApi({ tabs: true });
+  resetTrackedWindowState(1);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const listeners = {};
+  for (const event of ['onUpdated', 'onMoved', 'onActivated', 'onDetached', 'onAttached', 'onRemoved']) {
+    chrome.tabs[event] = { addListener: (listener) => { listeners[event] = listener; } };
+  }
+  chrome.webNavigation = { onHistoryStateUpdated: { addListener() {} } };
+  const tab = createChromeTabFixture(1, { discarded: true });
+  chrome.tabs.query = (_query, callback) => callback([tab]);
+  chrome.tabs.get = (_id, callback) => callback(tab);
+  const collected = [];
+  chrome.tabs.sendMessage = (id, _message, callback) => {
+    collected.push(id);
+    callback(createPlaybackMetricsFixture({ tabId: id }));
+  };
+
+  registerTabAndNavigationListeners();
+  listeners.onUpdated(tab.id, { discarded: true }, tab);
+  t.mock.timers.tick(200);
+  await setImmediate();
+
+  assert.deepEqual(collected, []);
+});

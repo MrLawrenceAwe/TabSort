@@ -59,11 +59,18 @@ async function runWithPopupErrorLogging(task, context) {
 async function initializePopupPreferences() {
   const options = await loadSortOptions();
   const groupOtherTabsToggle = getPopupElement('groupOtherTabsToggle');
+  const openTikTokPipToggle = getPopupElement('openTikTokPipToggle');
 
   if (groupOtherTabsToggle) {
     groupOtherTabsToggle.checked = Boolean(options.groupOtherTabsBySite);
     groupOtherTabsToggle.addEventListener('change', () => {
       saveSortOptions({ groupOtherTabsBySite: groupOtherTabsToggle.checked });
+    });
+  }
+  if (openTikTokPipToggle) {
+    openTikTokPipToggle.checked = Boolean(options.openTikTokPipOnPrepare);
+    openTikTokPipToggle.addEventListener('change', () => {
+      saveSortOptions({ openTikTokPipOnPrepare: openTikTokPipToggle.checked });
     });
   }
 }
@@ -114,7 +121,10 @@ async function requestPrepare() {
   setNoticeMessage('');
   syncPopupLayout();
   try {
-    const response = await runtimeClient.requestRuntimeMessage(RUNTIME_MESSAGE_TYPES.START_PREPARATION);
+    const response = await runtimeClient.requestRuntimeMessage(
+      RUNTIME_MESSAGE_TYPES.START_PREPARATION,
+      { openTikTokPip: Boolean(getPopupElement('openTikTokPipToggle')?.checked) },
+    );
     if (response?.ok !== true) setErrorMessage('Could not start preparation. Reopen TabSort and try again.');
   } catch (error) {
     setErrorMessage('Could not start preparation. Try again.');

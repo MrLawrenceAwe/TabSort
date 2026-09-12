@@ -1,5 +1,6 @@
 export const DEFAULT_SORT_OPTIONS = Object.freeze({
   groupOtherTabsBySite: false,
+  openTikTokPipOnPrepare: false,
 });
 
 const getChromeApi = () => globalThis.chrome ?? null;

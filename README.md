@@ -16,7 +16,9 @@ distribution workflow.
 
 - Open some YouTube watch or shorts pages in the same Chrome window, then click the TabSort extension.
 - The popup lists each tracked video tab, shows whether its remaining time is known, and highlights tabs that are ready.
-- Click **Prepare tabs** to visit unready videos one at a time, including sleeping tabs. TabSort waits for valid playback data before continuing and skips tabs still unavailable after 15 seconds. Ready, pinned, and live tabs are excluded.
+- Click **Prepare tabs** to visit unready videos one at a time, including sleeping tabs. After playback data appears, TabSort briefly samples it again so YouTube has time to restore saved viewing progress; a sudden position jump restarts that settling period. Tabs still unavailable after 15 seconds are skipped. A successfully prepared sleeping tab is returned to sleep, keeps its recorded remaining time for sorting, and is labelled **Auto-prepared · sleeping**. Use **Organise Tabs** when you are ready. Ready, pinned, and live tabs are excluded.
+- Enable **Open TikTok PiP while preparing** to ask the locally installed TikTok Picture-in-Picture extension to reuse or create a TikTok tab, start automatic PiP, and then begin preparation. Preparation still starts if TikTok or playable media is unavailable.
+- Auto-prepared results are saved for the browser session, so changing windows or Chrome suspending the extension worker does not erase sleeping tabs' recorded times. Waking, navigating, or closing a tab invalidates its saved result; restarting Chrome clears the session.
 - Preparation continues when the toolbar popup closes. A separate progress window shows counts and a **Stop** button; closing it also stops the run. Switching tabs manually or changing the tracked browser window stops preparation. TabSort does not click Play; a video that still needs interaction may be skipped.
 - The Remaining column explains blockers: **Sleeping**, **Loading tab**, **Loading video**, **Needs viewing**, or **Couldn’t read time**.
 - Follow the suggested action buttons (Reload tab/View tab) if a tab is missing metadata.
