@@ -78,7 +78,7 @@ test('loadSortOptions falls back to local storage when sync storage fails', asyn
     async () => {
       assert.deepEqual(await loadSortOptions(), {
         groupOtherTabsBySite: true,
-        openTikTokPipOnPrepare: false,
+        openTikTokPipOnAutoPrepare: false,
       });
     },
   );

@@ -68,9 +68,9 @@ async function initializePopupPreferences() {
     });
   }
   if (openTikTokPipToggle) {
-    openTikTokPipToggle.checked = Boolean(options.openTikTokPipOnPrepare);
+    openTikTokPipToggle.checked = Boolean(options.openTikTokPipOnAutoPrepare);
     openTikTokPipToggle.addEventListener('change', () => {
-      saveSortOptions({ openTikTokPipOnPrepare: openTikTokPipToggle.checked });
+      saveSortOptions({ openTikTokPipOnAutoPrepare: openTikTokPipToggle.checked });
     });
   }
 }
@@ -79,7 +79,7 @@ function renderAndScheduleSnapshot(snapshot) {
   renderTabList(snapshot, {
     requestTabAction,
   });
-  if (popupState.preparation.status !== 'running') snapshotPoller.scheduleIfNeeded(snapshot);
+  if (popupState.autoPreparation.status !== 'running') snapshotPoller.scheduleIfNeeded(snapshot);
 }
 
 async function loadInitialSnapshot() {
@@ -113,34 +113,34 @@ async function requestTabAction(type, data) {
   return false;
 }
 
-async function requestPrepare() {
-  if (popupState.isStartingPreparation || popupState.preparation.status === 'running') return;
-  applyPopupState({ isStartingPreparation: true });
+async function requestAutoPrepare() {
+  if (popupState.isStartingAutoPreparation || popupState.autoPreparation.status === 'running') return;
+  applyPopupState({ isStartingAutoPreparation: true });
   snapshotPoller.clear();
   setErrorMessage('');
   setNoticeMessage('');
   syncPopupLayout();
   try {
     const response = await runtimeClient.requestRuntimeMessage(
-      RUNTIME_MESSAGE_TYPES.START_PREPARATION,
+      RUNTIME_MESSAGE_TYPES.START_AUTO_PREPARATION,
       { openTikTokPip: Boolean(getPopupElement('openTikTokPipToggle')?.checked) },
     );
-    if (response?.ok !== true) setErrorMessage('Could not start preparation. Reopen TabSort and try again.');
+    if (response?.ok !== true) setErrorMessage('Could not start auto-preparation. Reopen TabSort and try again.');
   } catch (error) {
-    setErrorMessage('Could not start preparation. Try again.');
-    runtimeClient.logPopupError('Starting preparation failed', error);
+    setErrorMessage('Could not start auto-preparation. Try again.');
+    runtimeClient.logPopupError('Starting auto-preparation failed', error);
   } finally {
-    applyPopupState({ isStartingPreparation: false });
+    applyPopupState({ isStartingAutoPreparation: false });
     syncPopupLayout();
   }
 }
 
-async function requestStopPreparation() {
-  await requestTabAction(RUNTIME_MESSAGE_TYPES.STOP_PREPARATION);
+async function requestStopAutoPreparation() {
+  await requestTabAction(RUNTIME_MESSAGE_TYPES.STOP_AUTO_PREPARATION);
 }
 
 async function requestOrganise() {
-  if (popupState.isOrganising || (popupState.isStartingPreparation || popupState.preparation.status === 'running')) return;
+  if (popupState.isOrganising || (popupState.isStartingAutoPreparation || popupState.autoPreparation.status === 'running')) return;
   applyPopupState({ isOrganising: true });
   setErrorMessage('');
   setNoticeMessage('');
@@ -179,8 +179,8 @@ function createSnapshotMessageListener() {
 }
 
 function registerPopupControls() {
-  getPopupElement('prepareButton')?.addEventListener('click', requestPrepare);
-  getPopupElement('stopPreparationButton')?.addEventListener('click', requestStopPreparation);
+  getPopupElement('autoPrepareButton')?.addEventListener('click', requestAutoPrepare);
+  getPopupElement('stopAutoPreparationButton')?.addEventListener('click', requestStopAutoPreparation);
   const organiseButton = getPopupElement('organiseButton');
   if (organiseButton) {
     organiseButton.addEventListener('click', requestOrganise);

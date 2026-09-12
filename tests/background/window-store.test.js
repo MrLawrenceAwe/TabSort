@@ -56,7 +56,7 @@ test('sort reads and popup snapshots cannot mutate the background store', () => 
   state.sortSummary.readyCount = 99;
   const snapshot = buildTabSnapshot();
   assert.deepEqual(Object.keys(snapshot).sort(), [
-    'isTargetOrderApplied', 'preparation', 'sortSummary', 'tabRecordsById', 'trackedTabOrder', 'windowId',
+    'autoPreparation', 'isTargetOrderApplied', 'sortSummary', 'tabRecordsById', 'trackedTabOrder', 'windowId',
   ]);
   snapshot.trackedTabOrder.length = 0;
   snapshot.sortSummary.readyCount = 99;

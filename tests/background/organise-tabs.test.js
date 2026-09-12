@@ -106,7 +106,7 @@ test('organiseTabs avoids Chrome move calls when the complete order already matc
 });
 
 test(
-  'organiseTabs does not move tabs when its sync token is superseded during preparation',
+  'organiseTabs does not move tabs when its sync token is superseded during auto-preparation',
   { concurrency: false },
   async () => {
     resetTrackedWindowState(1);

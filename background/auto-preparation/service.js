@@ -1,5 +1,5 @@
-import { createPreparationController } from './controller.js';
-import { getPreparation, setPreparation, getProgressWindowId, setProgressWindowId } from './state.js';
+import { createAutoPreparationController } from './controller.js';
+import { getAutoPreparation, setAutoPreparation, getProgressWindowId, setProgressWindowId } from './state.js';
 import { discardTab, getTab, listWindowTabs, updateTab } from '../tabs/chrome-tabs.js';
 import {
   getMutableTabRecord,
@@ -13,14 +13,14 @@ import { broadcastSnapshotUpdate } from '../tab-snapshot.js';
 import { updateSortStateAndBroadcast } from '../sorting/update-sort-state.js';
 import { hasReadyRemainingTime } from '../../shared/tabs/sort-readiness.js';
 import { getYouTubeVideoId } from '../../shared/youtube/urls.js';
-import { openTikTokPipForPreparation } from '../integrations/tiktok-pip.js';
-import { savePreparedTab } from './prepared-tabs.js';
+import { openTikTokPipForAutoPreparation } from '../integrations/tiktok-pip.js';
+import { saveAutoPreparedTab } from './auto-prepared-tabs.js';
 
 function requireWindow(windowId) {
   if (getTrackedWindowId() !== windowId) throw new Error('Stopped because the tracked window changed');
 }
 
-const controller = createPreparationController({
+const controller = createAutoPreparationController({
   async inspect(tabId, windowId) {
     requireWindow(windowId);
     let tab;
@@ -56,14 +56,14 @@ const controller = createPreparationController({
       ]);
     } finally { clearTimeout(timer); }
   },
-  async settle(tabId, windowId, returnTabId, { prepared, wasDiscarded }) {
+  async settle(tabId, windowId, returnTabId, { autoPrepared, wasDiscarded }) {
     requireWindow(windowId);
-    const preparedRecord = getTabRecord(tabId);
-    const preparedRemainingSeconds = preparedRecord?.videoDetails?.remainingSeconds;
-    const preparedIdentity = getYouTubeVideoId(preparedRecord?.url);
-    if (prepared && wasDiscarded) {
+    const autoPreparedRecord = getTabRecord(tabId);
+    const autoPreparedRemainingSeconds = autoPreparedRecord?.videoDetails?.remainingSeconds;
+    const autoPreparedIdentity = getYouTubeVideoId(autoPreparedRecord?.url);
+    if (autoPrepared && wasDiscarded) {
       // Persist before discarding; focus changes may replace the live records.
-      await savePreparedTab(preparedRecord);
+      await saveAutoPreparedTab(autoPreparedRecord);
       const record = getMutableTabRecord(tabId);
       if (record) record.autoPreparedRemainingTime = true;
     }
@@ -83,11 +83,11 @@ const controller = createPreparationController({
     if (!restored) return null;
     if (wasDiscarded) {
       const discarded = await discardTab(tabId);
-      if (discarded && prepared && Number.isFinite(preparedRemainingSeconds)) {
+      if (discarded && autoPrepared && Number.isFinite(autoPreparedRemainingSeconds)) {
         const record = getMutableTabRecord(tabId);
-        if (record && getYouTubeVideoId(record.url) === preparedIdentity) {
+        if (record && getYouTubeVideoId(record.url) === autoPreparedIdentity) {
           record.videoDetails = record.videoDetails || {};
-          record.videoDetails.remainingSeconds = preparedRemainingSeconds;
+          record.videoDetails.remainingSeconds = autoPreparedRemainingSeconds;
           record.remainingSecondsStale = false;
           record.autoPreparedRemainingTime = true;
           updateSortStateAndBroadcast();
@@ -97,18 +97,18 @@ const controller = createPreparationController({
     return nextReturnTabId;
   },
   publish(state) {
-    setPreparation(state);
+    setAutoPreparation(state);
     broadcastSnapshotUpdate({ force: true });
   },
 });
 
 let starting = false;
-export async function startPreparation(message) {
-  if (starting || getPreparation().status === 'running') return { ok: false, error: 'alreadyPreparing' };
+export async function startAutoPreparation(message) {
+  if (starting || getAutoPreparation().status === 'running') return { ok: false, error: 'alreadyAutoPreparing' };
   starting = true;
   try {
     const tiktokPip = message.openTikTokPip === true
-      ? await openTikTokPipForPreparation(message.windowId)
+      ? await openTikTokPipForAutoPreparation(message.windowId)
       : null;
     const result = await reconcileWindowTabRecords(message.windowId, { force: true });
     if (!result.applied) return { ok: false, error: 'windowUnavailable' };
@@ -126,7 +126,7 @@ export async function startPreparation(message) {
       try { await chrome.windows.remove(existing); } catch { /* Already closed. */ }
     }
     const progress = await chrome.windows.create({
-      url: chrome.runtime.getURL('popup/preparation.html'),
+      url: chrome.runtime.getURL('popup/auto-preparation.html'),
       type: 'popup', focused: false, width: 440, height: 260,
     });
     setProgressWindowId(progress.id);
@@ -135,12 +135,12 @@ export async function startPreparation(message) {
   } finally { starting = false; }
 }
 
-export function stopPreparation() {
+export function stopAutoPreparation() {
   controller.stop();
-  return { ok: true, preparation: getPreparation() };
+  return { ok: true, autoPreparation: getAutoPreparation() };
 }
 
-export function onPreparationWindowRemoved(windowId) {
+export function onAutoPreparationWindowRemoved(windowId) {
   if (windowId === getProgressWindowId()) {
     setProgressWindowId(null);
     controller.stop('Stopped because the progress window was closed');

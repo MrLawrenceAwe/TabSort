@@ -8,7 +8,7 @@ import {
   getTrackedWindowId,
 } from '../../background/windows/store.js';
 import { reconcileWindowTabRecords } from '../../background/tabs/reconcile.js';
-import { savePreparedTab } from '../../background/preparation/prepared-tabs.js';
+import { saveAutoPreparedTab } from '../../background/auto-preparation/auto-prepared-tabs.js';
 import {
   ensureChromeApi,
   createChromeTabFixture,
@@ -22,7 +22,7 @@ import {
 
 ensureChromeApi({ tabs: true });
 
-test('prepared sleeping tabs remain sortable after visiting another window', async () => {
+test('auto-prepared sleeping tabs remain sortable after visiting another window', async () => {
   const saved = {};
   chrome.storage = { session: {
     set: async values => Object.assign(saved, values),
@@ -37,7 +37,7 @@ test('prepared sleeping tabs remain sortable after visiting another window', asy
       autoPreparedRemainingTime: true,
     }),
   });
-  await savePreparedTab(getTabRecordsById()[1]);
+  await saveAutoPreparedTab(getTabRecordsById()[1]);
   stubChromeTabQuery([createChromeTabFixture(1, { discarded: true })]);
   await reconcileWindowTabRecords(1, { force: true });
   stubChromeTabQuery([createChromeTabFixture(2, { windowId: 2, url: 'https://example.com/' })]);
@@ -118,7 +118,7 @@ test(
 );
 
 test(
-  'reconcileWindowTabRecords invalidates an ordinary discarded tab without a preparation marker',
+  'reconcileWindowTabRecords invalidates an ordinary discarded tab without an auto-preparation marker',
   { concurrency: false },
   async () => {
     resetTrackedWindowState();

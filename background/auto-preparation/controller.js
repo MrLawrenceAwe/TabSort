@@ -1,5 +1,5 @@
 // One run at a time. Cancellation is checked after every asynchronous boundary.
-export function createPreparationController({ inspect, activate, refresh, settle, publish,
+export function createAutoPreparationController({ inspect, activate, refresh, settle, publish,
   now = Date.now, delay = ms => new Promise(resolve => setTimeout(resolve, ms)),
   timeoutMs = 15000, pollMs = 500, settleMs = 3000,
   resumeJumpToleranceSeconds = 5 }) {
@@ -70,7 +70,7 @@ export function createPreparationController({ inspect, activate, refresh, settle
             if (current !== job) return;
             const settled = await settle(
               item.id, job.windowId, job.returnTabId, {
-                prepared: ready,
+                autoPrepared: ready,
                 wasDiscarded: initial.discarded,
               },
             );
@@ -94,13 +94,13 @@ export function createPreparationController({ inspect, activate, refresh, settle
       state.title = '';
       emit();
     } catch (error) {
-      if (current === job) stop(error?.message || 'Preparation interrupted');
+      if (current === job) stop(error?.message || 'Auto-preparation interrupted');
     }
   }
   return {
     snapshot, stop,
     start(windowId, items, returnTabId) {
-      if (current) return { ok: false, error: 'alreadyPreparing' };
+      if (current) return { ok: false, error: 'alreadyAutoPreparing' };
       const job = { windowId, items, returnTabId };
       current = job;
       state = { status: 'running', windowId, total: items.length, completed: 0,

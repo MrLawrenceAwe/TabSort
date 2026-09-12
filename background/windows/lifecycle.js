@@ -1,5 +1,5 @@
-import { getProgressWindowId } from '../preparation/state.js';
-import { onPreparationWindowRemoved } from '../preparation/service.js';
+import { getProgressWindowId } from '../auto-preparation/state.js';
+import { onAutoPreparationWindowRemoved } from '../auto-preparation/service.js';
 import { isValidWindowId } from '../../shared/guards.js';
 import { logDebug, logListenerError, withErrorLogging } from '../../shared/log.js';
 import { updateSortStateAndBroadcast } from '../sorting/update-sort-state.js';
@@ -114,7 +114,7 @@ export function initializeWindowLifecycle() {
 
   chrome.windows.onRemoved.addListener(
     withErrorLogging('windows.onRemoved', async (windowId) => {
-      onPreparationWindowRemoved(windowId);
+      onAutoPreparationWindowRemoved(windowId);
       if (windowId === getTrackedWindowId()) {
         resetTrackedWindow();
       }
