@@ -1,3 +1,4 @@
+import { getYouTubeVideoId } from '../../shared/youtube/urls.js';
 import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
 import { isFiniteNumber } from '../../shared/guards.js';
 
@@ -93,4 +94,13 @@ export function applyVideoDetailsFromPage(record, details = {}, { videoChanged =
     record.remainingSecondsStale = false;
     record.metricsWaitStartedAt = null;
   }
+}
+
+export function applyAutoPreparedTime(record, videoId, videoDetails, recordUrl = record?.url) {
+  if (!record || !videoId || getYouTubeVideoId(recordUrl) !== videoId ||
+      !isFiniteNumber(videoDetails?.remainingSeconds)) return false;
+  record.videoDetails = { ...videoDetails };
+  record.remainingSecondsStale = false;
+  record.hasAutoPreparedTime = true;
+  return true;
 }

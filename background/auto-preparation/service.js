@@ -1,5 +1,6 @@
+import { applyAutoPreparedTime } from '../tabs/video-state.js';
 import { createAutoPreparationController } from './controller.js';
-import { getAutoPreparation, setAutoPreparation, getProgressWindowId, setProgressWindowId } from './state.js';
+import { getAutoPreparation, autoPreparationState, getProgressWindowId, setProgressWindowId } from './state.js';
 import { discardTab, getTab, listWindowTabs, updateTab } from '../tabs/chrome-tabs.js';
 import {
   getMutableTabRecord,
@@ -38,6 +39,7 @@ async function restoreReturnTab(tabId, windowId, returnTabId) {
 }
 
 const controller = createAutoPreparationController({
+  state: autoPreparationState,
   async inspect(tabId, windowId) {
     requireWindow(windowId);
     let tab;
@@ -76,34 +78,30 @@ const controller = createAutoPreparationController({
   async finishTabPreparation(tabId, windowId, returnTabId, { autoPrepared, wasDiscarded }) {
     requireWindow(windowId);
     const autoPreparedRecord = getTabRecord(tabId);
-    const autoPreparedRemainingSeconds = autoPreparedRecord?.videoDetails?.remainingSeconds;
+    const autoPreparedDetails = autoPreparedRecord?.videoDetails;
     const autoPreparedVideoId = getYouTubeVideoId(autoPreparedRecord?.url);
     if (autoPrepared && wasDiscarded) {
       // Persist before discarding; focus changes may replace the live records.
-      await saveAutoPreparedTab(autoPreparedRecord);
-      const record = getMutableTabRecord(tabId);
-      if (record) record.hasAutoPreparedTime = true;
+      if (await saveAutoPreparedTab(autoPreparedRecord)) {
+        requireWindow(windowId);
+        applyAutoPreparedTime(getMutableTabRecord(tabId), autoPreparedVideoId, autoPreparedDetails);
+      }
     }
     if (tabId === returnTabId) return returnTabId;
     const nextReturnTabId = await restoreReturnTab(tabId, windowId, returnTabId);
     if (nextReturnTabId == null) return null;
     if (wasDiscarded) {
       const discarded = await discardTab(tabId);
-      if (discarded && autoPrepared && Number.isFinite(autoPreparedRemainingSeconds)) {
-        const record = getMutableTabRecord(tabId);
-        if (record && getYouTubeVideoId(record.url) === autoPreparedVideoId) {
-          record.videoDetails = record.videoDetails || {};
-          record.videoDetails.remainingSeconds = autoPreparedRemainingSeconds;
-          record.remainingSecondsStale = false;
-          record.hasAutoPreparedTime = true;
-          updateSortStateAndBroadcast();
-        }
+      requireWindow(windowId);
+      if (discarded && autoPrepared && applyAutoPreparedTime(
+        getMutableTabRecord(tabId), autoPreparedVideoId, autoPreparedDetails,
+      )) {
+        updateSortStateAndBroadcast();
       }
     }
     return nextReturnTabId;
   },
-  publish(state) {
-    setAutoPreparation(state);
+  publish() {
     broadcastSnapshotUpdate({ force: true });
   },
 });

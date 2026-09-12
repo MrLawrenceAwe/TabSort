@@ -28,15 +28,11 @@ export function broadcastSnapshotUpdate({ force = false } = {}) {
     if (!force && signature === getSnapshotSignature()) return;
     setSnapshotSignature(signature);
 
-    chrome.runtime.sendMessage(
+    void chrome.runtime.sendMessage(
       createRuntimeMessage(RUNTIME_MESSAGE_TYPES.TAB_SNAPSHOT_UPDATED, { payload: snapshot }),
-      () => {
-        const runtimeError = chrome.runtime.lastError;
-        if (runtimeError?.message && !/Receiving end/i.test(runtimeError.message)) {
-          console.debug(`[TabSort] broadcast warning: ${runtimeError.message}`);
-        }
-      },
-    );
+    ).catch(error => {
+      if (!/Receiving end/i.test(error.message)) logDebug('broadcast warning', error);
+    });
   } catch (error) {
     logDebug('broadcastSnapshotUpdate failed', error);
   }

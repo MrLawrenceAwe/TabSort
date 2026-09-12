@@ -369,17 +369,14 @@ test(
       3: createTabRecordFixture(3),
     });
 
-    globalThis.chrome.tabs.get = (tabId, callback) => {
-      callback({
+    globalThis.chrome.tabs.get = async tabId => ({
         id: tabId,
         windowId: 1,
         url: `https://www.youtube.com/watch?v=${tabId}`,
         active: false,
         hidden: false,
       });
-    };
-    globalThis.chrome.tabs.sendMessage = (tabId, _payload, callback) => {
-      callback({
+    globalThis.chrome.tabs.sendMessage = async tabId => ({
         title: `Video ${tabId}`,
         url: `https://www.youtube.com/watch?v=${tabId}`,
         playbackMetricsReady: true,
@@ -388,12 +385,10 @@ test(
         playbackRate: 1,
         isLive: false,
       });
-    };
 
     let broadcastCount = 0;
-    globalThis.chrome.runtime.sendMessage = (_message, callback) => {
+    globalThis.chrome.runtime.sendMessage = async () => {
       broadcastCount += 1;
-      callback?.();
     };
 
     const changed = await collectPlaybackMetricsBatch([1, 2, 3], { concurrency: 2 });
@@ -426,24 +421,20 @@ test(
 
     const injected = [];
     globalThis.chrome.scripting = {
-      executeScript(options, callback) {
+      async executeScript(options) {
         injected.push(options);
-        callback();
       },
     };
 
     let sendCount = 0;
-    globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
+    globalThis.chrome.tabs.sendMessage = async () => {
       sendCount += 1;
       if (sendCount === 1) {
-        globalThis.chrome.runtime.lastError = new Error(
+        throw new Error(
           'Could not establish connection. Receiving end does not exist.',
         );
-        callback();
-        globalThis.chrome.runtime.lastError = null;
-        return;
       }
-      callback(createPlaybackMetricsFixture({ tabId: 1 }));
+      return createPlaybackMetricsFixture({ tabId: 1 });
     };
 
     await collectPlaybackMetrics(1);
@@ -480,23 +471,18 @@ test(
     ]);
 
     globalThis.chrome.scripting = {
-      executeScript(_options, callback) {
-        callback();
-      },
+      async executeScript() {},
     };
 
     let sendCount = 0;
-    globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
+    globalThis.chrome.tabs.sendMessage = async () => {
       sendCount += 1;
       if (sendCount < 3) {
-        globalThis.chrome.runtime.lastError = new Error(
+        throw new Error(
           'Could not establish connection. Receiving end does not exist.',
         );
-        callback();
-        globalThis.chrome.runtime.lastError = null;
-        return;
       }
-      callback(createPlaybackMetricsFixture({ tabId: 1 }));
+      return createPlaybackMetricsFixture({ tabId: 1 });
     };
 
     await collectPlaybackMetrics(1);

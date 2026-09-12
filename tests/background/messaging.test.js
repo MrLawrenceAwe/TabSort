@@ -423,17 +423,14 @@ test(
       sender,
     );
 
-    globalThis.chrome.tabs.get = (_tabId, callback) => {
-      callback({
+    globalThis.chrome.tabs.get = async () => ({
         id: 7,
         windowId: 1,
         url: sender.tab.url,
         active: false,
         hidden: false,
       });
-    };
-    globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
-      callback({
+    globalThis.chrome.tabs.sendMessage = async () => ({
         title: 'Video',
         url: sender.tab.url,
         playbackMetricsReady: false,
@@ -443,7 +440,6 @@ test(
         playbackRate: 1,
         isLive: false,
       });
-    };
 
     await collectPlaybackMetrics(7);
 

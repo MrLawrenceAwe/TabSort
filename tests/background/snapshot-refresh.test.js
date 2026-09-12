@@ -35,20 +35,18 @@ test(
     });
 
     stubChromeTabQuery([createChromeTabFixture(1, { active: true }), createChromeTabFixture(2)]);
-    globalThis.chrome.tabs.get = (tabId, callback) => {
-      callback({
+    globalThis.chrome.tabs.get = async tabId => ({
         id: tabId,
         windowId: 1,
         url: `https://www.youtube.com/watch?v=${tabId}`,
         active: tabId === 1,
         hidden: false,
       });
-    };
 
     const refreshedTabIds = [];
-    globalThis.chrome.tabs.sendMessage = (tabId, _payload, callback) => {
+    globalThis.chrome.tabs.sendMessage = async tabId => {
       refreshedTabIds.push(tabId);
-      callback({
+      return {
         title: `Video ${tabId}`,
         url: `https://www.youtube.com/watch?v=${tabId}`,
         playbackMetricsReady: true,
@@ -56,7 +54,7 @@ test(
         positionSeconds: 20,
         playbackRate: 1,
         isLive: false,
-      });
+      };
     };
 
     const snapshot = await getWindowSnapshot({ windowId: 1 });
@@ -97,9 +95,9 @@ test(
     });
 
     const refreshedTabIds = [];
-    globalThis.chrome.tabs.sendMessage = (tabId, _payload, callback) => {
+    globalThis.chrome.tabs.sendMessage = async tabId => {
       refreshedTabIds.push(tabId);
-      callback({
+      return {
         title: 'Archived Stream',
         url: 'https://www.youtube.com/watch?v=archive',
         playbackMetricsReady: false,
@@ -108,7 +106,7 @@ test(
         positionSeconds: 0,
         playbackRate: 1,
         isLive: false,
-      });
+      };
     };
 
     const snapshot = await getWindowSnapshot({ windowId: 1 });

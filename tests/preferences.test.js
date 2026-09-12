@@ -28,7 +28,6 @@ function withChromeStorage(storage, fn) {
   const hadChrome = Object.prototype.hasOwnProperty.call(globalThis, 'chrome');
   const originalChrome = globalThis.chrome;
   globalThis.chrome = {
-    runtime: { lastError: null },
     storage,
   };
 
@@ -61,17 +60,15 @@ test('loadPreferences falls back to local storage when sync storage fails', asyn
   await withChromeStorage(
     {
       sync: {
-        get(_defaults, callback) {
+        async get() {
           calls.push('sync');
-          globalThis.chrome.runtime.lastError = new Error('sync unavailable');
-          callback({});
-          globalThis.chrome.runtime.lastError = null;
+          throw new Error('sync unavailable');
         },
       },
       local: {
-        get(_defaults, callback) {
+        async get() {
           calls.push('local');
-          callback({ groupOtherTabsBySite: true });
+          return { groupOtherTabsBySite: true };
         },
       },
     },
@@ -91,17 +88,14 @@ test('savePreferences falls back to local storage when sync storage fails', asyn
   await withChromeStorage(
     {
       sync: {
-        set(items, callback) {
+        async set(items) {
           calls.push(['sync', items]);
-          globalThis.chrome.runtime.lastError = new Error('sync unavailable');
-          callback();
-          globalThis.chrome.runtime.lastError = null;
+          throw new Error('sync unavailable');
         },
       },
       local: {
-        set(items, callback) {
+        async set(items) {
           calls.push(['local', items]);
-          callback();
         },
       },
     },
