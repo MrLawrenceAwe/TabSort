@@ -1,16 +1,17 @@
+import { createAutoPreparationState } from './state.js';
+
 // One run at a time. Cancellation is checked after every asynchronous boundary.
 export function createAutoPreparationController({ inspect, activate, refresh, finishTabPreparation, publish,
   now = Date.now, delay = ms => new Promise(resolve => setTimeout(resolve, ms)),
   timeoutMs = 15000, pollMs = 500, settleMs = 3000,
-  resumeJumpToleranceSeconds = 5 }) {
+  resumeJumpToleranceSeconds = 5, state = createAutoPreparationState() }) {
   let current = null;
-  let state = { status: 'idle', total: 0, completed: 0, ready: 0, skipped: 0, currentTabId: null };
   const snapshot = () => ({ ...state });
   const emit = () => publish(snapshot());
   function stop(reason = 'Stopped') {
     if (!current) return snapshot();
     current = null;
-    state = { ...state, status: 'stopped', currentTabId: null, reason };
+    Object.assign(state, { status: 'stopped', currentTabId: null, reason });
     emit();
     return snapshot();
   }
@@ -103,8 +104,9 @@ export function createAutoPreparationController({ inspect, activate, refresh, fi
       if (current) return { ok: false, error: 'alreadyAutoPreparing' };
       const job = { windowId, items, returnTabId };
       current = job;
-      state = { status: 'running', windowId, total: items.length, completed: 0,
-        ready: 0, skipped: 0, currentTabId: null, title: '' };
+      delete state.reason;
+      Object.assign(state, { status: 'running', windowId, total: items.length, completed: 0,
+        ready: 0, skipped: 0, currentTabId: null, title: '' });
       emit();
       // Return immediately: the toolbar popup can close while the run continues.
       void run(job);

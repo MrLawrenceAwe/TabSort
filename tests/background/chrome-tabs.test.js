@@ -27,9 +27,9 @@ test('discardTab reports Chrome failures without throwing', async () => {
 test('listWindowTabs uses the last focused window when no explicit id is provided', async () => {
   const queries = [];
 
-  globalThis.chrome.tabs.query = (query, callback) => {
+  globalThis.chrome.tabs.query = async (query) => {
     queries.push(query);
-    callback([]);
+    return [];
   };
 
   await listWindowTabs();
@@ -40,9 +40,9 @@ test('listWindowTabs uses the last focused window when no explicit id is provide
 test('listWindowTabs keeps explicit window ids when one is provided', async () => {
   const queries = [];
 
-  globalThis.chrome.tabs.query = (query, callback) => {
+  globalThis.chrome.tabs.query = async (query) => {
     queries.push(query);
-    callback([]);
+    return [];
   };
 
   await listWindowTabs(9);
@@ -51,11 +51,7 @@ test('listWindowTabs keeps explicit window ids when one is provided', async () =
 });
 
 test('listWindowTabs returns null when a Chrome query fails', async () => {
-  globalThis.chrome.tabs.query = (_query, callback) => {
-    globalThis.chrome.runtime.lastError = new Error('query failed');
-    callback([]);
-    globalThis.chrome.runtime.lastError = null;
-  };
+  globalThis.chrome.tabs.query = async () => { throw new Error('query failed'); };
 
   const tabs = await listWindowTabs(9);
 
@@ -63,15 +59,12 @@ test('listWindowTabs returns null when a Chrome query fails', async () => {
 });
 
 test('listWindowTabs filters out malformed tab entries from Chrome results', async () => {
-  globalThis.chrome.tabs.query = (_query, callback) => {
-    callback([
+  globalThis.chrome.tabs.query = async () => [
       { id: 1, windowId: 9, url: 'https://www.youtube.com/watch?v=1' },
       { windowId: 9, url: 'https://www.youtube.com/watch?v=missing-id' },
       null,
       { id: 2, windowId: 9, url: 'https://www.youtube.com/watch?v=2' },
-    ]);
-    globalThis.chrome.runtime.lastError = null;
-  };
+    ];
 
   const tabs = await listWindowTabs(9);
 
@@ -82,10 +75,8 @@ test('listWindowTabs filters out malformed tab entries from Chrome results', asy
 });
 
 test('sendMessageToTab classifies missing content-script receivers', async () => {
-  globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
-    globalThis.chrome.runtime.lastError = new Error('Could not establish connection. Receiving end does not exist.');
-    callback();
-    globalThis.chrome.runtime.lastError = null;
+  globalThis.chrome.tabs.sendMessage = async () => {
+    throw new Error('Could not establish connection. Receiving end does not exist.');
   };
 
   const result = await sendMessageToTab(1, { type: 'collectVideoMetrics' });
@@ -97,9 +88,8 @@ test('sendMessageToTab classifies missing content-script receivers', async () =>
 test('executeScriptInTab reports successful Chrome scripting injection', async () => {
   const calls = [];
   globalThis.chrome.scripting = {
-    executeScript(options, callback) {
+    async executeScript(options) {
       calls.push(options);
-      callback();
     },
   };
 

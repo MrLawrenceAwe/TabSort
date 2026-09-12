@@ -9,11 +9,11 @@ export function hasRemainingTime(tabRecord) {
   return isFiniteNumber(tabRecord?.videoDetails?.remainingSeconds);
 }
 
-export function isRecentTimestamp(timestamp, nowMs, graceMs) {
+function isRecentTimestamp(timestamp, nowMs, graceMs) {
   return typeof timestamp === 'number' && nowMs - timestamp < graceMs;
 }
 
-export function hasRecentWatchTransition(tabRecord, nowMs) {
+function hasRecentWatchTransition(tabRecord, nowMs) {
   return isRecentTimestamp(
     tabRecord?.transitionStartedAt,
     nowMs,
@@ -21,7 +21,7 @@ export function hasRecentWatchTransition(tabRecord, nowMs) {
   );
 }
 
-export function isRecentlyLoaded(tabRecord, nowMs) {
+function isRecentlyLoaded(tabRecord, nowMs) {
   return isRecentTimestamp(
     tabRecord?.loadedAt,
     nowMs,

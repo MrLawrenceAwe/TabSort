@@ -41,46 +41,19 @@ export async function moveTabsInOrder(tabIds, startIndex = 0, currentTabIds = []
   }
 }
 
-function queryTabs(query) {
-  return new Promise((resolve) => {
-    try {
-      chrome.tabs.query(query, (tabs) => {
-        const runtimeError = chrome.runtime.lastError;
-        if (runtimeError) {
-          logWarn(`tabs.query failed for ${JSON.stringify(query)}`, runtimeError);
-          resolve(null);
-          return;
-        }
-        resolve(Array.isArray(tabs) ? tabs : []);
-      });
-    } catch (error) {
-      logWarn(`tabs.query threw for ${JSON.stringify(query)}`, error);
-      resolve(null);
-    }
-  });
-}
-
 export async function listWindowTabs(windowId = null) {
   const query = windowId != null ? { windowId } : { lastFocusedWindow: true };
-  const tabs = await queryTabs(query);
-
-  if (!Array.isArray(tabs)) {
+  try {
+    const tabs = await chrome.tabs.query(query);
+    return tabs.filter(tab => tab && typeof tab.id === 'number');
+  } catch (error) {
+    logWarn(`tabs.query failed for ${JSON.stringify(query)}`, error);
     return null;
   }
-
-  return tabs.filter((tab) => tab && typeof tab.id === 'number');
 }
 
 export function getTab(tabId) {
-  return new Promise((resolve, reject) => {
-    chrome.tabs.get(tabId, (tab) => {
-      if (chrome.runtime.lastError) {
-        reject(chrome.runtime.lastError);
-        return;
-      }
-      resolve(tab);
-    });
-  });
+  return chrome.tabs.get(tabId);
 }
 
 export async function updateTab(tabId, updateProperties) {
@@ -113,43 +86,27 @@ export async function reloadChromeTab(tabId) {
   }
 }
 
-export function sendMessageToTab(tabId, payload) {
-  return new Promise((resolve) => {
-    chrome.tabs.sendMessage(tabId, payload, (responsePayload) => {
-      const runtimeError = chrome.runtime.lastError;
-      if (runtimeError) {
-        const reason = classifyRuntimeMessageFailure(runtimeError);
-        console.debug(`[TabSort] skipped message to tab ${tabId}: ${runtimeError.message}`);
-        resolve({ ok: false, reason, error: runtimeError });
-        return;
-      }
-      resolve({ ok: true, data: responsePayload });
-    });
-  });
+export async function sendMessageToTab(tabId, payload) {
+  try {
+    return { ok: true, data: await chrome.tabs.sendMessage(tabId, payload) };
+  } catch (error) {
+    const reason = classifyRuntimeMessageFailure(error);
+    logDebug(`skipped message to tab ${tabId}`, error);
+    return { ok: false, reason, error };
+  }
 }
 
-export function executeScriptInTab(tabId, files) {
-  return new Promise((resolve) => {
-    const scripting = chrome.scripting;
-    if (!scripting?.executeScript) {
-      resolve({ ok: false, reason: 'scriptingUnavailable' });
-      return;
-    }
-    try {
-      scripting.executeScript({ target: { tabId }, files }, () => {
-        const runtimeError = chrome.runtime.lastError;
-        if (runtimeError) {
-          logDebug(`scripting.executeScript failed for ${tabId}`, runtimeError);
-          resolve({ ok: false, reason: 'chromeError', error: runtimeError });
-          return;
-        }
-        resolve({ ok: true });
-      });
-    } catch (error) {
-      logDebug(`scripting.executeScript threw for ${tabId}`, error);
-      resolve({ ok: false, reason: 'chromeError', error });
-    }
-  });
+export async function executeScriptInTab(tabId, files) {
+  if (!chrome.scripting?.executeScript) {
+    return { ok: false, reason: 'scriptingUnavailable' };
+  }
+  try {
+    await chrome.scripting.executeScript({ target: { tabId }, files });
+    return { ok: true };
+  } catch (error) {
+    logDebug(`scripting.executeScript failed for ${tabId}`, error);
+    return { ok: false, reason: 'chromeError', error };
+  }
 }
 
 export { MESSAGE_FAILURE_REASONS };

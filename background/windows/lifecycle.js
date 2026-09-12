@@ -16,27 +16,17 @@ import { shouldRefreshRecordMetrics } from '../../shared/tabs/refresh-policy.js'
 
 const PLAYBACK_REFRESH_ALARM = 'refreshRemaining';
 const REFRESH_INTERVAL_MINUTES = 1;
-const MIN_REFRESH_INTERVAL_MINUTES = 1;
-const refreshMinutes = Math.max(REFRESH_INTERVAL_MINUTES, MIN_REFRESH_INTERVAL_MINUTES);
 let focusSyncGeneration = 0;
 
-const getLastFocusedWindowId = () =>
-  new Promise((resolve) => {
-    try {
-      chrome.windows.getLastFocused({ populate: false }, (win) => {
-        const runtimeError = chrome.runtime.lastError;
-        if (runtimeError) {
-          logDebug('windows.getLastFocused failed', runtimeError);
-          resolve(null);
-          return;
-        }
-        resolve(typeof win?.id === 'number' ? win.id : null);
-      });
-    } catch (error) {
-      logDebug('windows.getLastFocused threw', error);
-      resolve(null);
-    }
-  });
+async function getLastFocusedWindowId() {
+  try {
+    const win = await chrome.windows.getLastFocused({ populate: false });
+    return typeof win?.id === 'number' ? win.id : null;
+  } catch (error) {
+    logDebug('windows.getLastFocused failed', error);
+    return null;
+  }
+}
 
 export function resetTrackedWindow() {
   resetTrackedWindowStore();
@@ -74,26 +64,11 @@ async function windowHasTrackedYouTubeTabs(windowId) {
   return Array.isArray(tabs) && tabs.some((tab) => isYouTubeVideoPage(tab?.url));
 }
 
-function ensureRefreshAlarm() {
+async function ensureRefreshAlarm() {
   try {
-    chrome.alarms.get(PLAYBACK_REFRESH_ALARM, (alarm) => {
-      if (chrome.runtime.lastError) {
-        console.debug(`[TabSort] alarm get failed: ${chrome.runtime.lastError.message}`);
-        return;
-      }
-
-      const needsCreate =
-        !alarm ||
-        !Number.isFinite(alarm.periodInMinutes) ||
-        Math.abs(alarm.periodInMinutes - refreshMinutes) > 1e-6;
-      if (!needsCreate) return;
-
-      try {
-        chrome.alarms.create(PLAYBACK_REFRESH_ALARM, { periodInMinutes: refreshMinutes });
-      } catch (error) {
-        console.debug(`[TabSort] alarm create failed: ${error.message}`);
-      }
-    });
+    const alarm = await chrome.alarms.get(PLAYBACK_REFRESH_ALARM);
+    if (alarm?.periodInMinutes === REFRESH_INTERVAL_MINUTES) return;
+    await chrome.alarms.create(PLAYBACK_REFRESH_ALARM, { periodInMinutes: REFRESH_INTERVAL_MINUTES });
   } catch (error) {
     logDebug('ensureRefreshAlarm failed', error);
   }

@@ -102,12 +102,12 @@ test('handleOrganiseTabs refreshes a newly targeted window before deriving its s
   setTrackedSortState({ targetVideoTabOrder: [2, 1] });
 
   const queriedWindowIds = [];
-  globalThis.chrome.tabs.query = (query, callback) => {
+  globalThis.chrome.tabs.query = async query => {
     queriedWindowIds.push(query.windowId);
-    callback([
+    return [
       createChromeTabFixture(10, { windowId: 2, index: 0 }),
       createChromeTabFixture(11, { windowId: 2, index: 1 }),
-    ]);
+    ];
   };
   const movedTabIds = [];
   globalThis.chrome.tabs.move = async (tabId) => {
@@ -133,9 +133,8 @@ test(
   async () => {
     resetTrackedWindowState(1);
     const queryCallbacks = new Map();
-    globalThis.chrome.tabs.query = (query, callback) => {
-      queryCallbacks.set(query.windowId, callback);
-    };
+    globalThis.chrome.tabs.query = query =>
+      new Promise(resolve => { queryCallbacks.set(query.windowId, resolve); });
 
     const requestForWindow1 = getWindowSnapshot({ windowId: 1 });
     await Promise.resolve();
@@ -172,9 +171,8 @@ test(
   async () => {
     resetTrackedWindowState(1);
     const queryCallbacks = new Map();
-    globalThis.chrome.tabs.query = (query, callback) => {
-      queryCallbacks.set(query.windowId, callback);
-    };
+    globalThis.chrome.tabs.query = query =>
+      new Promise(resolve => { queryCallbacks.set(query.windowId, resolve); });
     const movedTabIds = [];
     globalThis.chrome.tabs.move = async (tabId) => {
       movedTabIds.push(tabId);

@@ -219,11 +219,9 @@ test(
     setTrackedSortState({ trackedTabOrder: [1] });
     setTrackedSortState({ targetVideoTabOrder: [1] });
 
-    globalThis.chrome.tabs.query = (query, callback) => {
-      globalThis.chrome.runtime.lastError =
-        query.hidden === true ? null : new Error('query failed');
-      callback([]);
-      globalThis.chrome.runtime.lastError = null;
+    globalThis.chrome.tabs.query = async query => {
+      if (query.hidden !== true) throw new Error('query failed');
+      return [];
     };
 
     await reconcileWindowTabRecords(1, { force: true });

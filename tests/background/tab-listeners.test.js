@@ -28,8 +28,8 @@ test('Chrome tab replacement transfers prepared time to the new sleeping tab ID'
   }
   chrome.webNavigation = { onHistoryStateUpdated: { addListener() {} } };
   const tab = createChromeTabFixture(200, { discarded: true, url: 'https://www.youtube.com/watch?v=same' });
-  chrome.tabs.get = (_id, callback) => callback(tab);
-  chrome.tabs.query = (_query, callback) => callback([tab]);
+  chrome.tabs.get = async () => tab;
+  chrome.tabs.query = async () => [tab];
   await saveAutoPreparedTab({ id: 100, url: tab.url, remainingSecondsStale: false,
     videoDetails: { title: 'Prepared before discard', remainingSeconds: 123 } });
   registerTabAndNavigationListeners();
@@ -57,17 +57,16 @@ for (const queryFails of [false, true]) {
     const tabs = [createChromeTabFixture(1), createChromeTabFixture(2),
       createChromeTabFixture(3, { url: 'https://example.com' })];
     let queries = 0;
-    chrome.tabs.query = (_query, callback) => {
+    chrome.tabs.query = async () => {
       queries += 1;
-      chrome.runtime.lastError = queryFails ? new Error('query failed') : null;
-      callback(tabs);
-      chrome.runtime.lastError = null;
+      if (queryFails) throw new Error('query failed');
+      return tabs;
     };
-    chrome.tabs.get = (id, callback) => callback(tabs.find((tab) => tab.id === id));
+    chrome.tabs.get = async id => tabs.find(tab => tab.id === id);
     const collected = [];
-    chrome.tabs.sendMessage = (id, _message, callback) => {
+    chrome.tabs.sendMessage = async id => {
       collected.push(id);
-      callback(createPlaybackMetricsFixture({ tabId: id }));
+      return createPlaybackMetricsFixture({ tabId: id });
     };
     registerTabAndNavigationListeners();
     for (const tab of tabs) {
@@ -92,12 +91,12 @@ test('discard events reconcile auto-prepared tabs without probing their unloaded
   }
   chrome.webNavigation = { onHistoryStateUpdated: { addListener() {} } };
   const tab = createChromeTabFixture(1, { discarded: true });
-  chrome.tabs.query = (_query, callback) => callback([tab]);
-  chrome.tabs.get = (_id, callback) => callback(tab);
+  chrome.tabs.query = async () => [tab];
+  chrome.tabs.get = async () => tab;
   const collected = [];
-  chrome.tabs.sendMessage = (id, _message, callback) => {
+  chrome.tabs.sendMessage = async id => {
     collected.push(id);
-    callback(createPlaybackMetricsFixture({ tabId: id }));
+    return createPlaybackMetricsFixture({ tabId: id });
   };
 
   registerTabAndNavigationListeners();

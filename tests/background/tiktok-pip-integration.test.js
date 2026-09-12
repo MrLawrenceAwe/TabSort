@@ -7,10 +7,9 @@ test('requests TikTok PiP from the installed companion extension', async () => {
   const calls = [];
   globalThis.chrome = {
     runtime: {
-      lastError: null,
-      sendMessage(extensionId, message, callback) {
+      async sendMessage(extensionId, message) {
         calls.push({ extensionId, message });
-        callback({ ok: true, status: 'opened' });
+        return { ok: true, status: 'opened' };
       },
     },
   };
@@ -27,11 +26,8 @@ test('requests TikTok PiP from the installed companion extension', async () => {
 test('reports an unavailable TikTok extension without rejecting auto-preparation', async () => {
   globalThis.chrome = {
     runtime: {
-      lastError: null,
-      sendMessage(_extensionId, _message, callback) {
-        globalThis.chrome.runtime.lastError = new Error('Receiving end does not exist');
-        callback();
-        globalThis.chrome.runtime.lastError = null;
+      async sendMessage() {
+        throw new Error('Receiving end does not exist');
       },
     },
   };

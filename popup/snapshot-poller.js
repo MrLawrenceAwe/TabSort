@@ -1,6 +1,7 @@
 import { shouldPollRecord } from '../shared/tabs/refresh-policy.js';
 
 export function shouldPollSnapshot(snapshot, { now = Date.now } = {}) {
+  if (snapshot?.autoPreparation?.status === 'running') return false;
   const tabRecordsById = snapshot?.tabRecordsById;
   if (!tabRecordsById || typeof tabRecordsById !== 'object') return false;
   return Object.values(tabRecordsById).some((record) => shouldPollRecord(record, { now }));
@@ -19,48 +20,49 @@ export function createSnapshotPoller({
 } = {}) {
   let timeoutId = null;
   let pollInFlight = false;
+  let paused = false;
+  let generation = 0;
+  let latestSnapshot = null;
 
-  function clear() {
-    if (timeoutId == null) return;
+  function clearTimer() {
     clearTimeout(timeoutId);
     timeoutId = null;
   }
 
   function schedule() {
-    if (timeoutId != null || pollInFlight) return;
+    if (paused || !isAppActive() || timeoutId != null || pollInFlight) return;
+    if (!shouldRetrySnapshotLoad(latestSnapshot, true) && !shouldPollSnapshot(latestSnapshot)) return;
     timeoutId = setTimeout(async () => {
       timeoutId = null;
       pollInFlight = true;
-      let snapshot = null;
+      const requestGeneration = generation;
       try {
-        snapshot = await loadSnapshot();
-        if (snapshot) {
-          onSnapshot(snapshot);
-        }
+        const snapshot = await loadSnapshot();
+        if (requestGeneration !== generation || paused || !isAppActive()) return;
+        latestSnapshot = snapshot;
+        if (snapshot) onSnapshot(snapshot);
       } catch (error) {
         logPopupError('Failed to refresh pending tab snapshot', error);
       } finally {
         pollInFlight = false;
-        if (
-          shouldRetrySnapshotLoad(snapshot, isAppActive()) ||
-          (isAppActive() && shouldPollSnapshot(snapshot))
-        ) {
-          schedule();
-        }
+        schedule();
       }
     }, delayMs);
   }
 
   function scheduleIfNeeded(snapshot) {
-    clear();
-    if (isAppActive() && shouldPollSnapshot(snapshot)) {
-      schedule();
-    }
+    latestSnapshot = snapshot;
+    generation += 1;
+    clearTimer();
+    schedule();
   }
 
-  return {
-    clear,
-    scheduleIfNeeded,
-    schedule,
-  };
+  function setPaused(value) {
+    paused = value;
+    generation += 1;
+    clearTimer();
+    schedule();
+  }
+
+  return { setPaused, scheduleIfNeeded };
 }

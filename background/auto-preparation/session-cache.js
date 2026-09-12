@@ -1,3 +1,4 @@
+import { applyAutoPreparedTime } from '../tabs/video-state.js';
 import { getYouTubeVideoId } from '../../shared/youtube/urls.js';
 
 const AUTO_PREPARED_KEY_PREFIX = 'autoPreparedTab:';
@@ -36,13 +37,8 @@ export async function readAutoPreparedTabs() {
 
 export function restoreAutoPreparedTab(tab, record, saved) {
   const autoPrepared = saved[keyFor(tab.id)];
-  if (!tab.discarded || !autoPrepared ||
-      autoPrepared.identity !== getYouTubeVideoId(tab.url) ||
-      !Number.isFinite(autoPrepared.videoDetails?.remainingSeconds)) return record;
-  return {
-    ...record,
-    videoDetails: { ...autoPrepared.videoDetails },
-    remainingSecondsStale: false,
-    hasAutoPreparedTime: true,
-  };
+  if (!tab.discarded || !autoPrepared) return record;
+  const restored = { ...record };
+  return applyAutoPreparedTime(restored, autoPrepared.identity, autoPrepared.videoDetails, tab.url)
+    ? restored : record;
 }

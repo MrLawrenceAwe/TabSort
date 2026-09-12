@@ -21,17 +21,11 @@ export function ensureChromeApi({ tabs = false } = {}) {
     globalThis.chrome.tabs = {};
   }
 
-  globalThis.chrome.runtime.lastError = null;
-  globalThis.chrome.runtime.sendMessage = (_message, callback) => {
-    if (typeof callback === 'function') callback();
-  };
+  globalThis.chrome.runtime.sendMessage = async () => undefined;
 }
 
 export function stubChromeTabQuery(tabs = []) {
-  globalThis.chrome.tabs.query = (_query, callback) => {
-    callback(tabs);
-    globalThis.chrome.runtime.lastError = null;
-  };
+  globalThis.chrome.tabs.query = async () => tabs;
 }
 
 export function createChromeTabFixture(id = 1, overrides = {}) {
@@ -50,11 +44,7 @@ export function createChromeTabFixture(id = 1, overrides = {}) {
 }
 
 export function stubChromeTabQueryFailure(message = 'query failed') {
-  globalThis.chrome.tabs.query = (_query, callback) => {
-    globalThis.chrome.runtime.lastError = new Error(message);
-    callback([]);
-    globalThis.chrome.runtime.lastError = null;
-  };
+  globalThis.chrome.tabs.query = async () => { throw new Error(message); };
 }
 
 export function stubChromeTabGet({
@@ -64,15 +54,13 @@ export function stubChromeTabGet({
   active = false,
   hidden = false,
 } = {}) {
-  globalThis.chrome.tabs.get = (_tabId, callback) => {
-    callback({
+  globalThis.chrome.tabs.get = async () => ({
       id: tabId,
       windowId,
       url,
       active,
       hidden,
-    });
-  };
+  });
 }
 
 export function createPlaybackMetricsFixture({
@@ -112,24 +100,22 @@ export function createChromeTabGetFixture({
 export function stubChromeTabGetSequence(tabs, { async = false } = {}) {
   const responses = tabs.map((tab) => createChromeTabGetFixture(tab));
   let nextIndex = 0;
-  globalThis.chrome.tabs.get = (_tabId, callback) => {
+  globalThis.chrome.tabs.get = async () => {
     const response = responses[Math.min(nextIndex, responses.length - 1)];
     nextIndex += 1;
     if (async) {
-      setTimeout(() => callback(response), 0);
-      return;
+      await new Promise(resolve => setTimeout(resolve, 0));
     }
-    callback(response);
+    return response;
   };
 }
 
 export function stubChromeTabMetricPayload(payload, { async = false } = {}) {
-  globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
+  globalThis.chrome.tabs.sendMessage = async () => {
     if (async) {
-      setTimeout(() => callback(payload), 0);
-      return;
+      await new Promise(resolve => setTimeout(resolve, 0));
     }
-    callback(payload);
+    return payload;
   };
 }
 
@@ -143,8 +129,7 @@ export function stubChromeTabMetrics({
 } = {}) {
   stubChromeTabGet({ tabId, windowId, url, active, hidden });
 
-  globalThis.chrome.tabs.sendMessage = (_tabId, _payload, callback) => {
-    callback(createPlaybackMetricsFixture({
+  globalThis.chrome.tabs.sendMessage = async () => createPlaybackMetricsFixture({
       tabId,
       title: 'Archived Stream',
       url,
@@ -155,8 +140,7 @@ export function stubChromeTabMetrics({
       playbackRate: 1,
       isLive: false,
       ...metrics,
-    }));
-  };
+    });
 }
 
 export function resetTrackedWindowState(windowId = null) {

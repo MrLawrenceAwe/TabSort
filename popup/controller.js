@@ -99,7 +99,7 @@ export function applyTabSnapshot(snapshot) {
 
 function renderAndScheduleSnapshot(snapshot) {
   applyTabSnapshot(snapshot);
-  if (popupState.autoPreparation.status !== 'running') snapshotPoller.scheduleIfNeeded(snapshot);
+  snapshotPoller.scheduleIfNeeded(snapshot);
 }
 
 async function loadInitialSnapshot() {
@@ -136,7 +136,7 @@ async function requestTabAction(type, data) {
 async function requestAutoPrepare() {
   if (popupState.isStartingAutoPreparation || popupState.autoPreparation.status === 'running') return;
   applyPopupState({ isStartingAutoPreparation: true });
-  snapshotPoller.clear();
+  snapshotPoller.setPaused(true);
   setErrorMessage('');
   setNoticeMessage('');
   syncPopupLayout();
@@ -151,6 +151,7 @@ async function requestAutoPrepare() {
     runtimeClient.logPopupError('Starting auto-preparation failed', error);
   } finally {
     applyPopupState({ isStartingAutoPreparation: false });
+    snapshotPoller.setPaused(false);
     syncPopupLayout();
   }
 }
@@ -211,7 +212,7 @@ function registerPopupLifecycle(messageListener) {
   chrome.runtime.onMessage.addListener(messageListener);
   window.addEventListener('unload', () => {
     isPopupActive = false;
-    snapshotPoller.clear();
+    snapshotPoller.setPaused(true);
     chrome.runtime.onMessage.removeListener(messageListener);
   });
 }

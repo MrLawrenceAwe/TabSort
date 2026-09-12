@@ -63,17 +63,16 @@ test(
     const queryCallbacks = new Map();
     let lastFocusedCallback;
     globalThis.chrome.windows = {
-      getLastFocused(_options, callback) {
-        lastFocusedCallback = callback;
+      getLastFocused() {
+        return new Promise(resolve => { lastFocusedCallback = resolve; });
       },
     };
-    globalThis.chrome.tabs.query = (query, callback) => {
-      queryCallbacks.set(query.windowId, callback);
-    };
+    globalThis.chrome.tabs.query = query =>
+      new Promise(resolve => { queryCallbacks.set(query.windowId, resolve); });
 
     const initialSync = syncInitialWindowState();
     lastFocusedCallback({ id: 1 });
-    await Promise.resolve();
+    await new Promise(resolve => setImmediate(resolve));
 
     const focusSync = syncFocusedWindow(2);
     queryCallbacks.get(2)([

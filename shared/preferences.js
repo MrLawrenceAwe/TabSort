@@ -4,7 +4,6 @@ export const DEFAULT_PREFERENCES = Object.freeze({
 });
 
 const getChromeApi = () => globalThis.chrome ?? null;
-const getRuntimeLastError = () => getChromeApi()?.runtime?.lastError ?? null;
 
 function getStorageCandidates() {
   const storage = getChromeApi()?.storage;
@@ -16,23 +15,13 @@ function getStorageCandidates() {
   return candidates;
 }
 
-function loadOptionsFromArea({ area, name }) {
-  return new Promise((resolve) => {
-    try {
-      area.get(DEFAULT_PREFERENCES, (items) => {
-        const runtimeError = getRuntimeLastError();
-        if (runtimeError) {
-          console.warn(`[TabSort] ${name} storage get failed: ${runtimeError.message}`);
-          resolve(null);
-          return;
-        }
-        resolve({ ...DEFAULT_PREFERENCES, ...items });
-      });
-    } catch (error) {
-      console.warn(`[TabSort] ${name} storage get threw: ${error.message}`);
-      resolve(null);
-    }
-  });
+async function loadOptionsFromArea({ area, name }) {
+  try {
+    return { ...DEFAULT_PREFERENCES, ...await area.get(DEFAULT_PREFERENCES) };
+  } catch (error) {
+    console.warn(`[TabSort] ${name} storage get failed: ${error.message}`);
+    return null;
+  }
 }
 
 export async function loadPreferences() {
@@ -43,23 +32,14 @@ export async function loadPreferences() {
   return { ...DEFAULT_PREFERENCES };
 }
 
-function saveOptionsToArea({ area, name }, update) {
-  return new Promise((resolve) => {
-    try {
-      area.set(update, () => {
-        const runtimeError = getRuntimeLastError();
-        if (runtimeError) {
-          console.warn(`[TabSort] ${name} storage set failed: ${runtimeError.message}`);
-          resolve(false);
-          return;
-        }
-        resolve(true);
-      });
-    } catch (error) {
-      console.warn(`[TabSort] ${name} storage set threw: ${error.message}`);
-      resolve(false);
-    }
-  });
+async function saveOptionsToArea({ area, name }, update) {
+  try {
+    await area.set(update);
+    return true;
+  } catch (error) {
+    console.warn(`[TabSort] ${name} storage set failed: ${error.message}`);
+    return false;
+  }
 }
 
 export async function savePreferences(update) {
