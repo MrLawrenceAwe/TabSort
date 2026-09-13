@@ -129,13 +129,23 @@ export async function startAutoPreparation(message) {
     if (existing != null) {
       try { await chrome.windows.remove(existing); } catch { /* Already closed. */ }
     }
-    const progress = await chrome.windows.create({
-      url: chrome.runtime.getURL('preparation-progress/index.html'),
-      type: 'popup', focused: false, width: 440, height: 260,
-    });
-    setProgressWindowId(progress.id);
-    requireWindow(result.windowId);
-    return { ...controller.start(result.windowId, items, returnTabId), tiktokPip };
+    let progressWindowId = null;
+    try {
+      const progress = await chrome.windows.create({
+        url: chrome.runtime.getURL('preparation-progress/index.html'),
+        type: 'popup', focused: false, width: 440, height: 260,
+      });
+      progressWindowId = progress.id;
+      setProgressWindowId(progressWindowId);
+      requireWindow(result.windowId);
+      return { ...controller.start(result.windowId, items, returnTabId), tiktokPip };
+    } catch (error) {
+      if (getProgressWindowId() === progressWindowId) setProgressWindowId(null);
+      if (progressWindowId != null) {
+        try { await chrome.windows.remove(progressWindowId); } catch { /* Already closed. */ }
+      }
+      throw error;
+    }
   } finally { starting = false; }
 }
 
