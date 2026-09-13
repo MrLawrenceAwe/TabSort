@@ -16,6 +16,7 @@ import { hasReadyRemainingTime } from '../../shared/tabs/sort-readiness.js';
 import { getYouTubeVideoId } from '../../shared/youtube/urls.js';
 import { openTikTokPipForAutoPreparation } from '../integrations/tiktok-pip.js';
 import { saveAutoPreparedTab } from './session-cache.js';
+import { updateAutoPreparationToolbarIndicator } from '../toolbar-indicator.js';
 
 function requireWindow(windowId) {
   if (getTrackedWindowId() !== windowId) throw new Error('Stopped because the tracked window changed');
@@ -101,7 +102,8 @@ const controller = createAutoPreparationController({
     }
     return nextReturnTabId;
   },
-  publish() {
+  publish(autoPreparation) {
+    void updateAutoPreparationToolbarIndicator(autoPreparation);
     broadcastSnapshotUpdate({ force: true });
   },
 });
