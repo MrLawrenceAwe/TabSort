@@ -103,3 +103,23 @@ test('ordered ready subset keeps the unfinished readiness count visible', () => 
   resetPopupDom();
   resetPopupState();
 });
+
+test('TikTok PiP option follows the auto-prepare control visibility', () => {
+  const document = createFakeDocument();
+  const option = { hidden: false, classList: { toggle(name, hidden) { if (name === 'hide') this.owner.hidden = hidden; } } };
+  option.classList.owner = option;
+  document.elements.get('openTikTokPipToggle').closest = () => option;
+
+  resetPopupDom();
+  resetPopupState();
+  initializePopupDom(document);
+  popupState.sortSummary = { readyCount: 1, sortableCount: 2, readyTabsLeadInOrder: false };
+  syncPopupLayout();
+  assert.equal(option.hidden, false);
+
+  popupState.sortSummary = { readyCount: 2, sortableCount: 2, readyTabsLeadInOrder: false };
+  syncPopupLayout();
+  assert.equal(option.hidden, true);
+  resetPopupDom();
+  resetPopupState();
+});

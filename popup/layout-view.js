@@ -87,12 +87,16 @@ export function syncPopupLayout() {
 
   const autoPreparation = popupState.autoPreparation;
   const running = autoPreparation.status === 'running';
+  const shouldShowAutoPrepare = !running &&
+    popupState.sortSummary.readyCount < popupState.sortSummary.sortableCount;
   const autoPrepareButton = getPopupElement('autoPrepareButton');
   if (autoPrepareButton) {
-    autoPrepareButton.classList.toggle('hide', running || popupState.sortSummary.readyCount >= popupState.sortSummary.sortableCount);
+    autoPrepareButton.classList.toggle('hide', !shouldShowAutoPrepare);
     autoPrepareButton.disabled = popupState.isStartingAutoPreparation || popupState.isOrganising;
     autoPrepareButton.textContent = popupState.isStartingAutoPreparation ? 'Starting auto-preparation…' : 'Auto-prepare tabs';
   }
+  const openTikTokPipOption = getPopupElement('openTikTokPipToggle')?.closest?.('.option-toggle');
+  openTikTokPipOption?.classList?.toggle('hide', !shouldShowAutoPrepare);
   getPopupElement('stopAutoPreparationButton')?.classList.toggle('hide', !running);
   const autoPreparationStatus = getPopupElement('autoPreparationStatus');
   if (autoPreparationStatus) {
