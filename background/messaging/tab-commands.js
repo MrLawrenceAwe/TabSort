@@ -13,6 +13,7 @@ import {
 } from '../windows/store.js';
 import { reconcileWindowTabRecords } from '../tabs/reconcile-window.js';
 import { shouldRefreshRecordMetrics } from '../../shared/tabs/refresh-policy.js';
+import { getProgressWindowId } from '../auto-preparation/state.js';
 
 function resolveTabAction(message) {
   const tabId = message.tabId;
@@ -59,6 +60,9 @@ export async function reloadTab(message) {
 
 export async function getWindowSnapshot(message) {
   const requestedWindowId = isValidWindowId(message.windowId) ? message.windowId : null;
+  if (requestedWindowId != null && requestedWindowId === getProgressWindowId()) {
+    return { ok: false, error: 'progressWindow', windowId: requestedWindowId };
+  }
   const reconciliation = await reconcileWindowTabRecords(
     message.windowId,
     requestedWindowId != null ? { force: true } : undefined,
