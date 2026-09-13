@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { updateAutoPreparationToolbarIndicator } from '../../background/toolbar-indicator.js';
+import {
+  queueAutoPreparationToolbarIndicator,
+  updateAutoPreparationToolbarIndicator,
+} from '../../background/toolbar-indicator.js';
 
 function createActionSpy() {
   const calls = [];
@@ -37,4 +40,29 @@ test('clears the completion badge while auto-preparation is running or stopped',
     ['setBadgeText', { text: '' }],
     ['setTitle', { title: 'TabSort' }],
   ]);
+});
+
+test('queues completion after a delayed running-state update', async () => {
+  let releaseRunningUpdate;
+  let signalRunningUpdate;
+  const runningUpdateStarted = new Promise(resolve => { signalRunningUpdate = resolve; });
+  const badgeText = [];
+  const action = {
+    setBadgeText: ({ text }) => {
+      badgeText.push(text);
+      if (text !== '') return Promise.resolve();
+      signalRunningUpdate();
+      return new Promise(resolve => { releaseRunningUpdate = resolve; });
+    },
+    setBadgeBackgroundColor: async () => {},
+    setTitle: async () => {},
+  };
+
+  const running = queueAutoPreparationToolbarIndicator({ status: 'running' }, action);
+  await runningUpdateStarted;
+  const complete = queueAutoPreparationToolbarIndicator({ status: 'complete' }, action);
+  releaseRunningUpdate();
+  await Promise.all([running, complete]);
+
+  assert.deepEqual(badgeText, ['', 'DONE']);
 });
