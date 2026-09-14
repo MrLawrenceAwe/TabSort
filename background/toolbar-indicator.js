@@ -5,6 +5,10 @@ const COMPLETE_TITLE = 'TabSort — Auto-prepare complete';
 const RUNNING_COLOR = '#1a73e8';
 const COMPLETE_COLOR = '#188038';
 export const DONE_BADGE_DURATION_MS = 3000;
+const DEFAULT_TIMER = {
+  set: (callback, delay) => setTimeout(callback, delay),
+  clear: timerId => clearTimeout(timerId),
+};
 
 let pendingToolbarUpdate = Promise.resolve();
 let toolbarStateGeneration = 0;
@@ -55,7 +59,7 @@ function enqueueToolbarUpdate(state, action) {
 export function queueAutoPreparationToolbarIndicator(
   state,
   action = chrome.action,
-  timer = { set: setTimeout, clear: clearTimeout },
+  timer = DEFAULT_TIMER,
 ) {
   const generation = ++toolbarStateGeneration;
   if (scheduledBadgeClear) {
