@@ -1,3 +1,4 @@
+import { onAutoPreparationTabReplaced } from '../auto-preparation/service.js';
 import { isFiniteNumber, isValidWindowId } from '../../shared/guards.js';
 import { logDebug, logWarn, withErrorLogging } from '../../shared/log.js';
 import { getTab } from './chrome-tabs.js';
@@ -56,6 +57,7 @@ function syncForWindowChange(label, resolveWindowId) {
 export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}) {
   chrome.tabs.onReplaced?.addListener(
     withErrorLogging('tabs.onReplaced', async (addedTabId, removedTabId) => {
+      await onAutoPreparationTabReplaced(addedTabId, removedTabId);
       await transferAutoPreparedTab(addedTabId, removedTabId);
       const tab = await getTab(addedTabId);
       if (canManageWindow(tab.windowId)) scheduleWindowReconcile(tab.windowId);

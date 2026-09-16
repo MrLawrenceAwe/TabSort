@@ -21,9 +21,8 @@ function harness(overrides = {}) {
       return true;
     },
     refresh: async id => { refreshed.push(id); tabs.get(id).ready = true; },
-    finishTabPreparation: async (id, _windowId, returnTabId, result) => {
-      finishedTabs.push({ id, returnTabId, ...result });
-      return returnTabId ?? 99;
+    finishTabPreparation: async (id, _windowId, result) => {
+      finishedTabs.push({ id, ...result });
     },
     publish: state => { if (state.status !== 'running') done(state); },
     ...overrides,
@@ -102,13 +101,13 @@ test('a sleeping tab is activated and allowed to load before collecting playback
   });
   h.tabs.get(1).loaded = false;
   h.tabs.get(1).discarded = true;
-  h.controller.start(1, h.items.slice(0, 1), 99);
+  h.controller.start(1, h.items.slice(0, 1));
   const result = await h.finished;
   assert.deepEqual(h.activated, [1]);
   assert.deepEqual([...new Set(h.refreshed)], [1]);
   assert.equal(result.ready, 1);
   assert.deepEqual(h.finishedTabs, [{
-    id: 1, returnTabId: 99, autoPrepared: true, wasDiscarded: true,
+    id: 1, autoPrepared: true, wasDiscarded: true,
   }]);
 });
 
@@ -125,10 +124,61 @@ test('auto-preparation waits again when YouTube restores a saved playback positi
     },
   });
 
-  h.controller.start(1, h.items.slice(0, 1), 99);
+  h.controller.start(1, h.items.slice(0, 1));
   const result = await h.finished;
 
   assert.equal(result.ready, 1);
   assert.ok(refreshCount >= 4);
   assert.equal(h.finishedTabs[0].autoPrepared, true);
+});
+
+
+test('Stop waits for a pending activation and returns the tab before allowing a new run', async () => {
+  let release;
+  let entered;
+  const waiting = new Promise(resolve => { entered = resolve; });
+  const h = harness({ activate: () => new Promise(resolve => { release = resolve; entered(); }) });
+  h.controller.start(1, h.items);
+  await waiting;
+  const stopped = h.controller.stop();
+  assert.equal(h.controller.start(1, h.items).ok, false);
+  assert.equal(h.controller.snapshot().status, 'running');
+  release(true);
+  await stopped;
+  assert.deepEqual(h.finishedTabs.map(tab => tab.id), [1]);
+  assert.equal(h.controller.snapshot().status, 'stopped');
+});
+
+test('a failed move still runs restoration and workspace cleanup', async () => {
+  let cleaned = false;
+  const h = harness({ activate: async () => { throw new Error('move failed'); }, cleanup: async () => { cleaned = true; } });
+  h.controller.start(1, h.items);
+  const result = await h.finished;
+  assert.equal(result.reason, 'move failed');
+  assert.equal(h.finishedTabs.length, 1);
+  assert.equal(cleaned, true);
+});
+
+test('a tab selected by the user before moving is skipped and counted', async () => {
+  const h = harness({ activate: async () => false });
+  h.controller.start(1, h.items);
+  const result = await h.finished;
+  assert.equal(result.completed, 3);
+  assert.equal(result.skipped, 3);
+});
+
+test('a pending return is visible in status and Stop reports that it is waiting', async () => {
+  let releaseReturn;
+  let enteredReturn;
+  const returning = new Promise(resolve => { enteredReturn = resolve; });
+  const h = harness({ finishTabPreparation: () => new Promise(resolve => { releaseReturn = resolve; enteredReturn(); }) });
+  h.controller.start(1, h.items);
+  await returning;
+  assert.equal(h.controller.snapshot().phase, 'returning');
+  const stopped = h.controller.stop();
+  assert.equal(h.controller.snapshot().phase, 'stopping');
+  releaseReturn();
+  await stopped;
+  assert.equal(h.controller.snapshot().status, 'stopped');
+  assert.equal(h.controller.snapshot().phase, null);
 });
