@@ -95,10 +95,11 @@ test('loads the bundled runtime and reports tracked YouTube tabs in the popup', 
   }
 });
 
-test('auto-prepares deferred media after activation, survives popup closure, and stops before visiting another tab', async () => {
+test('prepares media in another window while browsing continues, then returns tabs on Stop', async () => {
   const userDataDirectory = mkdtempSync(join(tmpdir(), 'tabsort-auto-prepare-'));
   const context = await chromium.launchPersistentContext(userDataDirectory, {
     headless: false,
+    ignoreDefaultArgs: ['--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding'],
     args: [`--disable-extensions-except=${projectRoot}`, `--load-extension=${projectRoot}`],
   });
   // A real one-second silent WAV decoded by Chromium's HTMLVideoElement.
@@ -135,14 +136,34 @@ test('auto-prepares deferred media after activation, survives popup closure, and
     await popup.bringToFront();
     await firstVideo.goto('https://www.youtube.com/watch?v=deferred-one');
     await secondVideo.goto('https://www.youtube.com/watch?v=deferred-two');
-    const ids = await worker.evaluate(async () => (await chrome.tabs.query({ url: 'https://www.youtube.com/*' })).map(tab => tab.id));
+    let ids = await worker.evaluate(async () => (await chrome.tabs.query({ url: 'https://www.youtube.com/*' })).map(tab => tab.id));
+    const originalTabs = await worker.evaluate(async ids => {
+      await chrome.tabs.group({ tabIds: ids[0] });
+      return Promise.all(ids.map(id => chrome.tabs.get(id)));
+    }, ids);
+    ids = originalTabs.map(tab => tab.id);
     await popup.reload();
     await expect(popup.locator('#organiseStatus')).toContainText('0 of 2');
     await popup.getByRole('button', { name: 'Auto-prepare tabs', exact: true }).click();
     await expect.poll(() => context.pages().some(page => page.url().endsWith('/preparation-progress/index.html'))).toBe(true);
     const progress = context.pages().find(page => page.url().endsWith('/preparation-progress/index.html'));
+    const sourceWindowId = await worker.evaluate(async id => (await chrome.tabs.get(id)).windowId, ids[1]);
+    // Continue using the original window while the first video is elsewhere.
+    await popup.bringToFront();
+    await expect.poll(() => worker.evaluate(async id => (await chrome.tabs.get(id)).windowId, ids[0])).not.toBe(sourceWindowId);
+    const browsing = await context.newPage();
+    await browsing.goto(`data:text/html,<video loop src="data:audio/wav;base64,${wav.toString('base64')}"></video><button onclick="document.querySelector('video').play();this.textContent=123">Play</button>`);
+    await browsing.getByRole('button').click();
+    await expect(browsing.getByRole('button')).toHaveText('123');
+    await expect.poll(() => browsing.locator('video').evaluate(video => !video.paused && video.readyState >= 2)).toBe(true);
+    await expect(progress.locator('#progress')).toHaveText('2 of 2 checked · 2 ready · 0 skipped', { timeout: 15000 });
+    ids = await worker.evaluate(async () => (await chrome.tabs.query({ url: 'https://www.youtube.com/*' })).sort((a, b) => a.index - b.index).map(tab => tab.id));
+    expect(await worker.evaluate(async ids => (await Promise.all(ids.map(id => chrome.tabs.get(id)))).map(tab => tab.windowId), ids)).toEqual([sourceWindowId, sourceWindowId]);
+    const returnedTabs = await worker.evaluate(async ids => Promise.all(ids.map(id => chrome.tabs.get(id))), ids);
+    expect(returnedTabs.map(tab => tab.index)).toEqual(originalTabs.map(tab => tab.index));
+    expect(returnedTabs[0].groupId).toBe(originalTabs[0].groupId);
+    expect(await worker.evaluate(async windowId => (await chrome.tabs.query({ windowId, active: true }))[0].url, sourceWindowId)).toContain('data:text/html');
     await popup.close();
-    await expect(progress.locator('#progress')).toHaveText('2 of 2 checked · 2 ready · 0 skipped', { timeout: 10000 });
     await expect(progress.getByRole('heading')).toHaveText('Auto-preparation finished');
     await expect.poll(() => progress.evaluate(async ids => {
       const { windowId } = await chrome.tabs.get(ids[0]);
@@ -170,7 +191,55 @@ test('auto-prepares deferred media after activation, survives popup closure, and
       firstActive: (await chrome.tabs.get(ids[0])).active,
       secondActive: (await chrome.tabs.get(ids[1])).active,
     }), stalledIds);
-    expect(state).toEqual({ firstActive: true, secondActive: false });
+    expect(state).toEqual({ firstActive: false, secondActive: false });
+  } finally {
+    await context.close();
+    rmSync(userDataDirectory, { recursive: true, force: true });
+  }
+});
+
+test('preparation preserves first, middle and last positions in a multi-tab group', async () => {
+  const userDataDirectory = mkdtempSync(join(tmpdir(), 'tabsort-group-'));
+  const context = await chromium.launchPersistentContext(userDataDirectory, {
+    headless: false,
+    args: [`--disable-extensions-except=${projectRoot}`, `--load-extension=${projectRoot}`],
+  });
+  try {
+    const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
+    const testPage = await context.newPage();
+    await testPage.goto(`chrome-extension://${new URL(worker.url()).host}/popup/popup.html`);
+    const result = await testPage.evaluate(async () => {
+      const { createPreparationWorkspace } = await import(chrome.runtime.getURL('background/auto-preparation/workspace.js'));
+      const source = await chrome.windows.getLastFocused();
+      const active = (await chrome.tabs.query({ windowId: source.id, active: true }))[0];
+      const members = [];
+      for (let i = 0; i < 3; i++) members.push(await chrome.tabs.create({ windowId: source.id, active: false, url: 'about:blank' }));
+      const ids = members.map(tab => tab.id);
+      const groupId = await chrome.tabs.group({ tabIds: ids });
+      const original = await Promise.all(ids.map(id => chrome.tabs.get(id)));
+      const workspace = createPreparationWorkspace();
+      await workspace.create(source.id);
+      const rounds = [];
+      for (const position of [1, 0, 2]) {
+        await workspace.visit(ids[position], source.id);
+        await workspace.returnTab();
+        const returned = await Promise.all(ids.map(id => chrome.tabs.get(id)));
+        rounds.push({
+          order: returned.map(tab => tab.index),
+          groups: returned.map(tab => tab.groupId),
+          activeId: (await chrome.tabs.query({ windowId: source.id, active: true }))[0].id,
+          placeholders: (await chrome.tabs.query({ windowId: source.id })).filter(tab => tab.url.includes('/placeholder.html')).length,
+        });
+      }
+      await workspace.close();
+      return { rounds, indices: original.map(tab => tab.index), groupId, activeId: active.id };
+    });
+    for (const round of result.rounds) {
+      expect(round.order).toEqual(result.indices);
+      expect(round.groups).toEqual([result.groupId, result.groupId, result.groupId]);
+      expect(round.activeId).toBe(result.activeId);
+      expect(round.placeholders).toBe(0);
+    }
   } finally {
     await context.close();
     rmSync(userDataDirectory, { recursive: true, force: true });

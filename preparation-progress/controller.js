@@ -1,4 +1,4 @@
-import { formatPreparationCounts } from '../shared/auto-preparation.js';
+import { formatPreparationCounts, formatPreparationDetail } from '../shared/auto-preparation.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 const progress = document.getElementById('progress');
 const current = document.getElementById('current');
@@ -9,7 +9,9 @@ function render(state) {
     state.status === 'stopped' ? state.reason : 'No auto-preparation running';
   document.querySelector('h1').textContent = heading;
   progress.textContent = formatPreparationCounts(state);
-  current.textContent = running ? state.title || 'Starting…' : '';
+  current.textContent = running
+    ? `${formatPreparationDetail(state)}${state.title ? ` · ${state.title}` : ''}`
+    : '';
   stop.disabled = !running;
 }
 async function refresh() {

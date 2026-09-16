@@ -1,5 +1,5 @@
 import { getProgressWindowId } from '../auto-preparation/state.js';
-import { onAutoPreparationWindowRemoved } from '../auto-preparation/service.js';
+import { onAutoPreparationWindowRemoved, recoverAutoPreparation } from '../auto-preparation/service.js';
 import { isValidWindowId } from '../../shared/guards.js';
 import { logDebug, logListenerError, withErrorLogging } from '../../shared/log.js';
 import { updateSortStateAndBroadcast } from '../sorting/update-sort-state.js';
@@ -76,7 +76,7 @@ async function ensureRefreshAlarm() {
 
 export function initializeWindowLifecycle() {
   ensureRefreshAlarm();
-  syncInitialWindowState().catch((error) => logListenerError('initial window sync', error));
+  recoverAutoPreparation().then(() => syncInitialWindowState()).catch((error) => logListenerError('initial window sync', error));
 
   chrome.alarms.onAlarm.addListener(
     withErrorLogging('alarms.onAlarm', async (alarm) => {

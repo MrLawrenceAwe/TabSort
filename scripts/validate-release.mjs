@@ -22,6 +22,8 @@ const requiredFiles = new Set([
   'preparation-progress/index.html',
   'preparation-progress/controller.js',
   'preparation-progress/styles.css',
+  'preparation-progress/placeholder.html',
+  'preparation-progress/placeholder.js',
   ...Object.values(manifest.icons || {}),
   ...Object.values(manifest.action?.default_icon || {}),
   ...(manifest.content_scripts || []).flatMap((entry) => entry.js || []),

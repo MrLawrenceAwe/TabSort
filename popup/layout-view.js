@@ -1,4 +1,4 @@
-import { formatPreparationCounts } from '../shared/auto-preparation.js';
+import { formatPreparationCounts, formatPreparationDetail } from '../shared/auto-preparation.js';
 import { getPopupElement } from './elements.js';
 import { popupState } from './store.js';
 
@@ -102,7 +102,7 @@ export function syncPopupLayout() {
   if (autoPreparationStatus) {
     autoPreparationStatus.classList.toggle('hide', autoPreparation.status === 'idle');
     autoPreparationStatus.textContent = autoPreparation.status === 'idle' ? '' :
-      `${running ? 'Auto-preparing' : autoPreparation.status === 'complete' ? 'Auto-preparation finished' : 'Auto-preparation stopped'}: ${formatPreparationCounts(autoPreparation)}`;
+      `${running ? 'Auto-preparing' : autoPreparation.status === 'complete' ? 'Auto-preparation finished' : 'Auto-preparation stopped'}: ${formatPreparationCounts(autoPreparation)}${formatPreparationDetail(autoPreparation) ? ` · ${formatPreparationDetail(autoPreparation)}` : ''}`;
   }
 
   setOptionToggleVisibility(shouldShowOrganise);
