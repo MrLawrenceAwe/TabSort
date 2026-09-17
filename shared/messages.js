@@ -11,6 +11,7 @@ export const RUNTIME_MESSAGE_TYPES = Object.freeze({
   START_AUTO_PREPARATION: 'startAutoPreparation',
   STOP_AUTO_PREPARATION: 'stopAutoPreparation',
   GET_AUTO_PREPARATION: 'getAutoPreparation',
+  AUTO_PREPARATION_UPDATED: 'autoPreparationUpdated',
   ORGANISE_TABS: 'organiseTabs',
   TAB_SNAPSHOT_UPDATED: 'tabSnapshotUpdated',
 });

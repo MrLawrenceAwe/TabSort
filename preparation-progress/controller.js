@@ -25,8 +25,8 @@ stop.addEventListener('click', async () => {
   await refresh();
 });
 chrome.runtime.onMessage.addListener(message => {
-  if (message.type === RUNTIME_MESSAGE_TYPES.TAB_SNAPSHOT_UPDATED && message.payload?.autoPreparation) {
-    render(message.payload.autoPreparation);
+  if (message.type === RUNTIME_MESSAGE_TYPES.AUTO_PREPARATION_UPDATED && message.autoPreparation) {
+    render(message.autoPreparation);
   }
 });
 void refresh();

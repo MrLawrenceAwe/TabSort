@@ -108,6 +108,14 @@ export function createPreparationWorkspace() {
         await step('Removing video from source group', () => chrome.tabs.ungroup(tabId));
       }
       await step('Moving video to preparation window', () => chrome.tabs.move(tabId, { windowId: workspace.windowId, index: -1 }));
+      // Selecting a discarded tab in an unfocused window can leave it unloaded.
+      // Start its navigation explicitly before activation instead of spending
+      // the whole preparation deadline waiting for a visibility-triggered load.
+      const moved = await getTab(tabId);
+      if (moved.windowId !== workspace.windowId || moved.url !== current.url) return false;
+      if (moved.discarded) {
+        await step('Waking sleeping video', () => chrome.tabs.reload(tabId));
+      }
       await step('Activating preparation video', () => chrome.tabs.update(tabId, { active: true }));
       return true;
     },

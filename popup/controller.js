@@ -188,6 +188,15 @@ async function requestOrganise() {
 
 function createSnapshotMessageListener() {
   return (message) => {
+    if (message?.type === RUNTIME_MESSAGE_TYPES.AUTO_PREPARATION_UPDATED && message.autoPreparation) {
+      applyPopupState({ autoPreparation: message.autoPreparation });
+      syncPopupLayout();
+      snapshotPoller.setPaused(message.autoPreparation.status === 'running');
+      if (message.autoPreparation.status !== 'running') {
+        void runWithPopupErrorLogging(loadInitialSnapshot, 'Failed to refresh after auto-preparation');
+      }
+      return;
+    }
     if (message?.type === RUNTIME_MESSAGE_TYPES.TAB_SNAPSHOT_UPDATED && message.payload) {
       if (!isSnapshotForActiveWindow(message.payload)) return;
       Promise.resolve().then(() => {

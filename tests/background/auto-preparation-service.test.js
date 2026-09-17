@@ -58,6 +58,7 @@ test('a sleeping tab returns to sleep and retains its result when Chrome replace
   };
   chrome.tabs.move = async (id, options) => Object.assign(tabs.get(id), options, { active: false });
   chrome.tabs.update = async (id, options) => Object.assign(tabs.get(id), options, { discarded: false, status: 'complete' });
+  chrome.tabs.reload = async id => Object.assign(tabs.get(id), { discarded: false, status: 'loading' });
   chrome.tabs.remove = async id => { tabs.delete(id); };
   chrome.tabs.sendMessage = async id => ({
     url: tabs.get(id).url, metadataDurationSeconds: 60, mediaDurationSeconds: 60,
