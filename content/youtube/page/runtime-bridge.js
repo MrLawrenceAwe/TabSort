@@ -14,7 +14,12 @@ export function createExtensionRuntimeBridge({ dependencies, environment, getChr
   function sendExtensionMessage(payload, context) {
     if (!hasExtensionRuntime()) return false;
     try {
-      getChrome().runtime.sendMessage(payload);
+      const result = getChrome().runtime.sendMessage(payload);
+      if (result && typeof result.catch === 'function') {
+        void result.catch((error) => {
+          if (context) logContentError(`Sending ${context}`, error);
+        });
+      }
       return true;
     } catch (error) {
       if (context) logContentError(`Sending ${context}`, error);
