@@ -29,7 +29,12 @@ export function createPreparationWorkspace() {
     if (tab.windowId === workspace.windowId || tab.windowId === transfer.returnWindowId) {
       const destination = isPlaceholder(placeholder) ? placeholder.windowId : transfer.sourceWindowId;
       try { await chrome.windows.get(destination); } catch {
-        throw new Error('Original window closed. Your video is still in the preparation window.');
+        // There is nowhere to return the tab. It is already safe in the
+        // preparation window, so do not leave a journal that would prevent
+        // every later preparation run from starting.
+        workspace.transfer = null;
+        await persist();
+        return tab;
       }
       const index = isPlaceholder(placeholder) ? placeholder.index : transfer.index;
       // Enter at the end: an ungrouped tab cannot be inserted inside a group.
