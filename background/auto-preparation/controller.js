@@ -16,6 +16,7 @@ export function createAutoPreparationController({ inspect, activate, refresh, fi
   function stop(reason = 'Stopped') {
     if (!current) return snapshot();
     current.cancelled = true;
+    current.abortController.abort();
     state.reason = reason;
     setPhase('stopping');
     return current.done;
@@ -78,7 +79,7 @@ export function createAutoPreparationController({ inspect, activate, refresh, fi
                 lastRemainingSeconds = null;
                 lastSampleAt = null;
               }
-              if (tab.loaded) await refresh(item.id, job.windowId, Math.max(1, deadline - now()));
+              if (tab.loaded) await refresh(item.id, job.windowId, Math.max(1, deadline - now()), job.abortController.signal);
               if (job.cancelled) return;
               await delay(pollMs);
             }
@@ -124,7 +125,7 @@ export function createAutoPreparationController({ inspect, activate, refresh, fi
     },
     start(windowId, items) {
       if (current) return { ok: false, error: 'alreadyAutoPreparing' };
-      const job = { windowId, items, cancelled: false };
+      const job = { windowId, items, cancelled: false, abortController: new AbortController() };
       current = job;
       delete state.reason;
       Object.assign(state, { status: 'running', windowId, total: items.length, completed: 0,

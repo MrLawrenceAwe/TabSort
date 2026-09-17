@@ -10,7 +10,7 @@ import { reconcileWindowTabRecords } from '../tabs/reconcile-window.js';
 import { derivePlaybackUpdate } from '../playback/derive-update.js';
 import { applyPlaybackStateUpdate } from '../playback/apply-update.js';
 import { tryInjectYouTubeBootstrap } from '../youtube/inject.js';
-import { broadcastSnapshotUpdate } from '../tab-snapshot.js';
+import { logDebug } from '../../shared/log.js';
 import { updateSortStateAndBroadcast } from '../sorting/update-sort-state.js';
 import { hasReadyRemainingTime } from '../../shared/tabs/sort-readiness.js';
 import { getYouTubeVideoId } from '../../shared/youtube/urls.js';
@@ -40,6 +40,10 @@ const controller = createAutoPreparationController({
     try { tab = await getTab(tabId); } catch { return null; }
     const visiting = workspace.transfer?.tabId === tabId && tab.windowId === workspace.windowId;
     if (!visiting && tab.windowId !== windowId) return null;
+    // Queued tabs may have become ready through normal browsing since start.
+    // Keep our private copy while visiting or when another window is tracked.
+    const latest = !visiting && getTrackedWindowId() === windowId ? getTabRecord(tabId) : null;
+    if (latest && getYouTubeVideoId(latest.url) === getYouTubeVideoId(tab.url)) records.set(tabId, latest);
     const record = records.get(tabId);
     const videoId = getYouTubeVideoId(tab.url);
     return {
@@ -52,8 +56,10 @@ const controller = createAutoPreparationController({
     };
   },
   activate: (tabId, windowId) => workspace.visit(tabId, windowId),
-  async refresh(tabId, _windowId, remainingMs) {
+  async refresh(tabId, _windowId, remainingMs, signal) {
     let timer;
+    let onAbort;
+    let expired = false;
     const record = records.get(tabId);
     const windowId = workspace.windowId;
     const requestedUrl = record?.url;
@@ -61,11 +67,13 @@ const controller = createAutoPreparationController({
       await Promise.race([
         (async () => {
           const result = await sendMessageToTab(tabId, { type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS });
+          if (expired || signal.aborted) return;
           if (result.reason === MESSAGE_FAILURE_REASONS.NO_RECEIVER) {
             await tryInjectYouTubeBootstrap(tabId);
             return; // Poll again after the content runtime has bootstrapped.
           }
           const tab = await getTab(tabId);
+          if (expired || signal.aborted) return;
           if (!result.ok || tab.windowId !== windowId || workspace.transfer?.tabId !== tabId) return;
           const update = derivePlaybackUpdate({ metricsPayload: result.data, record, requestedUrl, currentTabUrl: tab.url });
           if (!update) return;
@@ -73,8 +81,17 @@ const controller = createAutoPreparationController({
           applyPlaybackStateUpdate(record, update, tab.url);
         })(),
         new Promise(resolve => { timer = setTimeout(resolve, remainingMs); }),
+        new Promise(resolve => {
+          onAbort = resolve;
+          if (signal.aborted) resolve();
+          else signal.addEventListener('abort', onAbort, { once: true });
+        }),
       ]);
-    } finally { clearTimeout(timer); }
+    } finally {
+      expired = true;
+      clearTimeout(timer);
+      signal.removeEventListener('abort', onAbort);
+    }
   },
   async finishTabPreparation(tabId, _windowId, { autoPrepared, wasDiscarded }) {
     const record = records.get(tabId);
@@ -107,7 +124,9 @@ const controller = createAutoPreparationController({
   },
   publish(autoPreparation) {
     void queueAutoPreparationToolbarIndicator(autoPreparation);
-    broadcastSnapshotUpdate({ force: true });
+    void chrome.runtime.sendMessage({
+      type: RUNTIME_MESSAGE_TYPES.AUTO_PREPARATION_UPDATED, autoPreparation,
+    }).catch(error => logDebug('auto-preparation broadcast failed', error));
   },
 });
 

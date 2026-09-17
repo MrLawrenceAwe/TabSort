@@ -42,6 +42,7 @@ function harness() {
       },
       ungroup: async id => { calls.push(['ungroup', id]); tabs.get(id).groupId = -1; },
       update: async (id, options) => { calls.push(['update', id, options]); Object.assign(tabs.get(id), options); },
+      reload: async id => { calls.push(['reload', id]); Object.assign(tabs.get(id), { discarded: false, status: 'loading' }); },
       group: async ({ tabIds, groupId }) => { tabs.get(tabIds).groupId = groupId; },
       remove: async id => { tabs.delete(id); },
     },
@@ -142,8 +143,31 @@ test('sleeping grouped tabs are explicitly ungrouped before crossing windows', a
   await h.workspace.create(1);
   await h.workspace.visit(2, 1);
   assert.ok(h.calls.some(call => call[0] === 'ungroup' && call[1] === 2));
+  assert.equal(h.tabs.get(2).discarded, false);
+  const wakeIndex = h.calls.findIndex(call => call[0] === 'reload' && call[1] === 2);
+  const activateIndex = h.calls.findIndex(call => call[0] === 'update' && call[1] === 2);
+  assert.ok(wakeIndex >= 0 && wakeIndex < activateIndex);
   await h.workspace.returnTab();
   assert.equal(h.tabs.get(2).groupId, 7);
+});
+
+test('loaded videos are never reloaded during preparation', async () => {
+  const h = harness();
+  await h.workspace.create(1);
+  await h.workspace.visit(2, 1);
+  assert.equal(h.calls.some(call => call[0] === 'reload'), false);
+});
+
+test('failed wake still allows restoration of the sleeping video', async () => {
+  const h = harness();
+  h.tabs.get(2).discarded = true;
+  chrome.tabs.reload = async () => { throw new Error('reload failed'); };
+  await h.workspace.create(1);
+  await assert.rejects(h.workspace.visit(2, 1), /Waking sleeping video: reload failed/);
+  await h.workspace.close();
+  assert.equal(h.tabs.get(2).windowId, 1);
+  assert.equal(h.tabs.get(2).groupId, 7);
+  assert.equal(h.tabs.get(2).discarded, true);
 });
 
 test('failed outward moves restore the video to the source group', async () => {
