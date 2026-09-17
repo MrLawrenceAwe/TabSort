@@ -45,6 +45,9 @@ function harness() {
       reload: async id => { calls.push(['reload', id]); Object.assign(tabs.get(id), { discarded: false, status: 'loading' }); },
       group: async ({ tabIds, groupId }) => { tabs.get(tabIds).groupId = groupId; },
       remove: async id => { tabs.delete(id); },
+      query: async ({ windowId }) => [...tabs.values()]
+        .filter(tab => windowId == null || tab.windowId === windowId)
+        .map(tab => ({ ...tab })),
     },
   };
   return { workspace: createPreparationWorkspace(), tabs, saved, calls };
@@ -75,14 +78,17 @@ test('never moves the current browsing tab', async () => {
   assert.equal(h.workspace.transfer, null);
 });
 
-test('a worker restart returns a journaled tab and removes its placeholder', async () => {
+test('a worker restart returns a journaled tab and removes its stale progress page and placeholder', async () => {
   const h = harness();
   await h.workspace.create(1);
   await h.workspace.visit(2, 1);
   const placeholderId = h.workspace.transfer.placeholderId;
+  h.tabs.set(30, { id: 30, windowId: 3, index: 1, url: 'https://example.com', active: false });
   await createPreparationWorkspace().recover();
   assert.equal(h.tabs.get(2).windowId, 1);
   assert.equal(h.tabs.has(placeholderId), false);
+  assert.equal(h.tabs.has(9), false);
+  assert.equal(h.tabs.has(30), true);
   assert.equal(h.saved.autoPreparationWorkspace, undefined);
 });
 

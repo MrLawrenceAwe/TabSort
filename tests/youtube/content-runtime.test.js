@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { createYouTubePageController, shouldSendContentScriptReadySignal } from '../../content/youtube/page/controller.js';
+import { createExtensionRuntimeBridge } from '../../content/youtube/page/runtime-bridge.js';
 import { collectPageDetails } from '../../content/youtube/metadata/collect-page-details.js';
 import { inferIsLiveNow } from '../../content/youtube/metadata/live-status.js';
 import { RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
@@ -11,6 +12,26 @@ import {
   installRuntimeTestDom,
   resetGlobals,
 } from '../helpers/content-runtime-fixtures.js';
+
+test('content runtime absorbs asynchronous sendMessage failures', async () => {
+  const failure = new Error('Extension context invalidated');
+  const warnings = [];
+  const originalWarn = console.warn;
+  console.warn = message => warnings.push(message);
+  try {
+    const bridge = createExtensionRuntimeBridge({
+      dependencies: {},
+      environment: {},
+      getChrome: () => ({ runtime: { id: 'test', sendMessage: () => Promise.reject(failure) } }),
+      getLocation: () => ({ href: 'https://www.youtube.com/watch?v=test' }),
+    });
+    assert.equal(bridge.sendExtensionMessage({ type: 'test' }, 'test message'), true);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.deepEqual(warnings, ['[TabSort] Sending test message: Extension context invalidated']);
+  } finally {
+    console.warn = originalWarn;
+  }
+});
 test('shouldSendContentScriptReadySignal allows first-load, force-refresh, and URL-change signals', () => {
   assert.equal(
     shouldSendContentScriptReadySignal('https://www.youtube.com/watch?v=one', null),

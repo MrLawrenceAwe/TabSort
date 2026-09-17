@@ -15,6 +15,21 @@ export function createPreparationWorkspace() {
   const readTab = async id => { try { return await getTab(id); } catch { return null; } };
   const isPlaceholder = tab => tab?.url?.startsWith(chrome.runtime.getURL('preparation-progress/placeholder.html'));
 
+  async function removeRecoveredProgressTab(windowId) {
+    let tabs;
+    try {
+      tabs = await chrome.tabs.query({ windowId });
+    } catch {
+      return;
+    }
+    const progressUrl = chrome.runtime.getURL('preparation-progress/index.html');
+    await Promise.all(
+      tabs
+        .filter(tab => tab?.url === progressUrl)
+        .map(tab => chrome.tabs.remove(tab.id).catch(() => {})),
+    );
+  }
+
   async function returnTab() {
     const transfer = workspace?.transfer;
     if (!transfer) return null;
@@ -134,7 +149,12 @@ export function createPreparationWorkspace() {
     async recover() {
       const saved = await chrome.storage.session.get(JOURNAL_KEY);
       workspace = saved[JOURNAL_KEY] ?? null;
-      if (workspace) await close();
+      if (!workspace) return;
+      const recoveredWindowId = workspace.windowId;
+      await close();
+      // The run state itself cannot survive a service-worker restart. Remove
+      // only our stale progress page; leave any user-added tabs alone.
+      await removeRecoveredProgressTab(recoveredWindowId);
     },
   };
 }
