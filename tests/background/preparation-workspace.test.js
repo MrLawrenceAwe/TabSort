@@ -86,15 +86,16 @@ test('a worker restart returns a journaled tab and removes its placeholder', asy
   assert.equal(h.saved.autoPreparationWorkspace, undefined);
 });
 
-test('closing the original window leaves the real video and journal intact', async () => {
+test('closing the original window leaves the real video in preparation and clears the journal', async () => {
   const h = harness();
   await h.workspace.create(1);
   await h.workspace.visit(2, 1);
   h.tabs.delete(h.workspace.transfer.placeholderId);
   chrome.windows.get = async () => { throw new Error('No window'); };
-  await assert.rejects(h.workspace.close(), /still in the preparation window/);
+  await h.workspace.close();
   assert.equal(h.tabs.get(2).windowId, 3);
-  assert.ok(h.saved.autoPreparationWorkspace.transfer);
+  assert.equal(h.saved.autoPreparationWorkspace, undefined);
+  assert.equal(h.workspace.transfer, null);
 });
 
 test('closing the preparation video preserves a placeholder with the original URL', async () => {
