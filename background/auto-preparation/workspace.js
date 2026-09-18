@@ -83,6 +83,21 @@ export function createPreparationWorkspace() {
     await chrome.storage.session.remove(JOURNAL_KEY);
   }
 
+  async function discardUnstartedWorkspace() {
+    const windowId = workspace?.windowId;
+    if (windowId == null || workspace?.transfer) return;
+    // Closing a whole window could discard a tab the user added while Chrome
+    // was creating it. Removing our initial progress tab closes an otherwise
+    // empty window, while leaving any user tabs alone.
+    const tabs = await chrome.tabs.query({ windowId }).catch(() => []);
+    const progressUrl = chrome.runtime.getURL('preparation-progress/index.html');
+    await Promise.all(
+      tabs
+        .filter(tab => tab?.url === progressUrl)
+        .map(tab => chrome.tabs.remove(tab.id).catch(() => {})),
+    );
+  }
+
   return {
     get windowId() { return workspace?.windowId ?? null; },
     get transfer() { return workspace?.transfer ?? null; },
@@ -146,6 +161,7 @@ export function createPreparationWorkspace() {
     },
     returnTab,
     close,
+    discardUnstartedWorkspace,
     async recover() {
       const saved = await chrome.storage.session.get(JOURNAL_KEY);
       workspace = saved[JOURNAL_KEY] ?? null;

@@ -174,6 +174,7 @@ export async function startAutoPreparation(message) {
     for (const record of candidates) records.set(record.id, record);
     const windowId = await workspace.create(result.windowId);
     if (wasCancelled()) {
+      await workspace.discardUnstartedWorkspace();
       await workspace.close();
       records.clear();
       return { ok: false, error: 'startCancelled' };

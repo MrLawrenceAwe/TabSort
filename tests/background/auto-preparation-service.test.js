@@ -39,6 +39,48 @@ test('Stop cancels a start that is waiting for the optional TikTok PiP request',
   assert.equal(createWorkspaceCalls, 0);
 });
 
+test('Stop removes the unstarted preparation progress tab when window creation finishes late', async () => {
+  resetTrackedWindowStore({ windowId: 1 });
+  const saved = {};
+  chrome.storage = { session: {
+    get: async () => saved,
+    set: async data => Object.assign(saved, data),
+    remove: async key => { delete saved[key]; },
+  } };
+  chrome.runtime.getURL = path => `chrome-extension://test/${path}`;
+  const sourceTab = createChromeTabFixture(1, { windowId: 1, active: false });
+  const progressTab = createChromeTabFixture(99, {
+    windowId: 9,
+    url: chrome.runtime.getURL('preparation-progress/index.html'),
+  });
+  chrome.tabs.query = async ({ windowId } = {}) => windowId === 9 ? [progressTab] : [sourceTab];
+  chrome.tabs.get = async () => sourceTab;
+  let removeProgressTabId = null;
+  chrome.tabs.remove = async id => { removeProgressTabId = id; };
+
+  let resolveCreatedWindow;
+  let signalCreateStarted;
+  const createStarted = new Promise(resolve => { signalCreateStarted = resolve; });
+  chrome.windows = {
+    get: async id => ({ id }),
+    create: async () => {
+      signalCreateStarted();
+      return new Promise(resolve => { resolveCreatedWindow = () => resolve({ id: 9 }); });
+    },
+  };
+
+  const start = startAutoPreparation({ windowId: 1 });
+  await createStarted;
+  const stop = await stopAutoPreparation();
+  resolveCreatedWindow();
+
+  assert.equal(stop.ok, true);
+  assert.deepEqual(await start, { ok: false, error: 'startCancelled' });
+  assert.equal(removeProgressTabId, 99);
+  assert.equal(getProgressWindowId(), null);
+  assert.equal(saved.autoPreparationWorkspace, undefined);
+});
+
 test('does not open TikTok PiP when preparation has no eligible videos', async () => {
   resetTrackedWindowStore({ windowId: 1 });
   chrome.storage = { session: { get: async () => ({}), set: async () => {}, remove: async () => {} } };
