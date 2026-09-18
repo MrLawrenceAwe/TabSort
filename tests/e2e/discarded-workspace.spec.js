@@ -74,11 +74,17 @@ test('wakes five discarded pages and restores their groups without taking focus'
       }
     `);
     child = spawn(chromium.executablePath(), [
+      // Match Playwright's test-browser launch on hosted Linux runners.
+      '--no-sandbox',
       `--user-data-dir=${join(directory, 'profile')}`, '--no-first-run', '--no-default-browser-check',
       `--disable-extensions-except=${directory}`, `--load-extension=${directory}`, 'about:blank',
-    ], { stdio: 'ignore' });
+    ], { stdio: ['ignore', 'ignore', 'pipe'] });
+    let browserErrors = '';
+    child.stderr.on('data', chunk => { browserErrors = (browserErrors + chunk).slice(-8000); });
     child.once('error', rejectResult);
-    child.once('exit', code => rejectResult(new Error(`Test browser exited early: ${code}`)));
+    child.once('exit', (code, signal) => rejectResult(new Error(
+      `Test browser exited early: code=${code}, signal=${signal}\n${browserErrors}`
+    )));
     const observed = await Promise.race([result, new Promise((_, reject) => {
       timer = setTimeout(() => reject(new Error('Discard regression timed out')), 20000);
     })]);
