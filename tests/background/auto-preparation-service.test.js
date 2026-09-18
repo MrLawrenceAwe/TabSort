@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { startAutoPreparation, stopAutoPreparation } from '../../background/auto-preparation/service.js';
 import { getAutoPreparation, getProgressWindowId } from '../../background/auto-preparation/state.js';
-import { resetTrackedWindowStore } from '../../background/windows/store.js';
-import { createChromeTabFixture, ensureChromeApi } from '../helpers/background-test-helpers.js';
+import { replaceAllTabRecords, resetTrackedWindowStore } from '../../background/windows/store.js';
+import { createChromeTabFixture, createTabRecordFixture, ensureChromeApi } from '../helpers/background-test-helpers.js';
 
 ensureChromeApi({ tabs: true });
 
@@ -25,7 +25,7 @@ test('does not open TikTok PiP when preparation has no eligible videos', async (
   assert.equal(pipRequests, 0);
 });
 
-test('changing the tracked window during setup does not cancel preparation or move the user’s active tab', async () => {
+test('changing the tracked window during the setup query keeps preparation candidates in the source window', async () => {
   resetTrackedWindowStore({ windowId: 1 });
   const saved = {};
   chrome.storage = { session: {
@@ -35,26 +35,34 @@ test('changing the tracked window during setup does not cancel preparation or mo
   } };
   chrome.runtime.getURL = path => `chrome-extension://test/${path}`;
   const tab = createChromeTabFixture(1, { windowId: 1, active: true });
-  chrome.tabs.query = async () => [tab];
+  let queryCount = 0;
+  chrome.tabs.query = async () => {
+    if (++queryCount === 2) {
+      resetTrackedWindowStore({ windowId: 2 });
+      replaceAllTabRecords({
+        20: createTabRecordFixture(20, { windowId: 2 }),
+        21: createTabRecordFixture(21, { windowId: 2 }),
+      });
+    }
+    return [tab];
+  };
   chrome.tabs.get = async () => tab;
   chrome.tabs.move = async () => { assert.fail('active browsing tab must not move'); };
   chrome.windows = {
     get: async id => ({ id }),
-    create: async () => {
-      resetTrackedWindowStore({ windowId: 2 });
-      return { id: 99, tabs: [{ id: 100 }] };
-    },
+    create: async () => ({ id: 99, tabs: [{ id: 100 }] }),
   };
   const result = await startAutoPreparation({ windowId: 1 });
   assert.equal(result.ok, true);
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(getAutoPreparation().status, 'complete');
+  assert.equal(getAutoPreparation().total, 1);
   assert.equal(getAutoPreparation().skipped, 1);
   assert.equal(getProgressWindowId(), 99);
   await stopAutoPreparation();
 });
 
-test('a sleeping tab returns to sleep and retains its result when Chrome replaces its ID', async () => {
+test('a sleeping tab retains its preparation record across a setup window switch and Chrome ID replacement', async () => {
   resetTrackedWindowStore({ windowId: 1 });
   const saved = {};
   chrome.storage.session = {
@@ -90,7 +98,10 @@ test('a sleeping tab returns to sleep and retains its result when Chrome replace
   };
   chrome.windows = {
     get: async id => ({ id }),
-    create: async () => ({ id: 199, tabs: [{ id: 200 }] }),
+    create: async () => {
+      resetTrackedWindowStore({ windowId: 2 });
+      return { id: 199, tabs: [{ id: 200 }] };
+    },
   };
   assert.equal((await startAutoPreparation({ windowId: 1 })).ok, true);
   const deadline = Date.now() + 8000;

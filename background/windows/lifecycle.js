@@ -36,7 +36,7 @@ export function resetTrackedWindow() {
 export async function syncFocusedWindow(windowId) {
   if (!isValidWindowId(windowId) || windowId === getProgressWindowId()) return;
   focusSyncGeneration += 1;
-  if (windowId === getTrackedWindowId()) return;
+  // Even the current window must supersede an in-flight sync to another one.
   await reconcileWindowTabRecords(windowId, { force: true });
 }
 
