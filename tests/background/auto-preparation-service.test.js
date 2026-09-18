@@ -7,6 +7,24 @@ import { createChromeTabFixture, ensureChromeApi } from '../helpers/background-t
 
 ensureChromeApi({ tabs: true });
 
+test('does not open TikTok PiP when preparation has no eligible videos', async () => {
+  resetTrackedWindowStore({ windowId: 1 });
+  chrome.storage = { session: { get: async () => ({}), set: async () => {}, remove: async () => {} } };
+  chrome.tabs.query = async () => [
+    createChromeTabFixture(1, { windowId: 1, url: 'https://example.com', active: true }),
+  ];
+  let pipRequests = 0;
+  chrome.runtime.sendMessage = async (...args) => {
+    if (typeof args[0] === 'string') pipRequests += 1;
+    return { ok: true };
+  };
+
+  const result = await startAutoPreparation({ windowId: 1, openTikTokPip: true });
+
+  assert.deepEqual(result, { ok: false, error: 'noUnreadyTabs' });
+  assert.equal(pipRequests, 0);
+});
+
 test('changing the tracked window during setup does not cancel preparation or move the user’s active tab', async () => {
   resetTrackedWindowStore({ windowId: 1 });
   const saved = {};
