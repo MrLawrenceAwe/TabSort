@@ -136,9 +136,6 @@ export async function startAutoPreparation(message) {
   try {
     await recoverAutoPreparation();
     await workspace.close();
-    const tiktokPip = message.openTikTokPip === true
-      ? await openTikTokPipForAutoPreparation(message.windowId)
-      : null;
     const result = await reconcileWindowTabRecords(message.windowId, { force: true });
     if (!result.applied) return { ok: false, error: 'windowUnavailable' };
     const windowTabs = await listWindowTabs(result.windowId);
@@ -150,6 +147,9 @@ export async function startAutoPreparation(message) {
       .map(record => ({ id: record.id, videoId: getYouTubeVideoId(record.url),
         title: record.videoDetails?.title || 'YouTube video' }));
     if (!items.length) return { ok: false, error: 'noUnreadyTabs' };
+    const tiktokPip = message.openTikTokPip === true
+      ? await openTikTokPipForAutoPreparation(result.windowId)
+      : null;
     const existing = getProgressWindowId();
     if (existing != null) {
       // Remove only our old progress tab, never an entire window with user tabs.
