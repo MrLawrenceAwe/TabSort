@@ -3,8 +3,7 @@ import { createAutoPreparationController } from './controller.js';
 import { createPreparationWorkspace } from './workspace.js';
 import { getAutoPreparation, autoPreparationState, getProgressWindowId, setProgressWindowId } from './state.js';
 import { getTab, listWindowTabs, sendMessageToTab, MESSAGE_FAILURE_REASONS, getTabLoadState } from '../tabs/chrome-tabs.js';
-import { getTabRecord, getTrackedWindowId, listTabRecords, setTabRecord } from '../windows/store.js';
-import { createTabRecord } from '../tabs/record.js';
+import { getTabRecord, getTrackedWindowId, setTabRecord } from '../windows/store.js';
 import { reconcileTabRecord } from '../tabs/reconcile-tab-record.js';
 import { reconcileWindowTabRecords } from '../tabs/reconcile-window.js';
 import { derivePlaybackUpdate } from '../playback/derive-update.js';
@@ -138,9 +137,11 @@ export async function startAutoPreparation(message) {
     await workspace.close();
     const result = await reconcileWindowTabRecords(message.windowId, { force: true });
     if (!result.applied) return { ok: false, error: 'windowUnavailable' };
+    // Use the reconciliation's snapshot throughout setup: focus changes can
+    // replace the tracked-window store at any subsequent asynchronous boundary.
+    const candidates = Object.values(result.tabRecordsById);
     const windowTabs = await listWindowTabs(result.windowId);
     if (!windowTabs?.length) return { ok: false, error: 'windowUnavailable' };
-    const candidates = listTabRecords();
     const items = candidates
       .filter(record => !record.pinned && !record.isLive && !hasReadyRemainingTime(record))
       .sort((a, b) => a.index - b.index)
@@ -159,10 +160,7 @@ export async function startAutoPreparation(message) {
       }
       setProgressWindowId(null);
     }
-    for (const tab of windowTabs) {
-      const record = getTabRecord(tab.id) ?? createTabRecord(tab.id, tab.windowId, { url: tab.url });
-      records.set(tab.id, record);
-    }
+    for (const record of candidates) records.set(record.id, record);
     const windowId = await workspace.create(result.windowId);
     setProgressWindowId(windowId);
     return { ...controller.start(result.windowId, items), tiktokPip };

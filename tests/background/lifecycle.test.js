@@ -56,6 +56,27 @@ test(
 );
 
 test(
+  'returning focus to the tracked window supersedes a pending sync to another window',
+  { concurrency: false },
+  async () => {
+    resetTrackedWindowState(1);
+    replaceAllTabRecords({ 10: createTabRecordFixture(10, { windowId: 1 }) });
+    let resolveOtherWindow;
+    chrome.tabs.query = ({ windowId }) => windowId === 2
+      ? new Promise(resolve => { resolveOtherWindow = resolve; })
+      : Promise.resolve([createChromeTabFixture(10, { windowId: 1 })]);
+
+    const otherWindowSync = syncFocusedWindow(2);
+    await syncFocusedWindow(1);
+    resolveOtherWindow([createChromeTabFixture(20, { windowId: 2 })]);
+    await otherWindowSync;
+
+    assert.equal(getTrackedWindowId(), 1);
+    assert.deepEqual(Object.keys(getTabRecordsById()), ['10']);
+  },
+);
+
+test(
   'initial window sync cannot overwrite a newer focus sync',
   { concurrency: false },
   async () => {

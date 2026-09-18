@@ -78,5 +78,8 @@ export async function reconcileWindowTabRecords(windowId, options = {}) {
   replaceOrderedWindowTabs(tabs);
   replaceAllTabRecords(nextTabRecords);
   updateSortStateAndBroadcast();
-  return { ok: true, applied: true, windowId: queriedWindowId, syncToken };
+  return {
+    ok: true, applied: true, windowId: queriedWindowId, syncToken,
+    tabRecordsById: getTabRecordsById(),
+  };
 }
