@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "validate:release": "node scripts/validate-release.mjs",
     "package": "npm run build && npm run validate:release && node scripts/package-extension.mjs",
-    "check": "npm run build && npm test && npm run lint && node scripts/check-static.mjs && npm run validate:release"
+    "check": "npm run build && npm test && npm run test:e2e && npm run lint && node scripts/check-static.mjs && npm run validate:release"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.0",

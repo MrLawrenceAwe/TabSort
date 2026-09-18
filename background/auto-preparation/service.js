@@ -23,6 +23,7 @@ const workspace = createPreparationWorkspace();
 // the popup's tracked-window store without interrupting this run.
 const records = new Map();
 let starting = false;
+let pendingStart = null;
 let recovery = null;
 export function recoverAutoPreparation() {
   recovery ??= workspace.recover().catch(error => {
@@ -131,16 +132,23 @@ const controller = createAutoPreparationController({
 
 export async function startAutoPreparation(message) {
   if (starting || getAutoPreparation().status === 'running') return { ok: false, error: 'alreadyAutoPreparing' };
+  const start = { cancelled: false, abortController: new AbortController() };
   starting = true;
+  pendingStart = start;
+  const wasCancelled = () => start.cancelled;
   try {
     await recoverAutoPreparation();
+    if (wasCancelled()) return { ok: false, error: 'startCancelled' };
     await workspace.close();
+    if (wasCancelled()) return { ok: false, error: 'startCancelled' };
     const result = await reconcileWindowTabRecords(message.windowId, { force: true });
+    if (wasCancelled()) return { ok: false, error: 'startCancelled' };
     if (!result.applied) return { ok: false, error: 'windowUnavailable' };
     // Use the reconciliation's snapshot throughout setup: focus changes can
     // replace the tracked-window store at any subsequent asynchronous boundary.
     const candidates = Object.values(result.tabRecordsById);
     const windowTabs = await listWindowTabs(result.windowId);
+    if (wasCancelled()) return { ok: false, error: 'startCancelled' };
     if (!windowTabs?.length) return { ok: false, error: 'windowUnavailable' };
     const items = candidates
       .filter(record => !record.pinned && !record.isLive && !hasReadyRemainingTime(record))
@@ -149,28 +157,45 @@ export async function startAutoPreparation(message) {
         title: record.videoDetails?.title || 'YouTube video' }));
     if (!items.length) return { ok: false, error: 'noUnreadyTabs' };
     const tiktokPip = message.openTikTokPip === true
-      ? await openTikTokPipForAutoPreparation(result.windowId)
+      ? await openTikTokPipForAutoPreparation(result.windowId, { signal: start.abortController.signal })
       : null;
+    if (wasCancelled()) return { ok: false, error: 'startCancelled' };
     const existing = getProgressWindowId();
     if (existing != null) {
       // Remove only our old progress tab, never an entire window with user tabs.
       const tabs = await listWindowTabs(existing);
+      if (wasCancelled()) return { ok: false, error: 'startCancelled' };
       for (const tab of tabs ?? []) {
         if (tab.url === chrome.runtime.getURL('preparation-progress/index.html')) await chrome.tabs.remove(tab.id);
+        if (wasCancelled()) return { ok: false, error: 'startCancelled' };
       }
       setProgressWindowId(null);
     }
     for (const record of candidates) records.set(record.id, record);
     const windowId = await workspace.create(result.windowId);
+    if (wasCancelled()) {
+      await workspace.close();
+      records.clear();
+      return { ok: false, error: 'startCancelled' };
+    }
     setProgressWindowId(windowId);
     return { ...controller.start(result.windowId, items), tiktokPip };
   } catch (error) {
     await workspace.close();
+    records.clear();
     throw error;
-  } finally { starting = false; }
+  } finally {
+    if (pendingStart === start) pendingStart = null;
+    starting = false;
+  }
 }
 
 export async function stopAutoPreparation() {
+  if (pendingStart) {
+    pendingStart.cancelled = true;
+    pendingStart.abortController.abort();
+    return { ok: true, autoPreparation: getAutoPreparation() };
+  }
   await controller.stop();
   return { ok: true, autoPreparation: getAutoPreparation() };
 }
