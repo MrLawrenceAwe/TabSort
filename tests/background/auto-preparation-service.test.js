@@ -7,6 +7,38 @@ import { createChromeTabFixture, createTabRecordFixture, ensureChromeApi } from 
 
 ensureChromeApi({ tabs: true });
 
+test('Stop cancels a start that is waiting for the optional TikTok PiP request', async () => {
+  resetTrackedWindowStore({ windowId: 1 });
+  chrome.storage = { session: { get: async () => ({}), set: async () => {}, remove: async () => {} } };
+  chrome.runtime.getURL = path => `chrome-extension://test/${path}`;
+  const tab = createChromeTabFixture(1, { windowId: 1, active: false });
+  chrome.tabs.query = async () => [tab];
+  chrome.tabs.get = async () => tab;
+  let createWorkspaceCalls = 0;
+  chrome.windows = {
+    get: async id => ({ id }),
+    create: async () => { createWorkspaceCalls += 1; return { id: 99 }; },
+  };
+
+  let resolvePipRequest;
+  const pipRequestStarted = new Promise(resolve => { resolvePipRequest = resolve; });
+  chrome.runtime.sendMessage = async (...args) => {
+    if (typeof args[0] !== 'string') return undefined;
+    resolvePipRequest();
+    return new Promise(resolve => { resolvePipRequest = () => resolve({ ok: true }); });
+  };
+
+  const start = startAutoPreparation({ windowId: 1, openTikTokPip: true });
+  await pipRequestStarted;
+  const stop = await stopAutoPreparation();
+  const startResult = await start;
+  resolvePipRequest();
+
+  assert.equal(stop.ok, true);
+  assert.deepEqual(startResult, { ok: false, error: 'startCancelled' });
+  assert.equal(createWorkspaceCalls, 0);
+});
+
 test('does not open TikTok PiP when preparation has no eligible videos', async () => {
   resetTrackedWindowStore({ windowId: 1 });
   chrome.storage = { session: { get: async () => ({}), set: async () => {}, remove: async () => {} } };
