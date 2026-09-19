@@ -50,6 +50,7 @@ export function createAutoPreparationRunner({ inspect, moveTabToPreparationWindo
             let readySince = null;
             let lastRemainingSeconds = null;
             let lastSampleAt = null;
+            let lastRefreshAt = null;
             while (!job.signal.aborted && now() < deadline) {
               const tab = await inspect(item.id, job.windowId);
               if (job.signal.aborted) return;
@@ -78,9 +79,21 @@ export function createAutoPreparationRunner({ inspect, moveTabToPreparationWindo
                 lastRemainingSeconds = null;
                 lastSampleAt = null;
               }
-              if (tab.loaded) await refresh(item.id, job.windowId, Math.max(1, deadline - now()), job.signal);
+              // Inspect a completed read immediately so its settling period
+              // starts now, not one poll later. Read time counts toward the
+              // polling interval instead of adding to it on every iteration.
+              const untilNextRead = lastRefreshAt == null ? 0 : lastRefreshAt + pollMs - now();
+              const waitMs = Math.max(0, Math.min(
+                tab.loaded ? untilNextRead : pollMs,
+                deadline - now(),
+              ));
+              if (waitMs > 0) await delay(waitMs);
               if (job.signal.aborted) return;
-              await delay(pollMs);
+              if (now() >= deadline) break;
+              if (tab.loaded) {
+                lastRefreshAt = now();
+                await refresh(item.id, job.windowId, Math.max(1, deadline - now()), job.signal);
+              }
             }
             if (job.signal.aborted) return;
           } finally {

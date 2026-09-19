@@ -28,8 +28,45 @@ function harness(overrides = {}) {
     ...overrides,
   });
   const items = [1, 2, 3].map(id => ({ id, videoId: String(id), title: `Video ${id}` }));
-  return { runner, tabs, moved, refreshed, finishedTabs, items, finished };
+  return { runner, tabs, moved, refreshed, finishedTabs, items, finished,
+    now: () => time, advance: ms => { time += ms; } };
 }
+
+test('read latency counts toward polling and successful reads begin settling immediately', async () => {
+  const reads = [];
+  const h = harness({
+    timeoutMs: 15000, pollMs: 500, settleMs: 3000,
+    refresh: async id => {
+      reads.push(h.now());
+      h.advance(200);
+      Object.assign(h.tabs.get(id), { ready: true, remainingSeconds: 100 });
+    },
+  });
+  h.runner.start(1, h.items.slice(0, 1));
+  assert.equal((await h.finished).ready, 1);
+  assert.deepEqual(reads, [0, 500, 1000, 1500, 2000, 2500, 3000]);
+  assert.equal(h.now(), 3200);
+});
+
+test('polling waits only until the deadline and starts no read after it', async () => {
+  const reads = [];
+  const h = harness({
+    timeoutMs: 25,
+    refresh: async () => { reads.push(h.now()); },
+  });
+  h.runner.start(1, h.items.slice(0, 1));
+  assert.equal((await h.finished).skipped, 1);
+  assert.deepEqual(reads, [0, 10, 20]);
+  assert.equal(h.now(), 25);
+});
+
+test('Stop during the polling interval prevents the next read', async () => {
+  const h = harness({ delay: async () => { void h.runner.stop(); } });
+  h.runner.start(1, h.items);
+  assert.equal((await h.finished).status, 'stopped');
+  assert.deepEqual(h.refreshed, [1]);
+  assert.deepEqual(h.finishedTabs.map(tab => tab.id), [1]);
+});
 
 test('auto-preparation moves each tab and waits for playback readiness before advancing', async () => {
   const h = harness();
