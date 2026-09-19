@@ -36,16 +36,26 @@ const runtimeClient = createRuntimeClient({
 const snapshotClient = createTabSnapshotClient({
   requestRuntimeMessage: runtimeClient.requestRuntimeMessage,
   syncActiveWindow: runtimeClient.syncActiveWindow,
-  setErrorMessage,
-  logPopupMessage: runtimeClient.logPopupMessage,
-  toErrorMessage,
   retryDelayMs: SNAPSHOT_RETRY_DELAY_MS,
   maxAttempts: SNAPSHOT_MAX_ATTEMPTS,
 });
+
+async function loadSnapshot() {
+  try {
+    const snapshot = await snapshotClient.loadSnapshot();
+    setErrorMessage('');
+    return snapshot;
+  } catch (error) {
+    setErrorMessage('Could not load tab data. Try reopening the popup.');
+    runtimeClient.logPopupError('Failed to load tab records', error);
+    return null;
+  }
+}
+
 const snapshotPoller = createSnapshotPoller({
   delayMs: SNAPSHOT_POLL_DELAY_MS,
   isAppActive: () => isPopupActive,
-  loadSnapshot: snapshotClient.loadSnapshot,
+  loadSnapshot,
   logPopupError: runtimeClient.logPopupError,
   onSnapshot: renderAndScheduleSnapshot,
 });
@@ -103,7 +113,7 @@ function renderAndScheduleSnapshot(snapshot) {
 }
 
 async function loadInitialSnapshot() {
-  const snapshot = await snapshotClient.loadSnapshot();
+  const snapshot = await loadSnapshot();
   if (!snapshot) {
     setStateMessage('Tab data is unavailable.');
     return;

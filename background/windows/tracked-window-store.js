@@ -78,7 +78,6 @@ export function replaceOrderedWindowTabs(tabs = []) {
       url: tab.url ?? null,
     }))
     .sort((left, right) => left.index - right.index);
-  return getOrderedWindowTabs();
 }
 
 export function deleteTabFromOrderedWindow(tabId) {
@@ -102,7 +101,6 @@ export function resetTrackedWindowStore({ windowId = null } = {}) {
 // Writes take defensive copies. Only getMutableTabRecord exposes owned state.
 export function replaceAllTabRecords(tabRecordsById = {}) {
   trackedWindowState.tabRecordsById = cloneTabRecordsById(tabRecordsById);
-  return getTabRecordsById();
 }
 
 export function getMutableTabRecord(tabId) {
@@ -110,9 +108,8 @@ export function getMutableTabRecord(tabId) {
 }
 
 export function setTabRecord(tabId, record) {
-  if (typeof tabId !== 'number' || !record) return null;
+  if (typeof tabId !== 'number' || !record) return;
   trackedWindowState.tabRecordsById[tabId] = cloneTabRecord(record);
-  return getTabRecord(tabId);
 }
 
 export function deleteTabRecord(tabId) {

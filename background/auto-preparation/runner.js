@@ -15,7 +15,6 @@ export function createAutoPreparationRunner({ inspect, moveTabToPreparationWindo
   }
   function stop(reason = 'Stopped') {
     if (!current) return snapshot();
-    current.cancelled = true;
     current.abortController.abort();
     state.reason = reason;
     setPhase('stopping');
@@ -24,9 +23,9 @@ export function createAutoPreparationRunner({ inspect, moveTabToPreparationWindo
   async function run(job) {
     try {
       for (const item of job.items) {
-        if (job.cancelled) return;
+        if (job.signal.aborted) return;
         const initial = await inspect(item.id, job.windowId);
-        if (job.cancelled) return;
+        if (job.signal.aborted) return;
         if (!initial || initial.videoId !== item.videoId || initial.excluded) {
           state.skipped += 1;
         } else if (initial.ready) {
@@ -39,7 +38,7 @@ export function createAutoPreparationRunner({ inspect, moveTabToPreparationWindo
           let ready = false;
           try {
             const moved = await moveTabToPreparationWindow(item.id, job.windowId);
-            if (job.cancelled) return;
+            if (job.signal.aborted) return;
             if (!moved) {
               state.skipped += 1;
               state.completed += 1;
@@ -51,9 +50,9 @@ export function createAutoPreparationRunner({ inspect, moveTabToPreparationWindo
             let readySince = null;
             let lastRemainingSeconds = null;
             let lastSampleAt = null;
-            while (!job.cancelled && now() < deadline) {
+            while (!job.signal.aborted && now() < deadline) {
               const tab = await inspect(item.id, job.windowId);
-              if (job.cancelled) return;
+              if (job.signal.aborted) return;
               if (!tab || tab.videoId !== item.videoId || tab.excluded) break;
               if (!tab.active) { stop('Stopped because the selected tab changed inside the preparation window'); return; }
               setPhase(tab.ready ? 'settling' : tab.loaded ? 'reading' : 'loading');
@@ -79,18 +78,18 @@ export function createAutoPreparationRunner({ inspect, moveTabToPreparationWindo
                 lastRemainingSeconds = null;
                 lastSampleAt = null;
               }
-              if (tab.loaded) await refresh(item.id, job.windowId, Math.max(1, deadline - now()), job.abortController.signal);
-              if (job.cancelled) return;
+              if (tab.loaded) await refresh(item.id, job.windowId, Math.max(1, deadline - now()), job.signal);
+              if (job.signal.aborted) return;
               await delay(pollMs);
             }
-            if (job.cancelled) return;
+            if (job.signal.aborted) return;
           } finally {
             setPhase('returning');
             await finishTabPreparation(item.id, job.windowId, {
               autoPrepared: ready, wasDiscarded: initial.discarded,
             });
           }
-          if (job.cancelled) return;
+          if (job.signal.aborted) return;
           if (ready) state.ready += 1;
           else state.skipped += 1;
         }
@@ -99,16 +98,16 @@ export function createAutoPreparationRunner({ inspect, moveTabToPreparationWindo
         emit();
       }
     } catch (error) {
-      job.cancelled = true;
+      job.abortController.abort();
       state.reason = error?.message || 'Auto-preparation interrupted';
     } finally {
       try { await cleanup(); } catch (error) {
-        job.cancelled = true;
+        job.abortController.abort();
         state.reason = error?.message || 'Could not return the preparation tab';
       }
       current = null;
       state.phase = null;
-      state.status = job.cancelled ? 'stopped' : 'complete';
+      state.status = job.signal.aborted ? 'stopped' : 'complete';
       state.currentTabId = null;
       state.title = '';
       emit();
@@ -125,7 +124,8 @@ export function createAutoPreparationRunner({ inspect, moveTabToPreparationWindo
     },
     start(windowId, items) {
       if (current) return { ok: false, error: 'alreadyAutoPreparing' };
-      const job = { windowId, items, cancelled: false, abortController: new AbortController() };
+      const abortController = new AbortController();
+      const job = { windowId, items, abortController, signal: abortController.signal };
       current = job;
       delete state.reason;
       Object.assign(state, { status: 'running', windowId, total: items.length, completed: 0,
