@@ -372,7 +372,7 @@
       }
       return true;
     }
-    function markCurrentPlaybackReadyIfAvailable({ notify = true } = {}) {
+    function tryMarkPlaybackReady({ notify = true } = {}) {
       if (isCurrentPlaybackReady()) return true;
       const video = getPrimaryVideoElement(environment);
       if (!canMarkPlaybackReady(video)) return false;
@@ -410,7 +410,7 @@
           state.playbackReadyListenerCleanup = null;
         }
       };
-      const tryMarkPlaybackReady = () => {
+      const tryMarkPlaybackReady2 = () => {
         if (canMarkPlaybackReady(video, observedFreshMediaEvent)) {
           markPlaybackReady(video);
           return true;
@@ -419,9 +419,9 @@
       };
       const onMediaReadyEvent = () => {
         observedFreshMediaEvent = true;
-        tryMarkPlaybackReady();
+        tryMarkPlaybackReady2();
       };
-      if (tryMarkPlaybackReady()) return true;
+      if (tryMarkPlaybackReady2()) return true;
       events.forEach((eventName) => video.addEventListener(eventName, onMediaReadyEvent));
       state.playbackReadyListenerVideo = video;
       state.playbackReadyListenerCleanup = cleanup;
@@ -471,7 +471,7 @@
       resetForNavigation,
       reset,
       isCurrentPlaybackReady,
-      markCurrentPlaybackReadyIfAvailable,
+      tryMarkPlaybackReady,
       watchForVideoMount
     };
   }
@@ -556,12 +556,12 @@
     environment,
     collectPageDetails: collectPageDetails2,
     isCurrentPlaybackReady,
-    markCurrentPlaybackReadyIfAvailable
+    tryMarkPlaybackReady
   }) {
     const video = getPrimaryVideoElement(environment);
     const player = getYouTubePlayer(environment);
     const details = collectPageDetails2();
-    markCurrentPlaybackReadyIfAvailable?.({ notify: false });
+    tryMarkPlaybackReady?.({ notify: false });
     return {
       title: details.title || null,
       url: details.url,
@@ -748,7 +748,7 @@
         environment,
         collectPageDetails: collectPageDetails2,
         isCurrentPlaybackReady: playbackReadiness.isCurrentPlaybackReady,
-        markCurrentPlaybackReadyIfAvailable: playbackReadiness.markCurrentPlaybackReadyIfAvailable
+        tryMarkPlaybackReady: playbackReadiness.tryMarkPlaybackReady
       });
       addRuntimeMessageListener(messageListener);
       if (runtimeDocument?.readyState === "complete" || runtimeDocument?.readyState === "interactive") {

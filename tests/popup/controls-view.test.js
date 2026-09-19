@@ -4,14 +4,14 @@ import test from 'node:test';
 import {
   getOrganisedBadgeText,
   getOrganiseButtonText,
-  hasReadyTabsInOrder,
+  areReadyTabsLeadingInOrder,
   shouldShowOrganiseButton,
-} from '../../popup/layout-view.js';
+} from '../../popup/controls-view.js';
 import { createSortSummary } from '../../shared/sorting/summary.js';
 
 test('getOrganiseButtonText distinguishes partial and full organisation', () => {
-  assert.equal(getOrganiseButtonText(2, 4), 'Organise Ready Tabs');
-  assert.equal(getOrganiseButtonText(3, 3), 'Organise Tabs');
+  assert.equal(getOrganiseButtonText(2, 4), 'Organise ready tabs');
+  assert.equal(getOrganiseButtonText(3, 3), 'Organise tabs');
 });
 
 test('shows the organise button when ready videos are behind other tabs', () => {
@@ -43,8 +43,8 @@ test('identifies ready tabs that are already in their intended order', () => {
     readyTabsLeadInOrder: true,
   });
 
-  assert.equal(hasReadyTabsInOrder(partiallyReadyInOrder, false), true);
+  assert.equal(areReadyTabsLeadingInOrder(partiallyReadyInOrder, false), true);
   assert.equal(getOrganisedBadgeText(false), 'Ready tabs already in order');
   assert.equal(getOrganisedBadgeText(true), 'YouTube tabs organised');
-  assert.equal(hasReadyTabsInOrder(createSortSummary({ readyCount: 1 }), false), false);
+  assert.equal(areReadyTabsLeadingInOrder(createSortSummary({ readyCount: 1 }), false), false);
 });

@@ -9,7 +9,7 @@ import {
   deleteTabFromOrderedWindow,
   deleteTabRecord,
   getTrackedWindowId,
-} from '../windows/store.js';
+} from '../windows/tracked-window-store.js';
 import { reconcileWindowTabRecords } from './reconcile-window.js';
 import { isYouTubeVideoPage } from '../../shared/youtube/urls.js';
 import { removeAutoPreparedTab, transferAutoPreparedTab } from '../auto-preparation/session-cache.js';

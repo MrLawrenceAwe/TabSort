@@ -22,12 +22,12 @@ export function collectVideoMetrics({
   environment,
   collectPageDetails,
   isCurrentPlaybackReady,
-  markCurrentPlaybackReadyIfAvailable,
+  tryMarkPlaybackReady,
 }) {
   const video = getPrimaryVideoElement(environment);
   const player = getYouTubePlayer(environment);
   const details = collectPageDetails();
-  markCurrentPlaybackReadyIfAvailable?.({ notify: false });
+  tryMarkPlaybackReady?.({ notify: false });
   return {
     title: details.title || null,
     url: details.url,

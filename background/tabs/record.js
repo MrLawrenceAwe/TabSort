@@ -1,5 +1,5 @@
 import { isFiniteNumber } from '../../shared/guards.js';
-import { getMutableTabRecord, setTabRecord } from '../windows/store.js';
+import { getMutableTabRecord, setTabRecord } from '../windows/tracked-window-store.js';
 
 const FALLBACK_TAB_INDEX = Number.MAX_SAFE_INTEGER;
 
@@ -43,6 +43,7 @@ export function getOrCreateTabRecord(tabId, windowId, defaults = {}) {
   if (!record) {
     record = createTabRecord(tabId, windowId, defaults);
     setTabRecord(tabId, record);
+    record = getMutableTabRecord(tabId);
   } else if (windowId != null) {
     record.windowId = windowId;
   }

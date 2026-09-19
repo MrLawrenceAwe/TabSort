@@ -5,7 +5,7 @@ import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
 import {
   getTabRecordsById,
   getTrackedWindowId,
-} from '../../background/windows/store.js';
+} from '../../background/windows/tracked-window-store.js';
 import {
   getWindowSnapshot,
   handleOrganiseTabs,

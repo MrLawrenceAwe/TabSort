@@ -1,4 +1,4 @@
-import { syncPopupLayout } from '../../popup/layout-view.js';
+import { renderPopupControls } from '../../popup/controls-view.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
@@ -97,7 +97,7 @@ test('ordered ready subset keeps the unfinished readiness count visible', () => 
   resetPopupState();
   initializePopupDom(document);
   popupState.sortSummary = { readyCount: 2, sortableCount: 10, readyTabsLeadInOrder: true };
-  syncPopupLayout();
+  renderPopupControls();
   assert.equal(document.elements.get('organiseStatus').textContent,
     '2 of 10 sortable tabs ready · Ready tabs in order.');
   resetPopupDom();
@@ -114,11 +114,11 @@ test('TikTok PiP option follows the auto-prepare control visibility', () => {
   resetPopupState();
   initializePopupDom(document);
   popupState.sortSummary = { readyCount: 1, sortableCount: 2, readyTabsLeadInOrder: false };
-  syncPopupLayout();
+  renderPopupControls();
   assert.equal(option.hidden, false);
 
   popupState.sortSummary = { readyCount: 2, sortableCount: 2, readyTabsLeadInOrder: false };
-  syncPopupLayout();
+  renderPopupControls();
   assert.equal(option.hidden, true);
   resetPopupDom();
   resetPopupState();

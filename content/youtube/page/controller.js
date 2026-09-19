@@ -178,8 +178,8 @@ export function createYouTubePageController({
         environment,
         collectPageDetails,
         isCurrentPlaybackReady: playbackReadiness.isCurrentPlaybackReady,
-        markCurrentPlaybackReadyIfAvailable:
-          playbackReadiness.markCurrentPlaybackReadyIfAvailable,
+        tryMarkPlaybackReady:
+          playbackReadiness.tryMarkPlaybackReady,
       });
     addRuntimeMessageListener(messageListener);
 

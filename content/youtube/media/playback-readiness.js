@@ -96,7 +96,7 @@ export function createPlaybackReadinessTracker({
     return true;
   }
 
-  function markCurrentPlaybackReadyIfAvailable({ notify = true } = {}) {
+  function tryMarkPlaybackReady({ notify = true } = {}) {
     if (isCurrentPlaybackReady()) return true;
     const video = getPrimaryVideoElement(environment);
     if (!canMarkPlaybackReady(video)) return false;
@@ -215,7 +215,7 @@ export function createPlaybackReadinessTracker({
     resetForNavigation,
     reset,
     isCurrentPlaybackReady,
-    markCurrentPlaybackReadyIfAvailable,
+    tryMarkPlaybackReady,
     watchForVideoMount,
   };
 }

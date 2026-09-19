@@ -4,7 +4,7 @@ import { deriveSortState } from '../../background/sorting/derive-state.js';
 
 import {
   getSortState,
-} from '../../background/windows/store.js';
+} from '../../background/windows/tracked-window-store.js';
 import { updateSortStateAndBroadcast } from '../../background/sorting/update-sort-state.js';
 import {
   ensureChromeApi,
@@ -58,7 +58,7 @@ test('orders known remaining-time tabs before unknown tabs', () => {
 
   assert.deepEqual(getSortState().targetVideoTabOrder, [3, 1, 2]);
   assert.deepEqual(getSortState().trackedTabOrder, [1, 2, 3]);
-  assert.equal(getSortState().allVideosReadyAndOrdered, false);
+  assert.equal(getSortState().isYouTubeLayoutOrganised, false);
 });
 
 test('marks window as sorted only when all actionable tabs are known and ordered', () => {
@@ -70,7 +70,7 @@ test('marks window as sorted only when all actionable tabs are known and ordered
 
   updateSortStateAndBroadcast();
 
-  assert.equal(getSortState().allVideosReadyAndOrdered, true);
+  assert.equal(getSortState().isYouTubeLayoutOrganised, true);
 
 });
 
@@ -86,7 +86,7 @@ test('does not call a single sortable tab a completed sort', () => {
 
   updateSortStateAndBroadcast();
 
-  assert.equal(getSortState().allVideosReadyAndOrdered, false);
+  assert.equal(getSortState().isYouTubeLayoutOrganised, false);
 });
 
 test('detects a ready prefix that differs from the sort plan', () => {
@@ -134,7 +134,7 @@ test('live tabs do not block sorted readiness for VOD tabs with known remaining 
 
   updateSortStateAndBroadcast();
 
-  assert.equal(getSortState().allVideosReadyAndOrdered, true);
+  assert.equal(getSortState().isYouTubeLayoutOrganised, true);
   assert.equal(getSortState().sortSummary.sortableCount, 2);
   assert.equal(getSortState().sortSummary.readyCount, 2);
   assert.equal(getSortState().sortSummary.readyTabsLeadInOrder, true);
@@ -164,7 +164,7 @@ test('pinned tracked tabs are excluded from sortable readiness totals', () => {
 
   updateSortStateAndBroadcast();
 
-  assert.equal(getSortState().allVideosReadyAndOrdered, true);
+  assert.equal(getSortState().isYouTubeLayoutOrganised, true);
   assert.equal(getSortState().sortSummary.sortableCount, 2);
   assert.equal(getSortState().sortSummary.readyCount, 2);
   assert.equal(getSortState().sortSummary.readyTabsLeadInOrder, true);
@@ -193,6 +193,6 @@ test('does not mark videos sorted while non-YouTube tabs remain in front', () =>
 
   updateSortStateAndBroadcast();
 
-  assert.equal(getSortState().allVideosReadyAndOrdered, false);
+  assert.equal(getSortState().isYouTubeLayoutOrganised, false);
 
 });

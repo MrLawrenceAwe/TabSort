@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { startAutoPreparation, stopAutoPreparation } from '../../background/auto-preparation/service.js';
 import { getAutoPreparation, getProgressWindowId } from '../../background/auto-preparation/state.js';
-import { replaceAllTabRecords, resetTrackedWindowStore } from '../../background/windows/store.js';
+import { replaceAllTabRecords, resetTrackedWindowStore } from '../../background/windows/tracked-window-store.js';
 import { createChromeTabFixture, createTabRecordFixture, ensureChromeApi } from '../helpers/background-test-helpers.js';
 
 ensureChromeApi({ tabs: true });
@@ -51,7 +51,7 @@ test('Stop removes the unstarted preparation progress tab when window creation f
   const sourceTab = createChromeTabFixture(1, { windowId: 1, active: false });
   const progressTab = createChromeTabFixture(99, {
     windowId: 9,
-    url: chrome.runtime.getURL('preparation-progress/index.html'),
+    url: chrome.runtime.getURL('preparation/index.html'),
   });
   chrome.tabs.query = async ({ windowId } = {}) => windowId === 9 ? [progressTab] : [sourceTab];
   chrome.tabs.get = async () => sourceTab;

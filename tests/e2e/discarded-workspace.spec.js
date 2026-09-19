@@ -25,7 +25,7 @@ test('wakes five discarded pages and restores their groups without taking focus'
   try {
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     const endpoint = `http://127.0.0.1:${server.address().port}/result`;
-    for (const folder of ['background', 'shared', 'preparation-progress']) cpSync(resolve(folder), join(directory, folder), { recursive: true });
+    for (const folder of ['background', 'shared', 'preparation']) cpSync(resolve(folder), join(directory, folder), { recursive: true });
     writeFileSync(join(directory, 'manifest.json'), JSON.stringify({
       manifest_version: 3, name: 'TabSort discard regression', version: '1.0',
       permissions: ['tabs', 'storage'], host_permissions: ['http://127.0.0.1/*'],
@@ -61,13 +61,13 @@ test('wakes five discarded pages and restores their groups without taking focus'
         const rounds = [];
         try {
           for(const tab of original) {
-            await workspace.visit(tab.id,source.id);
+            await workspace.moveTabToPreparationWindow(tab.id,source.id);
             const awake = await waitLoaded(tab.id);
             await workspace.returnTab();
             const returned = await chrome.tabs.discard(tab.id);
             rounds.push({awake,returned,preparationFocused:(await chrome.windows.get(workspace.windowId)).focused});
           }
-        } finally {await workspace.close();}
+        } finally {await workspace.finishSession();}
         const after = await chrome.tabs.query({windowId:source.id});
         return {original,rounds,groupId,activeId,finalActiveId:after.find(tab=>tab.active).id,
           placeholders:after.filter(tab=>tab.url.includes('/placeholder.html')).length};

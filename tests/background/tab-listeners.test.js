@@ -3,7 +3,7 @@ import test from 'node:test';
 import { setImmediate } from 'node:timers/promises';
 import { registerTabAndNavigationListeners } from '../../background/tabs/listeners.js';
 import { saveAutoPreparedTab } from '../../background/auto-preparation/session-cache.js';
-import { getSortState, getTabRecord } from '../../background/windows/store.js';
+import { getSortState, getTabRecord } from '../../background/windows/tracked-window-store.js';
 import {
   createChromeTabFixture,
   createPlaybackMetricsFixture,

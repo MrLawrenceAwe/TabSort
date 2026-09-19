@@ -4,7 +4,7 @@ import {
   getOrderedWindowTabs,
   listTabRecords,
   setSortState,
-} from '../windows/store.js';
+} from '../windows/tracked-window-store.js';
 
 export function updateSortStateAndBroadcast() {
   const records = listTabRecords();
