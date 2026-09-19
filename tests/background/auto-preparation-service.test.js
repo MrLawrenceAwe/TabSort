@@ -190,3 +190,49 @@ test('a sleeping tab retains its preparation record across a setup window switch
   assert.equal(tabs.get(1).active, true);
   assert.equal(saved['autoPreparedTab:222'].videoDetails.remainingSeconds, 40);
 });
+
+test('a failed re-discard does not save a sleeping preparation result', async () => {
+  resetTrackedWindowStore({ windowId: 1 });
+  const saved = {};
+  chrome.storage.session = {
+    get: async () => structuredClone(saved),
+    set: async data => Object.assign(saved, structuredClone(data)),
+    remove: async key => { delete saved[key]; },
+  };
+  chrome.runtime.getURL = path => `chrome-extension://test/${path}`;
+  const tabs = new Map([
+    [1, createChromeTabFixture(1, { windowId: 1, active: true, url: 'https://example.com', index: 0 })],
+    [2, createChromeTabFixture(2, { windowId: 1, active: false, discarded: true, index: 1 })],
+  ]);
+  let nextId = 300;
+  chrome.tabs.query = async ({ windowId }) => [...tabs.values()].filter(tab => tab.windowId === windowId);
+  chrome.tabs.get = async id => { if (!tabs.has(id)) throw new Error('No tab'); return { ...tabs.get(id) }; };
+  chrome.tabs.create = async options => {
+    const tab = { id: nextId++, groupId: -1, ...options };
+    tabs.set(tab.id, tab);
+    return { ...tab };
+  };
+  chrome.tabs.move = async (id, options) => Object.assign(tabs.get(id), options, { active: false });
+  chrome.tabs.update = async (id, options) => Object.assign(tabs.get(id), options, { discarded: false, status: 'complete' });
+  chrome.tabs.reload = async id => Object.assign(tabs.get(id), { discarded: false, status: 'loading' });
+  chrome.tabs.remove = async id => { tabs.delete(id); };
+  chrome.tabs.sendMessage = async id => ({
+    url: tabs.get(id).url, metadataDurationSeconds: 60, mediaDurationSeconds: 60,
+    positionSeconds: 20, playbackMetricsReady: true,
+  });
+  chrome.tabs.discard = async () => { throw new Error('Cannot discard active tab'); };
+  chrome.windows = {
+    get: async id => ({ id }),
+    create: async () => ({ id: 199, tabs: [{ id: 200 }] }),
+  };
+
+  assert.equal((await startAutoPreparation({ windowId: 1 })).ok, true);
+  const deadline = Date.now() + 8000;
+  while (getAutoPreparation().status === 'running' && Date.now() < deadline) {
+    await new Promise(resolve => setTimeout(resolve, 25));
+  }
+
+  assert.equal(getAutoPreparation().status, 'complete');
+  assert.equal(tabs.get(2).discarded, false);
+  assert.equal(saved['autoPreparedTab:2'], undefined);
+});
