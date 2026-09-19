@@ -1,4 +1,4 @@
-import { applyAutoPreparedTime } from '../tabs/video-state.js';
+import { applyAutoPreparedTime, applyVideoMetricsUnavailable } from '../tabs/video-state.js';
 import { createAutoPreparationRunner } from './runner.js';
 import { createPreparationWorkspace } from './workspace.js';
 import { getAutoPreparation, autoPreparationState, getProgressWindowId, setProgressWindowId } from './state.js';
@@ -59,6 +59,7 @@ const runner = createAutoPreparationRunner({
     let timer;
     let onAbort;
     let expired = false;
+    let applied = false;
     const record = preparationRecordsById.get(tabId);
     const windowId = workspace.windowId;
     const requestedUrl = record?.url;
@@ -78,6 +79,7 @@ const runner = createAutoPreparationRunner({
           if (!update) return;
           record.loadState = getTabLoadState(tab);
           applyPlaybackStateUpdate(record, update, tab.url);
+          applied = true;
         })(),
         new Promise(resolve => { timer = setTimeout(resolve, remainingMs); }),
         new Promise(resolve => {
@@ -90,6 +92,8 @@ const runner = createAutoPreparationRunner({
       expired = true;
       clearTimeout(timer);
       signal.removeEventListener('abort', onAbort);
+      // A cached sample cannot establish stability while fresh reads fail.
+      if (!applied) applyVideoMetricsUnavailable(record);
     }
   },
   async finishTabPreparation(tabId, _windowId, { autoPrepared, wasDiscarded }) {
@@ -97,6 +101,9 @@ const runner = createAutoPreparationRunner({
     const returned = await workspace.returnTab();
     if (!returned) return;
     const sameVideo = getYouTubeVideoId(returned.url) === getYouTubeVideoId(record?.url);
+    if (autoPrepared && sameVideo && !(wasDiscarded && !returned.active)) {
+      await saveAutoPreparedTab(record, { discarded: Boolean(returned.discarded) });
+    }
     // Never discard a tab the user has selected or navigated in the meantime.
     if (wasDiscarded && !returned.active && sameVideo) {
       if (autoPrepared) await saveAutoPreparedTab(record);
