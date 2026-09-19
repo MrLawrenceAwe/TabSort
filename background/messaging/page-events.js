@@ -12,7 +12,7 @@ import {
   getTabRecord,
   getTrackedWindowId,
   setTrackedWindowId,
-} from '../windows/store.js';
+} from '../windows/tracked-window-store.js';
 import { hasYouTubeVideoChanged, isYouTubeVideoPage } from '../../shared/youtube/urls.js';
 
 function isSenderInTrackedWindow(windowId) {

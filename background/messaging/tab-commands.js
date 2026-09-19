@@ -2,7 +2,7 @@ import { isFiniteNumber, isValidWindowId } from '../../shared/guards.js';
 import { buildTabSnapshot } from '../tab-snapshot.js';
 import { applyTabReloadStarted } from '../tabs/video-state.js';
 import { updateSortStateAndBroadcast } from '../sorting/update-sort-state.js';
-import { organiseTabs } from '../sorting/execute-sort.js';
+import { organiseTabs } from '../sorting/organise-tabs.js';
 import { reloadChromeTab, updateTab } from '../tabs/chrome-tabs.js';
 import { collectPlaybackMetricsBatch } from '../playback/collect.js';
 import {
@@ -10,7 +10,7 @@ import {
   getTrackedWindowId,
   isSyncTokenCurrent,
   listTabIds,
-} from '../windows/store.js';
+} from '../windows/tracked-window-store.js';
 import { reconcileWindowTabRecords } from '../tabs/reconcile-window.js';
 import { shouldRefreshRecordMetrics } from '../../shared/tabs/refresh-policy.js';
 import { getProgressWindowId } from '../auto-preparation/state.js';

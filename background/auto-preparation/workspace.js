@@ -13,16 +13,16 @@ export function createPreparationWorkspace() {
     }
   }
   const readTab = async id => { try { return await getTab(id); } catch { return null; } };
-  const isPlaceholder = tab => tab?.url?.startsWith(chrome.runtime.getURL('preparation-progress/placeholder.html'));
+  const isPlaceholder = tab => tab?.url?.startsWith(chrome.runtime.getURL('preparation/placeholder.html'));
 
-  async function removeRecoveredProgressTab(windowId) {
+  async function removeProgressTabs(windowId) {
     let tabs;
     try {
       tabs = await chrome.tabs.query({ windowId });
     } catch {
       return;
     }
-    const progressUrl = chrome.runtime.getURL('preparation-progress/index.html');
+    const progressUrl = chrome.runtime.getURL('preparation/index.html');
     await Promise.all(
       tabs
         .filter(tab => tab?.url === progressUrl)
@@ -76,7 +76,7 @@ export function createPreparationWorkspace() {
     return await readTab(tab.id);
   }
 
-  async function close() {
+  async function finishSession() {
     await returnTab();
     if (!workspace) return;
     workspace = null;
@@ -86,16 +86,8 @@ export function createPreparationWorkspace() {
   async function discardUnstartedWorkspace() {
     const windowId = workspace?.windowId;
     if (windowId == null || workspace?.transfer) return;
-    // Closing a whole window could discard a tab the user added while Chrome
-    // was creating it. Removing our initial progress tab closes an otherwise
-    // empty window, while leaving any user tabs alone.
-    const tabs = await chrome.tabs.query({ windowId }).catch(() => []);
-    const progressUrl = chrome.runtime.getURL('preparation-progress/index.html');
-    await Promise.all(
-      tabs
-        .filter(tab => tab?.url === progressUrl)
-        .map(tab => chrome.tabs.remove(tab.id).catch(() => {})),
-    );
+    // Remove only our progress page, preserving any user-added tabs.
+    await removeProgressTabs(windowId);
   }
 
   return {
@@ -105,7 +97,7 @@ export function createPreparationWorkspace() {
       if (workspace) throw new Error('Return the previous preparation tab before starting again.');
       const source = await chrome.windows.get(sourceWindowId);
       const window = await chrome.windows.create({
-        url: chrome.runtime.getURL('preparation-progress/index.html'),
+        url: chrome.runtime.getURL('preparation/index.html'),
         type: 'normal', focused: false, width: 720, height: 560,
         incognito: Boolean(source.incognito),
       });
@@ -113,10 +105,10 @@ export function createPreparationWorkspace() {
       await persist();
       return window.id;
     },
-    async visit(tabId, sourceWindowId) {
+    async moveTabToPreparationWindow(tabId, sourceWindowId) {
       const tab = await getTab(tabId);
       if (tab.windowId !== sourceWindowId || tab.active || tab.pinned) return false;
-      const url = new URL(chrome.runtime.getURL('preparation-progress/placeholder.html'));
+      const url = new URL(chrome.runtime.getURL('preparation/placeholder.html'));
       url.searchParams.set('tabId', String(tab.id));
       url.searchParams.set('url', tab.url);
       const placeholder = await step('Creating placeholder', () => chrome.tabs.create({
@@ -160,17 +152,17 @@ export function createPreparationWorkspace() {
       await persist();
     },
     returnTab,
-    close,
+    finishSession,
     discardUnstartedWorkspace,
     async recover() {
       const saved = await chrome.storage.session.get(JOURNAL_KEY);
       workspace = saved[JOURNAL_KEY] ?? null;
       if (!workspace) return;
       const recoveredWindowId = workspace.windowId;
-      await close();
+      await finishSession();
       // The run state itself cannot survive a service-worker restart. Remove
       // only our stale progress page; leave any user-added tabs alone.
-      await removeRecoveredProgressTab(recoveredWindowId);
+      await removeProgressTabs(recoveredWindowId);
     },
   };
 }

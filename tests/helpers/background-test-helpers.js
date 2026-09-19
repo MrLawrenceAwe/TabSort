@@ -7,7 +7,7 @@ import {
   resetTrackedWindowStore,
   setSortState,
   setTabRecord,
-} from '../../background/windows/store.js';
+} from '../../background/windows/tracked-window-store.js';
 import { createTabRecord } from '../../background/tabs/record.js';
 
 export function ensureChromeApi({ tabs = false } = {}) {

@@ -21,7 +21,7 @@ function createTrackedWindowStoreState() {
     orderedWindowTabs: [],
     targetVideoTabOrder: [],
     trackedTabOrder: [],
-    allVideosReadyAndOrdered: false,
+    isYouTubeLayoutOrganised: false,
     sortSummary: createSortSummary(),
     windowId: null,
     snapshotSignature: null,
@@ -35,7 +35,7 @@ export function getSortState() {
   return {
     targetVideoTabOrder: [...trackedWindowState.targetVideoTabOrder],
     trackedTabOrder: [...trackedWindowState.trackedTabOrder],
-    allVideosReadyAndOrdered: trackedWindowState.allVideosReadyAndOrdered,
+    isYouTubeLayoutOrganised: trackedWindowState.isYouTubeLayoutOrganised,
     sortSummary: createSortSummary(trackedWindowState.sortSummary),
   };
 }
@@ -99,9 +99,10 @@ export function resetTrackedWindowStore({ windowId = null } = {}) {
   Object.assign(trackedWindowState, nextState);
 }
 
+// Writes take defensive copies. Only getMutableTabRecord exposes owned state.
 export function replaceAllTabRecords(tabRecordsById = {}) {
-  trackedWindowState.tabRecordsById = { ...tabRecordsById };
-  return trackedWindowState.tabRecordsById;
+  trackedWindowState.tabRecordsById = cloneTabRecordsById(tabRecordsById);
+  return getTabRecordsById();
 }
 
 export function getMutableTabRecord(tabId) {
@@ -110,8 +111,8 @@ export function getMutableTabRecord(tabId) {
 
 export function setTabRecord(tabId, record) {
   if (typeof tabId !== 'number' || !record) return null;
-  trackedWindowState.tabRecordsById[tabId] = record;
-  return trackedWindowState.tabRecordsById[tabId];
+  trackedWindowState.tabRecordsById[tabId] = cloneTabRecord(record);
+  return getTabRecord(tabId);
 }
 
 export function deleteTabRecord(tabId) {
@@ -137,12 +138,12 @@ export function isSyncTokenCurrent(syncToken) {
 export function setSortState({
   trackedTabOrder = [],
   targetVideoTabOrder = [],
-  allVideosReadyAndOrdered = false,
+  isYouTubeLayoutOrganised = false,
   sortSummary = createSortSummary(),
 } = {}) {
   trackedWindowState.targetVideoTabOrder = [...targetVideoTabOrder];
   trackedWindowState.trackedTabOrder = [...trackedTabOrder];
-  trackedWindowState.allVideosReadyAndOrdered = Boolean(allVideosReadyAndOrdered);
+  trackedWindowState.isYouTubeLayoutOrganised = Boolean(isYouTubeLayoutOrganised);
   trackedWindowState.sortSummary = createSortSummary(sortSummary);
 }
 

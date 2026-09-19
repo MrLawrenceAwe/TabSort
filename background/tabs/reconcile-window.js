@@ -10,7 +10,7 @@ import {
   replaceAllTabRecords,
   replaceOrderedWindowTabs,
   setTrackedWindowId,
-} from '../windows/store.js';
+} from '../windows/tracked-window-store.js';
 import { hasYouTubeVideoChanged, isYouTubeVideoPage } from '../../shared/youtube/urls.js';
 import { readAutoPreparedTabs, restoreAutoPreparedTab } from '../auto-preparation/session-cache.js';
 

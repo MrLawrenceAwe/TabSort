@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   getMutableTabRecord,
   getTabRecordsById,
-} from '../../background/windows/store.js';
+} from '../../background/windows/tracked-window-store.js';
 import {
   collectPlaybackMetrics,
   collectPlaybackMetricsBatch,
@@ -39,13 +39,16 @@ test(
     const replacementRecord = createTabRecordFixture(1, { contentScriptReady: false });
     setTrackedTabRecords({ 1: replacementRecord });
 
+    const storedReplacement = getMutableTabRecord(1);
+
     await collectPromise;
 
-    assert.equal(getMutableTabRecord(1), replacementRecord);
-    assert.equal(replacementRecord.contentScriptReady, true);
-    assert.equal(replacementRecord.videoDetails.lengthSeconds, 120);
-    assert.equal(replacementRecord.videoDetails.remainingSeconds, 100);
-    assert.equal(replacementRecord.remainingSecondsStale, false);
+    assert.equal(getMutableTabRecord(1), storedReplacement);
+    assert.notEqual(storedReplacement, replacementRecord);
+    assert.equal(storedReplacement.contentScriptReady, true);
+    assert.equal(storedReplacement.videoDetails.lengthSeconds, 120);
+    assert.equal(storedReplacement.videoDetails.remainingSeconds, 100);
+    assert.equal(storedReplacement.remainingSecondsStale, false);
   },
 );
 

@@ -6,7 +6,7 @@ import {
   getSortState,
   getTabRecordsById,
   getTrackedWindowId,
-} from '../../background/windows/store.js';
+} from '../../background/windows/tracked-window-store.js';
 import { reconcileWindowTabRecords } from '../../background/tabs/reconcile-window.js';
 import { saveAutoPreparedTab } from '../../background/auto-preparation/session-cache.js';
 import {

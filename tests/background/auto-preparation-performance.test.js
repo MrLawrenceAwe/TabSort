@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { startAutoPreparation, stopAutoPreparation } from '../../background/auto-preparation/service.js';
 import { getAutoPreparation } from '../../background/auto-preparation/state.js';
-import { getMutableTabRecord, resetTrackedWindowStore } from '../../background/windows/store.js';
+import { getMutableTabRecord, resetTrackedWindowStore } from '../../background/windows/tracked-window-store.js';
 import { RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import { createChromeTabFixture, ensureChromeApi } from '../helpers/background-test-helpers.js';
 

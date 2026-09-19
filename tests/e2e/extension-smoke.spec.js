@@ -73,12 +73,12 @@ test('loads the bundled runtime and reports tracked YouTube tabs in the popup', 
           },
         },
         sortSummary: { sortableCount: 2, readyCount: 1, readyTabsLeadInOrder: true },
-        allVideosReadyAndOrdered: false,
+        isYouTubeLayoutOrganised: false,
       });
     });
     await expect(popup.locator('#tabsTable .ready-row')).toHaveCount(1);
     await expect(popup.locator('td.remaining-time').nth(1)).toHaveText('Needs viewing');
-    await expect(popup.getByRole('button', { name: 'Auto-prepare tabs', exact: true })).toBeVisible();
+    await expect(popup.getByRole('button', { name: 'Read remaining times', exact: true })).toBeVisible();
     await expect(popup.locator('#backlogSummary')).toHaveText('2 videos · 1m remaining · 1 unknown');
     for (const [colorScheme, background, readyBackground] of [
       ['light', 'rgb(252, 252, 250)', 'rgb(238, 245, 239)'],
@@ -144,9 +144,9 @@ test('prepares media in another window while browsing continues, then returns ta
     ids = originalTabs.map(tab => tab.id);
     await popup.reload();
     await expect(popup.locator('#organiseStatus')).toContainText('0 of 2');
-    await popup.getByRole('button', { name: 'Auto-prepare tabs', exact: true }).click();
-    await expect.poll(() => context.pages().some(page => page.url().endsWith('/preparation-progress/index.html'))).toBe(true);
-    const progress = context.pages().find(page => page.url().endsWith('/preparation-progress/index.html'));
+    await popup.getByRole('button', { name: 'Read remaining times', exact: true }).click();
+    await expect.poll(() => context.pages().some(page => page.url().endsWith('/preparation/index.html'))).toBe(true);
+    const progress = context.pages().find(page => page.url().endsWith('/preparation/index.html'));
     const sourceWindowId = await worker.evaluate(async id => (await chrome.tabs.get(id)).windowId, ids[1]);
     // Continue using the original window while the first video is elsewhere.
     await popup.bringToFront();
@@ -164,7 +164,7 @@ test('prepares media in another window while browsing continues, then returns ta
     expect(returnedTabs[0].groupId).toBe(originalTabs[0].groupId);
     expect(await worker.evaluate(async windowId => (await chrome.tabs.query({ windowId, active: true }))[0].url, sourceWindowId)).toContain('data:text/html');
     await popup.close();
-    await expect(progress.getByRole('heading')).toHaveText('Auto-preparation finished');
+    await expect(progress.getByRole('heading')).toHaveText('Finished reading times');
     await expect.poll(() => progress.evaluate(async ids => {
       const { windowId } = await chrome.tabs.get(ids[0]);
       const snapshot = await chrome.runtime.sendMessage({ type: 'getTabSnapshot', windowId });
@@ -181,9 +181,9 @@ test('prepares media in another window while browsing continues, then returns ta
     await secondStalled.goto('https://www.youtube.com/watch?v=stalled-two');
     const stalledIds = await worker.evaluate(async () => (await chrome.tabs.query({ url: 'https://www.youtube.com/watch?v=stalled-*' })).map(tab => tab.id));
     await reopened.reload();
-    await reopened.getByRole('button', { name: 'Auto-prepare tabs', exact: true }).click();
-    await expect.poll(() => context.pages().some(page => page.url().endsWith('/preparation-progress/index.html'))).toBe(true);
-    const stopWindow = context.pages().find(page => page.url().endsWith('/preparation-progress/index.html'));
+    await reopened.getByRole('button', { name: 'Read remaining times', exact: true }).click();
+    await expect.poll(() => context.pages().some(page => page.url().endsWith('/preparation/index.html'))).toBe(true);
+    const stopWindow = context.pages().find(page => page.url().endsWith('/preparation/index.html'));
     await expect.poll(() => worker.evaluate(async id => (await chrome.tabs.get(id)).active, stalledIds[0])).toBe(true);
     await stopWindow.getByRole('button', { name: 'Stop', exact: true }).click();
     await expect(stopWindow.getByRole('heading')).toHaveText('Stopped');
@@ -221,7 +221,7 @@ test('preparation preserves first, middle and last positions in a multi-tab grou
       await workspace.create(source.id);
       const rounds = [];
       for (const position of [1, 0, 2]) {
-        await workspace.visit(ids[position], source.id);
+        await workspace.moveTabToPreparationWindow(ids[position], source.id);
         await workspace.returnTab();
         const returned = await Promise.all(ids.map(id => chrome.tabs.get(id)));
         rounds.push({
@@ -231,7 +231,7 @@ test('preparation preserves first, middle and last positions in a multi-tab grou
           placeholders: (await chrome.tabs.query({ windowId: source.id })).filter(tab => tab.url.includes('/placeholder.html')).length,
         });
       }
-      await workspace.close();
+      await workspace.finishSession();
       return { rounds, indices: original.map(tab => tab.index), groupId, activeId: active.id };
     });
     for (const round of result.rounds) {

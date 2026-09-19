@@ -56,7 +56,7 @@ function harness() {
 test('moves only the video and restores its placeholder position/group without activating it', async () => {
   const h = harness();
   await h.workspace.create(1);
-  await h.workspace.visit(2, 1);
+  await h.workspace.moveTabToPreparationWindow(2, 1);
   assert.equal(h.tabs.get(2).windowId, 3);
   assert.equal(h.tabs.get(1).active, true);
   const placeholder = h.tabs.get(h.workspace.transfer.placeholderId);
@@ -74,14 +74,14 @@ test('moves only the video and restores its placeholder position/group without a
 test('never moves the current browsing tab', async () => {
   const h = harness();
   await h.workspace.create(1);
-  assert.equal(await h.workspace.visit(1, 1), false);
+  assert.equal(await h.workspace.moveTabToPreparationWindow(1, 1), false);
   assert.equal(h.workspace.transfer, null);
 });
 
 test('a worker restart returns a journaled tab and removes its stale progress page and placeholder', async () => {
   const h = harness();
   await h.workspace.create(1);
-  await h.workspace.visit(2, 1);
+  await h.workspace.moveTabToPreparationWindow(2, 1);
   const placeholderId = h.workspace.transfer.placeholderId;
   h.tabs.set(30, { id: 30, windowId: 3, index: 1, url: 'https://example.com', active: false });
   await createPreparationWorkspace().recover();
@@ -95,10 +95,10 @@ test('a worker restart returns a journaled tab and removes its stale progress pa
 test('closing the original window leaves the real video in preparation and clears the journal', async () => {
   const h = harness();
   await h.workspace.create(1);
-  await h.workspace.visit(2, 1);
+  await h.workspace.moveTabToPreparationWindow(2, 1);
   h.tabs.delete(h.workspace.transfer.placeholderId);
   chrome.windows.get = async () => { throw new Error('No window'); };
-  await h.workspace.close();
+  await h.workspace.finishSession();
   assert.equal(h.tabs.get(2).windowId, 3);
   assert.equal(h.saved.autoPreparationWorkspace, undefined);
   assert.equal(h.workspace.transfer, null);
@@ -107,19 +107,19 @@ test('closing the original window leaves the real video in preparation and clear
 test('closing the preparation video preserves a placeholder with the original URL', async () => {
   const h = harness();
   await h.workspace.create(1);
-  await h.workspace.visit(2, 1);
+  await h.workspace.moveTabToPreparationWindow(2, 1);
   const placeholderId = h.workspace.transfer.placeholderId;
   h.tabs.delete(2);
-  await h.workspace.close();
+  await h.workspace.finishSession();
   assert.equal(new URL(h.tabs.get(placeholderId).url).searchParams.get('url'), 'https://www.youtube.com/watch?v=test');
 });
 
 test('a tab moved elsewhere by the user is left there', async () => {
   const h = harness();
   await h.workspace.create(1);
-  await h.workspace.visit(2, 1);
+  await h.workspace.moveTabToPreparationWindow(2, 1);
   h.tabs.get(2).windowId = 5;
-  await h.workspace.close();
+  await h.workspace.finishSession();
   assert.equal(h.tabs.get(2).windowId, 5);
 });
 
@@ -127,7 +127,7 @@ test('a tab moved elsewhere by the user is left there', async () => {
 test('Chrome tab replacement updates the recovery journal and returns the replacement', async () => {
   const h = harness();
   await h.workspace.create(1);
-  await h.workspace.visit(2, 1);
+  await h.workspace.moveTabToPreparationWindow(2, 1);
   h.tabs.set(22, { ...h.tabs.get(2), id: 22 });
   h.tabs.delete(2);
   await h.workspace.replaceTabId(22, 2);
@@ -148,7 +148,7 @@ test('sleeping grouped tabs are explicitly ungrouped before crossing windows', a
     return move(id, options);
   };
   await h.workspace.create(1);
-  await h.workspace.visit(2, 1);
+  await h.workspace.moveTabToPreparationWindow(2, 1);
   assert.ok(h.calls.some(call => call[0] === 'ungroup' && call[1] === 2));
   assert.equal(h.tabs.get(2).discarded, false);
   const wakeIndex = h.calls.findIndex(call => call[0] === 'reload' && call[1] === 2);
@@ -161,7 +161,7 @@ test('sleeping grouped tabs are explicitly ungrouped before crossing windows', a
 test('loaded videos are never reloaded during preparation', async () => {
   const h = harness();
   await h.workspace.create(1);
-  await h.workspace.visit(2, 1);
+  await h.workspace.moveTabToPreparationWindow(2, 1);
   assert.equal(h.calls.some(call => call[0] === 'reload'), false);
 });
 
@@ -170,8 +170,8 @@ test('failed wake still allows restoration of the sleeping video', async () => {
   h.tabs.get(2).discarded = true;
   chrome.tabs.reload = async () => { throw new Error('reload failed'); };
   await h.workspace.create(1);
-  await assert.rejects(h.workspace.visit(2, 1), /Waking sleeping video: reload failed/);
-  await h.workspace.close();
+  await assert.rejects(h.workspace.moveTabToPreparationWindow(2, 1), /Waking sleeping video: reload failed/);
+  await h.workspace.finishSession();
   assert.equal(h.tabs.get(2).windowId, 1);
   assert.equal(h.tabs.get(2).groupId, 7);
   assert.equal(h.tabs.get(2).discarded, true);
@@ -185,9 +185,9 @@ test('failed outward moves restore the video to the source group', async () => {
     return move(id, options);
   };
   await h.workspace.create(1);
-  await assert.rejects(h.workspace.visit(2, 1), /Moving video to preparation window: group continuity/);
+  await assert.rejects(h.workspace.moveTabToPreparationWindow(2, 1), /Moving video to preparation window: group continuity/);
   assert.equal(h.tabs.get(2).groupId, -1);
-  await h.workspace.close();
+  await h.workspace.finishSession();
   assert.equal(h.tabs.get(2).windowId, 1);
   assert.equal(h.tabs.get(2).groupId, 7);
   assert.equal(h.saved.autoPreparationWorkspace, undefined);
@@ -196,7 +196,7 @@ test('failed outward moves restore the video to the source group', async () => {
 test('a failed group restoration can be retried after the video has already returned', async () => {
   const h = harness();
   await h.workspace.create(1);
-  await h.workspace.visit(2, 1);
+  await h.workspace.moveTabToPreparationWindow(2, 1);
   const group = chrome.tabs.group;
   chrome.tabs.group = async () => { throw new Error('temporary group failure'); };
   await assert.rejects(h.workspace.returnTab(), /Restoring video group: temporary group failure/);

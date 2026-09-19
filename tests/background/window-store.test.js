@@ -7,7 +7,9 @@ import {
   getTabRecordsById,
   getSortState,
   setSortState,
-} from '../../background/windows/store.js';
+  setTabRecord,
+  replaceAllTabRecords,
+} from '../../background/windows/tracked-window-store.js';
 import { buildTabSnapshot } from '../../background/tab-snapshot.js';
 import {
   createTabRecordFixture,
@@ -56,7 +58,7 @@ test('sort reads and popup snapshots cannot mutate the background store', () => 
   state.sortSummary.readyCount = 99;
   const snapshot = buildTabSnapshot();
   assert.deepEqual(Object.keys(snapshot).sort(), [
-    'allVideosReadyAndOrdered', 'autoPreparation', 'sortSummary', 'tabRecordsById', 'trackedTabOrder', 'windowId',
+    'autoPreparation', 'isYouTubeLayoutOrganised', 'sortSummary', 'tabRecordsById', 'trackedTabOrder', 'windowId',
   ]);
   snapshot.trackedTabOrder.length = 0;
   snapshot.sortSummary.readyCount = 99;
@@ -65,4 +67,26 @@ test('sort reads and popup snapshots cannot mutate the background store', () => 
   assert.deepEqual(getSortState().trackedTabOrder, [1]);
   assert.equal(getSortState().sortSummary.readyCount, 1);
   assert.equal(getTabRecord(1).videoDetails.title, 'Video 1');
+});
+
+
+test('record writes isolate caller inputs and returned snapshots', () => {
+  resetTrackedWindowState();
+  const record = createTabRecordFixture(1, {
+    videoDetails: { title: 'Original', remainingSeconds: 20 },
+  });
+  const saved = setTabRecord(1, record);
+  record.videoDetails.title = 'Changed input';
+  saved.videoDetails.remainingSeconds = 99;
+  assert.equal(getTabRecord(1).videoDetails.title, 'Original');
+  assert.equal(getTabRecord(1).videoDetails.remainingSeconds, 20);
+
+  const records = { 1: record };
+  const snapshot = replaceAllTabRecords(records);
+  record.videoDetails.title = 'Changed again';
+  delete records[1];
+  snapshot[1].videoDetails.remainingSeconds = 88;
+  delete snapshot[1];
+  assert.equal(getTabRecord(1).videoDetails.title, 'Changed input');
+  assert.equal(getTabRecord(1).videoDetails.remainingSeconds, 20);
 });

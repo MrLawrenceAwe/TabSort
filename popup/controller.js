@@ -7,7 +7,7 @@ import { createRuntimeClient } from './runtime-client.js';
 import { createTabSnapshotClient } from './tab-snapshot-client.js';
 import { createSnapshotPoller } from './snapshot-poller.js';
 import { renderTabList } from './tab-list-view.js';
-import { syncPopupLayout, setNextStepHeaderVisible } from './layout-view.js';
+import { renderPopupControls, setNextStepHeaderVisible } from './controls-view.js';
 import {
   initializePopupDom,
   getPopupElement,
@@ -83,18 +83,18 @@ export function applyTabSnapshot(snapshot) {
   const records = (snapshot.trackedTabOrder ?? [])
     .map(tabId => snapshot.tabRecordsById?.[tabId])
     .filter(Boolean);
-  const allVideosReadyAndOrdered = snapshot.allVideosReadyAndOrdered === true;
+  const isYouTubeLayoutOrganised = snapshot.isYouTubeLayoutOrganised === true;
   applyPopupState({
-    allVideosReadyAndOrdered,
+    isYouTubeLayoutOrganised,
     sortSummary: createSortSummary(snapshot.sortSummary),
     autoPreparation: snapshot.autoPreparation ?? { status: 'idle' },
   });
   setErrorMessage('');
-  setNextStepHeaderVisible(!allVideosReadyAndOrdered);
-  renderTabList(records, { allVideosReadyAndOrdered, requestTabAction });
+  setNextStepHeaderVisible(!isYouTubeLayoutOrganised);
+  renderTabList(records, { isYouTubeLayoutOrganised, requestAction });
   setStateMessage(records.length ? '' : 'No YouTube video tabs in this window.');
   setBacklogSummary(formatBacklogSummary(createBacklogSummary(records)));
-  syncPopupLayout();
+  renderPopupControls();
 }
 
 function renderAndScheduleSnapshot(snapshot) {
@@ -119,7 +119,7 @@ const ACTION_ERROR_MESSAGES = Object.freeze({
   reloadFailed: 'Could not reload that tab.',
 });
 
-async function requestTabAction(type, data) {
+async function requestAction(type, data) {
   setErrorMessage('');
   setNoticeMessage('');
   try {
@@ -139,7 +139,7 @@ async function requestAutoPrepare() {
   snapshotPoller.setPaused(true);
   setErrorMessage('');
   setNoticeMessage('');
-  syncPopupLayout();
+  renderPopupControls();
   try {
     const response = await runtimeClient.requestRuntimeMessage(
       RUNTIME_MESSAGE_TYPES.START_AUTO_PREPARATION,
@@ -152,12 +152,12 @@ async function requestAutoPrepare() {
   } finally {
     applyPopupState({ isStartingAutoPreparation: false });
     snapshotPoller.setPaused(false);
-    syncPopupLayout();
+    renderPopupControls();
   }
 }
 
 async function requestStopAutoPreparation() {
-  await requestTabAction(RUNTIME_MESSAGE_TYPES.STOP_AUTO_PREPARATION);
+  await requestAction(RUNTIME_MESSAGE_TYPES.STOP_AUTO_PREPARATION);
 }
 
 async function requestOrganise() {
@@ -165,7 +165,7 @@ async function requestOrganise() {
   applyPopupState({ isOrganising: true });
   setErrorMessage('');
   setNoticeMessage('');
-  syncPopupLayout();
+  renderPopupControls();
   try {
     const response = await runtimeClient.requestRuntimeMessage(RUNTIME_MESSAGE_TYPES.ORGANISE_TABS);
     if (response?.ok !== true) {
@@ -182,7 +182,7 @@ async function requestOrganise() {
     runtimeClient.logPopupError('Organising tabs failed', error);
   } finally {
     applyPopupState({ isOrganising: false });
-    syncPopupLayout();
+    renderPopupControls();
   }
 }
 
@@ -190,7 +190,7 @@ function createSnapshotMessageListener() {
   return (message) => {
     if (message?.type === RUNTIME_MESSAGE_TYPES.AUTO_PREPARATION_UPDATED && message.autoPreparation) {
       applyPopupState({ autoPreparation: message.autoPreparation });
-      syncPopupLayout();
+      renderPopupControls();
       snapshotPoller.setPaused(message.autoPreparation.status === 'running');
       if (message.autoPreparation.status !== 'running') {
         void runWithPopupErrorLogging(loadInitialSnapshot, 'Failed to refresh after auto-preparation');
@@ -229,7 +229,7 @@ function registerPopupLifecycle(messageListener) {
 export async function initializePopup() {
   isPopupActive = true;
   initializePopupDom();
-  syncPopupLayout();
+  renderPopupControls();
   setErrorMessage('');
   setNoticeMessage('');
   setStateMessage('Loading YouTube video tabs…');

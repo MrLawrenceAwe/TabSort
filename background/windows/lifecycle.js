@@ -7,7 +7,7 @@ import {
   getTrackedWindowId,
   listTabIds,
   resetTrackedWindowStore,
-} from './store.js';
+} from './tracked-window-store.js';
 import { collectPlaybackMetricsBatch } from '../playback/collect.js';
 import { reconcileWindowTabRecords } from '../tabs/reconcile-window.js';
 import { listWindowTabs } from '../tabs/chrome-tabs.js';

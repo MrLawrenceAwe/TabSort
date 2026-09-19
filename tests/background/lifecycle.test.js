@@ -10,7 +10,7 @@ import {
   getTabRecordsById,
   getTrackedWindowId,
   replaceAllTabRecords,
-} from '../../background/windows/store.js';
+} from '../../background/windows/tracked-window-store.js';
 import {
   createChromeTabFixture,
   createTabRecordFixture,

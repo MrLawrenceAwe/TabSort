@@ -1,21 +1,20 @@
 import { createSortSummary } from '../shared/sorting/summary.js';
 
-export const popupState = {
-  sortSummary: createSortSummary(),
-  allVideosReadyAndOrdered: false,
-  isOrganising: false,
-  isStartingAutoPreparation: false,
-  autoPreparation: { status: 'idle' },
-  activeWindowId: null,
-};
+function createInitialPopupState() {
+  return {
+    sortSummary: createSortSummary(),
+    isYouTubeLayoutOrganised: false,
+    isOrganising: false,
+    isStartingAutoPreparation: false,
+    autoPreparation: { status: 'idle' },
+    activeWindowId: null,
+  };
+}
+
+export const popupState = createInitialPopupState();
 
 export function resetPopupState() {
-  popupState.sortSummary = createSortSummary();
-  popupState.allVideosReadyAndOrdered = false;
-  popupState.isOrganising = false;
-  popupState.isStartingAutoPreparation = false;
-  popupState.autoPreparation = { status: 'idle' };
-  popupState.activeWindowId = null;
+  Object.assign(popupState, createInitialPopupState());
 }
 
 export function setActiveWindowId(windowId) {

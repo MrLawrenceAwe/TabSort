@@ -11,7 +11,7 @@ import {
   getTrackedWindowId,
   getMutableTabRecord,
   setTrackedWindowId,
-} from '../windows/store.js';
+} from '../windows/tracked-window-store.js';
 import { isYouTubeVideoPage } from '../../shared/youtube/urls.js';
 
 const DEFAULT_BATCH_CONCURRENCY = 4;

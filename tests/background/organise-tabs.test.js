@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { organiseTabs } from '../../background/sorting/execute-sort.js';
-import { nextSyncToken } from '../../background/windows/store.js';
+import { organiseTabs } from '../../background/sorting/organise-tabs.js';
+import { nextSyncToken } from '../../background/windows/tracked-window-store.js';
 import {
   ensureChromeApi,
   createChromeTabFixture,

@@ -7,16 +7,16 @@ import {
   getTabRecordsById,
   getTrackedWindowId,
   setSnapshotSignature,
-} from './windows/store.js';
+} from './windows/tracked-window-store.js';
 
 export function buildTabSnapshot() {
-  const { trackedTabOrder, allVideosReadyAndOrdered, sortSummary } = getSortState();
+  const { trackedTabOrder, isYouTubeLayoutOrganised, sortSummary } = getSortState();
   return {
     windowId: getTrackedWindowId(),
     autoPreparation: getAutoPreparation(),
     tabRecordsById: getTabRecordsById(),
     trackedTabOrder,
-    allVideosReadyAndOrdered,
+    isYouTubeLayoutOrganised,
     sortSummary,
   };
 }

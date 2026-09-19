@@ -1,25 +1,21 @@
-function createPopupElements() {
-  return {
-    error: null,
-    notice: null,
-    stateMessage: null,
-    backlogSummary: null,
-    status: null,
-    organiseButton: null,
-    autoPrepareButton: null,
-    stopAutoPreparationButton: null,
-    autoPreparationStatus: null,
-    organisedBadge: null,
-    groupOtherTabsToggle: null,
-    openTikTokPipToggle: null,
-    table: null,
-    nextStepColumn: null,
-    initialized: false,
-  };
-}
+const ELEMENT_SELECTORS = Object.freeze({
+  popupError: '#popupError',
+  popupNotice: '#popupNotice',
+  popupStateMessage: '#popupStateMessage',
+  backlogSummary: '#backlogSummary',
+  organiseStatus: '#organiseStatus',
+  organiseButton: '#organiseButton',
+  autoPrepareButton: '#autoPrepareButton',
+  stopAutoPreparationButton: '#stopAutoPreparationButton',
+  autoPreparationStatus: '#autoPreparationStatus',
+  organisedBadge: '#organisedBadge',
+  groupOtherTabsToggle: '#groupOtherTabsToggle',
+  openTikTokPipToggle: '#openTikTokPipToggle',
+  tabsTable: '#tabsTable',
+  nextStepColumn: '.next-step',
+});
 
-const popupElements = createPopupElements();
-
+let popupElements = null;
 let popupDocument = null;
 
 function resolveDocument(nextDocument) {
@@ -27,31 +23,21 @@ function resolveDocument(nextDocument) {
 }
 
 export function resetPopupDom() {
-  Object.assign(popupElements, createPopupElements());
+  popupElements = null;
   popupDocument = null;
 }
 
 export function initializePopupDom(rootDocument = globalThis.document) {
-  if (popupElements.initialized) return;
-  const runtimeDocument = resolveDocument(rootDocument);
-  if (!runtimeDocument) return;
-
-  popupDocument = runtimeDocument;
-  popupElements.error = runtimeDocument.getElementById('popupError');
-  popupElements.notice = runtimeDocument.getElementById('popupNotice');
-  popupElements.stateMessage = runtimeDocument.getElementById('popupStateMessage');
-  popupElements.backlogSummary = runtimeDocument.getElementById('backlogSummary');
-  popupElements.status = runtimeDocument.getElementById('organiseStatus');
-  popupElements.autoPrepareButton = runtimeDocument.getElementById('autoPrepareButton');
-  popupElements.stopAutoPreparationButton = runtimeDocument.getElementById('stopAutoPreparationButton');
-  popupElements.autoPreparationStatus = runtimeDocument.getElementById('autoPreparationStatus');
-  popupElements.organiseButton = runtimeDocument.getElementById('organiseButton');
-  popupElements.organisedBadge = runtimeDocument.getElementById('organisedBadge');
-  popupElements.groupOtherTabsToggle = runtimeDocument.getElementById('groupOtherTabsToggle');
-  popupElements.openTikTokPipToggle = runtimeDocument.getElementById('openTikTokPipToggle');
-  popupElements.table = runtimeDocument.getElementById('tabsTable');
-  popupElements.nextStepColumn = runtimeDocument.querySelector('.next-step');
-  popupElements.initialized = true;
+  if (popupElements) return;
+  const document = resolveDocument(rootDocument);
+  if (!document) return;
+  popupDocument = document;
+  popupElements = Object.fromEntries(Object.entries(ELEMENT_SELECTORS).map(([key, selector]) => [
+    key,
+    selector.startsWith('#')
+      ? document.getElementById(selector.slice(1))
+      : document.querySelector(selector),
+  ]));
 }
 
 export function getPopupDocument() {
@@ -59,8 +45,8 @@ export function getPopupDocument() {
 }
 
 export function getPopupElement(key) {
-  if (!popupElements.initialized) initializePopupDom();
-  return popupElements[key];
+  if (!popupElements) initializePopupDom();
+  return popupElements?.[key];
 }
 
 function setMessage(elementKey, message) {
@@ -71,7 +57,7 @@ function setMessage(elementKey, message) {
   element.classList.toggle('hide', !text);
 }
 
-export const setErrorMessage = (message = '') => setMessage('error', message);
-export const setNoticeMessage = (message = '') => setMessage('notice', message);
-export const setStateMessage = (message = '') => setMessage('stateMessage', message);
+export const setErrorMessage = (message = '') => setMessage('popupError', message);
+export const setNoticeMessage = (message = '') => setMessage('popupNotice', message);
+export const setStateMessage = (message = '') => setMessage('popupStateMessage', message);
 export const setBacklogSummary = (message = '') => setMessage('backlogSummary', message);

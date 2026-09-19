@@ -5,7 +5,7 @@ import {
   getSortState,
   getTabRecordsById,
   getTrackedWindowId,
-} from '../../background/windows/store.js';
+} from '../../background/windows/tracked-window-store.js';
 import {
   handlePlaybackMetricsReady,
   handleContentScriptReady,
@@ -196,7 +196,7 @@ test('handleContentScriptReady clears stale sort data on watch-to-watch SPA navi
   assert.equal(record.isLive, false);
   assert.equal(record.remainingSecondsStale, true);
   assert.deepEqual(getSortState().targetVideoTabOrder, [7]);
-  assert.equal(getSortState().allVideosReadyAndOrdered, false);
+  assert.equal(getSortState().isYouTubeLayoutOrganised, false);
 });
 
 test('handlePlaybackMetricsReady removes tracked rows when a stale event arrives off watch/shorts', async () => {

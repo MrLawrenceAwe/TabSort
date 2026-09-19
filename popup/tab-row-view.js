@@ -12,7 +12,7 @@ const COLUMNS = Object.freeze([
   { key: 'tab-position', getter: formatPosition },
 ]);
 
-export function renderTabRow(row, tabRecord, allVideosReadyAndOrdered, requestTabAction) {
+export function renderTabRow(row, tabRecord, isYouTubeLayoutOrganised, requestAction) {
   const titleCell = row.insertCell(0);
   titleCell.textContent = tabRecord.videoDetails?.title ?? tabRecord.url;
   titleCell.title = titleCell.textContent;
@@ -21,14 +21,14 @@ export function renderTabRow(row, tabRecord, allVideosReadyAndOrdered, requestTa
   if (guidance === TAB_GUIDANCE.RELOAD_TAB) {
     row.classList.add('reload-required-row');
   }
-  if (!allVideosReadyAndOrdered) {
-    insertGuidanceCell(row, tabRecord, guidance, requestTabAction);
+  if (!isYouTubeLayoutOrganised) {
+    insertGuidanceCell(row, tabRecord, guidance, requestAction);
   }
 
   insertInfoCells(row, tabRecord, guidance);
 
   const isReadyToSort = !tabRecord.pinned && !tabRecord.isLive && hasReadyRemainingTime(tabRecord);
-  if (isReadyToSort && !allVideosReadyAndOrdered) row.classList.add('ready-row');
+  if (isReadyToSort && !isYouTubeLayoutOrganised) row.classList.add('ready-row');
 }
 
 function insertInfoCells(row, record, guidance) {
@@ -40,7 +40,7 @@ function insertInfoCells(row, record, guidance) {
   });
 }
 
-function insertGuidanceCell(row, record, guidance, requestTabAction) {
+function insertGuidanceCell(row, record, guidance, requestAction) {
   const cell = row.insertCell(1);
   cell.className = 'next-step';
   if (
@@ -60,12 +60,12 @@ function insertGuidanceCell(row, record, guidance, requestTabAction) {
       ? RUNTIME_MESSAGE_TYPES.RELOAD_TAB
       : RUNTIME_MESSAGE_TYPES.ACTIVATE_TAB,
     record.id,
-    requestTabAction,
+    requestAction,
   );
   cell.appendChild(actionButton);
 }
 
-function createActionButton(runtimeDocument, text, actionType, tabId, requestTabAction) {
+function createActionButton(runtimeDocument, text, actionType, tabId, requestAction) {
   const actionButton = runtimeDocument.createElement('button');
   actionButton.type = 'button';
   actionButton.classList.add('user-action-button');
@@ -77,7 +77,7 @@ function createActionButton(runtimeDocument, text, actionType, tabId, requestTab
     actionButton.textContent = actionType === RUNTIME_MESSAGE_TYPES.RELOAD_TAB
       ? 'Reloading…'
       : 'Switching…';
-    const didSucceed = await requestTabAction?.(actionType, { tabId });
+    const didSucceed = await requestAction?.(actionType, { tabId });
     if (!didSucceed) {
       actionButton.disabled = false;
       actionButton.removeAttribute?.('aria-busy');
@@ -87,7 +87,7 @@ function createActionButton(runtimeDocument, text, actionType, tabId, requestTab
   return actionButton;
 }
 
-export function formatRemainingStatus(record, requiredAction = determineTabGuidance(record)) {
+export function formatRemainingStatus(record, guidance = determineTabGuidance(record)) {
   if (record.isLive) return 'Live Stream';
 
   const remaining = record?.videoDetails?.remainingSeconds;
@@ -101,9 +101,9 @@ export function formatRemainingStatus(record, requiredAction = determineTabGuida
   }
   if (record.loadState === 'discarded') return 'Sleeping';
   if (record.loadState === 'loading') return 'Loading tab';
-  if (requiredAction === TAB_GUIDANCE.RELOAD_TAB) return 'Couldn’t read time';
-  if (requiredAction === TAB_GUIDANCE.VIEW_TAB_TO_LOAD_TIME ||
-      requiredAction === TAB_GUIDANCE.VIEW_TAB_TO_REFRESH_TIME) return 'Needs viewing';
+  if (guidance === TAB_GUIDANCE.RELOAD_TAB) return 'Couldn’t read time';
+  if (guidance === TAB_GUIDANCE.VIEW_TAB_TO_LOAD_TIME ||
+      guidance === TAB_GUIDANCE.VIEW_TAB_TO_REFRESH_TIME) return 'Needs viewing';
   return 'Loading video';
 }
 

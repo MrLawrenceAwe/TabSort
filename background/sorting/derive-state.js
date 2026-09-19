@@ -51,14 +51,16 @@ export function deriveSortState(records, { orderedWindowTabs = [] } = {}) {
   const youtubeTabStripMatchesPlan =
     !hasTabStripState ||
     expectedYouTubeTabOrder.every((id, index) => unpinnedTabIds[index] === id);
-  const allVideosReadyAndOrdered =
+  // At least two sortable videos must all be ready and ordered, with YouTube
+  // tabs at the front. Pinned/live videos and other-site grouping are excluded.
+  const isYouTubeLayoutOrganised =
     allSortableTabsReady &&
     tabIdsEqual(sortableTabIds, readyTabIdsByRemainingTime) &&
     youtubeTabStripMatchesPlan;
   return {
     trackedTabOrder,
     targetVideoTabOrder,
-    allVideosReadyAndOrdered,
+    isYouTubeLayoutOrganised,
     sortSummary: createSortSummary({
       sortableCount: sortableRecords.length,
       readyCount: readyRecords.length,

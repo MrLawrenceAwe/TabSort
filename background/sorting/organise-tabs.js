@@ -7,7 +7,7 @@ import {
   getTabRecordsById,
   getTrackedWindowId,
   isSyncTokenCurrent,
-} from '../windows/store.js';
+} from '../windows/tracked-window-store.js';
 import { buildOtherTabOrder, buildYouTubeTabOrder } from './move-order.js';
 
 export async function organiseTabs(
