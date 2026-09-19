@@ -15,19 +15,21 @@ export function createPreparationWorkspace() {
   const readTab = async id => { try { return await getTab(id); } catch { return null; } };
   const isPlaceholder = tab => tab?.url?.startsWith(chrome.runtime.getURL('preparation/placeholder.html'));
 
-  async function removeProgressTabs(windowId) {
+  async function removeProgressTabs(windowId, { signal } = {}) {
+    if (signal?.aborted) return false;
     let tabs;
     try {
       tabs = await chrome.tabs.query({ windowId });
     } catch {
-      return;
+      return true;
     }
+    if (signal?.aborted) return false;
     const progressUrl = chrome.runtime.getURL('preparation/index.html');
-    await Promise.all(
-      tabs
-        .filter(tab => tab?.url === progressUrl)
-        .map(tab => chrome.tabs.remove(tab.id).catch(() => {})),
-    );
+    for (const tab of tabs.filter(tab => tab?.url === progressUrl)) {
+      if (signal?.aborted) return false;
+      await chrome.tabs.remove(tab.id).catch(() => {});
+    }
+    return true;
   }
 
   async function returnTab() {
@@ -154,6 +156,7 @@ export function createPreparationWorkspace() {
     returnTab,
     finishSession,
     discardUnstartedWorkspace,
+    removeProgressTabs,
     async recover() {
       const saved = await chrome.storage.session.get(JOURNAL_KEY);
       workspace = saved[JOURNAL_KEY] ?? null;

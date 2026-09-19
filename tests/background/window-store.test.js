@@ -70,23 +70,20 @@ test('sort reads and popup snapshots cannot mutate the background store', () => 
 });
 
 
-test('record writes isolate caller inputs and returned snapshots', () => {
+test('record writes isolate caller inputs', () => {
   resetTrackedWindowState();
   const record = createTabRecordFixture(1, {
     videoDetails: { title: 'Original', remainingSeconds: 20 },
   });
-  const saved = setTabRecord(1, record);
+  setTabRecord(1, record);
   record.videoDetails.title = 'Changed input';
-  saved.videoDetails.remainingSeconds = 99;
   assert.equal(getTabRecord(1).videoDetails.title, 'Original');
   assert.equal(getTabRecord(1).videoDetails.remainingSeconds, 20);
 
   const records = { 1: record };
-  const snapshot = replaceAllTabRecords(records);
+  replaceAllTabRecords(records);
   record.videoDetails.title = 'Changed again';
   delete records[1];
-  snapshot[1].videoDetails.remainingSeconds = 88;
-  delete snapshot[1];
   assert.equal(getTabRecord(1).videoDetails.title, 'Changed input');
   assert.equal(getTabRecord(1).videoDetails.remainingSeconds, 20);
 });

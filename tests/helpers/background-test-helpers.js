@@ -149,11 +149,11 @@ export function resetTrackedWindowState(windowId = null) {
 }
 
 export function setTrackedTabRecords(tabRecordsById = {}) {
-  return replaceAllTabRecords(tabRecordsById);
+  replaceAllTabRecords(tabRecordsById);
 }
 
 export function setTrackedWindowTabs(tabs = []) {
-  return replaceOrderedWindowTabs(tabs);
+  replaceOrderedWindowTabs(tabs);
 }
 
 export function setTrackedSortState(sortState = {}) {
@@ -161,7 +161,7 @@ export function setTrackedSortState(sortState = {}) {
 }
 
 export function setTrackedTabRecord(tabId, record) {
-  return setTabRecord(tabId, record);
+  setTabRecord(tabId, record);
 }
 
 export function createTabRecordFixture(id = 1, overrides = {}) {

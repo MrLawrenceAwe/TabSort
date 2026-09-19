@@ -9,9 +9,6 @@ function isValidSnapshot(snapshot) {
 export function createTabSnapshotClient({
   requestRuntimeMessage,
   syncActiveWindow,
-  setErrorMessage,
-  logPopupMessage,
-  toErrorMessage,
   retryDelayMs,
   maxAttempts,
 } = {}) {
@@ -27,7 +24,6 @@ export function createTabSnapshotClient({
         }
         const response = await requestRuntimeMessage(RUNTIME_MESSAGE_TYPES.GET_TAB_SNAPSHOT, {});
         if (isValidSnapshot(response)) {
-          setErrorMessage('');
           return response;
         }
         lastError = new Error('Invalid snapshot response');
@@ -36,11 +32,7 @@ export function createTabSnapshotClient({
       }
     }
 
-    if (lastError) {
-      setErrorMessage('Could not load tab data. Try reopening the popup.');
-      logPopupMessage('error', `Failed to load tab records: ${toErrorMessage(lastError)}`);
-    }
-    return null;
+    throw lastError ?? new Error('Snapshot request failed');
   }
 
   return { loadSnapshot };
