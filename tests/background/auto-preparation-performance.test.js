@@ -3,6 +3,7 @@ import test from 'node:test';
 import { startAutoPreparation, stopAutoPreparation } from '../../background/auto-preparation/service.js';
 import { getAutoPreparation } from '../../background/auto-preparation/state.js';
 import { getMutableTabRecord, resetTrackedWindowStore } from '../../background/windows/tracked-window-store.js';
+import { reconcileWindowTabRecords } from '../../background/tabs/reconcile-window.js';
 import { RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import { createChromeTabFixture, ensureChromeApi } from '../helpers/background-test-helpers.js';
 
@@ -18,7 +19,12 @@ function setup(count, onCreate = () => {}) {
   let nextId = count + 1;
   chrome.runtime.getURL = path => `chrome-extension://test/${path}`;
   chrome.runtime.sendMessage = async message => { messages.push(structuredClone(message)); };
-  chrome.storage = { session: { get: async () => ({}), set: async () => {}, remove: async () => {} } };
+  const saved = {};
+  chrome.storage = { session: {
+    get: async () => structuredClone(saved),
+    set: async values => Object.assign(saved, structuredClone(values)),
+    remove: async key => { delete saved[key]; },
+  } };
   chrome.tabs.query = async ({ windowId }) => [...tabs.values()].filter(tab => tab.windowId === windowId);
   chrome.tabs.get = async id => {
     if (!tabs.has(id)) throw new Error('No tab');
@@ -36,7 +42,7 @@ function setup(count, onCreate = () => {}) {
   chrome.tabs.update = async (id, options) => Object.assign(tabs.get(id), options);
   chrome.tabs.remove = async id => { tabs.delete(id); };
   chrome.windows = { get: async id => ({ id }), create: async () => { onCreate(); return { id: 99 }; } };
-  return { tabs, messages, moves };
+  return { tabs, messages, moves, saved };
 }
 
 async function waitForCompletion() {
@@ -99,3 +105,63 @@ for (const lateResult of ['metrics', 'noReceiver']) {
     }
   });
 }
+
+for (const failure of ['readError', 'invalidPayload', 'noReceiver']) {
+  test(`settling restarts after ${failure} instead of accepting the cached sample`, { timeout: 10000 }, async () => {
+    const h = setup(1);
+    let reads = 0;
+    let failReads = true;
+    chrome.scripting = { executeScript: async () => [] };
+    chrome.tabs.sendMessage = async id => {
+      reads++;
+      if (reads > 1 && failReads) {
+        if (failure === 'invalidPayload') return null;
+        throw new Error(failure === 'noReceiver' ? 'Receiving end does not exist' : 'Read failed');
+      }
+      return { url: h.tabs.get(id).url, metadataDurationSeconds: 60,
+        mediaDurationSeconds: 60, positionSeconds: 20, playbackMetricsReady: true };
+    };
+    await startAutoPreparation({ windowId: 1 });
+    try {
+      await new Promise(resolve => setTimeout(resolve, 3600));
+      assert.ok(reads >= 7);
+      assert.equal(getAutoPreparation().status, 'running');
+      assert.equal(getAutoPreparation().ready, 0);
+      assert.equal(getAutoPreparation().phase, 'reading');
+      failReads = false;
+      const deadline = Date.now() + 5000;
+      while (getAutoPreparation().status === 'running' && Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 25));
+      }
+      assert.equal(getAutoPreparation().status, 'complete');
+      assert.equal(getAutoPreparation().ready, 1);
+    } finally {
+      await stopAutoPreparation();
+    }
+  });
+}
+
+test('awake preparation results survive completion while a different window is tracked', { timeout: 8000 }, async () => {
+  const h = setup(1, () => resetTrackedWindowStore({ windowId: 2 }));
+  chrome.tabs.sendMessage = async id => ({ url: h.tabs.get(id).url,
+    metadataDurationSeconds: 60, mediaDurationSeconds: 60,
+    positionSeconds: 20, playbackMetricsReady: true });
+  await startAutoPreparation({ windowId: 1 });
+  try {
+    const deadline = Date.now() + 5000;
+    while (getAutoPreparation().status === 'running' && Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    assert.equal(getAutoPreparation().status, 'complete');
+    assert.equal(getAutoPreparation().ready, 1);
+    assert.equal(h.saved['autoPreparedTab:1'].discarded, false);
+    for (let visit = 0; visit < 2; visit++) {
+      await reconcileWindowTabRecords(2, { force: true });
+      await reconcileWindowTabRecords(1, { force: true });
+      assert.equal(getMutableTabRecord(1).videoDetails.remainingSeconds, 40);
+      assert.equal(getMutableTabRecord(1).remainingSecondsStale, false);
+    }
+  } finally {
+    await stopAutoPreparation();
+  }
+});

@@ -25,3 +25,26 @@ test('saved auto-preparation survives record loss but cannot be reused for awake
   await removeAutoPreparedTab(tab.id);
   assert.deepEqual(restoreAutoPreparedTab(tab, {}, await readAutoPreparedTabs()), {});
 });
+
+test('awake snapshots restore only missing data in the same loaded video', async () => {
+  const storage = {};
+  globalThis.chrome = { storage: { session: {
+    set: async values => Object.assign(storage, values),
+    get: async () => structuredClone(storage),
+    remove: async key => { delete storage[key]; },
+  } } };
+  const tab = { id: 7, discarded: false, status: 'complete', url: 'https://www.youtube.com/watch?v=awake' };
+  await saveAutoPreparedTab({ ...tab, remainingSecondsStale: false,
+    videoDetails: { remainingSeconds: 40 } }, { discarded: false });
+  const saved = await readAutoPreparedTabs();
+  assert.equal(restoreAutoPreparedTab(tab, {}, saved).videoDetails.remainingSeconds, 40);
+  for (const changed of [{ status: 'loading' }, { discarded: true }, { url: 'https://www.youtube.com/watch?v=other' }]) {
+    assert.deepEqual(restoreAutoPreparedTab({ ...tab, ...changed }, {}, saved), {});
+  }
+  for (const record of [
+    { videoDetails: { remainingSeconds: 15 }, remainingSecondsStale: false },
+    { videoDetails: { remainingSeconds: null }, remainingSecondsStale: true },
+  ]) assert.equal(restoreAutoPreparedTab(tab, record, saved), record);
+  await removeAutoPreparedTab(tab.id);
+  assert.deepEqual(restoreAutoPreparedTab(tab, {}, await readAutoPreparedTabs()), {});
+});
