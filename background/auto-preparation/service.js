@@ -106,11 +106,12 @@ const runner = createAutoPreparationRunner({
     }
     // Never discard a tab the user has selected or navigated in the meantime.
     if (wasDiscarded && !returned.active && sameVideo) {
-      if (autoPrepared) await saveAutoPreparedTab(record);
       // Chrome can replace the tab ID when discarding. Use the returned ID
-      // instead of probing a tab that no longer exists.
+      // instead of probing a tab that no longer exists. Persist the sleeping
+      // result only after Chrome confirms that the discard happened: a failed
+      // discard leaves the tab awake, where a sleeping cache would be stale.
       const discarded = await chrome.tabs.discard(tabId).catch(() => null);
-      if (typeof discarded?.id === 'number') {
+      if (typeof discarded?.id === 'number' && discarded.discarded === true) {
         tabId = discarded.id;
         if (autoPrepared) await saveAutoPreparedTab({ ...record, id: tabId });
       }
