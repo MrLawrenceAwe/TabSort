@@ -125,9 +125,22 @@ const runner = createAutoPreparationRunner({
     setTabRecord(tab.id, next);
     updateSortStateAndBroadcast();
   },
-  async cleanup() {
+  async cleanup({ completed } = {}) {
     await workspace.finishSession();
     preparationRecordsById.clear();
+    // A normal run leaves only our progress page in the preparation window.
+    // Removing it lets Chrome close that otherwise-empty window. Keep the page
+    // after a stopped run so its status remains available to the user.
+    if (completed) {
+      const progressWindowId = getProgressWindowId();
+      if (progressWindowId != null) {
+        // Removing the last tab closes the window and can synchronously fire
+        // windows.onRemoved. Clear its ID first so that expected completion
+        // cannot be mistaken for the user cancelling the preparation window.
+        setProgressWindowId(null);
+        await workspace.removeProgressTabs(progressWindowId);
+      }
+    }
   },
   publish(autoPreparation) {
     void queueAutoPreparationToolbarIndicator(autoPreparation);

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { startAutoPreparation, stopAutoPreparation } from '../../background/auto-preparation/service.js';
+import { onAutoPreparationWindowRemoved, startAutoPreparation, stopAutoPreparation } from '../../background/auto-preparation/service.js';
 import { getAutoPreparation, getProgressWindowId } from '../../background/auto-preparation/state.js';
 import { replaceAllTabRecords, resetTrackedWindowStore } from '../../background/windows/tracked-window-store.js';
 import { createChromeTabFixture, createTabRecordFixture, ensureChromeApi } from '../helpers/background-test-helpers.js';
@@ -99,7 +99,7 @@ test('does not open TikTok PiP when preparation has no eligible videos', async (
   assert.equal(pipRequests, 0);
 });
 
-test('changing the tracked window during the setup query keeps preparation candidates in the source window', async () => {
+test('completion closes the empty preparation window after preserving source-window candidates', async () => {
   resetTrackedWindowStore({ windowId: 1 });
   const saved = {};
   chrome.storage = { session: {
@@ -109,8 +109,13 @@ test('changing the tracked window during the setup query keeps preparation candi
   } };
   chrome.runtime.getURL = path => `chrome-extension://test/${path}`;
   const tab = createChromeTabFixture(1, { windowId: 1, active: true });
+  const progressTab = createChromeTabFixture(100, {
+    windowId: 99,
+    url: chrome.runtime.getURL('preparation/index.html'),
+  });
   let queryCount = 0;
-  chrome.tabs.query = async () => {
+  chrome.tabs.query = async ({ windowId } = {}) => {
+    if (windowId === 99) return [progressTab];
     if (++queryCount === 2) {
       resetTrackedWindowStore({ windowId: 2 });
       replaceAllTabRecords({
@@ -119,6 +124,13 @@ test('changing the tracked window during the setup query keeps preparation candi
       });
     }
     return [tab];
+  };
+  let removedProgressTabId = null;
+  chrome.tabs.remove = async id => {
+    removedProgressTabId = id;
+    // Chrome closes a window when its last tab is removed. Deliver the
+    // lifecycle notification immediately to cover that completion race.
+    onAutoPreparationWindowRemoved(99);
   };
   chrome.tabs.get = async () => tab;
   chrome.tabs.move = async () => { assert.fail('active browsing tab must not move'); };
@@ -132,7 +144,8 @@ test('changing the tracked window during the setup query keeps preparation candi
   assert.equal(getAutoPreparation().status, 'complete');
   assert.equal(getAutoPreparation().total, 1);
   assert.equal(getAutoPreparation().skipped, 1);
-  assert.equal(getProgressWindowId(), 99);
+  assert.equal(getProgressWindowId(), null);
+  assert.equal(removedProgressTabId, progressTab.id);
   await stopAutoPreparation();
 });
 
