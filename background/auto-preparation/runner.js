@@ -114,7 +114,7 @@ export function createAutoPreparationRunner({ inspect, moveTabToPreparationWindo
       job.abortController.abort();
       state.reason = error?.message || 'Auto-preparation interrupted';
     } finally {
-      try { await cleanup(); } catch (error) {
+      try { await cleanup({ completed: !job.signal.aborted }); } catch (error) {
         job.abortController.abort();
         state.reason = error?.message || 'Could not return the preparation tab';
       }
