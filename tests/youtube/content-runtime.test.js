@@ -246,12 +246,57 @@ test(
   },
 );
 
+test('matching player metadata resolves a loaded video with an inaccurate SEO duration', () => {
+  const runtime = createYouTubePageController();
+  try {
+    const dom = installRuntimeTestDom();
+    dom.updatePage({
+      href: 'https://www.youtube.com/watch?v=Tffb5I8_xic',
+      title: 'Acceleration is 100% inevitable - YouTube',
+      duration: 'PT5M36S',
+    });
+    dom.video.duration = 340.641;
+    dom.video.readyState = 4;
+    dom.video.paused = true;
+    // Content scripts read the embedded response from their isolated world.
+    globalThis.document.scripts = [{ textContent: 'var ytInitialPlayerResponse = ' +
+      JSON.stringify({ videoDetails: { videoId: 'Tffb5I8_xic', lengthSeconds: '341' } }) + ';' }];
+    runtime.bootstrap();
+    let response;
+    installRuntimeTestDom.onMessageListener(
+      { type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS }, {},
+      (metrics) => { response = metrics; },
+    );
+    assert.equal(response.playbackMetricsReady, true);
+    assert.equal(response.metadataDurationSeconds, 341);
+    assert.equal(response.mediaDurationSeconds, 340.641);
+    assert.equal(response.positionSeconds, 0);
+
+    // A retained initial response must not validate the previous video's media.
+    dom.updatePage({
+      href: 'https://www.youtube.com/watch?v=next',
+      title: 'Next - YouTube', duration: 'PT10M0S',
+    });
+    dom.windowTarget.dispatch('yt-navigate-finish');
+    installRuntimeTestDom.onMessageListener(
+      { type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS }, {},
+      (metrics) => { response = metrics; },
+    );
+    assert.equal(response.playbackMetricsReady, false);
+    assert.equal(response.metadataDurationSeconds, 600);
+  } finally {
+    runtime.reset();
+    resetGlobals();
+  }
+});
+
 test('page video details ignore zero-length YouTube player metadata', () => {
   const environment = {
     location: { href: 'https://www.youtube.com/watch?v=archive' },
     window: {
       ytInitialPlayerResponse: {
         videoDetails: {
+          videoId: 'archive',
           title: 'Archived Stream',
           lengthSeconds: '0',
           isLive: false,
