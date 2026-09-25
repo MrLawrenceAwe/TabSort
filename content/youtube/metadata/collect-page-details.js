@@ -1,4 +1,5 @@
 import { toPositiveFiniteNumber } from '../../../shared/guards.js';
+import { getYouTubeVideoId } from '../../../shared/youtube/urls.js';
 import { parseYouTubeInitialPlayerResponse } from './player-response.js';
 
 function parseIsoDurationSeconds(isoDuration) {
@@ -24,23 +25,24 @@ export function collectPageDetails({ inferIsLiveNow, logContentError, environmen
   const docTitle = cleanTitle(runtimeDocument?.title);
   const ogTitle = cleanTitle(runtimeDocument?.querySelector?.('meta[property="og:title"]')?.content);
   const itempropTitle = cleanTitle(runtimeDocument?.querySelector?.('meta[itemprop="name"]')?.content);
-  const playerResponse = parseYouTubeInitialPlayerResponse(logContentError, environment);
+  const initialPlayerResponse = parseYouTubeInitialPlayerResponse(logContentError, environment);
+  // Initial response scripts can survive YouTube's single-page navigation.
+  const currentVideoId = getYouTubeVideoId(runtimeLocation?.href);
+  const playerResponse = currentVideoId &&
+    initialPlayerResponse?.videoDetails?.videoId === currentVideoId
+    ? initialPlayerResponse
+    : {};
 
   const title =
     docTitle || ogTitle || itempropTitle || cleanTitle(playerResponse?.videoDetails?.title) || null;
 
-  let lengthSeconds = toPositiveFiniteNumber(
+  // The player response describes the delivered media. The SEO duration can
+  // differ by several seconds even when both belong to the same video.
+  const lengthSeconds = toPositiveFiniteNumber(playerResponse?.videoDetails?.lengthSeconds) ?? toPositiveFiniteNumber(
     parseIsoDurationSeconds(
       runtimeDocument?.querySelector?.('meta[itemprop="duration"]')?.getAttribute('content'),
     ),
   );
-
-  if (lengthSeconds == null) {
-    const responseLengthSeconds = playerResponse?.videoDetails?.lengthSeconds;
-    if (responseLengthSeconds != null) {
-      lengthSeconds = toPositiveFiniteNumber(responseLengthSeconds);
-    }
-  }
 
   const isLiveBroadcastMeta = runtimeDocument
     ?.querySelector?.('meta[itemprop="isLiveBroadcast"]')

@@ -35,6 +35,28 @@
     return numericValue != null && numericValue > 0 ? numericValue : null;
   }
 
+  // shared/youtube/urls.js
+  var YOUTUBE_DOMAIN_REGEX = /(^|\.)youtube\.com$/i;
+  var isYouTubeVideoPage = (url) => getYouTubeVideoId(url) != null;
+  function getYouTubeVideoId(url) {
+    if (typeof url !== "string" || !url) return null;
+    try {
+      const parsed = new URL(url);
+      if (!YOUTUBE_DOMAIN_REGEX.test(parsed.hostname || "")) return null;
+      if (/^\/watch$/i.test(parsed.pathname)) {
+        const videoId = parsed.searchParams.get("v");
+        return videoId || null;
+      }
+      const shortsMatch = parsed.pathname.match(/^\/shorts\/([^/?#]+)/i);
+      if (shortsMatch?.[1]) {
+        return shortsMatch[1];
+      }
+    } catch (_) {
+      return null;
+    }
+    return null;
+  }
+
   // content/youtube/metadata/player-response.js
   function extractInitialPlayerResponse(source) {
     if (typeof source !== "string") return null;
@@ -137,19 +159,15 @@
     const docTitle = cleanTitle(runtimeDocument?.title);
     const ogTitle = cleanTitle(runtimeDocument?.querySelector?.('meta[property="og:title"]')?.content);
     const itempropTitle = cleanTitle(runtimeDocument?.querySelector?.('meta[itemprop="name"]')?.content);
-    const playerResponse = parseYouTubeInitialPlayerResponse(logContentError, environment);
+    const initialPlayerResponse = parseYouTubeInitialPlayerResponse(logContentError, environment);
+    const currentVideoId = getYouTubeVideoId(runtimeLocation?.href);
+    const playerResponse = currentVideoId && initialPlayerResponse?.videoDetails?.videoId === currentVideoId ? initialPlayerResponse : {};
     const title = docTitle || ogTitle || itempropTitle || cleanTitle(playerResponse?.videoDetails?.title) || null;
-    let lengthSeconds = toPositiveFiniteNumber(
+    const lengthSeconds = toPositiveFiniteNumber(playerResponse?.videoDetails?.lengthSeconds) ?? toPositiveFiniteNumber(
       parseIsoDurationSeconds(
         runtimeDocument?.querySelector?.('meta[itemprop="duration"]')?.getAttribute("content")
       )
     );
-    if (lengthSeconds == null) {
-      const responseLengthSeconds = playerResponse?.videoDetails?.lengthSeconds;
-      if (responseLengthSeconds != null) {
-        lengthSeconds = toPositiveFiniteNumber(responseLengthSeconds);
-      }
-    }
     const isLiveBroadcastMeta = runtimeDocument?.querySelector?.('meta[itemprop="isLiveBroadcast"]')?.getAttribute("content");
     const endDateMeta = runtimeDocument?.querySelector?.('meta[itemprop="endDate"]')?.getAttribute("content");
     const liveBroadcastDetails = playerResponse?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails;
@@ -577,28 +595,6 @@
     if (!message || message.type !== RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS) return false;
     sendResponse(collectVideoMetrics(options));
     return true;
-  }
-
-  // shared/youtube/urls.js
-  var YOUTUBE_DOMAIN_REGEX = /(^|\.)youtube\.com$/i;
-  var isYouTubeVideoPage = (url) => getYouTubeVideoId(url) != null;
-  function getYouTubeVideoId(url) {
-    if (typeof url !== "string" || !url) return null;
-    try {
-      const parsed = new URL(url);
-      if (!YOUTUBE_DOMAIN_REGEX.test(parsed.hostname || "")) return null;
-      if (/^\/watch$/i.test(parsed.pathname)) {
-        const videoId = parsed.searchParams.get("v");
-        return videoId || null;
-      }
-      const shortsMatch = parsed.pathname.match(/^\/shorts\/([^/?#]+)/i);
-      if (shortsMatch?.[1]) {
-        return shortsMatch[1];
-      }
-    } catch (_) {
-      return null;
-    }
-    return null;
   }
 
   // content/youtube/page/controller.js
