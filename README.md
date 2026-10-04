@@ -1,6 +1,12 @@
 # TabSort for YouTube
 
+[![CI](https://github.com/MrLawrenceAwe/TabSort/actions/workflows/ci.yml/badge.svg)](https://github.com/MrLawrenceAwe/TabSort/actions/workflows/ci.yml)
+
 Chrome extension that keeps YouTube video tabs organised by the time you still have left in each video. It tracks watch and shorts tabs in the current window, gathers the remaining playback times and lets you organise the ready tabs with one click.
+
+![TabSort popup with ready and unready video tabs](docs/images/popup.png)
+
+*Preview uses synthetic tab titles and playback times.*
 
 ## Install (unpacked)
 
@@ -12,73 +18,36 @@ Chrome extension that keeps YouTube video tabs organised by the time you still h
 Alternatively, install the ZIP produced by `npm run package` using your normal extension
 distribution workflow.
 
-## Using the popup
+## Quick walkthrough
 
-- Open some YouTube watch or shorts pages in the same Chrome window, then click the TabSort extension.
-- The popup lists each tracked video tab, shows whether its remaining time is known, and highlights tabs that are ready.
-- Click **Read remaining times** to prepare unready videos one at a time in a separate window, including sleeping tabs. A temporary placeholder preserves each tab’s position and group; the original tab returns without changing your selected tab. You can keep browsing in your original window or other windows. The tab you are currently using is skipped. After playback data appears, TabSort briefly samples it again so YouTube has time to restore saved viewing progress; a sudden position jump or failed read restarts that settling period. Tabs still unavailable after 15 seconds are skipped. A successfully auto-prepared sleeping tab is returned to sleep, keeps its recorded remaining time for sorting, and is labelled **Auto-prepared · sleeping**. Use **Organise tabs** when you are ready. Ready, pinned, and live tabs are excluded.
-- Enable **Open TikTok picture-in-picture while reading times** to ask the locally installed TikTok Picture-in-Picture extension to reuse or create a TikTok tab, start automatic PiP, and then begin auto-preparation. Auto-preparation still starts if TikTok or playable media is unavailable.
-- Auto-prepared results are saved for the browser session, so changing windows or Chrome suspending the extension worker does not erase recorded times for sleeping or awake tabs. Awake results are snapshots used when no newer playback data is available. Waking a sleeping tab, reloading, navigating, or closing a tab invalidates its saved result; restarting Chrome clears the session.
-- Auto-preparation continues when the toolbar popup closes. The preparation window contains a progress tab with counts and a **Stop** button. When preparation completes, TabSort closes that progress tab; Chrome also closes the preparation window when it is then empty. Stop returns the current video before ending the run; the placeholder also has **Stop and return video**. Switching tabs in your browsing window does not stop preparation. Switching away from the video inside the preparation window stops and returns it. Closing the preparation window closes its current video too; its placeholder can reopen the original URL (page state is not restored). Use Stop before closing to preserve the existing page. An interrupted extension worker returns an outstanding tab from its session journal when it restarts. If the original window was closed, the video is left safely in the preparation window. TabSort does not click Play; a video that still needs interaction may be skipped.
-- The Remaining column explains blockers: **Sleeping**, **Loading tab**, **Loading video**, **Needs viewing**, or **Couldn’t read time**.
-- Follow the suggested action buttons (Reload tab/View tab) if a tab is missing metadata.
-- When at least two tabs have known remaining time and the ready subset is not already grouped at the front, the **Organise** button appears; click it to move the ready tabs to the front in remaining-time order.
-- When you organise, all YouTube tabs (watch, home, shorts, etc.) move to the front with tracked video pages first; tick the popup option if you also want other tabs grouped by site.
-- If the popup warns that a background tab needs viewing, view that tab once so Chrome exposes the accurate remaining time.
+1. Open several YouTube videos in the same Chrome window.
+2. Open TabSort to see remaining playback times and any tabs needing attention.
+3. Choose **Read remaining times** to prepare eligible tabs while you keep browsing.
+4. Choose **Organise tabs** or **Organise ready tabs** to sort the available videos.
+
+See [the usage guide](docs/usage.md) for sleeping tabs, session recovery and Stop behaviour.
+
+## Engineering highlights
+
+- Separates the extension worker, YouTube content runtime, popup and preparation queue.
+- Uses a session journal to return tabs after worker interruption and caches prepared playback readings.
+- Tests cover sorting, browser events, playback evidence and tab-group restoration.
+- All processing stays local; browsing data is not sent to a server.
 
 ## Development
 
-- `npm run build` bundles the isolated YouTube content runtime into
-  `dist/content-runtime.js`.
-- `npm test` runs the unit and integration-style Node tests.
-- `npm run test:e2e` launches Chromium with the unpacked extension and runs the popup/runtime
-  smoke test. Install its browser once with `npx playwright install chromium`.
-- `npm run check` builds and runs tests, linting, static import checks, and release validation.
-- `npm run package` creates `release/tabsort-v<version>.zip`.
+Requires Node.js 22+ and Chrome for installation. For automated browser tests, install Chromium first:
 
-### Code organisation
+```sh
+npm ci
+npx playwright install chromium
+npm run check
+npm run package
+```
 
-- `background/` owns the tracked window, tab reconciliation, playback updates, sorting,
-  and extension message handlers. Store reads and writes take defensive copies; mutation uses
-  explicit write functions and `getMutableTabRecord()`. Tab event bursts reconcile once
-  per window and batch playback collection by unique tab ID.
-- `content/youtube/` collects page metadata and playback evidence. Each observer owns
-  its state. Navigation resets preserve previous media evidence until new media arrives;
-  a full controller reset clears it. Numeric configuration is separate from injected dependencies.
-  The page entry point creates and bootstraps the controller.
-- `popup/` separates the controller, state store, DOM elements, controls, and tab views.
-  The controller applies snapshots and renders controls; tab views render records.
-  CSS follows the system colour scheme and highlights ready, sortable video rows.
-- `preparation/` owns the preparation progress and placeholder pages.
-- `background/windows/tracked-window-store.js` owns the single tracked-window state.
-- `background/auto-preparation/runner.js` runs the preparation queue; `workspace.js`
-  moves tabs with `moveTabToPreparationWindow()` and restores them with `finishSession()`.
-  Finishing clears the session journal and leaves the progress window open.
-- `background/auto-preparation/session-cache.js` persists prepared tab snapshots.
-- `shared/tabs/` contains load states, readiness grace periods, guidance, and refresh policy.
-  `shared/preferences.js` persists grouping and TikTok auto-preparation preferences.
-  `shared/urls.js` provides generic site grouping, and `shared/preparation-progress.js` formats progress counts.
-- `tests/background/`, `tests/youtube/`, and `tests/popup/` mirror the runtime boundaries.
+See [development and architecture](docs/development.md). CI installs Chromium before running the complete check suite and uploads the packaged extension.
 
-Tab records use `loaded`, `loading`, and `discarded` load states. `loadedAt` records an
-observed completion after loading or discarding, not the start of a reload. Video changes
-refer to YouTube video identity, so extra URL parameters do not invalidate playback data.
-`videoDetails.remainingSeconds` is the estimated wall-clock playback time remaining,
-adjusted for playback speed; `remainingSecondsStale` indicates whether it can be trusted.
-The sorting summary's `readyTabsLeadInOrder` means ready videos occupy the front of
-the unpinned tab strip in remaining-time order. Popup snapshots contain display state;
-the target video order stays in the background store. `isYouTubeLayoutOrganised` additionally
-requires at least two sortable videos, all ready, with YouTube tabs grouped at the front;
-it does not describe grouping of other sites. `hasAutoPreparedTime` permits a saved
-remaining-time reading to be used while its tab sleeps. Tab activation uses `activateTab`.
-
-Playback messages use `metadataDurationSeconds`, `mediaDurationSeconds`, and
-`positionSeconds` to distinguish their sources and units. Stored `videoDetails.lengthSeconds`
-and session-cache `identity` retain their existing storage schema so saved results remain usable.
-Preference storage keys are also unchanged.
-
-The package and manifest versions must match. CI verifies the committed bundle, runs the
-Chromium smoke test, and uploads the packaged extension as a workflow artifact.
+For a synthetic popup preview without installing the extension, serve the repository with `python3 -m http.server 8766 --bind 127.0.0.1` and open `/docs/preview.html`. Preview actions use mock browser APIs.
 
 ## Permissions and privacy
 
