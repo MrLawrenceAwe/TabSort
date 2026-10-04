@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TabSort preview · synthetic data</title>
+    <title>TabSort preview · synthetic data</title><link rel="icon" href="data:,">
     <link rel="stylesheet" href="../popup/popup.css">
 </head>
 <body>
@@ -57,7 +57,7 @@
     <script>
 const titles = ['JavaScript testing patterns', 'Building a useful browser extension', 'Managing background tasks'];
 const records = Object.fromEntries(titles.map((title, index) => [index + 1, {
-  id: index + 1, index, windowId: 1, loadState: 'loaded', contentScriptReady: true,
+  id: index + 1, index, windowId: 1, loadState: index === 2 ? 'discarded' : 'loaded', contentScriptReady: true,
   remainingSecondsStale: index === 2,
   videoDetails: { title, remainingSeconds: index === 2 ? null : [420, 195][index] }
 }]));
