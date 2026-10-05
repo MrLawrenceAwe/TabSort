@@ -109,6 +109,8 @@ test('wakes five discarded pages and restores their groups without taking focus'
     }
     server.closeAllConnections();
     await new Promise(resolve => server.close(resolve));
-    rmSync(directory, { recursive: true, force: true });
+    // Chromium subprocesses can finish writing the profile after the main process exits.
+    // Retry transient cleanup races, but still fail if the directory cannot be removed.
+    rmSync(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 });
