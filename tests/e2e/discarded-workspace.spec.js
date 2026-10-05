@@ -8,6 +8,7 @@ import { join, resolve } from 'node:path';
 // Run without a DevTools connection: Chromium on macOS crashes when discarding
 // debugger-attached tabs. The test extension imports the real workspace module.
 test('wakes five discarded pages and restores their groups without taking focus', async () => {
+  test.setTimeout(90_000);
   const directory = mkdtempSync(join(tmpdir(), 'tabsort-discard-test-'));
   let child;
   let timer;
@@ -42,7 +43,7 @@ test('wakes five discarded pages and restores their groups without taking focus'
         const activeId = source.tabs[0].id;
         const tabs = [];
         const waitLoaded = async id => {
-          const deadline = Date.now() + 10000;
+          const deadline = Date.now() + 20000;
           while(Date.now() < deadline) {
             const tab = await chrome.tabs.get(id);
             if (!tab.discarded && tab.status === 'complete') return tab;
@@ -76,6 +77,11 @@ test('wakes five discarded pages and restores their groups without taking focus'
     child = spawn(chromium.executablePath(), [
       // Match Playwright's test-browser launch on hosted Linux runners.
       '--no-sandbox',
+      '--disable-dev-shm-usage',
+      // Keep the unfocused preparation window responsive on busy CI runners.
+      '--disable-background-timer-throttling',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding',
       `--user-data-dir=${join(directory, 'profile')}`, '--no-first-run', '--no-default-browser-check',
       `--disable-extensions-except=${directory}`, `--load-extension=${directory}`, 'about:blank',
     ], { stdio: ['ignore', 'ignore', 'pipe'] });
@@ -86,7 +92,8 @@ test('wakes five discarded pages and restores their groups without taking focus'
       `Test browser exited early: code=${code}, signal=${signal}\n${browserErrors}`
     )));
     const observed = await Promise.race([result, new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error('Discard regression timed out')), 20000);
+      // Include browser startup and five sequential discard/wake/restore rounds.
+      timer = setTimeout(() => reject(new Error(`Discard regression timed out\n${browserErrors}`)), 60000);
     })]);
     expect(observed.error).toBeUndefined();
     expect(observed.original.every(tab => tab.discarded)).toBe(true);
