@@ -28,12 +28,14 @@ export function inferIsLiveNow({
   liveBroadcastDetails,
   lengthSeconds,
 } = {}) {
-  if (toBooleanFlag(videoDetails?.isLive)) return true;
-  if (toBooleanFlag(liveBroadcastDetails?.isLiveNow)) return true;
-
+  // Initial player responses can retain live flags after a broadcast ends.
+  // Explicit end metadata takes precedence over those retained flags.
   const hasEndedSignal =
     hasNonEmptyString(metaEndDate) || hasNonEmptyString(liveBroadcastDetails?.endTimestamp);
   if (hasEndedSignal) return false;
+
+  if (toBooleanFlag(videoDetails?.isLive)) return true;
+  if (toBooleanFlag(liveBroadcastDetails?.isLiveNow)) return true;
 
   if (toBooleanFlag(metaIsLiveBroadcast)) return true;
 

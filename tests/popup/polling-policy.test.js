@@ -16,6 +16,15 @@ import {
 const NOW_MS = 100_000;
 const fakeNow = () => NOW_MS;
 
+test('awake live tabs refresh their status; sleeping live tabs remain asleep', () => {
+  const live = { isLive: true, loadState: TAB_LOAD_STATES.LOADED };
+  assert.equal(shouldPollSnapshot({ tabRecordsById: { 1: live } }), true);
+  assert.equal(shouldRefreshRecordMetrics(live), true);
+  const sleeping = { ...live, loadState: TAB_LOAD_STATES.DISCARDED };
+  assert.equal(shouldPollRecord(sleeping), false);
+  assert.equal(shouldRefreshRecordMetrics(sleeping), false);
+});
+
 function makeRecord(overrides = {}) {
   return {
     id: 1,

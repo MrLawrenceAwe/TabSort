@@ -14,6 +14,30 @@ import {
 
 ensureChromeApi({ tabs: true });
 
+test('an ended live tab becomes sortable on the next snapshot without navigation', async () => {
+  resetTrackedWindowState(1);
+  const tab = createChromeTabFixture(1);
+  setTrackedTabRecords({
+    1: createTabRecordFixture(1, { isLive: true, remainingSecondsStale: false }),
+  });
+  stubChromeTabQuery([tab]);
+  globalThis.chrome.tabs.get = async () => tab;
+  const refreshed = [];
+  globalThis.chrome.tabs.sendMessage = async id => {
+    refreshed.push(id);
+    return {
+      url: tab.url, isLive: false, playbackMetricsReady: true,
+      metadataDurationSeconds: 120, mediaDurationSeconds: 120,
+      positionSeconds: 20, playbackRate: 1,
+    };
+  };
+  const snapshot = await getWindowSnapshot({ windowId: 1 });
+  assert.deepEqual(refreshed, [1]);
+  assert.equal(snapshot.tabRecordsById[1].isLive, false);
+  assert.equal(snapshot.tabRecordsById[1].videoDetails.remainingSeconds, 100);
+  assert.equal(snapshot.sortSummary.readyCount, 1);
+});
+
 test(
   'getWindowSnapshot refreshes ready awake tabs as well as pending readings',
   { concurrency: false },

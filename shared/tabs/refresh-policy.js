@@ -7,7 +7,9 @@ import {
 } from './grace-periods.js';
 
 export function shouldPollRecord(record, { now = Date.now } = {}) {
-  if (!record || record.isLive) return false;
+  if (!record) return false;
+  // Live status can change without a navigation or title change.
+  if (record.isLive) return record.loadState === TAB_LOAD_STATES.LOADED;
 
   // Awake readings change as playback advances, seeks, or changes speed,
   // even in a background tab. Sleeping preparation snapshots remain cached.
@@ -29,7 +31,7 @@ export function shouldPollRecord(record, { now = Date.now } = {}) {
 }
 
 export function shouldRefreshRecordMetrics(record, options = {}) {
-  if (!record || record.isLive || record.loadState !== TAB_LOAD_STATES.LOADED) return false;
+  if (!record || record.loadState !== TAB_LOAD_STATES.LOADED) return false;
   if (shouldPollRecord(record, options)) return true;
   return Boolean(record.remainingSecondsStale && record.isActive && !record.isHidden);
 }

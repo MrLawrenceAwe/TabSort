@@ -3,6 +3,20 @@ import assert from 'node:assert/strict';
 
 import { inferIsLiveNow } from '../../content/youtube/metadata/live-status.js';
 
+test('ended broadcasts override retained live flags from the initial player response', () => {
+  for (const ended of [
+    { metaEndDate: '2026-10-06T16:00:00Z' },
+    { liveBroadcastDetails: { isLiveNow: true, endTimestamp: '2026-10-06T16:00:00Z' } },
+  ]) {
+    assert.equal(inferIsLiveNow({
+      videoDetails: { isLive: true, isLiveContent: true },
+      liveBroadcastDetails: { isLiveNow: true },
+      lengthSeconds: 3600,
+      ...ended,
+    }), false);
+  }
+});
+
 test('does not mark non-live videos as live when liveBroadcastDetails exists without isLiveNow', () => {
   const isLive = inferIsLiveNow({
     videoDetails: { isLiveContent: false, isLive: false },

@@ -279,10 +279,10 @@
     liveBroadcastDetails,
     lengthSeconds
   } = {}) {
-    if (toBooleanFlag(videoDetails?.isLive)) return true;
-    if (toBooleanFlag(liveBroadcastDetails?.isLiveNow)) return true;
     const hasEndedSignal = hasNonEmptyString(metaEndDate) || hasNonEmptyString(liveBroadcastDetails?.endTimestamp);
     if (hasEndedSignal) return false;
+    if (toBooleanFlag(videoDetails?.isLive)) return true;
+    if (toBooleanFlag(liveBroadcastDetails?.isLiveNow)) return true;
     if (toBooleanFlag(metaIsLiveBroadcast)) return true;
     const hasLiveStreamabilitySignal = Boolean(playabilityStatus?.liveStreamability);
     const isLiveContent = toBooleanFlag(videoDetails?.isLiveContent);

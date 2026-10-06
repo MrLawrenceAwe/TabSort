@@ -14,6 +14,40 @@ import {
   resetGlobals,
 } from '../helpers/content-runtime-fixtures.js';
 
+test('metric reads detect a broadcast ending despite retained initial live flags and an unchanged title', () => {
+  const runtime = createYouTubePageController();
+  try {
+    installRuntimeTestDom();
+    globalThis.document.scripts = [{ textContent: 'var ytInitialPlayerResponse = ' +
+      JSON.stringify({
+        videoDetails: { videoId: 'one', isLive: true, isLiveContent: true },
+        microformat: { playerMicroformatRenderer: { liveBroadcastDetails: { isLiveNow: true } } },
+      }) + ';' }];
+    let endDate = null;
+    const querySelector = globalThis.document.querySelector;
+    globalThis.document.querySelector = selector => selector === 'meta[itemprop="endDate"]'
+      ? { getAttribute: () => endDate }
+      : querySelector(selector);
+    runtime.bootstrap();
+    let metrics;
+    const read = () => installRuntimeTestDom.onMessageListener(
+      { type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS }, {}, payload => { metrics = payload; },
+    );
+    read();
+    assert.equal(metrics.isLive, true);
+    endDate = '2026-10-06T16:00:00Z';
+    read();
+    assert.equal(metrics.isLive, false);
+    const update = derivePlaybackUpdate({ metricsPayload: metrics, record: { isLive: true },
+      requestedUrl: metrics.url, currentTabUrl: metrics.url });
+    assert.equal(update.remainingSeconds, 120);
+    assert.equal(update.remainingSecondsStale, false);
+  } finally {
+    runtime.reset();
+    resetGlobals();
+  }
+});
+
 test('content runtime absorbs asynchronous sendMessage failures', async () => {
   const failure = new Error('Extension context invalidated');
   const warnings = [];
