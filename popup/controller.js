@@ -93,7 +93,8 @@ export function applyTabSnapshot(snapshot) {
   const records = (snapshot.trackedTabOrder ?? [])
     .map(tabId => snapshot.tabRecordsById?.[tabId])
     .filter(Boolean);
-  const isYouTubeLayoutOrganised = snapshot.isYouTubeLayoutOrganised === true;
+  const isYouTubeLayoutOrganised = snapshot.isYouTubeLayoutOrganised === true &&
+    snapshot.autoPreparation?.status !== 'running';
   applyPopupState({
     isYouTubeLayoutOrganised,
     sortSummary: createSortSummary(snapshot.sortSummary),

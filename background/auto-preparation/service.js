@@ -1,7 +1,7 @@
 import { applyAutoPreparedTime, applyVideoMetricsUnavailable } from '../tabs/video-state.js';
 import { createAutoPreparationRunner } from './runner.js';
 import { createPreparationWorkspace } from './workspace.js';
-import { getAutoPreparation, autoPreparationState, getProgressWindowId, setProgressWindowId } from './state.js';
+import { getAutoPreparation, autoPreparationState, getProgressWindowId, setProgressWindowId, setPreparingTabRecord } from './state.js';
 import { getTab, listWindowTabs, sendMessageToTab, MESSAGE_FAILURE_REASONS, getTabLoadState } from '../tabs/chrome-tabs.js';
 import { getTabRecord, getTrackedWindowId, setTabRecord } from '../windows/tracked-window-store.js';
 import { reconcileTabRecord } from '../tabs/reconcile-tab-record.js';
@@ -54,7 +54,10 @@ const runner = createAutoPreparationRunner({
       remainingSeconds: record?.videoDetails?.remainingSeconds,
     };
   },
-  moveTabToPreparationWindow: (tabId, windowId) => workspace.moveTabToPreparationWindow(tabId, windowId),
+  async moveTabToPreparationWindow(tabId, windowId) {
+    setPreparingTabRecord(preparationRecordsById.get(tabId));
+    return workspace.moveTabToPreparationWindow(tabId, windowId);
+  },
   async refresh(tabId, _windowId, remainingMs, signal) {
     let timer;
     let onAbort;
@@ -99,6 +102,7 @@ const runner = createAutoPreparationRunner({
   async finishTabPreparation(tabId, _windowId, { autoPrepared, wasDiscarded }) {
     const record = preparationRecordsById.get(tabId);
     const returned = await workspace.returnTab();
+    setPreparingTabRecord(null);
     if (!returned) return;
     const sameVideo = getYouTubeVideoId(returned.url) === getYouTubeVideoId(record?.url);
     if (autoPrepared && sameVideo && !(wasDiscarded && !returned.active)) {
@@ -127,6 +131,7 @@ const runner = createAutoPreparationRunner({
   },
   async cleanup({ completed } = {}) {
     await workspace.finishSession();
+    setPreparingTabRecord(null);
     preparationRecordsById.clear();
     // A normal run leaves only our progress page in the preparation window.
     // Removing it lets Chrome close that otherwise-empty window. Keep the page
@@ -191,6 +196,7 @@ export async function startAutoPreparation(message) {
     if (signal.aborted) {
       await workspace.discardUnstartedWorkspace();
       await workspace.finishSession();
+      setPreparingTabRecord(null);
       preparationRecordsById.clear();
       return { ok: false, error: 'startCancelled' };
     }
@@ -198,6 +204,7 @@ export async function startAutoPreparation(message) {
     return { ...runner.start(result.windowId, items), tiktokPip };
   } catch (error) {
     await workspace.finishSession();
+    setPreparingTabRecord(null);
     preparationRecordsById.clear();
     throw error;
   } finally {

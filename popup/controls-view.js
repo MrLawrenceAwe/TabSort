@@ -71,9 +71,9 @@ function setOptionToggleVisibility(visible) {
 function formatPreparationStatus(state) {
   if (state.status === 'idle') return '';
   const labels = {
-    running: 'Reading remaining times',
-    complete: 'Finished reading times',
-    stopped: 'Stopped reading times',
+    running: 'Auto-preparing tabs',
+    complete: 'Auto-prepare complete',
+    stopped: 'Auto-prepare stopped',
   };
   const detail = formatPreparationDetail(state);
   return `${labels[state.status]}: ${formatPreparationCounts(state)}${detail ? ` · ${detail}` : ''}`;
@@ -103,7 +103,7 @@ export function renderPopupControls() {
   if (autoPrepareButton) {
     autoPrepareButton.classList.toggle('hide', !shouldShowAutoPrepare);
     autoPrepareButton.disabled = popupState.isStartingAutoPreparation || popupState.isOrganising;
-    autoPrepareButton.textContent = popupState.isStartingAutoPreparation ? 'Starting to read times…' : 'Read remaining times';
+    autoPrepareButton.textContent = popupState.isStartingAutoPreparation ? 'Starting auto-prepare…' : 'Auto-prepare tabs';
   }
   const openTikTokPipOption = getPopupElement('openTikTokPipToggle')?.closest?.('.option-toggle');
   openTikTokPipOption?.classList?.toggle('hide', !shouldShowAutoPrepare);
@@ -117,6 +117,6 @@ export function renderPopupControls() {
   setOptionToggleVisibility(shouldShowOrganise);
 
   updateStatus(status, readyTabsInOrder);
-  updateOrganisedBadge(organisedBadge, readyTabsInOrder);
+  updateOrganisedBadge(organisedBadge, readyTabsInOrder && !preparationBusy);
   updateOrganiseButton(organiseButton, shouldShowOrganise, actionsDisabled);
 }

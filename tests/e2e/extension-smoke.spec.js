@@ -59,6 +59,9 @@ test('loads the bundled runtime and reports tracked YouTube tabs in the popup', 
     // Exercise the popup view with a deterministic ready subset so theme changes
     // and highlighting are checked independently of media-loading timing.
     await popup.evaluate(async () => {
+      // Stop the live controller before injecting a view fixture so background
+      // broadcasts and polling cannot overwrite it during theme assertions.
+      window.dispatchEvent(new Event('unload'));
       const { applyTabSnapshot } = await import(chrome.runtime.getURL('popup/controller.js'));
       applyTabSnapshot({
         trackedTabOrder: [1, 2],
@@ -78,7 +81,7 @@ test('loads the bundled runtime and reports tracked YouTube tabs in the popup', 
     });
     await expect(popup.locator('#tabsTable .ready-row')).toHaveCount(1);
     await expect(popup.locator('td.remaining-time').nth(1)).toHaveText('Needs viewing');
-    await expect(popup.getByRole('button', { name: 'Read remaining times', exact: true })).toBeVisible();
+    await expect(popup.getByRole('button', { name: 'Auto-prepare tabs', exact: true })).toBeVisible();
     await expect(popup.locator('#backlogSummary')).toHaveText('2 videos · 1m remaining · 1 unknown');
     for (const [colorScheme, background, readyBackground] of [
       ['light', 'rgb(252, 252, 250)', 'rgb(238, 245, 239)'],
@@ -144,13 +147,17 @@ test('prepares media in another window while browsing continues, then returns ta
     ids = originalTabs.map(tab => tab.id);
     await popup.reload();
     await expect(popup.locator('#organiseStatus')).toContainText('0 of 2');
-    await popup.getByRole('button', { name: 'Read remaining times', exact: true }).click();
+    await popup.getByRole('button', { name: 'Auto-prepare tabs', exact: true }).click();
     await expect.poll(() => context.pages().some(page => page.url().endsWith('/preparation/index.html'))).toBe(true);
     const progress = context.pages().find(page => page.url().endsWith('/preparation/index.html'));
     const sourceWindowId = await worker.evaluate(async id => (await chrome.tabs.get(id)).windowId, ids[1]);
     // Continue using the original window while the first video is elsewhere.
     await popup.bringToFront();
     await expect.poll(() => worker.evaluate(async id => (await chrome.tabs.get(id)).windowId, ids[0])).not.toBe(sourceWindowId);
+    await expect(popup.locator('#tabsTable tbody tr')).toHaveCount(2);
+    await expect(popup.locator('#backlogSummary')).toContainText('2 videos');
+    await expect(popup.locator('#tabsTable')).toContainText('Auto-preparing…');
+    await expect(popup.locator('#organisedBadge')).toBeHidden();
     const browsing = await context.newPage();
     await browsing.goto(`data:text/html,<video loop src="data:audio/wav;base64,${wav.toString('base64')}"></video><button onclick="document.querySelector('video').play();this.textContent=123">Play</button>`);
     await browsing.getByRole('button').click();
@@ -184,7 +191,7 @@ test('prepares media in another window while browsing continues, then returns ta
     await secondStalled.goto('https://www.youtube.com/watch?v=stalled-two');
     const stalledIds = await worker.evaluate(async () => (await chrome.tabs.query({ url: 'https://www.youtube.com/watch?v=stalled-*' })).map(tab => tab.id));
     await reopened.reload();
-    await reopened.getByRole('button', { name: 'Read remaining times', exact: true }).click();
+    await reopened.getByRole('button', { name: 'Auto-prepare tabs', exact: true }).click();
     await expect.poll(() => context.pages().some(page => page.url().endsWith('/preparation/index.html'))).toBe(true);
     const stopWindow = context.pages().find(page => page.url().endsWith('/preparation/index.html'));
     await expect.poll(() => worker.evaluate(async id => (await chrome.tabs.get(id)).active, stalledIds[0])).toBe(true);

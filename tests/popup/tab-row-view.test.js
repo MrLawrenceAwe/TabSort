@@ -356,3 +356,7 @@ test('remaining status labels auto-prepared sleeping tabs', () => {
   })), 'Sleeping');
   assert.equal(formatRemainingStatus(makeRecord({ loadState: 'loading', videoDetails: { remainingSeconds: 100 } })), 'Loading tab');
 });
+
+test('a video visiting the preparation window displays its preparation state', () => {
+  assert.equal(formatRemainingStatus(makeRecord({ autoPreparationInProgress: true })), 'Auto-preparing…');
+});

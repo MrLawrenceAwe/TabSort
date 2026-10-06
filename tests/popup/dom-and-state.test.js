@@ -123,3 +123,24 @@ test('TikTok PiP option follows the auto-prepare control visibility', () => {
   resetPopupDom();
   resetPopupState();
 });
+
+test('auto-prepare hides the organised badge even if the current subset is ordered', () => {
+  const document = createFakeDocument();
+  const badge = document.elements.get('organisedBadge');
+  let hidden;
+  badge.classList.toggle = (_name, value) => { hidden = value; };
+  resetPopupDom();
+  resetPopupState();
+  initializePopupDom(document);
+  popupState.isYouTubeLayoutOrganised = true;
+  popupState.sortSummary = { readyCount: 2, sortableCount: 2, readyTabsLeadInOrder: true };
+  popupState.autoPreparation = { status: 'running', total: 3, completed: 1 };
+  renderPopupControls();
+  assert.equal(hidden, true);
+  assert.equal(badge.textContent, '');
+  popupState.autoPreparation.status = 'complete';
+  renderPopupControls();
+  assert.equal(hidden, false);
+  resetPopupDom();
+  resetPopupState();
+});

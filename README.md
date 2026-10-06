@@ -22,7 +22,7 @@ distribution workflow.
 
 1. Open several YouTube videos in the same Chrome window.
 2. Open TabSort to see remaining playback times and any tabs needing attention.
-3. Choose **Read remaining times** to prepare eligible tabs while you keep browsing.
+3. Choose **Auto-prepare tabs** to prepare eligible tabs while you keep browsing.
 4. Choose **Organise tabs** or **Organise ready tabs** to sort the available videos.
 
 See [the usage guide](docs/usage.md) for sleeping tabs, session recovery and Stop behaviour.

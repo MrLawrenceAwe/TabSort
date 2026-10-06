@@ -1,3 +1,4 @@
+import { projectPreparationPlaceholder } from '../auto-preparation/state.js';
 import { isValidWindowId } from '../../shared/guards.js';
 import { getTabLoadState, listWindowTabs } from './chrome-tabs.js';
 import { updateSortStateAndBroadcast } from '../sorting/update-sort-state.js';
@@ -58,8 +59,16 @@ export async function reconcileWindowTabRecords(windowId, options = {}) {
 
   const previousTabRecords = getTabRecordsById();
   const nextTabRecords = {};
+  const projectedTabs = [];
 
   for (const tab of tabs) {
+    const preparingRecord = projectPreparationPlaceholder(tab);
+    if (preparingRecord) {
+      nextTabRecords[preparingRecord.id] = preparingRecord;
+      projectedTabs.push({ ...tab, id: preparingRecord.id, url: preparingRecord.url });
+      continue;
+    }
+    projectedTabs.push(tab);
     if (!isYouTubeVideoPage(tab.url)) continue;
 
     const previousTabRecord = previousTabRecords[tab.id] || {};
@@ -75,7 +84,7 @@ export async function reconcileWindowTabRecords(windowId, options = {}) {
   if (!isSyncTokenCurrent(syncToken)) {
     return { ok: false, applied: false, reason: 'superseded', windowId: resolvedWindowId };
   }
-  replaceOrderedWindowTabs(tabs);
+  replaceOrderedWindowTabs(projectedTabs);
   replaceAllTabRecords(nextTabRecords);
   updateSortStateAndBroadcast();
   return {

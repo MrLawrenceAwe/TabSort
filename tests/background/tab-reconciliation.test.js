@@ -8,6 +8,7 @@ import {
   getTrackedWindowId,
 } from '../../background/windows/tracked-window-store.js';
 import { reconcileWindowTabRecords } from '../../background/tabs/reconcile-window.js';
+import { setPreparingTabRecord } from '../../background/auto-preparation/state.js';
 import { saveAutoPreparedTab } from '../../background/auto-preparation/session-cache.js';
 import {
   ensureChromeApi,
@@ -273,3 +274,43 @@ test(
     assert.equal(getTabRecordsById()[7].windowId, 4);
   },
 );
+
+test('keeps the video being auto-prepared in its placeholder position, including after switching windows', async () => {
+  resetTrackedWindowState(1);
+  const originalGetURL = chrome.runtime.getURL;
+  chrome.runtime.getURL = path => `chrome-extension://tabsort/${path}`;
+  const record = createTabRecordFixture(5, {
+    videoDetails: { title: 'Preparing video', remainingSeconds: 30, lengthSeconds: 120 },
+    remainingSecondsStale: false,
+  });
+  setPreparingTabRecord(record);
+  try {
+    const placeholder = createChromeTabFixture(99, {
+      index: 2, url: 'chrome-extension://tabsort/preparation/placeholder.html?tabId=5&url=video',
+    });
+    stubChromeTabQuery([createChromeTabFixture(2, { index: 0 }), placeholder]);
+    await reconcileWindowTabRecords(1, { force: true });
+    assert.equal(getTabRecordsById()[5].autoPreparationInProgress, true);
+    assert.equal(getTabRecordsById()[5].index, 2);
+    assert.equal(getSortState().sortSummary.sortableCount, 2);
+    assert.equal(getSortState().sortSummary.readyCount, 0);
+    assert.equal(getSortState().isYouTubeLayoutOrganised, false);
+    stubChromeTabQuery([createChromeTabFixture(8, { windowId: 2 })]);
+    await reconcileWindowTabRecords(2, { force: true });
+    assert.equal(getTabRecordsById()[5], undefined);
+    stubChromeTabQuery([placeholder]);
+    await reconcileWindowTabRecords(1, { force: true });
+    assert.equal(getTabRecordsById()[5].videoDetails.title, 'Preparing video');
+    record.id = 6; // Chrome replaced the video tab while its placeholder stayed put.
+    await reconcileWindowTabRecords(1, { force: true });
+    assert.equal(getTabRecordsById()[6].autoPreparationInProgress, true);
+    assert.equal(getTabRecordsById()[5], undefined);
+    setPreparingTabRecord(null);
+    stubChromeTabQuery([createChromeTabFixture(5, { index: 2 })]);
+    await reconcileWindowTabRecords(1, { force: true });
+    assert.equal(getTabRecordsById()[5].autoPreparationInProgress, undefined);
+  } finally {
+    setPreparingTabRecord(null);
+    chrome.runtime.getURL = originalGetURL;
+  }
+});

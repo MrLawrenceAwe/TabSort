@@ -5,8 +5,8 @@ const current = document.getElementById('current');
 const stop = document.getElementById('stop');
 function render(state) {
   const running = state.status === 'running';
-  const heading = running ? 'Reading remaining times' : state.status === 'complete' ? 'Finished reading times' :
-    state.status === 'stopped' ? state.reason : 'No remaining-time reading in progress';
+  const heading = running ? 'Auto-preparing tabs' : state.status === 'complete' ? 'Auto-prepare complete' :
+    state.status === 'stopped' ? state.reason : 'No auto-prepare in progress';
   document.querySelector('h1').textContent = heading;
   progress.textContent = formatPreparationCounts(state);
   current.textContent = running

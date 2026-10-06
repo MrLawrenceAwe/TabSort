@@ -43,6 +43,10 @@ function insertInfoCells(row, record, guidance) {
 function insertGuidanceCell(row, record, guidance, requestAction) {
   const cell = row.insertCell(1);
   cell.className = 'next-step';
+  if (record.autoPreparationInProgress) {
+    cell.textContent = 'Preparing in another window';
+    return;
+  }
   if (
     guidance === TAB_GUIDANCE.NONE ||
     guidance === TAB_GUIDANCE.WAIT_FOR_LOAD ||
@@ -88,6 +92,7 @@ function createActionButton(runtimeDocument, text, actionType, tabId, requestAct
 }
 
 export function formatRemainingStatus(record, guidance = determineTabGuidance(record)) {
+  if (record.autoPreparationInProgress) return 'Auto-preparing…';
   if (record.isLive) return 'Live Stream';
 
   const remaining = record?.videoDetails?.remainingSeconds;
