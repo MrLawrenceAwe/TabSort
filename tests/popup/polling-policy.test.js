@@ -218,3 +218,12 @@ test('pausing during an in-flight poll prevents its response from restarting pol
 
   assert.equal(loadCount, 1);
 });
+
+test('ready awake videos keep polling, including background playback; sleeping readings stay cached', () => {
+  const ready = makeRecord({ videoDetails: { remainingSeconds: 90 } });
+  assert.equal(shouldPollSnapshot({ tabRecordsById: { 1: ready } }), true);
+  assert.equal(shouldRefreshRecordMetrics(ready), true);
+  const sleeping = { ...ready, loadState: TAB_LOAD_STATES.DISCARDED, hasAutoPreparedTime: true };
+  assert.equal(shouldPollSnapshot({ tabRecordsById: { 1: sleeping } }), false);
+  assert.equal(shouldRefreshRecordMetrics(sleeping), false);
+});

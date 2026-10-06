@@ -1,3 +1,4 @@
+import { hasReadyRemainingTime } from './sort-readiness.js';
 import { TAB_LOAD_STATES } from './load-states.js';
 import {
   canLoadingStillSettle,
@@ -7,6 +8,10 @@ import {
 
 export function shouldPollRecord(record, { now = Date.now } = {}) {
   if (!record || record.isLive) return false;
+
+  // Awake readings change as playback advances, seeks, or changes speed,
+  // even in a background tab. Sleeping preparation snapshots remain cached.
+  if (record.loadState === TAB_LOAD_STATES.LOADED && hasReadyRemainingTime(record)) return true;
 
   const nowMs = now();
   if (record.loadState === TAB_LOAD_STATES.LOADED && record.remainingSecondsStale) {

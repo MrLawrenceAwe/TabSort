@@ -173,6 +173,7 @@ async function requestStopAutoPreparation() {
 async function requestOrganise() {
   if (popupState.isOrganising || (popupState.isStartingAutoPreparation || popupState.autoPreparation.status === 'running')) return;
   applyPopupState({ isOrganising: true });
+  snapshotPoller.setPaused(true);
   setErrorMessage('');
   setNoticeMessage('');
   renderPopupControls();
@@ -192,6 +193,7 @@ async function requestOrganise() {
     runtimeClient.logPopupError('Organising tabs failed', error);
   } finally {
     applyPopupState({ isOrganising: false });
+    snapshotPoller.setPaused(false);
     renderPopupControls();
   }
 }

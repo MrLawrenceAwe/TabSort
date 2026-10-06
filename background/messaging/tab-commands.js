@@ -110,6 +110,8 @@ export async function handleOrganiseTabs(message) {
     };
   }
 
+  await collectPlaybackMetricsBatch(listTabIds(), { shouldRefresh: shouldRefreshRecordMetrics });
+
   const resolvedTargetWindowId = reconciliation.windowId;
   const organisationResult = await organiseTabs(resolvedTargetWindowId, {
     expectedSyncToken: reconciliation.syncToken,
