@@ -18,9 +18,9 @@ function classifyRuntimeMessageFailure(runtimeError) {
   return MESSAGE_FAILURE_REASONS.CHROME_ERROR;
 }
 
-export async function moveTabsInOrder(tabIds, startIndex = 0, currentTabIds = []) {
+export async function moveTabsInOrder(tabIds, startIndex = 0, currentTabs = []) {
   const desiredTabIds = tabIds.filter((tabId) => typeof tabId === 'number');
-  const currentOrder = currentTabIds.filter((tabId) => typeof tabId === 'number');
+  const currentOrder = currentTabs.map(tab => tab.id);
   const orderAlreadyMatches =
     desiredTabIds.length === currentOrder.length &&
     desiredTabIds.every((tabId, index) => currentOrder[index] === tabId);
@@ -33,7 +33,39 @@ export async function moveTabsInOrder(tabIds, startIndex = 0, currentTabIds = []
       ? desiredTabIds.filter((tabId, index) => currentOrder[index] !== tabId).length
       : desiredTabIds.length;
   try {
-    await chrome.tabs.move(desiredTabIds, { index: startIndex });
+    if (!currentTabs.some(tab => tab.groupId >= 0)) {
+      await chrome.tabs.move(desiredTabIds, { index: startIndex });
+    } else {
+      const tabsById = new Map(currentTabs.map(tab => [tab.id, tab]));
+      let offset = 0;
+      while (offset < desiredTabIds.length) {
+        const id = desiredTabIds[offset];
+        const groupId = tabsById.get(id)?.groupId;
+        const index = startIndex + offset;
+        if (!(groupId >= 0)) {
+          const tab = await chrome.tabs.get(id);
+          if (tab.index !== index) await chrome.tabs.move(id, { index });
+          offset += 1;
+          continue;
+        }
+        const members = [];
+        while (offset < desiredTabIds.length &&
+               tabsById.get(desiredTabIds[offset])?.groupId === groupId) {
+          members.push(desiredTabIds[offset++]);
+        }
+        // Move the group as a unit to preserve its identity and appearance.
+        const groupTabs = await chrome.tabs.query({ groupId });
+        if (Math.min(...groupTabs.map(tab => tab.index)) !== index) {
+          await chrome.tabGroups.move(groupId, { windowId: tabsById.get(id).windowId, index });
+        }
+        for (let memberIndex = 0; memberIndex < members.length; memberIndex++) {
+          const tab = await chrome.tabs.get(members[memberIndex]);
+          if (tab.index !== index + memberIndex) {
+            await chrome.tabs.move(tab.id, { index: index + memberIndex });
+          }
+        }
+      }
+    }
     return { ok: true, movedCount, failedCount: 0 };
   } catch (error) {
     logDebug(`tabs.move failed for ${desiredTabIds.join(',')}`, error);

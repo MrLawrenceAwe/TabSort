@@ -1,3 +1,4 @@
+import { getYouTubeVideoId } from '../../../shared/youtube/urls.js';
 import { isFiniteNumber } from '../../../shared/guards.js';
 import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../../shared/messages.js';
 import { getPrimaryVideoElement } from './elements.js';
@@ -10,10 +11,11 @@ export function createPlaybackReadinessTracker({
   getMutationObserver,
   sendExtensionMessage,
   doesMediaMatchPageMetadata,
+  getMediaDurationSeconds,
 }) {
   const state = {
     videoMountObserver: null,
-    playbackReadyPageUrl: null,
+    playbackReadyVideoId: null,
     lastReadyVideo: null,
     lastReadyFingerprint: null,
     playbackReadyListenerVideo: null,
@@ -23,8 +25,8 @@ export function createPlaybackReadinessTracker({
   };
 
   function isCurrentPlaybackReady() {
-    const currentUrl = getCurrentPageUrl();
-    return Boolean(currentUrl) && currentUrl === state.playbackReadyPageUrl;
+    const videoId = getYouTubeVideoId(getCurrentPageUrl());
+    return Boolean(videoId) && videoId === state.playbackReadyVideoId;
   }
 
   function getVideoFingerprint(video) {
@@ -50,7 +52,7 @@ export function createPlaybackReadinessTracker({
   function canMarkPlaybackReady(video, observedFreshMediaEvent = false) {
     return (
       video?.readyState >= config.mediaReadyStateThreshold &&
-      isFiniteNumber(video.duration) &&
+      isFiniteNumber(getMediaDurationSeconds(video)) &&
       hasFreshMediaEvidence(video, observedFreshMediaEvent) &&
       doesMediaMatchPageMetadata(video)
     );
@@ -79,9 +81,9 @@ export function createPlaybackReadinessTracker({
   }
 
   function markPlaybackReady(video, { notify = true } = {}) {
-    const currentUrl = getCurrentPageUrl();
-    if (!currentUrl) return false;
-    state.playbackReadyPageUrl = currentUrl;
+    const videoId = getYouTubeVideoId(getCurrentPageUrl());
+    if (!videoId) return false;
+    state.playbackReadyVideoId = videoId;
     state.lastReadyVideo = video;
     state.lastReadyFingerprint = getVideoFingerprint(video);
     if (notify) {
@@ -199,7 +201,7 @@ export function createPlaybackReadinessTracker({
 
   function resetForNavigation() {
     dispose();
-    state.playbackReadyPageUrl = null;
+    state.playbackReadyVideoId = null;
     // Keep previous media evidence so a reused video element cannot mark the
     // next page ready until its source/duration changes or a fresh event arrives.
   }

@@ -433,7 +433,7 @@ test(
     globalThis.chrome.tabs.sendMessage = async () => ({
         title: 'Video',
         url: sender.tab.url,
-        playbackMetricsReady: false,
+        playbackMetricsReady: true,
         metadataDurationSeconds: 300,
         mediaDurationSeconds: 300,
         positionSeconds: 180,

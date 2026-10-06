@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  keepTabGroupsTogether,
   buildOtherTabOrder,
   buildYouTubeTabOrder,
 } from '../../background/sorting/move-order.js';
@@ -37,4 +38,11 @@ test('buildOtherTabOrder groups by first-seen domain and preserves intra-domain 
   ];
 
   assert.deepEqual(buildOtherTabOrder(unpinnedTabs, true), [1, 3, 2, 4]);
+});
+
+
+test('tab group blocks follow the first ranked member and keep internal ranking', () => {
+  const tabs = [{ id: 1, groupId: 7 }, { id: 2, groupId: 7 },
+    { id: 3, groupId: -1 }, { id: 4, groupId: 8 }, { id: 5, groupId: 8 }];
+  assert.deepEqual(keepTabGroupsTogether([2, 3, 5, 1, 4], tabs), [2, 1, 3, 5, 4]);
 });

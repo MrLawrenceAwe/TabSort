@@ -27,9 +27,9 @@ test('manifest injects YouTube runtime on all YouTube pages for SPA navigation',
   assert.deepEqual(youtubeContentScript.js, ['dist/content-runtime.js']);
 });
 
-test('manifest avoids unused tab group permission', () => {
+test('manifest permits moving existing tab groups without splitting them', () => {
   const manifest = loadManifest();
-  assert.equal(manifest.permissions.includes('tabGroups'), false);
+  assert.equal(manifest.permissions.includes('tabGroups'), true);
 });
 
 test('manifest references complete extension icon sizes', () => {

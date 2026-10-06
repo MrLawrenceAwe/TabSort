@@ -196,3 +196,17 @@ test('does not mark videos sorted while non-YouTube tabs remain in front', () =>
   assert.equal(getSortState().isYouTubeLayoutOrganised, false);
 
 });
+
+
+test('organised state recognises the achievable order with mixed Chrome groups', () => {
+  const records = [
+    createTabRecordFixture(1, { index: 0, remainingSecondsStale: false, videoDetails: { remainingSeconds: 10 } }),
+    createTabRecordFixture(3, { index: 2, remainingSecondsStale: false, videoDetails: { remainingSeconds: 20 } }),
+  ];
+  const orderedWindowTabs = [
+    { ...records[0], groupId: 7 },
+    { id: 2, index: 1, groupId: 7, url: 'https://example.com' },
+    { ...records[1], groupId: -1 },
+  ];
+  assert.equal(deriveSortState(records, { orderedWindowTabs }).isYouTubeLayoutOrganised, true);
+});

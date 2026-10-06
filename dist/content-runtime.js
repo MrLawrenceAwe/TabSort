@@ -56,6 +56,14 @@
     }
     return null;
   }
+  function hasYouTubeVideoChanged(previousUrl, nextUrl) {
+    const previousIdentity = getYouTubeVideoId(previousUrl);
+    const nextIdentity = getYouTubeVideoId(nextUrl);
+    if (previousIdentity && nextIdentity) {
+      return previousIdentity !== nextIdentity;
+    }
+    return Boolean(previousUrl) && Boolean(nextUrl) && previousUrl !== nextUrl;
+  }
 
   // content/youtube/metadata/player-response.js
   function extractInitialPlayerResponse(source) {
@@ -322,11 +330,12 @@
     getDocument,
     getMutationObserver,
     sendExtensionMessage,
-    doesMediaMatchPageMetadata
+    doesMediaMatchPageMetadata,
+    getMediaDurationSeconds
   }) {
     const state = {
       videoMountObserver: null,
-      playbackReadyPageUrl: null,
+      playbackReadyVideoId: null,
       lastReadyVideo: null,
       lastReadyFingerprint: null,
       playbackReadyListenerVideo: null,
@@ -335,8 +344,8 @@
       videoMountCheckToken: 0
     };
     function isCurrentPlaybackReady() {
-      const currentUrl = getCurrentPageUrl();
-      return Boolean(currentUrl) && currentUrl === state.playbackReadyPageUrl;
+      const videoId = getYouTubeVideoId(getCurrentPageUrl());
+      return Boolean(videoId) && videoId === state.playbackReadyVideoId;
     }
     function getVideoFingerprint(video) {
       if (!video || typeof video !== "object") return "";
@@ -352,7 +361,7 @@
       return Boolean(fingerprint) && fingerprint !== state.lastReadyFingerprint;
     }
     function canMarkPlaybackReady(video, observedFreshMediaEvent = false) {
-      return video?.readyState >= config.mediaReadyStateThreshold && isFiniteNumber(video.duration) && hasFreshMediaEvidence(video, observedFreshMediaEvent) && doesMediaMatchPageMetadata(video);
+      return video?.readyState >= config.mediaReadyStateThreshold && isFiniteNumber(getMediaDurationSeconds(video)) && hasFreshMediaEvidence(video, observedFreshMediaEvent) && doesMediaMatchPageMetadata(video);
     }
     function clearPlaybackReadyListener() {
       if (typeof state.playbackReadyListenerCleanup === "function") {
@@ -374,9 +383,9 @@
       });
     }
     function markPlaybackReady(video, { notify = true } = {}) {
-      const currentUrl = getCurrentPageUrl();
-      if (!currentUrl) return false;
-      state.playbackReadyPageUrl = currentUrl;
+      const videoId = getYouTubeVideoId(getCurrentPageUrl());
+      if (!videoId) return false;
+      state.playbackReadyVideoId = videoId;
       state.lastReadyVideo = video;
       state.lastReadyFingerprint = getVideoFingerprint(video);
       if (notify) {
@@ -477,7 +486,7 @@
     }
     function resetForNavigation() {
       dispose();
-      state.playbackReadyPageUrl = null;
+      state.playbackReadyVideoId = null;
     }
     function reset() {
       resetForNavigation();
@@ -655,15 +664,19 @@
         messageBus.removeListener?.(listener);
       });
     }
+    function getMediaDurationSeconds(video) {
+      return getVideoDurationSeconds(video, getDocument()?.querySelector?.("#movie_player"));
+    }
     function doesMediaMatchPageMetadata(video) {
-      if (!video || !isFiniteNumber(video.duration)) {
+      const duration = getMediaDurationSeconds(video);
+      if (!video || !isFiniteNumber(duration)) {
         return false;
       }
       const details = collectPageDetails2();
       if (!isFiniteNumber(details.lengthSeconds)) {
         return true;
       }
-      return Math.abs(video.duration - details.lengthSeconds) <= pageConfig.mediaDurationSyncToleranceSeconds;
+      return Math.abs(duration - details.lengthSeconds) <= pageConfig.mediaDurationSyncToleranceSeconds;
     }
     function dispatchContentScriptReadySignal({ force = false } = {}) {
       const currentUrl = getCurrentPageUrl();
@@ -683,7 +696,8 @@
       getDocument,
       getMutationObserver,
       sendExtensionMessage,
-      doesMediaMatchPageMetadata
+      doesMediaMatchPageMetadata,
+      getMediaDurationSeconds
     });
     const titleObserver = createTitleObserver({
       getDocument,
@@ -708,9 +722,11 @@
       const currentUrl = getCurrentPageUrl();
       if (currentUrl && currentUrl !== lifecycle.observedPageUrl) {
         titleObserver.dispose();
+        if (!isYouTubeVideoPage(currentUrl) || hasYouTubeVideoChanged(lifecycle.observedPageUrl, currentUrl)) {
+          playbackReadiness.resetForNavigation();
+        }
         lifecycle.observedPageUrl = currentUrl;
         lifecycle.lastScriptReadyUrl = null;
-        playbackReadiness.resetForNavigation();
       }
     }
     function refreshPageState({ sendReadySignal = false, forceReadySignal = false } = {}) {

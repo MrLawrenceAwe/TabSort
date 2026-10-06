@@ -37,9 +37,8 @@ export function getOrganiseButtonText(readyCount, sortableCount) {
   return readyCount === sortableCount ? 'Organise tabs' : 'Organise ready tabs';
 }
 
-export function shouldShowOrganiseButton(sortSummary, isYouTubeLayoutOrganised) {
-  return sortSummary.readyCount >= 2 &&
-    !isYouTubeLayoutOrganised && !sortSummary.readyTabsLeadInOrder;
+export function shouldShowOrganiseButton(sortSummary) {
+  return sortSummary.readyCount >= 2;
 }
 
 function updateOrganiseButton(organiseButton, shouldShow, disabled) {
@@ -83,10 +82,7 @@ export function renderPopupControls() {
   const status = getPopupElement('organiseStatus');
   const organiseButton = getPopupElement('organiseButton');
   const organisedBadge = getPopupElement('organisedBadge');
-  const shouldShowOrganise = shouldShowOrganiseButton(
-    popupState.sortSummary,
-    popupState.isYouTubeLayoutOrganised,
-  );
+  const shouldShowOrganise = shouldShowOrganiseButton(popupState.sortSummary);
 
   const readyTabsInOrder = areReadyTabsLeadingInOrder(
     popupState.sortSummary,

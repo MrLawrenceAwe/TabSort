@@ -1,7 +1,7 @@
 import { isFiniteNumber } from '../../shared/guards.js';
 import { createSortSummary } from '../../shared/sorting/summary.js';
 import { hasReadyRemainingTime } from '../../shared/tabs/sort-readiness.js';
-import { buildYouTubeTabOrder } from './move-order.js';
+import { buildYouTubeTabOrder, buildOtherTabOrder, keepTabGroupsTogether } from './move-order.js';
 
 function tabIdsEqual(left, right) {
   return left.length === right.length && left.every((id, index) => id === right[index]);
@@ -36,8 +36,11 @@ export function deriveSortState(records, { orderedWindowTabs = [] } = {}) {
       .sort((left, right) => left.index - right.index)
     : [];
   const unpinnedTabIds = unpinnedTabs.map((tab) => tab.id);
-  const expectedYouTubeTabOrder = hasTabStripState
-    ? buildYouTubeTabOrder(unpinnedTabs, targetVideoTabOrder)
+  const expectedTabOrder = hasTabStripState
+    ? keepTabGroupsTogether([
+      ...buildYouTubeTabOrder(unpinnedTabs, targetVideoTabOrder),
+      ...buildOtherTabOrder(unpinnedTabs, false),
+    ], unpinnedTabs)
     : [];
 
   // Compare against the complete unpinned strip when available. Without it,
@@ -48,15 +51,15 @@ export function deriveSortState(records, { orderedWindowTabs = [] } = {}) {
   );
 
   const allSortableTabsReady = sortableRecords.length > 1 && waitingTabIds.length === 0;
-  const youtubeTabStripMatchesPlan =
+  const tabStripMatchesPlan =
     !hasTabStripState ||
-    expectedYouTubeTabOrder.every((id, index) => unpinnedTabIds[index] === id);
-  // At least two sortable videos must all be ready and ordered, with YouTube
-  // tabs at the front. Pinned/live videos and other-site grouping are excluded.
+    expectedTabOrder.every((id, index) => unpinnedTabIds[index] === id);
+  // Compare with the achievable plan: existing groups stay contiguous, even
+  // when they contain other sites or videos with different remaining times.
   const isYouTubeLayoutOrganised =
     allSortableTabsReady &&
-    tabIdsEqual(sortableTabIds, readyTabIdsByRemainingTime) &&
-    youtubeTabStripMatchesPlan;
+    (hasTabStripState || tabIdsEqual(sortableTabIds, readyTabIdsByRemainingTime)) &&
+    tabStripMatchesPlan;
   return {
     trackedTabOrder,
     targetVideoTabOrder,

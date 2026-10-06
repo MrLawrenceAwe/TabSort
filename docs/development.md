@@ -43,7 +43,9 @@ The sorting summary's `readyTabsLeadInOrder` means ready videos occupy the front
 the unpinned tab strip in remaining-time order. Popup snapshots contain display state;
 the target video order stays in the background store. `isYouTubeLayoutOrganised` additionally
 requires at least two sortable videos, all ready, with YouTube tabs grouped at the front;
-it does not describe grouping of other sites. `hasAutoPreparedTime` permits a saved
+it does not describe grouping of other sites. Existing Chrome groups constrain the sort
+plan to contiguous blocks; the organised state compares against that achievable plan.
+`hasAutoPreparedTime` permits a saved
 remaining-time reading to be used while its tab sleeps. Tab activation uses `activateTab`.
 
 Playback messages use `metadataDurationSeconds`, `mediaDurationSeconds`, and

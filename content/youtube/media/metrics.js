@@ -7,7 +7,7 @@ function getYouTubePlayer(environment = globalThis) {
   return runtimeDocument?.querySelector?.('#movie_player') || null;
 }
 
-function getVideoDurationSeconds(video, player) {
+export function getVideoDurationSeconds(video, player) {
   return (
     toPositiveFiniteNumber(video?.duration) ??
     toPositiveFiniteNumber(player?.getDuration?.())

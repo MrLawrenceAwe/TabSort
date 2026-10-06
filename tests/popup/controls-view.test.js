@@ -1,3 +1,4 @@
+import { deriveSortState } from '../../background/sorting/derive-state.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
@@ -21,19 +22,19 @@ test('shows the organise button when ready videos are behind other tabs', () => 
     readyTabsLeadInOrder: false,
   });
 
-  assert.equal(shouldShowOrganiseButton(sortSummary, false), true);
+  assert.equal(shouldShowOrganiseButton(sortSummary), true);
 });
 
-test('organise button requires two ready tabs and an unapplied ready prefix', () => {
+test('organise button stays available with two ready tabs even when already ordered', () => {
   assert.equal(shouldShowOrganiseButton(createSortSummary({
     readyCount: 1, readyTabsLeadInOrder: false,
-  }), false), false);
+  })), false);
   assert.equal(shouldShowOrganiseButton(createSortSummary({
     readyCount: 2, sortableCount: 3, readyTabsLeadInOrder: true,
-  }), false), false);
+  })), true);
   assert.equal(shouldShowOrganiseButton(createSortSummary({
     readyCount: 2, sortableCount: 3, readyTabsLeadInOrder: false,
-  }), false), true);
+  })), true);
 });
 
 test('identifies ready tabs that are already in their intended order', () => {
@@ -47,4 +48,18 @@ test('identifies ready tabs that are already in their intended order', () => {
   assert.equal(getOrganisedBadgeText(false), 'Ready tabs already in order');
   assert.equal(getOrganisedBadgeText(true), 'YouTube tabs organised');
   assert.equal(areReadyTabsLeadingInOrder(createSortSummary({ readyCount: 1 }), false), false);
+});
+
+
+test('organise remains available for YouTube pages behind another site and for site grouping', () => {
+  const records = [1, 2].map((id, index) => ({ id, index, url: `https://www.youtube.com/watch?v=${id}`,
+    loadState: 'loaded', remainingSecondsStale: false, videoDetails: { remainingSeconds: id * 60 } }));
+  const state = deriveSortState(records, { orderedWindowTabs: [...records,
+    { id: 3, index: 2, url: 'https://example.com' },
+    { id: 4, index: 3, url: 'https://www.youtube.com/' },
+  ] });
+  assert.equal(state.sortSummary.readyTabsLeadInOrder, true);
+  assert.equal(state.isYouTubeLayoutOrganised, false);
+  assert.equal(shouldShowOrganiseButton(state.sortSummary), true);
+  assert.equal(shouldShowOrganiseButton(createSortSummary({ readyCount: 2, sortableCount: 2, readyTabsLeadInOrder: true })), true);
 });

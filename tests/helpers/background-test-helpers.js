@@ -133,7 +133,7 @@ export function stubChromeTabMetrics({
       tabId,
       title: 'Archived Stream',
       url,
-      playbackMetricsReady: false,
+      playbackMetricsReady: true,
       metadataDurationSeconds: null,
       mediaDurationSeconds: 6211,
       positionSeconds: 0,

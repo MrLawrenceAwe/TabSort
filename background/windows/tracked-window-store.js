@@ -75,6 +75,7 @@ export function replaceOrderedWindowTabs(tabs = []) {
       id: tab.id,
       index: tab.index,
       pinned: Boolean(tab.pinned),
+      groupId: tab.groupId ?? -1,
       url: tab.url ?? null,
     }))
     .sort((left, right) => left.index - right.index);

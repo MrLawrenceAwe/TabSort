@@ -1,3 +1,4 @@
+import { derivePlaybackUpdate } from '../../background/playback/derive-update.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
@@ -218,7 +219,8 @@ test(
   () => {
     const runtime = createYouTubePageController();
     try {
-      const { video, player } = installRuntimeTestDom();
+      const { video, player, updatePage } = installRuntimeTestDom();
+      updatePage({ href: 'https://www.youtube.com/watch?v=archive', title: 'Archive', duration: 'PT1H43M31S' });
       video.readyState = 3;
       video.duration = Infinity;
       video.currentTime = 0;
@@ -236,7 +238,7 @@ test(
         },
       );
 
-      assert.equal(response?.playbackMetricsReady, false);
+      assert.equal(response?.playbackMetricsReady, true);
       assert.equal(response?.mediaDurationSeconds, 6211);
       assert.equal(response?.positionSeconds, 0);
     } finally {
@@ -394,4 +396,48 @@ test('content script throttles video mount scans during mutation bursts', () => 
     runtime.reset();
     resetGlobals();
   }
+});
+
+
+test('same-duration SPA navigation does not trust the previous video position', () => {
+  const runtime = createYouTubePageController();
+  try {
+    const dom = installRuntimeTestDom();
+    dom.video.currentTime = 100;
+    runtime.bootstrap();
+    dom.updatePage({ href: 'https://www.youtube.com/watch?v=two', title: 'Two', duration: 'PT2M0S' });
+    dom.windowTarget.dispatch('yt-navigate-finish');
+    let metrics;
+    installRuntimeTestDom.onMessageListener(
+      { type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS }, {}, payload => { metrics = payload; },
+    );
+    const update = derivePlaybackUpdate({ metricsPayload: metrics,
+      record: { url: metrics.url, playbackMetricsReady: false },
+      requestedUrl: metrics.url, currentTabUrl: metrics.url });
+    assert.equal(metrics.playbackMetricsReady, false);
+    assert.equal(update.playbackMetricsReady, false);
+    assert.equal(update.remainingSecondsStale, true);
+    dom.video.currentTime = 0;
+    dom.video.currentSrc = 'blob:video-two';
+    dom.video.dispatch('loadeddata');
+    installRuntimeTestDom.onMessageListener(
+      { type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS }, {}, payload => { metrics = payload; },
+    );
+    assert.equal(metrics.playbackMetricsReady, true);
+  } finally { runtime.reset(); resetGlobals(); }
+});
+
+test('same-video URL parameter changes keep media readiness', () => {
+  const runtime = createYouTubePageController();
+  try {
+    const dom = installRuntimeTestDom();
+    runtime.bootstrap();
+    dom.updatePage({ href: 'https://www.youtube.com/watch?v=one&list=playlist', title: 'One', duration: 'PT2M0S' });
+    dom.windowTarget.dispatch('yt-navigate-finish');
+    let metrics;
+    installRuntimeTestDom.onMessageListener(
+      { type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS }, {}, payload => { metrics = payload; },
+    );
+    assert.equal(metrics.playbackMetricsReady, true);
+  } finally { runtime.reset(); resetGlobals(); }
 });

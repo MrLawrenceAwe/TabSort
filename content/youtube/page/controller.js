@@ -5,8 +5,8 @@ import { isFiniteNumber } from '../../../shared/guards.js';
 import { inferIsLiveNow } from '../metadata/live-status.js';
 import { createPlaybackReadinessTracker } from '../media/playback-readiness.js';
 import { createTitleObserver } from '../metadata/title-observer.js';
-import { handleCollectVideoMetricsMessage } from '../media/metrics.js';
-import { isYouTubeVideoPage } from '../../../shared/youtube/urls.js';
+import { handleCollectVideoMetricsMessage, getVideoDurationSeconds } from '../media/metrics.js';
+import { isYouTubeVideoPage, hasYouTubeVideoChanged } from '../../../shared/youtube/urls.js';
 
 export function shouldSendContentScriptReadySignal(
   currentUrl,
@@ -75,8 +75,13 @@ export function createYouTubePageController({
     });
   }
 
+  function getMediaDurationSeconds(video) {
+    return getVideoDurationSeconds(video, getDocument()?.querySelector?.('#movie_player'));
+  }
+
   function doesMediaMatchPageMetadata(video) {
-    if (!video || !isFiniteNumber(video.duration)) {
+    const duration = getMediaDurationSeconds(video);
+    if (!video || !isFiniteNumber(duration)) {
       return false;
     }
     const details = collectPageDetails();
@@ -84,7 +89,7 @@ export function createYouTubePageController({
       return true;
     }
     return (
-      Math.abs(video.duration - details.lengthSeconds) <=
+      Math.abs(duration - details.lengthSeconds) <=
       pageConfig.mediaDurationSyncToleranceSeconds
     );
   }
@@ -109,6 +114,7 @@ export function createYouTubePageController({
     getMutationObserver,
     sendExtensionMessage,
     doesMediaMatchPageMetadata,
+    getMediaDurationSeconds,
   });
   const titleObserver = createTitleObserver({
     getDocument,
@@ -136,9 +142,12 @@ export function createYouTubePageController({
     const currentUrl = getCurrentPageUrl();
     if (currentUrl && currentUrl !== lifecycle.observedPageUrl) {
       titleObserver.dispose();
+      if (!isYouTubeVideoPage(currentUrl) ||
+          hasYouTubeVideoChanged(lifecycle.observedPageUrl, currentUrl)) {
+        playbackReadiness.resetForNavigation();
+      }
       lifecycle.observedPageUrl = currentUrl;
       lifecycle.lastScriptReadyUrl = null;
-      playbackReadiness.resetForNavigation();
     }
   }
 

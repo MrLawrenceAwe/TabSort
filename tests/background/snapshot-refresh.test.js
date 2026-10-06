@@ -108,7 +108,7 @@ test(
       return {
         title: 'Archived Stream',
         url: 'https://www.youtube.com/watch?v=archive',
-        playbackMetricsReady: false,
+        playbackMetricsReady: true,
         metadataDurationSeconds: null,
         mediaDurationSeconds: 6211,
         positionSeconds: 0,

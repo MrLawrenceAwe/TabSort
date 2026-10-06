@@ -274,7 +274,7 @@ test(
 
     stubChromeTabMetrics({
       url: 'https://www.youtube.com/watch?v=archive',
-      metrics: { mediaDurationSeconds: 0, positionSeconds: 0 },
+      metrics: { playbackMetricsReady: false, mediaDurationSeconds: 0, positionSeconds: 0 },
     });
 
     await collectPlaybackMetrics(1);
@@ -305,7 +305,7 @@ test(
 
     stubChromeTabMetrics({
       url: 'https://www.youtube.com/watch?v=archive',
-      metrics: { mediaDurationSeconds: 6211, positionSeconds: null },
+      metrics: { playbackMetricsReady: false, mediaDurationSeconds: 6211, positionSeconds: null },
     });
 
     await collectPlaybackMetrics(1);

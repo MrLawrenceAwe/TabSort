@@ -1,6 +1,20 @@
 import { getSiteKey } from '../../shared/urls.js';
 import { isYouTubeVideoPage, isYouTubeSite } from '../../shared/youtube/urls.js';
 
+// A Chrome group must remain contiguous. Rank blocks by their first requested
+// member and keep the requested order within each block.
+export function keepTabGroupsTogether(tabIds, tabs) {
+  const tabsById = new Map(tabs.map(tab => [tab.id, tab]));
+  const blocks = new Map();
+  for (const id of tabIds) {
+    const groupId = tabsById.get(id)?.groupId;
+    const key = groupId >= 0 ? `group:${groupId}` : `tab:${id}`;
+    if (!blocks.has(key)) blocks.set(key, []);
+    blocks.get(key).push(id);
+  }
+  return [...blocks.values()].flat();
+}
+
 export function buildYouTubeTabOrder(unpinnedTabs, orderedTrackedTabIds) {
   const youtubeTabs = unpinnedTabs
     .filter((tab) => tab && isYouTubeSite(tab.url))
