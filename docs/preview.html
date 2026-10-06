@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TabSort preview · synthetic data</title><link rel="icon" href="data:,">
+    <link rel="stylesheet" href="../popup/popup.css">
+</head>
+<body>
+    <main>
+        <header>
+            <div id="headerContainer">
+              <h1>YouTube video tabs</h1>
+              <div class="header-actions">
+                <button id="organiseButton" class="action-button hide">Organise tabs</button>
+                <div id="organisedBadge" class="tabs-organised hide"><span aria-hidden="true">✓</span> YouTube tabs organised</div>
+              </div>
+          </div>
+        </header>
+        <section>
+            <p id="backlogSummary" class="backlog-summary hide"></p>
+            <div id="popupError" class="message-banner error-message hide" role="alert"></div>
+            <div id="popupNotice" class="message-banner notice-message hide" role="status" aria-live="polite"></div>
+            <p id="popupStateMessage" class="state-message" role="status" aria-live="polite">Loading YouTube video tabs…</p>
+            <div class="table-scroll">
+            <table id="tabsTable" class="hide">
+              <caption class="visually-hidden">YouTube video tabs and their organisation readiness</caption>
+              <thead>
+                <tr>
+                    <th class="video-title">Video</th>
+                    <th class="next-step">Next step</th>
+                    <th class="remaining-time">Remaining</th>
+                    <th class="tab-position">Position</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            </div>
+        </section>
+        <footer>
+            <div id="controls">
+                <button id="autoPrepareButton" class="action-button hide" title="Prepare unready tabs in a separate window while you browse">Read remaining times</button>
+                <button id="stopAutoPreparationButton" class="action-button hide">Stop reading times</button>
+                <p id="autoPreparationStatus" class="status-message hide" role="status" aria-live="polite"></p>
+                <div id="organiseStatus" class="status-message" role="status" aria-live="polite"></div>
+                <label class="option-toggle">
+                    <input type="checkbox" id="openTikTokPipToggle">
+                    Open TikTok picture-in-picture while reading times
+                </label>
+                <label class="option-toggle hide">
+                    <input type="checkbox" id="groupOtherTabsToggle">
+                    Keep other tabs from the same site together
+                </label>
+            </div>
+        </footer>
+    </main>
+    <script>
+const titles = ['JavaScript testing patterns', 'Building a useful browser extension', 'Managing background tasks'];
+const records = Object.fromEntries(titles.map((title, index) => [index + 1, {
+  id: index + 1, index, windowId: 1, loadState: index === 2 ? 'discarded' : 'loaded', contentScriptReady: true,
+  remainingSecondsStale: index === 2,
+  videoDetails: { title, remainingSeconds: index === 2 ? null : [420, 195][index] }
+}]));
+const snapshot = {
+  windowId: 1, trackedTabOrder: [1, 2, 3], tabRecordsById: records,
+  sortSummary: { sortableCount: 3, readyCount: 2, readyTabsLeadInOrder: false },
+  isYouTubeLayoutOrganised: false, autoPreparation: { status: 'idle' }
+};
+window.chrome = {
+  runtime: { sendMessage: async ({type}) => type === 'getTabSnapshot' ? snapshot : {status:'idle'},
+    onMessage: { addListener() {}, removeListener() {} } },
+  tabs: { query: async () => [{ id: 1, windowId: 1 }], onActivated: { addListener() {}, removeListener() {} } },
+  windows: { onFocusChanged: { addListener() {}, removeListener() {} } },
+  storage: { sync: { get: async defaults => defaults, set: async () => {} } }
+};
+</script>
+<script type="module" src="../popup/controller.js"></script>
+</body>
+</html>

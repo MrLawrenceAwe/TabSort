@@ -156,23 +156,26 @@ test('prepares media in another window while browsing continues, then returns ta
     await browsing.getByRole('button').click();
     await expect(browsing.getByRole('button')).toHaveText('123');
     await expect.poll(() => browsing.locator('video').evaluate(video => !video.paused && video.readyState >= 2)).toBe(true);
-    await expect(progress.locator('#progress')).toHaveText('2 of 2 checked · 2 ready · 0 skipped', { timeout: 15000 });
+    await expect.poll(() => popup.evaluate(async () =>
+      (await chrome.runtime.sendMessage({ type: 'getAutoPreparation' })).autoPreparation,
+    ), { timeout: 15000 }).toMatchObject({
+      status: 'complete', total: 2, completed: 2, ready: 2, skipped: 0,
+    });
+    await expect.poll(() => progress.isClosed()).toBe(true);
     ids = await worker.evaluate(async () => (await chrome.tabs.query({ url: 'https://www.youtube.com/*' })).sort((a, b) => a.index - b.index).map(tab => tab.id));
     expect(await worker.evaluate(async ids => (await Promise.all(ids.map(id => chrome.tabs.get(id)))).map(tab => tab.windowId), ids)).toEqual([sourceWindowId, sourceWindowId]);
     const returnedTabs = await worker.evaluate(async ids => Promise.all(ids.map(id => chrome.tabs.get(id))), ids);
     expect(returnedTabs.map(tab => tab.index)).toEqual(originalTabs.map(tab => tab.index));
     expect(returnedTabs[0].groupId).toBe(originalTabs[0].groupId);
     expect(await worker.evaluate(async windowId => (await chrome.tabs.query({ windowId, active: true }))[0].url, sourceWindowId)).toContain('data:text/html');
-    await popup.close();
-    await expect(progress.getByRole('heading')).toHaveText('Finished reading times');
-    await expect.poll(() => progress.evaluate(async ids => {
+    await expect.poll(() => popup.evaluate(async ids => {
       const { windowId } = await chrome.tabs.get(ids[0]);
       const snapshot = await chrome.runtime.sendMessage({ type: 'getTabSnapshot', windowId });
       return ids.every(id => snapshot.tabRecordsById[id]?.videoDetails.remainingSeconds === 1 && !snapshot.tabRecordsById[id]?.remainingSecondsStale);
     }, ids)).toBe(true);
+    await popup.close();
 
     // These pages never expose media. Stop while the first is waiting.
-    await progress.close();
     const firstStalled = await context.newPage();
     const secondStalled = await context.newPage();
     const reopened = await context.newPage();

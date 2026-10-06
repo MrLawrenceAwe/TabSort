@@ -4,20 +4,22 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run check
-      - run: git diff --exit-code -- dist/content-runtime.js
       - run: npx playwright install --with-deps chromium
-      - run: xvfb-run --auto-servernum npm run test:e2e
+      - run: xvfb-run --auto-servernum npm run check
+      - run: git diff --exit-code -- dist/content-runtime.js
       - run: npm run package
       - uses: actions/upload-artifact@v4
         with:
