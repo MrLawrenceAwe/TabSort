@@ -3,6 +3,9 @@ import test from 'node:test';
 
 import { getWindowSnapshot, handleOrganiseTabs } from '../../background/messaging/tab-commands.js';
 import {
+  getTabRecordsById,
+} from '../../background/windows/tracked-window-store.js';
+import {
   ensureChromeApi,
   createChromeTabFixture,
   createTabRecordFixture,
@@ -13,6 +16,47 @@ import {
 } from '../helpers/background-test-helpers.js';
 
 ensureChromeApi({ tabs: true });
+
+test('snapshot waits are bounded and share a batch while renderers are stalled', async () => {
+  resetTrackedWindowState(1);
+  const tabs = Array.from({ length: 12 }, (_, index) => createChromeTabFixture(index + 1));
+  setTrackedTabRecords(Object.fromEntries(tabs.map(tab => [tab.id,
+    createTabRecordFixture(tab.id, { isLive: true, remainingSecondsStale: false }),
+  ])));
+  stubChromeTabQuery(tabs);
+  chrome.tabs.get = async id => tabs.find(tab => tab.id === id);
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  const reads = [];
+  chrome.tabs.sendMessage = async id => {
+    reads.push(id);
+    await gate;
+    return { url: tabs[id - 1].url, isLive: false, playbackMetricsReady: true,
+      metadataDurationSeconds: 120, mediaDurationSeconds: 120,
+      positionSeconds: 20, playbackRate: 1 };
+  };
+  let deadline;
+  try {
+    const snapshots = await Promise.race([
+      Promise.all([getWindowSnapshot({ windowId: 1 }), getWindowSnapshot({ windowId: 1 })]),
+      new Promise((_, reject) => {
+        deadline = setTimeout(() => reject(new Error('Snapshots waited for stalled renderers')), 1000);
+      }),
+    ]);
+    // Concurrent reconciliation can supersede one caller. A subsequent request
+    // must still return a full snapshot without starting a second batch.
+    assert.ok(snapshots.some(snapshot => snapshot.trackedTabOrder?.length === 12));
+    const next = await getWindowSnapshot({ windowId: 1 });
+    assert.equal(next.trackedTabOrder.length, 12);
+    assert.equal(reads.length, 4);
+  } finally {
+    clearTimeout(deadline);
+    release();
+    await new Promise(resolve => setImmediate(resolve));
+  }
+  assert.equal(reads.length, 12);
+  assert.equal(getTabRecordsById()[12].videoDetails.remainingSeconds, 100);
+});
 
 test('an ended live tab becomes sortable on the next snapshot without navigation', async () => {
   resetTrackedWindowState(1);

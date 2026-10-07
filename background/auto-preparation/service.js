@@ -178,7 +178,7 @@ export async function startAutoPreparation(message) {
       .filter(record => !record.pinned && !record.isLive && !hasReadyRemainingTime(record))
       .sort((a, b) => a.index - b.index)
       .map(record => ({ id: record.id, videoId: getYouTubeVideoId(record.url),
-        title: record.videoDetails?.title || 'YouTube video' }));
+        title: record.videoDetails?.title || record.browserTitle || 'YouTube video' }));
     if (!items.length) return { ok: false, error: 'noUnreadyTabs' };
     const tiktokPip = message.openTikTokPip === true
       ? await openTikTokPipForAutoPreparation(result.windowId, { signal })

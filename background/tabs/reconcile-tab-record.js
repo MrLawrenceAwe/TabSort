@@ -17,6 +17,7 @@ export function reconcileTabRecord(
 
   const record = createTabRecord(tab.id, tab.windowId, {
     url: tab.url,
+    browserTitle: tab.title || null,
     index: tab.index,
     pinned: Boolean(tab.pinned),
     loadState: nextLoadState,

@@ -23,6 +23,21 @@ import {
 
 ensureChromeApi({ tabs: true });
 
+test('sleeping tabs retain browser titles after cold rehydration and window changes', async () => {
+  const tab = createChromeTabFixture(1, { discarded: true, title: 'Sleeping video - YouTube' });
+  resetTrackedWindowState(1);
+  stubChromeTabQuery([tab]);
+  await reconcileWindowTabRecords(1, { force: true });
+  assert.equal(getTabRecordsById()[1].browserTitle, tab.title);
+  assert.equal(getTabRecordsById()[1].videoDetails, null);
+  assert.equal(getSortState().sortSummary.readyCount, 0);
+  stubChromeTabQuery([createChromeTabFixture(2, { windowId: 2 })]);
+  await reconcileWindowTabRecords(2, { force: true });
+  stubChromeTabQuery([tab]);
+  await reconcileWindowTabRecords(1, { force: true });
+  assert.equal(getTabRecordsById()[1].browserTitle, tab.title);
+});
+
 test('auto-prepared sleeping tabs remain sortable after visiting another window', async () => {
   const saved = {};
   chrome.storage = { session: {

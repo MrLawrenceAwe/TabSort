@@ -14,6 +14,7 @@ export function createTabRecord(tabId, windowId, defaults = {}) {
     id: tabId,
     windowId: initialWindowId,
     url: defaults.url ?? null,
+    browserTitle: defaults.browserTitle ?? null,
     index: initialIndex,
     pinned: Boolean(defaults.pinned),
     loadState: defaults.loadState ?? null,

@@ -14,7 +14,7 @@ const COLUMNS = Object.freeze([
 
 export function renderTabRow(row, tabRecord, isYouTubeLayoutOrganised, requestAction) {
   const titleCell = row.insertCell(0);
-  titleCell.textContent = tabRecord.videoDetails?.title ?? tabRecord.url;
+  titleCell.textContent = tabRecord.videoDetails?.title || tabRecord.browserTitle || tabRecord.url;
   titleCell.title = titleCell.textContent;
 
   const guidance = determineTabGuidance(tabRecord);

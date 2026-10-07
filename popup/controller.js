@@ -46,7 +46,7 @@ async function loadSnapshot() {
     setErrorMessage('');
     return snapshot;
   } catch (error) {
-    setErrorMessage('Could not load tab data. Try reopening the popup.');
+    setErrorMessage('Could not load tab data. Retrying…');
     runtimeClient.logPopupError('Failed to load tab records', error);
     return null;
   }
@@ -115,8 +115,10 @@ function renderAndScheduleSnapshot(snapshot) {
 
 async function loadInitialSnapshot() {
   const snapshot = await loadSnapshot();
+  if (!isPopupActive) return;
   if (!snapshot) {
     setStateMessage('Tab data is unavailable.');
+    snapshotPoller.scheduleIfNeeded(null);
     return;
   }
   renderAndScheduleSnapshot(snapshot);
@@ -247,13 +249,14 @@ export async function initializePopup() {
   setNoticeMessage('');
   setStateMessage('Loading YouTube video tabs…');
 
-  await runWithPopupErrorLogging(runtimeClient.syncActiveWindow, 'Failed to refresh active context');
-  await runWithPopupErrorLogging(initializePopupPreferences, 'Failed to set up option controls');
-  await runWithPopupErrorLogging(loadInitialSnapshot, 'Failed to request initial snapshot');
-
   const messageListener = createSnapshotMessageListener();
   registerPopupControls();
   registerPopupLifecycle(messageListener);
+
+  await runWithPopupErrorLogging(runtimeClient.syncActiveWindow, 'Failed to refresh active context');
+  await runWithPopupErrorLogging(initializePopupPreferences, 'Failed to set up option controls');
+  if (!isPopupActive) return;
+  await runWithPopupErrorLogging(loadInitialSnapshot, 'Failed to request initial snapshot');
 }
 
 function canBootstrapPopup() {

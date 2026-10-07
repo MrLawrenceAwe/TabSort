@@ -64,5 +64,12 @@ change from View to Reload do not transfer focus to a different operation. Brows
 responsiveness tests use pages without media. Any test that starts playback mutes its
 specific player before playback and verifies that it remains muted.
 
+Popup snapshot requests wait at most 250 ms for playback collection. Slower reads
+continue in one shared batch per window and broadcast their results; organising
+still waits for fresh playback data before sorting. Controls and listeners register
+before the initial request, and failed initial loads retry while the popup is open.
+Records keep Chrome's `browserTitle` separately from page playback metadata so
+sleeping tabs remain identifiable after worker suspension or window changes.
+
 The package and manifest versions must match. CI verifies the committed bundle, runs the
 Chromium smoke test, and uploads the packaged extension as a workflow artifact.

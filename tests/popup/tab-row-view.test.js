@@ -223,6 +223,18 @@ function createFakeRow() {
   };
 }
 
+test('rows use retained browser titles without treating them as playback evidence', () => {
+  const row = createFakeRow();
+  const record = makeRecord({ loadState: 'discarded', videoDetails: null,
+    browserTitle: 'Sleeping video - YouTube', url: 'https://www.youtube.com/watch?v=sleeping' });
+  renderTabRow(row, record, true);
+  assert.equal(row.cells[0].textContent, record.browserTitle);
+  assert.equal(row.cells[1].textContent, 'Sleeping');
+  const readyRow = createFakeRow();
+  renderTabRow(readyRow, { ...record, videoDetails: { title: 'Page video title' } }, true);
+  assert.equal(readyRow.cells[0].textContent, 'Page video title');
+});
+
 test('highlighting identifies sortable ready rows and clears when the order is applied', () => {
   const previousDocument = globalThis.document;
   globalThis.document = createFakeDocument();

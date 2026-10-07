@@ -14,6 +14,32 @@ import {
 import { reconcileWindowTabRecords } from '../tabs/reconcile-window.js';
 import { shouldRefreshRecordMetrics } from '../../shared/tabs/refresh-policy.js';
 import { getProgressWindowId } from '../auto-preparation/state.js';
+import { logDebug } from '../../shared/log.js';
+
+const SNAPSHOT_REFRESH_WAIT_MS = 250;
+const snapshotRefreshes = new Map();
+
+async function refreshSnapshotPlayback(windowId) {
+  let refresh = snapshotRefreshes.get(windowId);
+  if (!refresh) {
+    refresh = collectPlaybackMetricsBatch(listTabIds(), {
+      shouldRefresh: shouldRefreshRecordMetrics,
+    }).catch(error => logDebug('snapshot playback refresh failed', error))
+      .finally(() => snapshotRefreshes.delete(windowId));
+    snapshotRefreshes.set(windowId, refresh);
+  }
+  // Fast reads are included in the response. Slow reads continue broadcasting
+  // updates without holding the popup open or starting duplicate batches.
+  let timer;
+  try {
+    await Promise.race([
+      refresh,
+      new Promise(resolve => { timer = setTimeout(resolve, SNAPSHOT_REFRESH_WAIT_MS); }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function resolveTabAction(message) {
   const tabId = message.tabId;
@@ -79,8 +105,7 @@ export async function getWindowSnapshot(message) {
     };
   }
 
-  const ids = listTabIds();
-  await collectPlaybackMetricsBatch(ids, { shouldRefresh: shouldRefreshRecordMetrics });
+  await refreshSnapshotPlayback(reconciliation.windowId);
   if (
     !isSyncTokenCurrent(reconciliation.syncToken) ||
     (requestedWindowId != null && getTrackedWindowId() !== requestedWindowId)
