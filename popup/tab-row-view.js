@@ -72,6 +72,7 @@ function insertGuidanceCell(row, record, guidance, requestAction) {
 function createActionButton(runtimeDocument, text, actionType, tabId, requestAction) {
   const actionButton = runtimeDocument.createElement('button');
   actionButton.type = 'button';
+  actionButton.setAttribute('data-action-type', actionType);
   actionButton.classList.add('user-action-button');
   actionButton.textContent = text;
   actionButton.addEventListener('click', async () => {

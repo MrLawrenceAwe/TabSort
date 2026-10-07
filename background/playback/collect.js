@@ -12,11 +12,12 @@ import {
   getMutableTabRecord,
   setTrackedWindowId,
 } from '../windows/tracked-window-store.js';
-import { isYouTubeVideoPage } from '../../shared/youtube/urls.js';
+import { hasYouTubeVideoChanged, isYouTubeVideoPage } from '../../shared/youtube/urls.js';
 
 const DEFAULT_BATCH_CONCURRENCY = 4;
 const NO_RECEIVER_RETRY_ATTEMPTS = 3;
 const NO_RECEIVER_RETRY_DELAY_MS = 50;
+const PLAYBACK_READ_TIMEOUT_MS = 2000;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -49,33 +50,55 @@ async function loadTabRecordContext(tabId) {
   return { record, tab };
 }
 
-export async function collectPlaybackMetrics(tabId, { recompute = true } = {}) {
+async function readPlaybackMetrics(tabId, timeoutMs) {
+  let timer;
+  let expired = false;
+  const request = () => sendMessageToTab(tabId, {
+    type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS,
+  });
+  try {
+    return await Promise.race([
+      (async () => {
+        let result = await request();
+        if (expired || result?.reason !== MESSAGE_FAILURE_REASONS.NO_RECEIVER) return result;
+        const injected = await tryInjectYouTubeBootstrap(tabId);
+        if (!injected || expired) return result;
+        for (let attempt = 0; attempt < NO_RECEIVER_RETRY_ATTEMPTS; attempt += 1) {
+          await sleep(NO_RECEIVER_RETRY_DELAY_MS);
+          if (expired) return result;
+          result = await request();
+          if (expired || result?.reason !== MESSAGE_FAILURE_REASONS.NO_RECEIVER) break;
+        }
+        return result;
+      })(),
+      new Promise(resolve => {
+        timer = setTimeout(() => resolve({ ok: false, reason: 'timedOut' }), timeoutMs);
+      }),
+    ]);
+  } finally {
+    // The underlying Chrome call cannot be cancelled. Its late result must
+    // neither update records nor start another injection or retry.
+    expired = true;
+    clearTimeout(timer);
+  }
+}
+
+export async function collectPlaybackMetrics(
+  tabId,
+  { recompute = true, timeoutMs = PLAYBACK_READ_TIMEOUT_MS } = {},
+) {
   try {
     const initialContext = await loadTabRecordContext(tabId);
     if (!initialContext) return false;
 
     const requestedUrl = initialContext.tab.url || initialContext.record.url || null;
-    let result = await sendMessageToTab(tabId, {
-      type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS,
-    });
-
-    if (result?.reason === MESSAGE_FAILURE_REASONS.NO_RECEIVER) {
-      const injected = await tryInjectYouTubeBootstrap(tabId);
-      if (injected) {
-        for (let attempt = 0; attempt < NO_RECEIVER_RETRY_ATTEMPTS; attempt += 1) {
-          await sleep(NO_RECEIVER_RETRY_DELAY_MS);
-          result = await sendMessageToTab(tabId, {
-            type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS,
-          });
-          if (result?.reason !== MESSAGE_FAILURE_REASONS.NO_RECEIVER) break;
-        }
-      }
-    }
+    const result = await readPlaybackMetrics(tabId, timeoutMs);
     const currentContext = await loadTabRecordContext(tabId);
     if (!currentContext) return false;
     const { record, tab } = currentContext;
 
     if (!result || result.ok !== true) {
+      if (hasYouTubeVideoChanged(requestedUrl, tab.url)) return false;
       applyVideoMetricsUnavailable(record);
       if (recompute) updateSortStateAndBroadcast();
       return true;

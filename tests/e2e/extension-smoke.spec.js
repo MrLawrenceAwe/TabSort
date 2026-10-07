@@ -161,10 +161,10 @@ test('prepares media in another window while browsing continues, then returns ta
     const browsingOpened = context.waitForEvent('page');
     await worker.evaluate(windowId => chrome.tabs.create({ windowId, url: 'about:blank', active: true }), sourceWindowId);
     const browsing = await browsingOpened;
-    await browsing.goto(`data:text/html,<video loop src="data:audio/wav;base64,${wav.toString('base64')}"></video><button onclick="document.querySelector('video').play();this.textContent=123">Play</button>`);
+    await browsing.goto(`data:text/html,<video loop muted src="data:audio/wav;base64,${wav.toString('base64')}"></video><button onclick="document.querySelector('video').play();this.textContent=123">Play</button>`);
     await browsing.getByRole('button').click();
     await expect(browsing.getByRole('button')).toHaveText('123');
-    await expect.poll(() => browsing.locator('video').evaluate(video => !video.paused && video.readyState >= 2)).toBe(true);
+    await expect.poll(() => browsing.locator('video').evaluate(video => video.muted && !video.paused && video.readyState >= 2)).toBe(true);
     await expect.poll(() => popup.evaluate(async () =>
       (await chrome.runtime.sendMessage({ type: 'getAutoPreparation' })).autoPreparation,
     ), { timeout: 15000 }).toMatchObject({

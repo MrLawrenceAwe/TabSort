@@ -23,6 +23,67 @@ import {
 
 ensureChromeApi({ tabs: true });
 
+test('a stalled read expires and its late metrics cannot restore stale time', async () => {
+  resetTrackedWindowState(1);
+  setTrackedTabRecords({ 1: createTabRecordFixture(1, {
+    remainingSecondsStale: false, videoDetails: { remainingSeconds: 100, lengthSeconds: 120 },
+  }) });
+  stubChromeTabGetSequence([{ tabId: 1 }]);
+  let resolveRead;
+  chrome.tabs.sendMessage = () => new Promise(resolve => { resolveRead = resolve; });
+  assert.equal(await collectPlaybackMetrics(1, { timeoutMs: 20 }), true);
+  assert.equal(getTabRecordsById()[1].remainingSecondsStale, true);
+  assert.equal(getTabRecordsById()[1].videoDetails.remainingSeconds, null);
+  resolveRead(createPlaybackMetricsFixture());
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(getTabRecordsById()[1].videoDetails.remainingSeconds, null);
+});
+
+test('an expired read cannot start a late missing-receiver injection', async () => {
+  resetTrackedWindowState(1);
+  setTrackedTabRecords({ 1: createTabRecordFixture(1) });
+  stubChromeTabGetSequence([{ tabId: 1 }]);
+  let rejectRead;
+  chrome.tabs.sendMessage = () => new Promise((_resolve, reject) => { rejectRead = reject; });
+  let injections = 0;
+  chrome.scripting = { executeScript: async () => { injections += 1; } };
+  await collectPlaybackMetrics(1, { timeoutMs: 20 });
+  rejectRead(new Error('Receiving end does not exist'));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(injections, 0);
+});
+
+test('a stalled reinjection expires without retrying after it finishes late', async () => {
+  resetTrackedWindowState(1);
+  setTrackedTabRecords({ 1: createTabRecordFixture(1) });
+  stubChromeTabGetSequence([{ tabId: 1 }]);
+  let messages = 0;
+  chrome.tabs.sendMessage = async () => { messages += 1; throw new Error('Receiving end does not exist'); };
+  let resolveInjection;
+  chrome.scripting = { executeScript: () => new Promise(resolve => { resolveInjection = resolve; }) };
+  await collectPlaybackMetrics(1, { timeoutMs: 20 });
+  resolveInjection();
+  await new Promise(resolve => setTimeout(resolve, 80));
+  assert.equal(messages, 1);
+});
+
+test('an expired read does not invalidate a successor video', async () => {
+  resetTrackedWindowState(1);
+  setTrackedTabRecords({ 1: createTabRecordFixture(1) });
+  stubChromeTabGetSequence([
+    { tabId: 1 }, { tabId: 1, url: 'https://www.youtube.com/watch?v=next' },
+  ]);
+  chrome.tabs.sendMessage = () => {
+    setTrackedTabRecord(1, createTabRecordFixture(1, {
+      url: 'https://www.youtube.com/watch?v=next', remainingSecondsStale: false,
+      videoDetails: { remainingSeconds: 60, lengthSeconds: 100 },
+    }));
+    return new Promise(() => {});
+  };
+  assert.equal(await collectPlaybackMetrics(1, { timeoutMs: 20 }), false);
+  assert.equal(getTabRecordsById()[1].videoDetails.remainingSeconds, 60);
+});
+
 test(
   'collectPlaybackMetrics applies updates to the latest record object after async boundaries',
   { concurrency: false },

@@ -6,7 +6,7 @@
   `dist/content-runtime.js`.
 - `npm test` runs the unit and integration-style Node tests.
 - `npm run test:e2e` launches Chromium with the unpacked extension and runs the popup/runtime
-  smoke test. Install its browser once with `npx playwright install chromium`.
+  smoke and responsiveness tests. Install its browser once with `npx playwright install chromium`.
 - `npm run check` builds and runs tests, linting, static import checks, and release validation.
 - `npm run package` creates `release/tabsort-v<version>.zip`.
 
@@ -53,6 +53,16 @@ Playback messages use `metadataDurationSeconds`, `mediaDurationSeconds`, and
 and session-cache `identity` retain their existing storage schema so saved results remain usable.
 Preference storage keys are also unchanged.
 
+Normal playback collection has a two-second deadline per tab, shared by the metric
+request, missing-receiver reinjection and retries. Expiry marks the reading unavailable;
+late responses cannot update records or start more retries. A failed read for a previous
+video does not invalidate a successor video's reading.
+
+Popup table refreshes preserve keyboard focus on the same tab and action, even when
+rows change order. Focus outside the table is left alone; disappearing actions or a
+change from View to Reload do not transfer focus to a different operation. Browser
+responsiveness tests use pages without media. Any test that starts playback mutes its
+specific player before playback and verifies that it remains muted.
+
 The package and manifest versions must match. CI verifies the committed bundle, runs the
 Chromium smoke test, and uploads the packaged extension as a workflow artifact.
-
