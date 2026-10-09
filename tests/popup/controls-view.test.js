@@ -22,19 +22,19 @@ test('shows the organise button when ready videos are behind other tabs', () => 
     readyTabsLeadInOrder: false,
   });
 
-  assert.equal(shouldShowOrganiseButton(sortSummary), true);
+  assert.equal(shouldShowOrganiseButton(sortSummary, false), true);
 });
 
-test('organise button stays available with two ready tabs even when already ordered', () => {
+test('organise button hides for an organised layout and fewer than two ready tabs', () => {
   assert.equal(shouldShowOrganiseButton(createSortSummary({
     readyCount: 1, readyTabsLeadInOrder: false,
-  })), false);
+  }), false), false);
   assert.equal(shouldShowOrganiseButton(createSortSummary({
     readyCount: 2, sortableCount: 3, readyTabsLeadInOrder: true,
-  })), true);
+  }), true), false);
   assert.equal(shouldShowOrganiseButton(createSortSummary({
     readyCount: 2, sortableCount: 3, readyTabsLeadInOrder: false,
-  })), true);
+  }), false), true);
 });
 
 test('identifies ready tabs that are already in their intended order', () => {
@@ -60,6 +60,6 @@ test('organise remains available for YouTube pages behind another site and for s
   ] });
   assert.equal(state.sortSummary.readyTabsLeadInOrder, true);
   assert.equal(state.isYouTubeLayoutOrganised, false);
-  assert.equal(shouldShowOrganiseButton(state.sortSummary), true);
-  assert.equal(shouldShowOrganiseButton(createSortSummary({ readyCount: 2, sortableCount: 2, readyTabsLeadInOrder: true })), true);
+  assert.equal(shouldShowOrganiseButton(state.sortSummary, state.isYouTubeLayoutOrganised), true);
+  assert.equal(shouldShowOrganiseButton(createSortSummary({ readyCount: 2, sortableCount: 2, readyTabsLeadInOrder: true }), true), false);
 });

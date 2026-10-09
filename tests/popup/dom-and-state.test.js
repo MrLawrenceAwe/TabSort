@@ -104,6 +104,39 @@ test('ordered ready subset keeps the unfinished readiness count visible', () => 
   resetPopupState();
 });
 
+test('organise control hides for an organised layout and returns when the order changes', () => {
+  const document = createFakeDocument();
+  const button = document.elements.get('organiseButton');
+  const badge = document.elements.get('organisedBadge');
+  const option = createFakeElement();
+  document.elements.get('groupOtherTabsToggle').closest = () => option;
+  const hidden = new Map();
+  for (const element of [button, badge, option]) {
+    element.classList.toggle = (_name, value) => hidden.set(element, value);
+  }
+
+  resetPopupDom();
+  resetPopupState();
+  initializePopupDom(document);
+  popupState.sortSummary = { readyCount: 3, sortableCount: 3, readyTabsLeadInOrder: true };
+  popupState.isYouTubeLayoutOrganised = true;
+  renderPopupControls();
+  assert.equal(hidden.get(button), true);
+  assert.equal(hidden.get(option), true);
+  assert.equal(hidden.get(badge), false);
+  assert.equal(badge.textContent, '✓ YouTube tabs organised');
+
+  popupState.isYouTubeLayoutOrganised = false;
+  popupState.sortSummary.readyTabsLeadInOrder = false;
+  renderPopupControls();
+  assert.equal(hidden.get(button), false);
+  assert.equal(button.textContent, 'Organise tabs');
+  assert.equal(hidden.get(option), false);
+  assert.equal(hidden.get(badge), true);
+  resetPopupDom();
+  resetPopupState();
+});
+
 test('TikTok PiP option follows the auto-prepare control visibility', () => {
   const document = createFakeDocument();
   const option = { hidden: false, classList: { toggle(name, hidden) { if (name === 'hide') this.owner.hidden = hidden; } } };
