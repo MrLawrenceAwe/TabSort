@@ -24,7 +24,7 @@ export function createPreparationWorkspace() {
       return true;
     }
     if (signal?.aborted) return false;
-    const progressUrl = chrome.runtime.getURL('preparation/index.html');
+    const progressUrl = chrome.runtime.getURL('preparation/progress.html');
     for (const tab of tabs.filter(tab => tab?.url === progressUrl)) {
       if (signal?.aborted) return false;
       await chrome.tabs.remove(tab.id).catch(() => {});
@@ -99,7 +99,7 @@ export function createPreparationWorkspace() {
       if (workspace) throw new Error('Return the previous preparation tab before starting again.');
       const source = await chrome.windows.get(sourceWindowId);
       const window = await chrome.windows.create({
-        url: chrome.runtime.getURL('preparation/index.html'),
+        url: chrome.runtime.getURL('preparation/progress.html'),
         type: 'normal', focused: false, width: 720, height: 560,
         incognito: Boolean(source.incognito),
       });

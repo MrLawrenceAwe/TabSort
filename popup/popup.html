@@ -9,11 +9,11 @@
 <body>
     <main>
         <header>
-            <div id="headerContainer">
+            <div id="popupHeader">
               <h1>YouTube video tabs</h1>
               <div class="header-actions">
                 <button id="organiseButton" class="action-button hide">Organise tabs</button>
-                <div id="organisedBadge" class="tabs-organised hide"><span aria-hidden="true">✓</span> YouTube tabs organised</div>
+                <div id="organisedBadge" class="tabs-organised hide"><span aria-hidden="true">✓</span><span id="organisedBadgeText">YouTube tabs organised</span></div>
               </div>
           </div>
         </header>
@@ -39,7 +39,7 @@
         </section>
         <footer>
             <div id="controls">
-                <button id="autoPrepareButton" class="action-button hide" title="Prepare unready tabs in a separate window while you browse">Auto-prepare tabs</button>
+                <button id="autoPrepareButton" class="action-button hide" title="Read remaining times in a separate window, then return each tab while you keep browsing">Auto-prepare tabs</button>
                 <button id="stopAutoPreparationButton" class="action-button hide">Stop auto-prepare</button>
                 <p id="autoPreparationStatus" class="status-message hide" role="status" aria-live="polite"></p>
                 <div id="organiseStatus" class="status-message" role="status" aria-live="polite"></div>

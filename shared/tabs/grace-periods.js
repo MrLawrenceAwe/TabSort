@@ -1,13 +1,7 @@
-import { isFiniteNumber } from '../guards.js';
-
 export const RECENTLY_LOADED_MS = 5000;
 export const RECENT_WATCH_TRANSITION_MS = 5000;
 export const MEDIA_WAIT_GRACE_MS = 15000;
 export const LOADING_GRACE_MS = 5000;
-
-export function hasRemainingTime(tabRecord) {
-  return isFiniteNumber(tabRecord?.videoDetails?.remainingSeconds);
-}
 
 function isRecentTimestamp(timestamp, nowMs, graceMs) {
   return typeof timestamp === 'number' && nowMs - timestamp < graceMs;

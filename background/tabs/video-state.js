@@ -81,10 +81,10 @@ export function applyVideoDetailsFromPage(record, details = {}, { videoChanged =
     markRemainingTimeAsStale(record);
   }
 
-  if (isFiniteNumber(details.lengthSeconds)) {
-    record.videoDetails.lengthSeconds = details.lengthSeconds;
+  if (isFiniteNumber(details.durationSeconds)) {
+    record.videoDetails.durationSeconds = details.durationSeconds;
     if (!record.isLive && record.videoDetails.remainingSeconds == null) {
-      record.videoDetails.remainingSeconds = details.lengthSeconds;
+      record.videoDetails.remainingSeconds = details.durationSeconds;
       record.remainingSecondsStale = true;
     }
   }

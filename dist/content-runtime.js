@@ -164,14 +164,14 @@
   function collectPageDetails({ inferIsLiveNow: inferIsLiveNow2, logContentError, environment = globalThis }) {
     const runtimeDocument = environment.document ?? globalThis.document;
     const runtimeLocation = environment.location ?? globalThis.location;
-    const docTitle = cleanTitle(runtimeDocument?.title);
-    const ogTitle = cleanTitle(runtimeDocument?.querySelector?.('meta[property="og:title"]')?.content);
-    const itempropTitle = cleanTitle(runtimeDocument?.querySelector?.('meta[itemprop="name"]')?.content);
+    const documentTitle = cleanTitle(runtimeDocument?.title);
+    const openGraphTitle = cleanTitle(runtimeDocument?.querySelector?.('meta[property="og:title"]')?.content);
+    const itemPropertyTitle = cleanTitle(runtimeDocument?.querySelector?.('meta[itemprop="name"]')?.content);
     const initialPlayerResponse = parseYouTubeInitialPlayerResponse(logContentError, environment);
     const currentVideoId = getYouTubeVideoId(runtimeLocation?.href);
     const playerResponse = currentVideoId && initialPlayerResponse?.videoDetails?.videoId === currentVideoId ? initialPlayerResponse : {};
-    const title = docTitle || ogTitle || itempropTitle || cleanTitle(playerResponse?.videoDetails?.title) || null;
-    const lengthSeconds = toPositiveFiniteNumber(playerResponse?.videoDetails?.lengthSeconds) ?? toPositiveFiniteNumber(
+    const title = documentTitle || openGraphTitle || itemPropertyTitle || cleanTitle(playerResponse?.videoDetails?.title) || null;
+    const durationSeconds = toPositiveFiniteNumber(playerResponse?.videoDetails?.lengthSeconds) ?? toPositiveFiniteNumber(
       parseIsoDurationSeconds(
         runtimeDocument?.querySelector?.('meta[itemprop="duration"]')?.getAttribute("content")
       )
@@ -185,9 +185,9 @@
       videoDetails: playerResponse?.videoDetails,
       playabilityStatus: playerResponse?.playabilityStatus,
       liveBroadcastDetails,
-      lengthSeconds
+      durationSeconds
     });
-    return { title, lengthSeconds, isLive, url: runtimeLocation?.href };
+    return { title, durationSeconds, isLive, url: runtimeLocation?.href };
   }
 
   // content/youtube/page/runtime-bridge.js
@@ -227,7 +227,7 @@
     function publishPageVideoDetails() {
       try {
         const details = collectPageDetails2();
-        if (details.title || details.lengthSeconds != null || details.isLive) {
+        if (details.title || details.durationSeconds != null || details.isLive) {
           sendExtensionMessage(
             createRuntimeMessage(RUNTIME_MESSAGE_TYPES.PAGE_VIDEO_DETAILS, { details }),
             "page video details"
@@ -277,7 +277,7 @@
     videoDetails,
     playabilityStatus,
     liveBroadcastDetails,
-    lengthSeconds
+    durationSeconds
   } = {}) {
     const hasEndedSignal = hasNonEmptyString(metaEndDate) || hasNonEmptyString(liveBroadcastDetails?.endTimestamp);
     if (hasEndedSignal) return false;
@@ -286,9 +286,9 @@
     if (toBooleanFlag(metaIsLiveBroadcast)) return true;
     const hasLiveStreamabilitySignal = Boolean(playabilityStatus?.liveStreamability);
     const isLiveContent = toBooleanFlag(videoDetails?.isLiveContent);
-    const numericLength = typeof lengthSeconds === "string" && lengthSeconds.trim() === "" ? NaN : Number(lengthSeconds);
-    const hasFiniteLength = Number.isFinite(numericLength) && numericLength > 0;
-    if ((hasLiveStreamabilitySignal || isLiveContent) && !hasFiniteLength) return true;
+    const numericDuration = typeof durationSeconds === "string" && durationSeconds.trim() === "" ? NaN : Number(durationSeconds);
+    const hasFiniteDuration = Number.isFinite(numericDuration) && numericDuration > 0;
+    if ((hasLiveStreamabilitySignal || isLiveContent) && !hasFiniteDuration) return true;
     return false;
   }
 
@@ -593,7 +593,7 @@
       title: details.title || null,
       url: details.url,
       playbackMetricsReady: isCurrentPlaybackReady(),
-      metadataDurationSeconds: isFiniteNumber(details.lengthSeconds) ? details.lengthSeconds : null,
+      metadataDurationSeconds: isFiniteNumber(details.durationSeconds) ? details.durationSeconds : null,
       isLive: Boolean(details.isLive),
       mediaDurationSeconds: getVideoDurationSeconds(video, player),
       positionSeconds: getVideoCurrentTimeSeconds(video, player),
@@ -673,10 +673,10 @@
         return false;
       }
       const details = collectPageDetails2();
-      if (!isFiniteNumber(details.lengthSeconds)) {
+      if (!isFiniteNumber(details.durationSeconds)) {
         return true;
       }
-      return Math.abs(duration - details.lengthSeconds) <= pageConfig.mediaDurationSyncToleranceSeconds;
+      return Math.abs(duration - details.durationSeconds) <= pageConfig.mediaDurationSyncToleranceSeconds;
     }
     function dispatchContentScriptReadySignal({ force = false } = {}) {
       const currentUrl = getCurrentPageUrl();

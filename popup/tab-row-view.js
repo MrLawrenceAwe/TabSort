@@ -73,7 +73,7 @@ function createActionButton(runtimeDocument, text, actionType, tabId, requestAct
   const actionButton = runtimeDocument.createElement('button');
   actionButton.type = 'button';
   actionButton.setAttribute('data-action-type', actionType);
-  actionButton.classList.add('user-action-button');
+  actionButton.classList.add('tab-action-button');
   actionButton.textContent = text;
   actionButton.addEventListener('click', async () => {
     const originalText = actionButton.textContent;

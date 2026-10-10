@@ -148,8 +148,8 @@ test('prepares media in another window while browsing continues, then returns ta
     await popup.reload();
     await expect(popup.locator('#organiseStatus')).toContainText('0 of 2');
     await popup.getByRole('button', { name: 'Auto-prepare tabs', exact: true }).click();
-    await expect.poll(() => context.pages().some(page => page.url().endsWith('/preparation/index.html'))).toBe(true);
-    const progress = context.pages().find(page => page.url().endsWith('/preparation/index.html'));
+    await expect.poll(() => context.pages().some(page => page.url().endsWith('/preparation/progress.html'))).toBe(true);
+    const progress = context.pages().find(page => page.url().endsWith('/preparation/progress.html'));
     const sourceWindowId = await worker.evaluate(async id => (await chrome.tabs.get(id)).windowId, ids[1]);
     // Continue using the original window while the first video is elsewhere.
     await popup.bringToFront();
@@ -194,8 +194,8 @@ test('prepares media in another window while browsing continues, then returns ta
     const stalledIds = await worker.evaluate(async () => (await chrome.tabs.query({ url: 'https://www.youtube.com/watch?v=stalled-*' })).map(tab => tab.id));
     await reopened.reload();
     await reopened.getByRole('button', { name: 'Auto-prepare tabs', exact: true }).click();
-    await expect.poll(() => context.pages().some(page => page.url().endsWith('/preparation/index.html'))).toBe(true);
-    const stopWindow = context.pages().find(page => page.url().endsWith('/preparation/index.html'));
+    await expect.poll(() => context.pages().some(page => page.url().endsWith('/preparation/progress.html'))).toBe(true);
+    const stopWindow = context.pages().find(page => page.url().endsWith('/preparation/progress.html'));
     await expect.poll(() => worker.evaluate(async id => (await chrome.tabs.get(id)).active, stalledIds[0])).toBe(true);
     await stopWindow.getByRole('button', { name: 'Stop', exact: true }).click();
     await expect(stopWindow.getByRole('heading')).toHaveText('Stopped');

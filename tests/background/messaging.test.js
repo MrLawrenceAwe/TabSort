@@ -73,7 +73,7 @@ test('handlePageVideoDetails removes tracked rows when tab leaves watch/shorts',
   resetTrackedWindowState(1);
   setTrackedTabRecords({
     7: createTabRecordFixture(7, {
-      videoDetails: { title: 'Video 7', remainingSeconds: 25, lengthSeconds: 100 },
+      videoDetails: { title: 'Video 7', remainingSeconds: 25, durationSeconds: 100 },
       remainingSecondsStale: false,
     }),
   });
@@ -105,7 +105,7 @@ test('handleContentScriptReady removes tracked rows when a SPA tab leaves watch/
   resetTrackedWindowState(1);
   setTrackedTabRecords({
     7: createTabRecordFixture(7, {
-      videoDetails: { title: 'Video 7', remainingSeconds: 25, lengthSeconds: 100 },
+      videoDetails: { title: 'Video 7', remainingSeconds: 25, durationSeconds: 100 },
       remainingSecondsStale: false,
     }),
   });
@@ -166,7 +166,7 @@ test('handleContentScriptReady clears stale sort data on watch-to-watch SPA navi
       url: 'https://www.youtube.com/watch?v=old',
       contentScriptReady: true,
       playbackMetricsReady: true,
-      videoDetails: { title: 'Old Video', remainingSeconds: 25, lengthSeconds: 100 },
+      videoDetails: { title: 'Old Video', remainingSeconds: 25, durationSeconds: 100 },
       remainingSecondsStale: false,
     }),
   });
@@ -203,7 +203,7 @@ test('handlePlaybackMetricsReady removes tracked rows when a stale event arrives
   resetTrackedWindowState(1);
   setTrackedTabRecords({
     7: createTabRecordFixture(7, {
-      videoDetails: { title: 'Video 7', remainingSeconds: 25, lengthSeconds: 100 },
+      videoDetails: { title: 'Video 7', remainingSeconds: 25, durationSeconds: 100 },
       remainingSecondsStale: false,
     }),
   });
@@ -240,7 +240,7 @@ test('handlePageVideoDetails resets carried remaining time on watch-to-watch SPA
     7: createTabRecordFixture(7, {
       url: 'https://www.youtube.com/watch?v=old',
       contentScriptReady: true,
-      videoDetails: { title: 'Old Video', remainingSeconds: 25, lengthSeconds: 100 },
+      videoDetails: { title: 'Old Video', remainingSeconds: 25, durationSeconds: 100 },
       remainingSecondsStale: false,
     }),
   });
@@ -250,7 +250,7 @@ test('handlePageVideoDetails resets carried remaining time on watch-to-watch SPA
       details: {
         url: 'https://www.youtube.com/watch?v=new',
         title: 'New Video',
-        lengthSeconds: 400,
+        durationSeconds: 400,
         isLive: false,
       },
     },
@@ -267,7 +267,7 @@ test('handlePageVideoDetails resets carried remaining time on watch-to-watch SPA
   assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
   assert.equal(record.contentScriptReady, false);
   assert.equal(record.videoDetails.title, 'New Video');
-  assert.equal(record.videoDetails.lengthSeconds, 400);
+  assert.equal(record.videoDetails.durationSeconds, 400);
   assert.equal(record.videoDetails.remainingSeconds, 400);
   assert.equal(record.remainingSecondsStale, true);
 });
@@ -278,7 +278,7 @@ test('handlePageVideoDetails preserves ready state when the title changes for th
     7: createTabRecordFixture(7, {
       url: 'https://www.youtube.com/watch?v=new',
       playbackMetricsReady: true,
-      videoDetails: { title: 'Old Video', remainingSeconds: 3365, lengthSeconds: 3365 },
+      videoDetails: { title: 'Old Video', remainingSeconds: 3365, durationSeconds: 3365 },
       remainingSecondsStale: false,
     }),
   });
@@ -288,7 +288,7 @@ test('handlePageVideoDetails preserves ready state when the title changes for th
       details: {
         url: 'https://www.youtube.com/watch?v=new',
         title: 'Cyberpunk 2077 - PS5 Pro Update Trailer',
-        lengthSeconds: 3365,
+        durationSeconds: 3365,
         isLive: false,
       },
     },
@@ -305,7 +305,7 @@ test('handlePageVideoDetails preserves ready state when the title changes for th
   assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
   assert.equal(record.playbackMetricsReady, true);
   assert.equal(record.videoDetails.title, 'Cyberpunk 2077 - PS5 Pro Update Trailer');
-  assert.equal(record.videoDetails.lengthSeconds, 3365);
+  assert.equal(record.videoDetails.durationSeconds, 3365);
   assert.equal(record.videoDetails.remainingSeconds, 3365);
   assert.equal(record.remainingSecondsStale, false);
 });
@@ -316,7 +316,7 @@ test('handlePageVideoDetails preserves ready state when only watch URL parameter
     7: createTabRecordFixture(7, {
       url: 'https://www.youtube.com/watch?v=new',
       playbackMetricsReady: true,
-      videoDetails: { title: 'Video', remainingSeconds: 120, lengthSeconds: 300 },
+      videoDetails: { title: 'Video', remainingSeconds: 120, durationSeconds: 300 },
       remainingSecondsStale: false,
     }),
   });
@@ -326,7 +326,7 @@ test('handlePageVideoDetails preserves ready state when only watch URL parameter
       details: {
         url: 'https://www.youtube.com/watch?v=new&list=abc123&index=10',
         title: 'Video',
-        lengthSeconds: 300,
+        durationSeconds: 300,
         isLive: false,
       },
     },
@@ -353,7 +353,7 @@ test('handlePageVideoDetails invalidates playback state when a live stream ends'
       url: 'https://www.youtube.com/watch?v=live',
       playbackMetricsReady: true,
       isLive: true,
-      videoDetails: { title: 'Live stream', remainingSeconds: null, lengthSeconds: null },
+      videoDetails: { title: 'Live stream', remainingSeconds: null, durationSeconds: null },
       remainingSecondsStale: false,
     }),
   });
@@ -393,7 +393,7 @@ test(
         url: 'https://www.youtube.com/watch?v=new',
         contentScriptReady: true,
         playbackMetricsReady: true,
-        videoDetails: { title: 'Video', remainingSeconds: 120, lengthSeconds: 300 },
+        videoDetails: { title: 'Video', remainingSeconds: 120, durationSeconds: 300 },
         remainingSecondsStale: false,
       }),
     });
@@ -416,7 +416,7 @@ test(
         details: {
           url: sender.tab.url,
           title: 'Video',
-          lengthSeconds: 300,
+          durationSeconds: 300,
           isLive: false,
         },
       },

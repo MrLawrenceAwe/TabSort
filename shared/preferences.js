@@ -15,7 +15,7 @@ function getStorageCandidates() {
   return candidates;
 }
 
-async function loadOptionsFromArea({ area, name }) {
+async function loadPreferencesFromArea({ area, name }) {
   try {
     return { ...DEFAULT_PREFERENCES, ...await area.get(DEFAULT_PREFERENCES) };
   } catch (error) {
@@ -26,13 +26,13 @@ async function loadOptionsFromArea({ area, name }) {
 
 export async function loadPreferences() {
   for (const candidate of getStorageCandidates()) {
-    const options = await loadOptionsFromArea(candidate);
+    const options = await loadPreferencesFromArea(candidate);
     if (options) return options;
   }
   return { ...DEFAULT_PREFERENCES };
 }
 
-async function saveOptionsToArea({ area, name }, update) {
+async function savePreferencesToArea({ area, name }, update) {
   try {
     await area.set(update);
     return true;
@@ -45,6 +45,6 @@ async function saveOptionsToArea({ area, name }, update) {
 export async function savePreferences(update) {
   if (!update || typeof update !== 'object') return;
   for (const candidate of getStorageCandidates()) {
-    if (await saveOptionsToArea(candidate, update)) return;
+    if (await savePreferencesToArea(candidate, update)) return;
   }
 }

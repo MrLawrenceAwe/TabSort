@@ -175,7 +175,7 @@ export function createTabRecordFixture(id = 1, overrides = {}) {
     isLive: false,
     isActive: false,
     isHidden: false,
-    videoDetails: { title: `Video ${id}`, remainingSeconds: null, lengthSeconds: null },
+    videoDetails: { title: `Video ${id}`, remainingSeconds: null, durationSeconds: null },
     loadingStartedAt: null,
     loadedAt: null,
     transitionStartedAt: null,

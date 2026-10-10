@@ -139,7 +139,7 @@ test('active watch rows wait through video data mismatches instead of asking for
     playbackMetricsReady: false,
     remainingSecondsStale: true,
     metricsWaitStartedAt: Date.now() - (MEDIA_WAIT_GRACE_MS - 1000),
-    videoDetails: { remainingSeconds: 45143, lengthSeconds: 45143 },
+    videoDetails: { remainingSeconds: 45143, durationSeconds: 45143 },
   });
 
   assert.equal(determineTabGuidance(activeAdRecord), TAB_GUIDANCE.WAIT_FOR_VIDEO_DATA);
@@ -153,7 +153,7 @@ test('active watch rows eventually ask for reload when video data stays stuck', 
     playbackMetricsReady: false,
     remainingSecondsStale: true,
     metricsWaitStartedAt: Date.now() - (MEDIA_WAIT_GRACE_MS + 1000),
-    videoDetails: { remainingSeconds: 45143, lengthSeconds: 45143 },
+    videoDetails: { remainingSeconds: 45143, durationSeconds: 45143 },
   });
 
   assert.equal(determineTabGuidance(activeStalledMediaRecord), TAB_GUIDANCE.RELOAD_TAB);
@@ -301,7 +301,7 @@ test('wait rows render passive text instead of clickable actions', () => {
           playbackMetricsReady: false,
           remainingSecondsStale: true,
           metricsWaitStartedAt: Date.now() - (MEDIA_WAIT_GRACE_MS - 1000),
-          videoDetails: { remainingSeconds: 45143, lengthSeconds: 45143 },
+          videoDetails: { remainingSeconds: 45143, durationSeconds: 45143 },
         }),
       ],
     ];

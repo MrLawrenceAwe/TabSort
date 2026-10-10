@@ -1,4 +1,4 @@
-import { projectPreparationPlaceholder } from '../auto-preparation/state.js';
+import { projectPreparationPlaceholder } from '../auto-preparation/placeholder.js';
 import { isValidWindowId } from '../../shared/guards.js';
 import { getTabLoadState, listWindowTabs } from './chrome-tabs.js';
 import { updateSortStateAndBroadcast } from '../sorting/update-sort-state.js';

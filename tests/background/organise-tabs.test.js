@@ -20,12 +20,12 @@ test('organiseTabs returns move counts after organising tabs', { concurrency: fa
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
       index: 0,
-      videoDetails: { title: 'Video 1', remainingSeconds: 120, lengthSeconds: 120 },
+      videoDetails: { title: 'Video 1', remainingSeconds: 120, durationSeconds: 120 },
       remainingSecondsStale: false,
     }),
     2: createTabRecordFixture(2, {
       index: 1,
-      videoDetails: { title: 'Video 2', remainingSeconds: 60, lengthSeconds: 120 },
+      videoDetails: { title: 'Video 2', remainingSeconds: 60, durationSeconds: 120 },
       remainingSecondsStale: false,
     }),
   });
@@ -56,11 +56,11 @@ test('organiseTabs reports an atomic bulk move failure', { concurrency: false },
   resetTrackedWindowState(1);
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
-      videoDetails: { title: 'Video 1', remainingSeconds: 120, lengthSeconds: 120 },
+      videoDetails: { title: 'Video 1', remainingSeconds: 120, durationSeconds: 120 },
       remainingSecondsStale: false,
     }),
     2: createTabRecordFixture(2, {
-      videoDetails: { title: 'Video 2', remainingSeconds: 60, lengthSeconds: 120 },
+      videoDetails: { title: 'Video 2', remainingSeconds: 60, durationSeconds: 120 },
       remainingSecondsStale: false,
     }),
   });
@@ -82,12 +82,12 @@ test('organiseTabs avoids Chrome move calls when the complete order already matc
   resetTrackedWindowState(1);
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
-      videoDetails: { title: 'Video 1', remainingSeconds: 60, lengthSeconds: 120 },
+      videoDetails: { title: 'Video 1', remainingSeconds: 60, durationSeconds: 120 },
       remainingSecondsStale: false,
     }),
     2: createTabRecordFixture(2, {
       index: 1,
-      videoDetails: { title: 'Video 2', remainingSeconds: 120, lengthSeconds: 120 },
+      videoDetails: { title: 'Video 2', remainingSeconds: 120, durationSeconds: 120 },
       remainingSecondsStale: false,
     }),
   });
@@ -112,11 +112,11 @@ test(
     resetTrackedWindowState(1);
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
-        videoDetails: { title: 'Video 1', remainingSeconds: 120, lengthSeconds: 120 },
+        videoDetails: { title: 'Video 1', remainingSeconds: 120, durationSeconds: 120 },
         remainingSecondsStale: false,
       }),
       2: createTabRecordFixture(2, {
-        videoDetails: { title: 'Video 2', remainingSeconds: 60, lengthSeconds: 120 },
+        videoDetails: { title: 'Video 2', remainingSeconds: 60, durationSeconds: 120 },
         remainingSecondsStale: false,
       }),
     });

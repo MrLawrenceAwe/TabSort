@@ -30,47 +30,47 @@ function shouldIgnoreStaleMetricsPayload({ payloadUrl, requestedUrl, currentTabU
   );
 }
 
-function resolveVideoLengthSeconds(metricsPayload, record) {
-  const pageLengthSeconds = toPositiveFiniteNumber(metricsPayload.metadataDurationSeconds);
-  if (pageLengthSeconds != null) {
-    return pageLengthSeconds;
+function resolveVideoDurationSeconds(metricsPayload, record) {
+  const metadataDurationSeconds = toPositiveFiniteNumber(metricsPayload.metadataDurationSeconds);
+  if (metadataDurationSeconds != null) {
+    return metadataDurationSeconds;
   }
 
-  const recordedLengthSeconds = toPositiveFiniteNumber(record?.videoDetails?.lengthSeconds);
-  if (recordedLengthSeconds != null) {
-    return recordedLengthSeconds;
+  const recordedDurationSeconds = toPositiveFiniteNumber(record?.videoDetails?.durationSeconds);
+  if (recordedDurationSeconds != null) {
+    return recordedDurationSeconds;
   }
 
   return toPositiveFiniteNumber(metricsPayload.mediaDurationSeconds) ?? NaN;
 }
 
-function hasMediaDurationMismatch(metricsPayload, record, resolvedLengthSeconds) {
+function hasMediaDurationMismatch(metricsPayload, record, resolvedDurationSeconds) {
   const videoDurationSeconds = toFiniteNumber(metricsPayload.mediaDurationSeconds);
-  if (videoDurationSeconds == null || !isFiniteNumber(resolvedLengthSeconds)) {
+  if (videoDurationSeconds == null || !isFiniteNumber(resolvedDurationSeconds)) {
     return false;
   }
 
-  const authoritativeLengthSeconds =
+  const authoritativeDurationSeconds =
     toPositiveFiniteNumber(metricsPayload.metadataDurationSeconds) ??
-    toPositiveFiniteNumber(record?.videoDetails?.lengthSeconds);
+    toPositiveFiniteNumber(record?.videoDetails?.durationSeconds);
 
-  if (authoritativeLengthSeconds == null) {
+  if (authoritativeDurationSeconds == null) {
     return false;
   }
 
   return (
-    Math.abs(videoDurationSeconds - authoritativeLengthSeconds) >
+    Math.abs(videoDurationSeconds - authoritativeDurationSeconds) >
     MEDIA_DURATION_SYNC_TOLERANCE_SECONDS
   );
 }
 
-function deriveRemainingTimeSeconds(resolvedLengthSeconds, currentTimeSeconds, playbackRate) {
+function deriveRemainingTimeSeconds(resolvedDurationSeconds, currentTimeSeconds, playbackRate) {
   if (!isFiniteNumber(currentTimeSeconds)) {
-    return resolvedLengthSeconds;
+    return resolvedDurationSeconds;
   }
 
   const safePlaybackRate = isFiniteNumber(playbackRate) && playbackRate > 0 ? playbackRate : 1;
-  return Math.max(0, (resolvedLengthSeconds - currentTimeSeconds) / safePlaybackRate);
+  return Math.max(0, (resolvedDurationSeconds - currentTimeSeconds) / safePlaybackRate);
 }
 
 export function derivePlaybackUpdate({
@@ -89,7 +89,7 @@ export function derivePlaybackUpdate({
     return null;
   }
 
-  const resolvedLengthSeconds = resolveVideoLengthSeconds(metricsPayload, record);
+  const resolvedDurationSeconds = resolveVideoDurationSeconds(metricsPayload, record);
   const currentTimeSeconds = Number(metricsPayload.positionSeconds ?? NaN);
   const playbackRate = Number(metricsPayload.playbackRate ?? 1);
   const isLive =
@@ -102,7 +102,7 @@ export function derivePlaybackUpdate({
     playbackMetricsReady:
       metricsPayload.playbackMetricsReady === true,
     isLive,
-    resolvedLengthSeconds: isFiniteNumber(resolvedLengthSeconds) ? resolvedLengthSeconds : null,
+    resolvedDurationSeconds: isFiniteNumber(resolvedDurationSeconds) ? resolvedDurationSeconds : null,
     remainingSeconds: null,
     remainingSecondsStale: true,
   };
@@ -112,24 +112,24 @@ export function derivePlaybackUpdate({
     return update;
   }
 
-  if (!isFiniteNumber(resolvedLengthSeconds)) {
+  if (!isFiniteNumber(resolvedDurationSeconds)) {
     update.remainingSecondsStale = !update.playbackMetricsReady;
     return update;
   }
 
-  if (hasMediaDurationMismatch(metricsPayload, record, resolvedLengthSeconds)) {
+  if (hasMediaDurationMismatch(metricsPayload, record, resolvedDurationSeconds)) {
     update.playbackMetricsReady = false;
-    update.remainingSeconds = resolvedLengthSeconds;
+    update.remainingSeconds = resolvedDurationSeconds;
     return update;
   }
 
   if (!update.playbackMetricsReady) {
-    update.remainingSeconds = resolvedLengthSeconds;
+    update.remainingSeconds = resolvedDurationSeconds;
     return update;
   }
 
   update.remainingSeconds = deriveRemainingTimeSeconds(
-    resolvedLengthSeconds,
+    resolvedDurationSeconds,
     currentTimeSeconds,
     playbackRate,
   );

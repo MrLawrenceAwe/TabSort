@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { onAutoPreparationWindowRemoved, startAutoPreparation, stopAutoPreparation } from '../../background/auto-preparation/service.js';
-import { getAutoPreparation, getProgressWindowId } from '../../background/auto-preparation/state.js';
+import { getAutoPreparation, getPreparationWindowId } from '../../background/auto-preparation/state.js';
 import { replaceAllTabRecords, resetTrackedWindowStore } from '../../background/windows/tracked-window-store.js';
 import { createChromeTabFixture, createTabRecordFixture, ensureChromeApi } from '../helpers/background-test-helpers.js';
 
@@ -51,7 +51,7 @@ test('Stop removes the unstarted preparation progress tab when window creation f
   const sourceTab = createChromeTabFixture(1, { windowId: 1, active: false });
   const progressTab = createChromeTabFixture(99, {
     windowId: 9,
-    url: chrome.runtime.getURL('preparation/index.html'),
+    url: chrome.runtime.getURL('preparation/progress.html'),
   });
   chrome.tabs.query = async ({ windowId } = {}) => windowId === 9 ? [progressTab] : [sourceTab];
   chrome.tabs.get = async () => sourceTab;
@@ -77,7 +77,7 @@ test('Stop removes the unstarted preparation progress tab when window creation f
   assert.equal(stop.ok, true);
   assert.deepEqual(await start, { ok: false, error: 'startCancelled' });
   assert.equal(removeProgressTabId, 99);
-  assert.equal(getProgressWindowId(), null);
+  assert.equal(getPreparationWindowId(), null);
   assert.equal(saved.autoPreparationWorkspace, undefined);
 });
 
@@ -111,7 +111,7 @@ test('completion closes the empty preparation window after preserving source-win
   const tab = createChromeTabFixture(1, { windowId: 1, active: true });
   const progressTab = createChromeTabFixture(100, {
     windowId: 99,
-    url: chrome.runtime.getURL('preparation/index.html'),
+    url: chrome.runtime.getURL('preparation/progress.html'),
   });
   let queryCount = 0;
   chrome.tabs.query = async ({ windowId } = {}) => {
@@ -144,7 +144,7 @@ test('completion closes the empty preparation window after preserving source-win
   assert.equal(getAutoPreparation().status, 'complete');
   assert.equal(getAutoPreparation().total, 1);
   assert.equal(getAutoPreparation().skipped, 1);
-  assert.equal(getProgressWindowId(), null);
+  assert.equal(getPreparationWindowId(), null);
   assert.equal(removedProgressTabId, progressTab.id);
   await stopAutoPreparation();
 });

@@ -97,7 +97,7 @@ test(
         remainingSecondsStale: true,
       }),
       2: createTabRecordFixture(2, {
-        videoDetails: { title: 'Video 2', remainingSeconds: 90, lengthSeconds: 120 },
+        videoDetails: { title: 'Video 2', remainingSeconds: 90, durationSeconds: 120 },
         remainingSecondsStale: false,
       }),
     });
@@ -199,9 +199,9 @@ test('organising refreshes playback before deciding the order', { concurrency: f
   const tabs = [createChromeTabFixture(1), createChromeTabFixture(2)];
   setTrackedTabRecords({
     1: createTabRecordFixture(1, { index: 0, remainingSecondsStale: false,
-      videoDetails: { remainingSeconds: 20, lengthSeconds: 120 } }),
+      videoDetails: { remainingSeconds: 20, durationSeconds: 120 } }),
     2: createTabRecordFixture(2, { index: 1, remainingSecondsStale: false,
-      videoDetails: { remainingSeconds: 100, lengthSeconds: 120 } }),
+      videoDetails: { remainingSeconds: 100, durationSeconds: 120 } }),
   });
   stubChromeTabQuery(tabs);
   globalThis.chrome.tabs.get = async id => tabs.find(tab => tab.id === id);

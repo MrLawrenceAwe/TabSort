@@ -46,14 +46,14 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-#headerContainer,
+#popupHeader,
 .header-actions {
     display: flex;
     align-items: center;
     gap: 16px;
 }
 
-#headerContainer {
+#popupHeader {
     justify-content: space-between;
     min-height: 34px;
     margin-bottom: 18px;
@@ -100,7 +100,7 @@ input:focus-visible {
     font-size: 12px;
 }
 
-.tabs-organised span { margin-right: 4px; }
+.tabs-organised [aria-hidden] { margin-right: 4px; }
 
 .table-scroll {
     max-height: 360px;
@@ -168,7 +168,7 @@ input:focus-visible {
     font-size: 12px;
 }
 
-.user-action-button {
+.tab-action-button {
     appearance: none;
     padding: 2px 0;
     border: 0;
@@ -181,7 +181,7 @@ input:focus-visible {
     cursor: pointer;
 }
 
-.reload-required-row .user-action-button { color: var(--warning); }
+.reload-required-row .tab-action-button { color: var(--warning); }
 
 #controls {
     display: flex;

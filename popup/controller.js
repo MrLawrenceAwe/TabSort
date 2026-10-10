@@ -27,7 +27,7 @@ const SNAPSHOT_RETRY_DELAY_MS = 150;
 const SNAPSHOT_MAX_ATTEMPTS = 2;
 const SNAPSHOT_POLL_DELAY_MS = 1000;
 
-let isPopupActive = false;
+let isPopupOpen = false;
 
 const runtimeClient = createRuntimeClient({
   getActiveWindowId: () => popupState.activeWindowId,
@@ -54,7 +54,7 @@ async function loadSnapshot() {
 
 const snapshotPoller = createSnapshotPoller({
   delayMs: SNAPSHOT_POLL_DELAY_MS,
-  isAppActive: () => isPopupActive,
+  isPopupOpen: () => isPopupOpen,
   loadSnapshot,
   logPopupError: runtimeClient.logPopupError,
   onSnapshot: renderAndScheduleSnapshot,
@@ -115,7 +115,7 @@ function renderAndScheduleSnapshot(snapshot) {
 
 async function loadInitialSnapshot() {
   const snapshot = await loadSnapshot();
-  if (!isPopupActive) return;
+  if (!isPopupOpen) return;
   if (!snapshot) {
     setStateMessage('Tab data is unavailable.');
     snapshotPoller.scheduleIfNeeded(null);
@@ -235,14 +235,14 @@ function registerPopupControls() {
 function registerPopupLifecycle(messageListener) {
   chrome.runtime.onMessage.addListener(messageListener);
   window.addEventListener('unload', () => {
-    isPopupActive = false;
+    isPopupOpen = false;
     snapshotPoller.setPaused(true);
     chrome.runtime.onMessage.removeListener(messageListener);
   });
 }
 
 export async function initializePopup() {
-  isPopupActive = true;
+  isPopupOpen = true;
   initializePopupDom();
   renderPopupControls();
   setErrorMessage('');
@@ -255,7 +255,7 @@ export async function initializePopup() {
 
   await runWithPopupErrorLogging(runtimeClient.syncActiveWindow, 'Failed to refresh active context');
   await runWithPopupErrorLogging(initializePopupPreferences, 'Failed to set up option controls');
-  if (!isPopupActive) return;
+  if (!isPopupOpen) return;
   await runWithPopupErrorLogging(loadInitialSnapshot, 'Failed to request initial snapshot');
 }
 

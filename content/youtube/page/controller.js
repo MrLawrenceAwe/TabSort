@@ -85,11 +85,11 @@ export function createYouTubePageController({
       return false;
     }
     const details = collectPageDetails();
-    if (!isFiniteNumber(details.lengthSeconds)) {
+    if (!isFiniteNumber(details.durationSeconds)) {
       return true;
     }
     return (
-      Math.abs(duration - details.lengthSeconds) <=
+      Math.abs(duration - details.durationSeconds) <=
       pageConfig.mediaDurationSyncToleranceSeconds
     );
   }

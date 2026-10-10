@@ -12,7 +12,7 @@ import {
   activateTab,
   reloadTab,
 } from '../../background/messaging/tab-commands.js';
-import { setProgressWindowId } from '../../background/auto-preparation/state.js';
+import { setPreparationWindowId } from '../../background/auto-preparation/state.js';
 import { reconcileWindowTabRecords } from '../../background/tabs/reconcile-window.js';
 import {
   ensureChromeApi,
@@ -90,7 +90,7 @@ test('activateTab returns a structured success result', { concurrency: false }, 
 
 test('getWindowSnapshot does not replace the tracked target with the preparation progress window', { concurrency: false }, async () => {
   resetTrackedWindowState(1);
-  setProgressWindowId(2);
+  setPreparationWindowId(2);
   globalThis.chrome.tabs.query = async () => {
     throw new Error('the progress window must not be queried');
   };
@@ -99,7 +99,7 @@ test('getWindowSnapshot does not replace the tracked target with the preparation
 
   assert.deepEqual(result, { ok: false, error: 'progressWindow', windowId: 2 });
   assert.equal(getTrackedWindowId(), 1);
-  setProgressWindowId(null);
+  setPreparationWindowId(null);
 });
 
 test('handleOrganiseTabs refreshes a newly targeted window before deriving its sort', { concurrency: false }, async () => {

@@ -13,7 +13,7 @@ import {
 } from '../windows/tracked-window-store.js';
 import { reconcileWindowTabRecords } from '../tabs/reconcile-window.js';
 import { shouldRefreshRecordMetrics } from '../../shared/tabs/refresh-policy.js';
-import { getProgressWindowId } from '../auto-preparation/state.js';
+import { getPreparationWindowId } from '../auto-preparation/state.js';
 import { logDebug } from '../../shared/log.js';
 
 const SNAPSHOT_REFRESH_WAIT_MS = 250;
@@ -86,7 +86,7 @@ export async function reloadTab(message) {
 
 export async function getWindowSnapshot(message) {
   const requestedWindowId = isValidWindowId(message.windowId) ? message.windowId : null;
-  if (requestedWindowId != null && requestedWindowId === getProgressWindowId()) {
+  if (requestedWindowId != null && requestedWindowId === getPreparationWindowId()) {
     return { ok: false, error: 'progressWindow', windowId: requestedWindowId };
   }
   const reconciliation = await reconcileWindowTabRecords(

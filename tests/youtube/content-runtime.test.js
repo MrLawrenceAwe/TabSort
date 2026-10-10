@@ -359,7 +359,7 @@ test('page video details ignore zero-length YouTube player metadata', () => {
     environment,
   });
 
-  assert.equal(details.lengthSeconds, null);
+  assert.equal(details.durationSeconds, null);
   assert.equal(details.isLive, false);
 });
 

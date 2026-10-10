@@ -1,14 +1,15 @@
 import { applyAutoPreparedTime, applyVideoMetricsUnavailable } from '../tabs/video-state.js';
 import { createAutoPreparationRunner } from './runner.js';
 import { createPreparationWorkspace } from './workspace.js';
-import { getAutoPreparation, autoPreparationState, getProgressWindowId, setProgressWindowId, setPreparingTabRecord } from './state.js';
+import { setPreparingTabRecord } from './placeholder.js';
+import { getAutoPreparation, autoPreparationState, getPreparationWindowId, setPreparationWindowId } from './state.js';
 import { getTab, listWindowTabs, sendMessageToTab, MESSAGE_FAILURE_REASONS, getTabLoadState } from '../tabs/chrome-tabs.js';
 import { getTabRecord, getTrackedWindowId, setTabRecord } from '../windows/tracked-window-store.js';
 import { reconcileTabRecord } from '../tabs/reconcile-tab-record.js';
 import { reconcileWindowTabRecords } from '../tabs/reconcile-window.js';
 import { derivePlaybackUpdate } from '../playback/derive-update.js';
 import { applyPlaybackStateUpdate } from '../playback/apply-update.js';
-import { tryInjectYouTubeBootstrap } from '../youtube/inject.js';
+import { tryInjectYouTubeRuntime } from '../youtube/inject.js';
 import { logDebug } from '../../shared/log.js';
 import { updateSortStateAndBroadcast } from '../sorting/update-sort-state.js';
 import { hasReadyRemainingTime } from '../../shared/tabs/sort-readiness.js';
@@ -22,14 +23,14 @@ const workspace = createPreparationWorkspace();
 // Preparation owns its records; browsing a different window can freely replace
 // the popup's tracked-window store without interrupting this run.
 const preparationRecordsById = new Map();
-let pendingStart = null;
-let recovery = null;
+let startAbortController = null;
+let recoveryPromise = null;
 export function recoverAutoPreparation() {
-  recovery ??= workspace.recover().catch(error => {
-    recovery = null;
+  recoveryPromise ??= workspace.recover().catch(error => {
+    recoveryPromise = null;
     throw error;
   });
-  return recovery;
+  return recoveryPromise;
 }
 
 const runner = createAutoPreparationRunner({
@@ -37,17 +38,17 @@ const runner = createAutoPreparationRunner({
   async inspect(tabId, windowId) {
     let tab;
     try { tab = await getTab(tabId); } catch { return null; }
-    const visiting = workspace.transfer?.tabId === tabId && tab.windowId === workspace.windowId;
-    if (!visiting && tab.windowId !== windowId) return null;
+    const isInPreparationWindow = workspace.transfer?.tabId === tabId && tab.windowId === workspace.windowId;
+    if (!isInPreparationWindow && tab.windowId !== windowId) return null;
     // Queued tabs may have become ready through normal browsing since start.
-    // Keep our private copy while visiting or when another window is tracked.
-    const latest = !visiting && getTrackedWindowId() === windowId ? getTabRecord(tabId) : null;
+    // Keep our private copy while preparing or when another window is tracked.
+    const latest = !isInPreparationWindow && getTrackedWindowId() === windowId ? getTabRecord(tabId) : null;
     if (latest && getYouTubeVideoId(latest.url) === getYouTubeVideoId(tab.url)) preparationRecordsById.set(tabId, latest);
     const record = preparationRecordsById.get(tabId);
     const videoId = getYouTubeVideoId(tab.url);
     return {
       active: tab.active, discarded: tab.discarded, videoId,
-      excluded: tab.pinned || record?.isLive || !videoId || (!visiting && tab.active),
+      excluded: tab.pinned || record?.isLive || !videoId || (!isInPreparationWindow && tab.active),
       loaded: !tab.discarded && tab.status === 'complete',
       ready: !tab.discarded && tab.status === 'complete' &&
         videoId === getYouTubeVideoId(record?.url) && hasReadyRemainingTime(record),
@@ -72,7 +73,7 @@ const runner = createAutoPreparationRunner({
           const result = await sendMessageToTab(tabId, { type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS });
           if (expired || signal.aborted) return;
           if (result.reason === MESSAGE_FAILURE_REASONS.NO_RECEIVER) {
-            await tryInjectYouTubeBootstrap(tabId);
+            await tryInjectYouTubeRuntime(tabId);
             return; // Poll again after the content runtime has bootstrapped.
           }
           const tab = await getTab(tabId);
@@ -137,13 +138,13 @@ const runner = createAutoPreparationRunner({
     // Removing it lets Chrome close that otherwise-empty window. Keep the page
     // after a stopped run so its status remains available to the user.
     if (completed) {
-      const progressWindowId = getProgressWindowId();
-      if (progressWindowId != null) {
+      const preparationWindowId = getPreparationWindowId();
+      if (preparationWindowId != null) {
         // Removing the last tab closes the window and can synchronously fire
         // windows.onRemoved. Clear its ID first so that expected completion
         // cannot be mistaken for the user cancelling the preparation window.
-        setProgressWindowId(null);
-        await workspace.removeProgressTabs(progressWindowId);
+        setPreparationWindowId(null);
+        await workspace.removeProgressTabs(preparationWindowId);
       }
     }
   },
@@ -156,10 +157,10 @@ const runner = createAutoPreparationRunner({
 });
 
 export async function startAutoPreparation(message) {
-  if (pendingStart || getAutoPreparation().status === 'running') return { ok: false, error: 'alreadyAutoPreparing' };
+  if (startAbortController || getAutoPreparation().status === 'running') return { ok: false, error: 'alreadyAutoPreparing' };
   const startController = new AbortController();
   const { signal } = startController;
-  pendingStart = startController;
+  startAbortController = startController;
   try {
     await recoverAutoPreparation();
     if (signal.aborted) return { ok: false, error: 'startCancelled' };
@@ -184,11 +185,11 @@ export async function startAutoPreparation(message) {
       ? await openTikTokPipForAutoPreparation(result.windowId, { signal })
       : null;
     if (signal.aborted) return { ok: false, error: 'startCancelled' };
-    const existing = getProgressWindowId();
+    const existing = getPreparationWindowId();
     if (existing != null) {
       const removed = await workspace.removeProgressTabs(existing, { signal });
       if (!removed) return { ok: false, error: 'startCancelled' };
-      setProgressWindowId(null);
+      setPreparationWindowId(null);
       if (signal.aborted) return { ok: false, error: 'startCancelled' };
     }
     for (const record of candidates) preparationRecordsById.set(record.id, record);
@@ -200,7 +201,7 @@ export async function startAutoPreparation(message) {
       preparationRecordsById.clear();
       return { ok: false, error: 'startCancelled' };
     }
-    setProgressWindowId(windowId);
+    setPreparationWindowId(windowId);
     return { ...runner.start(result.windowId, items), tiktokPip };
   } catch (error) {
     await workspace.finishSession();
@@ -208,13 +209,13 @@ export async function startAutoPreparation(message) {
     preparationRecordsById.clear();
     throw error;
   } finally {
-    if (pendingStart === startController) pendingStart = null;
+    if (startAbortController === startController) startAbortController = null;
   }
 }
 
 export async function stopAutoPreparation() {
-  if (pendingStart) {
-    pendingStart.abort();
+  if (startAbortController) {
+    startAbortController.abort();
     return { ok: true, autoPreparation: getAutoPreparation() };
   }
   await runner.stop();
@@ -222,8 +223,8 @@ export async function stopAutoPreparation() {
 }
 
 export function onAutoPreparationWindowRemoved(windowId) {
-  if (windowId === getProgressWindowId()) {
-    setProgressWindowId(null);
+  if (windowId === getPreparationWindowId()) {
+    setPreparationWindowId(null);
     void runner.stop('Preparation window closed. Use the placeholder to reopen its video.');
   }
 }

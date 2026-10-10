@@ -79,7 +79,7 @@ test('shouldPollRecord polls active stale watch tabs while video data can self-r
     playbackMetricsReady: false,
     remainingSecondsStale: true,
     metricsWaitStartedAt: NOW_MS - (MEDIA_WAIT_GRACE_MS - 1000),
-    videoDetails: { remainingSeconds: 45143, lengthSeconds: 45143 },
+    videoDetails: { remainingSeconds: 45143, durationSeconds: 45143 },
   });
 
   assert.equal(shouldPollRecord(record, { now: fakeNow }), true);
@@ -92,7 +92,7 @@ test('shouldPollRecord stops polling active stale watch tabs when media stays st
     playbackMetricsReady: false,
     remainingSecondsStale: true,
     metricsWaitStartedAt: NOW_MS - (MEDIA_WAIT_GRACE_MS + 1000),
-    videoDetails: { remainingSeconds: 45143, lengthSeconds: 45143 },
+    videoDetails: { remainingSeconds: 45143, durationSeconds: 45143 },
   });
 
   assert.equal(shouldPollRecord(record, { now: fakeNow }), false);
@@ -210,7 +210,7 @@ test('pausing during an in-flight poll prevents its response from restarting pol
   };
   const poller = createSnapshotPoller({
     delayMs: 1,
-    isAppActive: () => true,
+    isPopupOpen: () => true,
     loadSnapshot: () => {
       loadCount += 1;
       return new Promise(resolve => { releaseLoad = resolve; });

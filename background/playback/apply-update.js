@@ -24,7 +24,7 @@ export function applyPlaybackStateUpdate(record, playbackUpdate, currentTabUrl) 
   }
 
   record.isLive = Boolean(playbackUpdate.isLive);
-  record.videoDetails.lengthSeconds = playbackUpdate.resolvedLengthSeconds;
+  record.videoDetails.durationSeconds = playbackUpdate.resolvedDurationSeconds;
   record.videoDetails.remainingSeconds = playbackUpdate.remainingSeconds;
   record.remainingSecondsStale = playbackUpdate.remainingSecondsStale;
 }

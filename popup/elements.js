@@ -9,6 +9,7 @@ const ELEMENT_SELECTORS = Object.freeze({
   stopAutoPreparationButton: '#stopAutoPreparationButton',
   autoPreparationStatus: '#autoPreparationStatus',
   organisedBadge: '#organisedBadge',
+  organisedBadgeText: '#organisedBadgeText',
   groupOtherTabsToggle: '#groupOtherTabsToggle',
   openTikTokPipToggle: '#openTikTokPipToggle',
   tabsTable: '#tabsTable',

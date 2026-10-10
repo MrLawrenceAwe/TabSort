@@ -15,8 +15,8 @@ Chrome extension that keeps YouTube video tabs organised by the time you still h
 3. Visit `chrome://extensions`, enable **Developer mode**, and choose **Load unpacked**.
 4. Select the project directory.
 
-Alternatively, install the ZIP produced by `npm run package` using your normal extension
-distribution workflow.
+For a packaged copy, run `npm run package`, extract the ZIP from `release/`, and
+select the extracted directory when loading the unpacked extension.
 
 ## Quick walkthrough
 
@@ -32,7 +32,6 @@ See [the usage guide](docs/usage.md) for sleeping tabs, session recovery and Sto
 - Separates the extension worker, YouTube content runtime, popup and preparation queue.
 - Uses a session journal to return tabs after worker interruption and caches prepared playback readings.
 - Tests cover sorting, browser events, playback evidence and tab-group restoration.
-- All processing stays local; browsing data is not sent to a server.
 
 ## Development
 
@@ -47,7 +46,7 @@ npm run package
 
 See [development and architecture](docs/development.md). CI installs Chromium before running the complete check suite and uploads the packaged extension.
 
-For a synthetic popup preview without installing the extension, serve the repository with `python3 -m http.server 8766 --bind 127.0.0.1` and open `/docs/preview.html`. Preview actions use mock browser APIs.
+For a synthetic popup preview without installing the extension, serve the repository with `python3 -m http.server 8766 --bind 127.0.0.1` and open `/docs/preview.html`. The preview reuses the popup markup with fixed synthetic data and mock browser APIs; its buttons do not operate real tabs.
 
 ## Permissions and privacy
 

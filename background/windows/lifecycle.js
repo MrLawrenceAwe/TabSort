@@ -1,4 +1,4 @@
-import { getProgressWindowId } from '../auto-preparation/state.js';
+import { getPreparationWindowId } from '../auto-preparation/state.js';
 import { onAutoPreparationWindowRemoved, recoverAutoPreparation } from '../auto-preparation/service.js';
 import { isValidWindowId } from '../../shared/guards.js';
 import { logDebug, logListenerError, withErrorLogging } from '../../shared/log.js';
@@ -34,7 +34,7 @@ export function resetTrackedWindow() {
 }
 
 export async function syncFocusedWindow(windowId) {
-  if (!isValidWindowId(windowId) || windowId === getProgressWindowId()) return;
+  if (!isValidWindowId(windowId) || windowId === getPreparationWindowId()) return;
   focusSyncGeneration += 1;
   // Even the current window must supersede an in-flight sync to another one.
   await reconcileWindowTabRecords(windowId, { force: true });

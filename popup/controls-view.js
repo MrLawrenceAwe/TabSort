@@ -12,7 +12,7 @@ export function getOrganisedBadgeText(isYouTubeLayoutOrganised) {
   return isYouTubeLayoutOrganised ? 'YouTube tabs organised' : 'Ready tabs already in order';
 }
 
-function updateStatus(status, readyTabsInOrder) {
+function updateSortStatus(status, readyTabsInOrder) {
   if (!status) return;
   const { readyCount, sortableCount } = popupState.sortSummary;
   if (!popupState.isYouTubeLayoutOrganised) {
@@ -28,9 +28,12 @@ function updateStatus(status, readyTabsInOrder) {
 function updateOrganisedBadge(organisedBadge, readyTabsInOrder) {
   if (!organisedBadge) return;
   organisedBadge.classList.toggle('hide', !readyTabsInOrder);
-  organisedBadge.textContent = readyTabsInOrder
-    ? `✓ ${getOrganisedBadgeText(popupState.isYouTubeLayoutOrganised)}`
-    : '';
+  const badgeText = getPopupElement('organisedBadgeText');
+  if (badgeText) {
+    badgeText.textContent = readyTabsInOrder
+      ? getOrganisedBadgeText(popupState.isYouTubeLayoutOrganised)
+      : '';
+  }
 }
 
 export function getOrganiseButtonText(readyCount, sortableCount) {
@@ -62,7 +65,7 @@ export function setNextStepHeaderVisible(visible) {
   nextStep?.classList.toggle('hide', !visible);
 }
 
-function setOptionToggleVisibility(visible) {
+function setSiteGroupingOptionVisible(visible) {
   const toggle = getPopupElement('groupOtherTabsToggle')?.closest?.('.option-toggle');
   toggle?.classList?.toggle('hide', !visible);
 }
@@ -113,9 +116,9 @@ export function renderPopupControls() {
     autoPreparationStatus.textContent = preparationStatusText;
   }
 
-  setOptionToggleVisibility(shouldShowOrganise);
+  setSiteGroupingOptionVisible(shouldShowOrganise);
 
-  updateStatus(status, readyTabsInOrder);
+  updateSortStatus(status, readyTabsInOrder);
   updateOrganisedBadge(organisedBadge, readyTabsInOrder && !preparationBusy);
   updateOrganiseButton(organiseButton, shouldShowOrganise, actionsDisabled);
 }

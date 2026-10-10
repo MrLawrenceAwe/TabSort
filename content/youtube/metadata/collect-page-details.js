@@ -22,9 +22,9 @@ function cleanTitle(raw) {
 export function collectPageDetails({ inferIsLiveNow, logContentError, environment = globalThis }) {
   const runtimeDocument = environment.document ?? globalThis.document;
   const runtimeLocation = environment.location ?? globalThis.location;
-  const docTitle = cleanTitle(runtimeDocument?.title);
-  const ogTitle = cleanTitle(runtimeDocument?.querySelector?.('meta[property="og:title"]')?.content);
-  const itempropTitle = cleanTitle(runtimeDocument?.querySelector?.('meta[itemprop="name"]')?.content);
+  const documentTitle = cleanTitle(runtimeDocument?.title);
+  const openGraphTitle = cleanTitle(runtimeDocument?.querySelector?.('meta[property="og:title"]')?.content);
+  const itemPropertyTitle = cleanTitle(runtimeDocument?.querySelector?.('meta[itemprop="name"]')?.content);
   const initialPlayerResponse = parseYouTubeInitialPlayerResponse(logContentError, environment);
   // Initial response scripts can survive YouTube's single-page navigation.
   const currentVideoId = getYouTubeVideoId(runtimeLocation?.href);
@@ -34,11 +34,11 @@ export function collectPageDetails({ inferIsLiveNow, logContentError, environmen
     : {};
 
   const title =
-    docTitle || ogTitle || itempropTitle || cleanTitle(playerResponse?.videoDetails?.title) || null;
+    documentTitle || openGraphTitle || itemPropertyTitle || cleanTitle(playerResponse?.videoDetails?.title) || null;
 
   // The player response describes the delivered media. The SEO duration can
   // differ by several seconds even when both belong to the same video.
-  const lengthSeconds = toPositiveFiniteNumber(playerResponse?.videoDetails?.lengthSeconds) ?? toPositiveFiniteNumber(
+  const durationSeconds = toPositiveFiniteNumber(playerResponse?.videoDetails?.lengthSeconds) ?? toPositiveFiniteNumber(
     parseIsoDurationSeconds(
       runtimeDocument?.querySelector?.('meta[itemprop="duration"]')?.getAttribute('content'),
     ),
@@ -55,8 +55,8 @@ export function collectPageDetails({ inferIsLiveNow, logContentError, environmen
     videoDetails: playerResponse?.videoDetails,
     playabilityStatus: playerResponse?.playabilityStatus,
     liveBroadcastDetails,
-    lengthSeconds,
+    durationSeconds,
   });
 
-  return { title, lengthSeconds, isLive, url: runtimeLocation?.href };
+  return { title, durationSeconds, isLive, url: runtimeLocation?.href };
 }

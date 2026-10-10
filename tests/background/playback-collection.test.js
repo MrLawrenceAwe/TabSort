@@ -26,7 +26,7 @@ ensureChromeApi({ tabs: true });
 test('a stalled read expires and its late metrics cannot restore stale time', async () => {
   resetTrackedWindowState(1);
   setTrackedTabRecords({ 1: createTabRecordFixture(1, {
-    remainingSecondsStale: false, videoDetails: { remainingSeconds: 100, lengthSeconds: 120 },
+    remainingSecondsStale: false, videoDetails: { remainingSeconds: 100, durationSeconds: 120 },
   }) });
   stubChromeTabGetSequence([{ tabId: 1 }]);
   let resolveRead;
@@ -76,7 +76,7 @@ test('an expired read does not invalidate a successor video', async () => {
   chrome.tabs.sendMessage = () => {
     setTrackedTabRecord(1, createTabRecordFixture(1, {
       url: 'https://www.youtube.com/watch?v=next', remainingSecondsStale: false,
-      videoDetails: { remainingSeconds: 60, lengthSeconds: 100 },
+      videoDetails: { remainingSeconds: 60, durationSeconds: 100 },
     }));
     return new Promise(() => {});
   };
@@ -107,7 +107,7 @@ test(
     assert.equal(getMutableTabRecord(1), storedReplacement);
     assert.notEqual(storedReplacement, replacementRecord);
     assert.equal(storedReplacement.contentScriptReady, true);
-    assert.equal(storedReplacement.videoDetails.lengthSeconds, 120);
+    assert.equal(storedReplacement.videoDetails.durationSeconds, 120);
     assert.equal(storedReplacement.videoDetails.remainingSeconds, 100);
     assert.equal(storedReplacement.remainingSecondsStale, false);
   },
@@ -121,7 +121,7 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
-        videoDetails: { title: 'Old Video', remainingSeconds: 45, lengthSeconds: 120 },
+        videoDetails: { title: 'Old Video', remainingSeconds: 45, durationSeconds: 120 },
         remainingSecondsStale: false,
         contentScriptReady: false,
       }),
@@ -142,7 +142,7 @@ test(
     const record = getTabRecordsById()[1];
     assert.equal(record.url, 'https://www.youtube.com/watch?v=new');
     assert.equal(record.videoDetails.title, 'New Video');
-    assert.equal(record.videoDetails.lengthSeconds, 400);
+    assert.equal(record.videoDetails.durationSeconds, 400);
     assert.equal(record.videoDetails.remainingSeconds, 390);
     assert.equal(record.remainingSecondsStale, false);
   },
@@ -203,7 +203,7 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         hasAutoPreparedTime: true,
-        videoDetails: { title: 'Prepared Video', remainingSeconds: 45, lengthSeconds: 120 },
+        videoDetails: { title: 'Prepared Video', remainingSeconds: 45, durationSeconds: 120 },
         remainingSecondsStale: false,
       }),
     });
@@ -233,7 +233,7 @@ test(
         url: 'https://www.youtube.com/watch?v=new',
         contentScriptReady: true,
         playbackMetricsReady: false,
-        videoDetails: { title: 'New Video', remainingSeconds: null, lengthSeconds: null },
+        videoDetails: { title: 'New Video', remainingSeconds: null, durationSeconds: null },
         remainingSecondsStale: true,
       }),
     });
@@ -255,7 +255,7 @@ test(
     assert.equal(record.contentScriptReady, true);
     assert.equal(record.playbackMetricsReady, false);
     assert.equal(typeof record.metricsWaitStartedAt, 'number');
-    assert.equal(record.videoDetails.lengthSeconds, 400);
+    assert.equal(record.videoDetails.durationSeconds, 400);
     assert.equal(record.videoDetails.remainingSeconds, 400);
     assert.equal(record.remainingSecondsStale, true);
   },
@@ -271,7 +271,7 @@ test(
         url: 'https://www.youtube.com/watch?v=archive',
         contentScriptReady: true,
         playbackMetricsReady: false,
-        videoDetails: { title: 'Archived Stream', remainingSeconds: null, lengthSeconds: null },
+        videoDetails: { title: 'Archived Stream', remainingSeconds: null, durationSeconds: null },
         remainingSecondsStale: true,
       }),
     });
@@ -284,7 +284,7 @@ test(
     assert.equal(record.contentScriptReady, true);
     assert.equal(record.playbackMetricsReady, true);
     assert.equal(record.metricsWaitStartedAt, null);
-    assert.equal(record.videoDetails.lengthSeconds, 6211);
+    assert.equal(record.videoDetails.durationSeconds, 6211);
     assert.equal(record.videoDetails.remainingSeconds, 6211);
     assert.equal(record.remainingSecondsStale, false);
   },
@@ -300,7 +300,7 @@ test(
         url: 'https://www.youtube.com/watch?v=archive',
         contentScriptReady: true,
         playbackMetricsReady: false,
-        videoDetails: { title: 'Archived Stream', remainingSeconds: null, lengthSeconds: 0 },
+        videoDetails: { title: 'Archived Stream', remainingSeconds: null, durationSeconds: 0 },
         remainingSecondsStale: true,
       }),
     });
@@ -312,7 +312,7 @@ test(
     const record = getTabRecordsById()[1];
     assert.equal(record.contentScriptReady, true);
     assert.equal(record.playbackMetricsReady, true);
-    assert.equal(record.videoDetails.lengthSeconds, 6211);
+    assert.equal(record.videoDetails.durationSeconds, 6211);
     assert.equal(record.videoDetails.remainingSeconds, 6211);
     assert.equal(record.remainingSecondsStale, false);
   },
@@ -328,7 +328,7 @@ test(
         url: 'https://www.youtube.com/watch?v=archive',
         contentScriptReady: true,
         playbackMetricsReady: false,
-        videoDetails: { title: 'Archived Stream', remainingSeconds: null, lengthSeconds: 0 },
+        videoDetails: { title: 'Archived Stream', remainingSeconds: null, durationSeconds: 0 },
         remainingSecondsStale: true,
       }),
     });
@@ -343,7 +343,7 @@ test(
     const record = getTabRecordsById()[1];
     assert.equal(record.contentScriptReady, true);
     assert.equal(record.playbackMetricsReady, false);
-    assert.equal(record.videoDetails.lengthSeconds, null);
+    assert.equal(record.videoDetails.durationSeconds, null);
     assert.equal(record.videoDetails.remainingSeconds, null);
     assert.equal(record.remainingSecondsStale, true);
   },
@@ -359,7 +359,7 @@ test(
         url: 'https://www.youtube.com/watch?v=archive',
         contentScriptReady: true,
         playbackMetricsReady: false,
-        videoDetails: { title: 'Archived Stream', remainingSeconds: null, lengthSeconds: null },
+        videoDetails: { title: 'Archived Stream', remainingSeconds: null, durationSeconds: null },
         remainingSecondsStale: true,
       }),
     });
@@ -374,7 +374,7 @@ test(
     const record = getTabRecordsById()[1];
     assert.equal(record.contentScriptReady, true);
     assert.equal(record.playbackMetricsReady, false);
-    assert.equal(record.videoDetails.lengthSeconds, 6211);
+    assert.equal(record.videoDetails.durationSeconds, 6211);
     assert.equal(record.videoDetails.remainingSeconds, 6211);
     assert.equal(record.remainingSecondsStale, true);
   },
@@ -393,7 +393,7 @@ test(
         videoDetails: {
           title: 'OpenAI vs. Anthropic\'s Direct Faceoff + Future of Agents - With Aaron Levie',
           remainingSeconds: 3364,
-          lengthSeconds: 3364,
+          durationSeconds: 3364,
         },
         remainingSecondsStale: false,
       }),
@@ -416,7 +416,7 @@ test(
     assert.equal(record.contentScriptReady, true);
     assert.equal(record.playbackMetricsReady, false);
     assert.equal(typeof record.metricsWaitStartedAt, 'number');
-    assert.equal(record.videoDetails.lengthSeconds, 3364);
+    assert.equal(record.videoDetails.durationSeconds, 3364);
     assert.equal(record.videoDetails.remainingSeconds, 3364);
     assert.equal(record.remainingSecondsStale, true);
   },

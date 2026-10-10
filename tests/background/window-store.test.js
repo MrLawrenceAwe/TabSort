@@ -21,7 +21,7 @@ test('public tracked window store access returns defensive copies', () => {
   resetTrackedWindowState();
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
-      videoDetails: { title: 'Video 1', remainingSeconds: 20, lengthSeconds: 100 },
+      videoDetails: { title: 'Video 1', remainingSeconds: 20, durationSeconds: 100 },
       remainingSecondsStale: false,
     }),
   });
@@ -36,7 +36,7 @@ test('writable tracked window store access is explicit for write paths', () => {
   resetTrackedWindowState();
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
-      videoDetails: { title: 'Video 1', remainingSeconds: 20, lengthSeconds: 100 },
+      videoDetails: { title: 'Video 1', remainingSeconds: 20, durationSeconds: 100 },
       remainingSecondsStale: false,
     }),
   });

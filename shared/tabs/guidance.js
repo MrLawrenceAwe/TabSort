@@ -1,9 +1,9 @@
 import { TAB_LOAD_STATES } from './load-states.js';
+import { hasRemainingTime } from './sort-readiness.js';
 import {
   LOADING_GRACE_MS,
   canMediaStillSettle,
   canWatchTransitionStillSettle,
-  hasRemainingTime,
 } from './grace-periods.js';
 
 export const TAB_GUIDANCE = {

@@ -8,7 +8,7 @@ import {
   getTrackedWindowId,
 } from '../../background/windows/tracked-window-store.js';
 import { reconcileWindowTabRecords } from '../../background/tabs/reconcile-window.js';
-import { setPreparingTabRecord } from '../../background/auto-preparation/state.js';
+import { setPreparingTabRecord } from '../../background/auto-preparation/placeholder.js';
 import { saveAutoPreparedTab } from '../../background/auto-preparation/session-cache.js';
 import {
   ensureChromeApi,
@@ -48,7 +48,7 @@ test('auto-prepared sleeping tabs remain sortable after visiting another window'
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
       loadState: TAB_LOAD_STATES.DISCARDED,
-      videoDetails: { title: 'Prepared video', remainingSeconds: 45, lengthSeconds: 120 },
+      videoDetails: { title: 'Prepared video', remainingSeconds: 45, durationSeconds: 120 },
       remainingSecondsStale: false,
       hasAutoPreparedTime: true,
     }),
@@ -114,7 +114,7 @@ test(
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
         loadState: TAB_LOAD_STATES.LOADED,
-        videoDetails: { title: 'Prepared video', remainingSeconds: 45, lengthSeconds: 120 },
+        videoDetails: { title: 'Prepared video', remainingSeconds: 45, durationSeconds: 120 },
         remainingSecondsStale: false,
         hasAutoPreparedTime: true,
       }),
@@ -140,7 +140,7 @@ test(
     resetTrackedWindowState();
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
-        videoDetails: { title: 'Ordinary video', remainingSeconds: 45, lengthSeconds: 120 },
+        videoDetails: { title: 'Ordinary video', remainingSeconds: 45, durationSeconds: 120 },
         remainingSecondsStale: false,
       }),
     });
@@ -165,7 +165,7 @@ test(
         url: 'https://www.youtube.com/watch?v=old',
         playbackMetricsReady: true,
         contentScriptReady: true,
-        videoDetails: { title: 'Old Video', remainingSeconds: 45, lengthSeconds: 120 },
+        videoDetails: { title: 'Old Video', remainingSeconds: 45, durationSeconds: 120 },
         remainingSecondsStale: false,
       }),
     });
@@ -195,7 +195,7 @@ test(
         url: 'https://www.youtube.com/watch?v=same',
         playbackMetricsReady: true,
         contentScriptReady: true,
-        videoDetails: { title: 'Same Video', remainingSeconds: 45, lengthSeconds: 120 },
+        videoDetails: { title: 'Same Video', remainingSeconds: 45, durationSeconds: 120 },
         remainingSecondsStale: false,
       }),
     });
@@ -215,7 +215,7 @@ test(
     assert.deepEqual(record.videoDetails, {
       title: 'Same Video',
       remainingSeconds: 45,
-      lengthSeconds: 120,
+      durationSeconds: 120,
     });
     assert.equal(record.remainingSecondsStale, false);
   },
@@ -228,7 +228,7 @@ test(
     resetTrackedWindowState(1);
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
-        videoDetails: { title: 'Video 1', remainingSeconds: 90, lengthSeconds: 120 },
+        videoDetails: { title: 'Video 1', remainingSeconds: 90, durationSeconds: 120 },
         remainingSecondsStale: false,
       }),
     });
@@ -256,7 +256,7 @@ test(
     resetTrackedWindowState(1);
     setTrackedTabRecords({
       1: createTabRecordFixture(1, {
-        videoDetails: { title: 'Window 1 Video', remainingSeconds: 90, lengthSeconds: 120 },
+        videoDetails: { title: 'Window 1 Video', remainingSeconds: 90, durationSeconds: 120 },
         remainingSecondsStale: false,
       }),
     });
@@ -295,7 +295,7 @@ test('keeps the video being auto-prepared in its placeholder position, including
   const originalGetURL = chrome.runtime.getURL;
   chrome.runtime.getURL = path => `chrome-extension://tabsort/${path}`;
   const record = createTabRecordFixture(5, {
-    videoDetails: { title: 'Preparing video', remainingSeconds: 30, lengthSeconds: 120 },
+    videoDetails: { title: 'Preparing video', remainingSeconds: 30, durationSeconds: 120 },
     remainingSecondsStale: false,
   });
   setPreparingTabRecord(record);

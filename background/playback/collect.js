@@ -2,7 +2,7 @@ import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
 import { logDebug } from '../../shared/log.js';
 import { RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import { getTab, MESSAGE_FAILURE_REASONS, sendMessageToTab } from '../tabs/chrome-tabs.js';
-import { tryInjectYouTubeBootstrap } from '../youtube/inject.js';
+import { tryInjectYouTubeRuntime } from '../youtube/inject.js';
 import { derivePlaybackUpdate } from './derive-update.js';
 import { applyVideoMetricsUnavailable } from '../tabs/video-state.js';
 import { applyPlaybackStateUpdate } from './apply-update.js';
@@ -61,7 +61,7 @@ async function readPlaybackMetrics(tabId, timeoutMs) {
       (async () => {
         let result = await request();
         if (expired || result?.reason !== MESSAGE_FAILURE_REASONS.NO_RECEIVER) return result;
-        const injected = await tryInjectYouTubeBootstrap(tabId);
+        const injected = await tryInjectYouTubeRuntime(tabId);
         if (!injected || expired) return result;
         for (let attempt = 0; attempt < NO_RECEIVER_RETRY_ATTEMPTS; attempt += 1) {
           await sleep(NO_RECEIVER_RETRY_DELAY_MS);

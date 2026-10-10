@@ -19,8 +19,8 @@ if (manifest.version !== packageMetadata.version) {
 const requiredFiles = new Set([
   manifest.background?.service_worker,
   manifest.action?.default_popup,
-  'preparation/index.html',
-  'preparation/controller.js',
+  'preparation/progress.html',
+  'preparation/progress.js',
   'preparation/styles.css',
   'preparation/placeholder.html',
   'preparation/placeholder.js',

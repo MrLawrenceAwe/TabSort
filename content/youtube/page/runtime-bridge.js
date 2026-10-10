@@ -42,7 +42,7 @@ export function createExtensionRuntimeBridge({ dependencies, environment, getChr
   function publishPageVideoDetails() {
     try {
       const details = collectPageDetails();
-      if (details.title || details.lengthSeconds != null || details.isLive) {
+      if (details.title || details.durationSeconds != null || details.isLive) {
         sendExtensionMessage(
           createRuntimeMessage(RUNTIME_MESSAGE_TYPES.PAGE_VIDEO_DETAILS, { details }),
           'page video details',

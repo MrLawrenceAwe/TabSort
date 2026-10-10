@@ -23,16 +23,21 @@
 - `popup/` separates the controller, state store, DOM elements, controls, and tab views.
   The controller applies snapshots and renders controls; tab views render records.
   CSS follows the system colour scheme and highlights ready, sortable video rows.
-- `preparation/` owns the preparation progress and placeholder pages.
+- `preparation/progress.html` and `progress.js` display preparation progress.
+  `placeholder.html` and `placeholder.js` preserve a moved video’s place and offer Stop/recovery.
 - `background/windows/tracked-window-store.js` owns the single tracked-window state.
 - `background/auto-preparation/runner.js` runs the preparation queue; `workspace.js`
   moves tabs with `moveTabToPreparationWindow()` and restores them with `finishSession()`.
-  Finishing clears the session journal and leaves the progress window open.
+  Finishing clears the session journal. The service removes the progress tab after
+  successful completion and retains it after stopping. `placeholder.js` projects
+  the moved video into its placeholder position for browsing-window snapshots;
+  `state.js` holds run state and the preparation-window ID.
 - `background/auto-preparation/session-cache.js` persists prepared tab snapshots.
 - `shared/tabs/` contains load states, readiness grace periods, guidance, and refresh policy.
   `shared/preferences.js` persists grouping and TikTok auto-preparation preferences.
   `shared/urls.js` provides generic site grouping, and `shared/preparation-progress.js` formats progress counts.
-- `tests/background/`, `tests/youtube/`, and `tests/popup/` mirror the runtime boundaries.
+- `tests/background/`, `tests/youtube/`, `tests/popup/`, and `tests/shared/` mirror
+  the runtime boundaries. `sort-state.test.js` checks derived sorting state.
 
 Tab records use `loaded`, `loading`, and `discarded` load states. `loadedAt` records an
 observed completion after loading or discarding, not the start of a reload. Video changes
@@ -49,9 +54,11 @@ plan to contiguous blocks; the organised state compares against that achievable 
 remaining-time reading to be used while its tab sleeps. Tab activation uses `activateTab`.
 
 Playback messages use `metadataDurationSeconds`, `mediaDurationSeconds`, and
-`positionSeconds` to distinguish their sources and units. Stored `videoDetails.lengthSeconds`
-and session-cache `identity` retain their existing storage schema so saved results remain usable.
-Preference storage keys are also unchanged.
+`positionSeconds` to distinguish their sources and units. Tab records store
+`videoDetails.durationSeconds`; the metadata collector translates YouTube’s external
+`lengthSeconds` field at the page boundary. Session-cache entries use `videoId`.
+The cache reader migrates previous stored field names in place before restoring
+readings, preserving prepared times without legacy fallbacks in runtime records.
 
 Normal playback collection has a two-second deadline per tab, shared by the metric
 request, missing-receiver reinjection and retries. Expiry marks the reading unavailable;
@@ -73,3 +80,24 @@ sleeping tabs remain identifiable after worker suspension or window changes.
 
 The package and manifest versions must match. CI verifies the committed bundle, runs the
 Chromium smoke test, and uploads the packaged extension as a workflow artifact.
+
+## Preparation sampling
+
+Each video has a 15-second preparation deadline. Once data appears, the runner
+samples it for a three-second settling period so YouTube can restore saved viewing
+progress. A sudden position jump or a failed read restarts settling. Unavailable
+videos are skipped at the deadline. Successfully prepared sleeping tabs return to
+sleep, and their remaining-time readings stay available for sorting.
+
+## Preview and artwork
+
+Serve the repository locally and open `docs/preview.html` to preview the popup.
+`docs/preview.js` loads the production `popup/popup.html` markup, installs the fixed
+synthetic browser fixture from `preview-fixture.js`, and starts the production
+controller. The fixture derives sort state using the same helper as the extension.
+Preview buttons do not operate real tabs. `docs/images/popup.png` is the README
+screenshot of this preview; refresh it when the visible popup changes.
+
+`assets/icon.svg` is the source artwork for the packaged PNG icons in
+`assets/icons/`. Temporary screenshots belong in ignored `output/`, rather than
+committed verification-artifact directories.

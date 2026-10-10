@@ -7,13 +7,13 @@ export function shouldPollSnapshot(snapshot, { now = Date.now } = {}) {
   return Object.values(tabRecordsById).some((record) => shouldPollRecord(record, { now }));
 }
 
-export function shouldRetrySnapshotLoad(snapshot, appActive) {
-  return Boolean(appActive) && snapshot == null;
+export function shouldRetrySnapshotLoad(snapshot, popupOpen) {
+  return Boolean(popupOpen) && snapshot == null;
 }
 
 export function createSnapshotPoller({
   delayMs,
-  isAppActive,
+  isPopupOpen,
   loadSnapshot,
   logPopupError,
   onSnapshot,
@@ -30,7 +30,7 @@ export function createSnapshotPoller({
   }
 
   function schedule() {
-    if (paused || !isAppActive() || timeoutId != null || pollInFlight) return;
+    if (paused || !isPopupOpen() || timeoutId != null || pollInFlight) return;
     if (!shouldRetrySnapshotLoad(latestSnapshot, true) && !shouldPollSnapshot(latestSnapshot)) return;
     timeoutId = setTimeout(async () => {
       timeoutId = null;
@@ -38,7 +38,7 @@ export function createSnapshotPoller({
       const requestGeneration = generation;
       try {
         const snapshot = await loadSnapshot();
-        if (requestGeneration !== generation || paused || !isAppActive()) return;
+        if (requestGeneration !== generation || paused || !isPopupOpen()) return;
         latestSnapshot = snapshot;
         if (snapshot) onSnapshot(snapshot);
       } catch (error) {

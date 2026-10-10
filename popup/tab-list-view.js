@@ -7,7 +7,7 @@ export function renderTabList(records, { isYouTubeLayoutOrganised = false, reque
   const runtimeDocument = getPopupDocument();
   const tbody = table.tBodies[0] ?? table.createTBody();
   const focusedButton = runtimeDocument.activeElement;
-  const focusedTabId = focusedButton?.matches('.user-action-button') && tbody.contains(focusedButton)
+  const focusedTabId = focusedButton?.matches('.tab-action-button') && tbody.contains(focusedButton)
     ? focusedButton.closest('tr').getAttribute('data-tab-id')
     : null;
   const focusedActionType = focusedTabId == null ? null : focusedButton.getAttribute('data-action-type');
@@ -18,7 +18,7 @@ export function renderTabList(records, { isYouTubeLayoutOrganised = false, reque
     row.setAttribute('data-tab-id', String(record.id));
     renderTabRow(row, record, isYouTubeLayoutOrganised, requestAction);
     if (String(record.id) === focusedTabId) {
-      replacementButton = row.querySelector('.user-action-button');
+      replacementButton = row.querySelector('.tab-action-button');
     }
     rowFragment.appendChild(row);
   }

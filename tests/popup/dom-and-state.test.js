@@ -35,6 +35,7 @@ function createFakeDocument() {
     ['organiseStatus', createFakeElement()],
     ['organiseButton', createFakeElement()],
     ['organisedBadge', createFakeElement()],
+    ['organisedBadgeText', createFakeElement()],
     ['groupOtherTabsToggle', createFakeElement()],
     ['openTikTokPipToggle', createFakeElement()],
     ['tabsTable', createFakeElement()],
@@ -124,7 +125,7 @@ test('organise control hides for an organised layout and returns when the order 
   assert.equal(hidden.get(button), true);
   assert.equal(hidden.get(option), true);
   assert.equal(hidden.get(badge), false);
-  assert.equal(badge.textContent, '✓ YouTube tabs organised');
+  assert.equal(document.elements.get('organisedBadgeText').textContent, 'YouTube tabs organised');
 
   popupState.isYouTubeLayoutOrganised = false;
   popupState.sortSummary.readyTabsLeadInOrder = false;
@@ -170,7 +171,7 @@ test('auto-prepare hides the organised badge even if the current subset is order
   popupState.autoPreparation = { status: 'running', total: 3, completed: 1 };
   renderPopupControls();
   assert.equal(hidden, true);
-  assert.equal(badge.textContent, '');
+  assert.equal(document.elements.get('organisedBadgeText').textContent, '');
   popupState.autoPreparation.status = 'complete';
   renderPopupControls();
   assert.equal(hidden, false);
