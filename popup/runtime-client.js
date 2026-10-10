@@ -1,12 +1,12 @@
 import { POPUP_LOG_LEVELS, toErrorMessage } from '../shared/log.js';
-import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
+import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 
 export function createRuntimeClient({
   getActiveWindowId,
   setActiveWindowId,
 } = {}) {
   function requestRuntimeMessage(type, data = {}) {
-    const message = createRuntimeMessage(type, data);
+    const message = { type, ...data };
     const activeWindowId = getActiveWindowId?.();
     if (typeof activeWindowId === 'number' && message.windowId == null) {
       message.windowId = activeWindowId;

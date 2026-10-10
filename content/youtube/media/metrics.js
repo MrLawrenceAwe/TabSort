@@ -18,7 +18,7 @@ function getVideoCurrentTimeSeconds(video, player) {
   return toFiniteNumber(video?.currentTime) ?? toFiniteNumber(player?.getCurrentTime?.());
 }
 
-export function collectVideoMetrics({
+function collectVideoMetrics({
   environment,
   collectPageDetails,
   isCurrentPlaybackReady,

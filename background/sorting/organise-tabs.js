@@ -8,7 +8,7 @@ import {
   getTrackedWindowId,
   isSyncTokenCurrent,
 } from '../windows/tracked-window-store.js';
-import { buildOtherTabOrder, buildYouTubeTabOrder, keepTabGroupsTogether } from './move-order.js';
+import { buildTabOrder } from './move-order.js';
 
 export async function organiseTabs(
   windowId = getTrackedWindowId(),
@@ -41,12 +41,9 @@ export async function organiseTabs(
   const pinnedCount = tabsByIndex.filter((tab) => tab?.pinned).length;
   const unpinnedTabs = tabsByIndex.filter((tab) => tab && !tab.pinned);
 
-  const youtubeOrder = buildYouTubeTabOrder(unpinnedTabs, targetVideoTabOrder);
-  const nonYouTubeOrder = buildOtherTabOrder(
-    unpinnedTabs,
-    Boolean(options.groupOtherTabsBySite),
-  );
-  const finalTabOrder = keepTabGroupsTogether([...youtubeOrder, ...nonYouTubeOrder], unpinnedTabs);
+  const finalTabOrder = buildTabOrder(unpinnedTabs, targetVideoTabOrder, {
+    groupOtherTabsBySite: Boolean(options.groupOtherTabsBySite),
+  });
 
   if (!finalTabOrder.length) {
     return { ok: true, movedCount: 0, skippedReason: 'emptySortOrder' };

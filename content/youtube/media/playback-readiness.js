@@ -1,6 +1,6 @@
 import { getYouTubeVideoId } from '../../../shared/youtube/urls.js';
 import { isFiniteNumber } from '../../../shared/guards.js';
-import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../../shared/messages.js';
+import { RUNTIME_MESSAGE_TYPES } from '../../../shared/messages.js';
 import { getPrimaryVideoElement } from './elements.js';
 
 export function createPlaybackReadinessTracker({
@@ -88,7 +88,7 @@ export function createPlaybackReadinessTracker({
     state.lastReadyFingerprint = getVideoFingerprint(video);
     if (notify) {
       sendExtensionMessage(
-        createRuntimeMessage(RUNTIME_MESSAGE_TYPES.PLAYBACK_METRICS_READY),
+        { type: RUNTIME_MESSAGE_TYPES.PLAYBACK_METRICS_READY },
         'playback metrics ready',
       );
     }

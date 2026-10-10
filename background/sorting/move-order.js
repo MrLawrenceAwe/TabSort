@@ -59,3 +59,10 @@ export function buildOtherTabOrder(unpinnedTabs, groupBySite) {
 
   return [...domainToTabIds.values()].flat();
 }
+
+export function buildTabOrder(unpinnedTabs, orderedTrackedTabIds, { groupOtherTabsBySite = false } = {}) {
+  return keepTabGroupsTogether([
+    ...buildYouTubeTabOrder(unpinnedTabs, orderedTrackedTabIds),
+    ...buildOtherTabOrder(unpinnedTabs, groupOtherTabsBySite),
+  ], unpinnedTabs);
+}

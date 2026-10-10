@@ -1,4 +1,4 @@
-import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../../shared/messages.js';
+import { RUNTIME_MESSAGE_TYPES } from '../../../shared/messages.js';
 import { collectPageDetails as collectYouTubePageDetails } from '../metadata/collect-page-details.js';
 
 export function createExtensionRuntimeBridge({ dependencies, environment, getChrome, getLocation }) {
@@ -44,7 +44,7 @@ export function createExtensionRuntimeBridge({ dependencies, environment, getChr
       const details = collectPageDetails();
       if (details.title || details.durationSeconds != null || details.isLive) {
         sendExtensionMessage(
-          createRuntimeMessage(RUNTIME_MESSAGE_TYPES.PAGE_VIDEO_DETAILS, { details }),
+          { type: RUNTIME_MESSAGE_TYPES.PAGE_VIDEO_DETAILS, details },
           'page video details',
         );
       }

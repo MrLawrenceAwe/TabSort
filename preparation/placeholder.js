@@ -1,3 +1,5 @@
+import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
+
 const params = new URLSearchParams(location.search);
 const tabId = Number(params.get('tabId'));
 const originalUrl = params.get('url');
@@ -5,7 +7,7 @@ const button = document.getElementById('return');
 button.addEventListener('click', async () => {
   button.disabled = true;
   try {
-    await chrome.runtime.sendMessage({ type: 'stopAutoPreparation' });
+    await chrome.runtime.sendMessage({ type: RUNTIME_MESSAGE_TYPES.STOP_AUTO_PREPARATION });
     let tab;
     try { tab = await chrome.tabs.get(tabId); } catch { /* Closed in the preparation window. */ }
     if (tab) {

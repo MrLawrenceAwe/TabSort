@@ -1,4 +1,4 @@
-import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../../../shared/messages.js';
+import { RUNTIME_MESSAGE_TYPES } from '../../../shared/messages.js';
 import { createExtensionRuntimeBridge } from './runtime-bridge.js';
 import { DEFAULT_PAGE_CONFIG } from './config.js';
 import { isFiniteNumber } from '../../../shared/guards.js';
@@ -101,7 +101,7 @@ export function createYouTubePageController({
     }
     lifecycle.lastScriptReadyUrl = currentUrl;
     sendExtensionMessage(
-      createRuntimeMessage(RUNTIME_MESSAGE_TYPES.CONTENT_SCRIPT_READY),
+      { type: RUNTIME_MESSAGE_TYPES.CONTENT_SCRIPT_READY },
       'content script ready',
     );
   }

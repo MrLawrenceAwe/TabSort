@@ -12,6 +12,7 @@ await build({
   entryPoints: [resolve(projectRoot, 'content/youtube/page/entry.js')],
   outfile: resolve(outputDirectory, 'content-runtime.js'),
   bundle: true,
+  minify: true,
   format: 'iife',
   platform: 'browser',
   target: ['chrome120'],

@@ -8,7 +8,7 @@ export function clearRemainingTime(record) {
   }
 }
 
-export function markRemainingTimeAsStale(record) {
+function markRemainingTimeAsStale(record) {
   record.remainingSecondsStale = true;
 }
 

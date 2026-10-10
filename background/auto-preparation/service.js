@@ -25,6 +25,13 @@ const workspace = createPreparationWorkspace();
 const preparationRecordsById = new Map();
 let startAbortController = null;
 let recoveryPromise = null;
+
+async function clearPreparationSession() {
+  await workspace.finishSession();
+  setPreparingTabRecord(null);
+  preparationRecordsById.clear();
+}
+
 export function recoverAutoPreparation() {
   recoveryPromise ??= workspace.recover().catch(error => {
     recoveryPromise = null;
@@ -131,9 +138,7 @@ const runner = createAutoPreparationRunner({
     updateSortStateAndBroadcast();
   },
   async cleanup({ completed } = {}) {
-    await workspace.finishSession();
-    setPreparingTabRecord(null);
-    preparationRecordsById.clear();
+    await clearPreparationSession();
     // A normal run leaves only our progress page in the preparation window.
     // Removing it lets Chrome close that otherwise-empty window. Keep the page
     // after a stopped run so its status remains available to the user.
@@ -196,17 +201,13 @@ export async function startAutoPreparation(message) {
     const windowId = await workspace.create(result.windowId);
     if (signal.aborted) {
       await workspace.discardUnstartedWorkspace();
-      await workspace.finishSession();
-      setPreparingTabRecord(null);
-      preparationRecordsById.clear();
+      await clearPreparationSession();
       return { ok: false, error: 'startCancelled' };
     }
     setPreparationWindowId(windowId);
     return { ...runner.start(result.windowId, items), tiktokPip };
   } catch (error) {
-    await workspace.finishSession();
-    setPreparingTabRecord(null);
-    preparationRecordsById.clear();
+    await clearPreparationSession();
     throw error;
   } finally {
     if (startAbortController === startController) startAbortController = null;

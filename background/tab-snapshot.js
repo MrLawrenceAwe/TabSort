@@ -1,6 +1,6 @@
 import { getAutoPreparation } from './auto-preparation/state.js';
 import { logDebug } from '../shared/log.js';
-import { createRuntimeMessage, RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
+import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import {
   getSnapshotSignature,
   getSortState,
@@ -29,7 +29,7 @@ export function broadcastSnapshotUpdate({ force = false } = {}) {
     setSnapshotSignature(signature);
 
     void chrome.runtime.sendMessage(
-      createRuntimeMessage(RUNTIME_MESSAGE_TYPES.TAB_SNAPSHOT_UPDATED, { payload: snapshot }),
+      { type: RUNTIME_MESSAGE_TYPES.TAB_SNAPSHOT_UPDATED, payload: snapshot },
     ).catch(error => {
       if (!/Receiving end/i.test(error.message)) logDebug('broadcast warning', error);
     });

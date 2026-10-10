@@ -15,7 +15,3 @@ export const RUNTIME_MESSAGE_TYPES = Object.freeze({
   ORGANISE_TABS: 'organiseTabs',
   TAB_SNAPSHOT_UPDATED: 'tabSnapshotUpdated',
 });
-
-export function createRuntimeMessage(type, data = {}) {
-  return { type, ...data };
-}

@@ -146,27 +146,34 @@ async function requestAction(type, data) {
   return false;
 }
 
-async function requestAutoPrepare() {
-  if (popupState.isStartingAutoPreparation || popupState.autoPreparation.status === 'running') return;
-  applyPopupState({ isStartingAutoPreparation: true });
+async function runPopupAction(busyKey, errorMessage, errorContext, task) {
+  applyPopupState({ [busyKey]: true });
   snapshotPoller.setPaused(true);
   setErrorMessage('');
   setNoticeMessage('');
   renderPopupControls();
   try {
-    const response = await runtimeClient.requestRuntimeMessage(
-      RUNTIME_MESSAGE_TYPES.START_AUTO_PREPARATION,
-      { openTikTokPip: Boolean(getPopupElement('openTikTokPipToggle')?.checked) },
-    );
-    if (response?.ok !== true) setErrorMessage('Could not start auto-preparation. Reopen TabSort and try again.');
+    await task();
   } catch (error) {
-    setErrorMessage('Could not start auto-preparation. Try again.');
-    runtimeClient.logPopupError('Starting auto-preparation failed', error);
+    setErrorMessage(errorMessage);
+    runtimeClient.logPopupError(errorContext, error);
   } finally {
-    applyPopupState({ isStartingAutoPreparation: false });
+    applyPopupState({ [busyKey]: false });
     snapshotPoller.setPaused(false);
     renderPopupControls();
   }
+}
+
+async function requestAutoPrepare() {
+  if (popupState.isStartingAutoPreparation || popupState.autoPreparation.status === 'running') return;
+  await runPopupAction('isStartingAutoPreparation',
+    'Could not start auto-preparation. Try again.', 'Starting auto-preparation failed', async () => {
+      const response = await runtimeClient.requestRuntimeMessage(
+        RUNTIME_MESSAGE_TYPES.START_AUTO_PREPARATION,
+        { openTikTokPip: Boolean(getPopupElement('openTikTokPipToggle')?.checked) },
+      );
+      if (response?.ok !== true) setErrorMessage('Could not start auto-preparation. Reopen TabSort and try again.');
+    });
 }
 
 async function requestStopAutoPreparation() {
@@ -175,30 +182,19 @@ async function requestStopAutoPreparation() {
 
 async function requestOrganise() {
   if (popupState.isOrganising || (popupState.isStartingAutoPreparation || popupState.autoPreparation.status === 'running')) return;
-  applyPopupState({ isOrganising: true });
-  snapshotPoller.setPaused(true);
-  setErrorMessage('');
-  setNoticeMessage('');
-  renderPopupControls();
-  try {
-    const response = await runtimeClient.requestRuntimeMessage(RUNTIME_MESSAGE_TYPES.ORGANISE_TABS);
-    if (response?.ok !== true) {
-      setErrorMessage('Could not organise the tabs. Try again.');
-      return;
-    }
-    if (response.movedCount > 0) {
-      setNoticeMessage(
-        `Organised ${response.movedCount} tab${response.movedCount === 1 ? '' : 's'}.`,
-      );
-    }
-  } catch (error) {
-    setErrorMessage('Could not organise the tabs. Try again.');
-    runtimeClient.logPopupError('Organising tabs failed', error);
-  } finally {
-    applyPopupState({ isOrganising: false });
-    snapshotPoller.setPaused(false);
-    renderPopupControls();
-  }
+  await runPopupAction('isOrganising',
+    'Could not organise the tabs. Try again.', 'Organising tabs failed', async () => {
+      const response = await runtimeClient.requestRuntimeMessage(RUNTIME_MESSAGE_TYPES.ORGANISE_TABS);
+      if (response?.ok !== true) {
+        setErrorMessage('Could not organise the tabs. Try again.');
+        return;
+      }
+      if (response.movedCount > 0) {
+        setNoticeMessage(
+          `Organised ${response.movedCount} tab${response.movedCount === 1 ? '' : 's'}.`,
+        );
+      }
+    });
 }
 
 function createSnapshotMessageListener() {

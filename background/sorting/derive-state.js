@@ -1,7 +1,7 @@
 import { isFiniteNumber } from '../../shared/guards.js';
 import { createSortSummary } from '../../shared/sorting/summary.js';
 import { hasReadyRemainingTime } from '../../shared/tabs/sort-readiness.js';
-import { buildYouTubeTabOrder, buildOtherTabOrder, keepTabGroupsTogether } from './move-order.js';
+import { buildTabOrder } from './move-order.js';
 
 function tabIdsEqual(left, right) {
   return left.length === right.length && left.every((id, index) => id === right[index]);
@@ -37,10 +37,7 @@ export function deriveSortState(records, { orderedWindowTabs = [] } = {}) {
     : [];
   const unpinnedTabIds = unpinnedTabs.map((tab) => tab.id);
   const expectedTabOrder = hasTabStripState
-    ? keepTabGroupsTogether([
-      ...buildYouTubeTabOrder(unpinnedTabs, targetVideoTabOrder),
-      ...buildOtherTabOrder(unpinnedTabs, false),
-    ], unpinnedTabs)
+    ? buildTabOrder(unpinnedTabs, targetVideoTabOrder)
     : [];
 
   // Compare against the complete unpinned strip when available. Without it,
