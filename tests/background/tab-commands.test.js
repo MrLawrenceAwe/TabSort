@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
+import { TAB_LOAD_STATES } from '../../shared/tabs/constants.js';
 import {
   getTabRecordsById,
   getTrackedWindowId,

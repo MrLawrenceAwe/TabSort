@@ -1,4 +1,4 @@
-import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
+import { TAB_LOAD_STATES } from '../../shared/tabs/constants.js';
 import { logDebug, logWarn } from '../../shared/log.js';
 
 const MESSAGE_FAILURE_REASONS = Object.freeze({

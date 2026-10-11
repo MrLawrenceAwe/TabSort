@@ -1,4 +1,4 @@
-import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
+import { TAB_LOAD_STATES } from '../../shared/tabs/constants.js';
 import { createSortSummary } from '../../shared/sorting/summary.js';
 import {
   getSortState,

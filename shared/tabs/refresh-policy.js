@@ -1,5 +1,5 @@
 import { hasReadyRemainingTime } from './sort-readiness.js';
-import { TAB_LOAD_STATES } from './load-states.js';
+import { TAB_LOAD_STATES } from './constants.js';
 import {
   canLoadingStillSettle,
   canMediaStillSettle,

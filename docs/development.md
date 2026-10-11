@@ -7,7 +7,7 @@
 - `npm test` runs the unit and integration-style Node tests.
 - `npm run test:e2e` launches Chromium with the unpacked extension and runs the popup/runtime
   smoke and responsiveness tests. Install its browser once with `npx playwright install chromium`.
-- `npm run check` builds and runs tests, linting, static import checks, and release validation.
+- `npm run check` builds and runs tests, source linting, static syntax/import checks (including the bundle), and release validation.
 - `npm run package` creates `release/tabsort-v<version>.zip`.
 
 ### Code organisation
@@ -35,6 +35,7 @@
 - `background/auto-preparation/session-cache.js` persists prepared tab snapshots.
 - `shared/tabs/` contains load states, readiness grace periods, guidance, and refresh policy.
   `shared/preferences.js` persists grouping and TikTok auto-preparation preferences.
+  `shared/tabs/constants.js` defines load states and playback duration tolerance.
   `shared/urls.js` provides generic site grouping, and `shared/preparation-progress.js` formats progress counts.
 - `tests/background/`, `tests/youtube/`, `tests/popup/`, and `tests/shared/` mirror
   the runtime boundaries. `sort-state.test.js` checks derived sorting state.
@@ -79,7 +80,12 @@ Records keep Chrome's `browserTitle` separately from page playback metadata so
 sleeping tabs remain identifiable after worker suspension or window changes.
 
 The package and manifest versions must match. CI verifies the committed bundle, runs the
-Chromium smoke test, and uploads the packaged extension as a workflow artifact.
+Chromium suite, and uploads the packaged extension. Failed checks upload `test-results/`
+with Playwright traces. Preparation and Stop run as separate scenarios; preparation has
+a 60-second test budget for setup and two sequential reads. Runtime deadlines are unchanged.
+
+Preferences use local storage. Missing keys import existing sync settings once, keeping
+local values and retrying imports after read failures. Subsequent saves do not use sync.
 
 ## Preparation sampling
 

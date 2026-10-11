@@ -24,8 +24,8 @@ export function createPreviewChrome() {
       onMessage: { addListener() {}, removeListener() {} },
     },
     tabs: { query: async () => [{ id: 1, windowId: 1 }] },
-    storage: { sync: {
-      get: async defaults => ({ ...defaults, ...preferences }),
+    storage: { local: {
+      get: async keys => Object.fromEntries(keys.filter(key => Object.hasOwn(preferences, key)).map(key => [key, preferences[key]])),
       set: async update => Object.assign(preferences, update),
     } },
   };
