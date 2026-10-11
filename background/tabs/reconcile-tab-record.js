@@ -1,4 +1,4 @@
-import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
+import { TAB_LOAD_STATES } from '../../shared/tabs/constants.js';
 import { createTabRecord } from './record.js';
 import { clearRemainingTime } from './video-state.js';
 

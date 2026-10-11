@@ -1,108 +1,69 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { DEFAULT_PREFERENCES, loadPreferences, savePreferences } from '../shared/preferences.js';
 
-import {
-  DEFAULT_PREFERENCES,
-  loadPreferences,
-  savePreferences,
-} from '../shared/preferences.js';
-
-function withMissingChrome(fn) {
-  const hadChrome = Object.prototype.hasOwnProperty.call(globalThis, 'chrome');
-  const originalChrome = globalThis.chrome;
-
-  Reflect.deleteProperty(globalThis, 'chrome');
-
-  return Promise.resolve()
-    .then(fn)
-    .finally(() => {
-      if (hadChrome) {
-        globalThis.chrome = originalChrome;
-      } else {
-        Reflect.deleteProperty(globalThis, 'chrome');
-      }
-    });
+function storageFixture(localValues = {}, syncValues = {}) {
+  const values = { ...localValues };
+  let syncReads = 0;
+  globalThis.chrome = { storage: {
+    local: {
+      get: async keys => Object.fromEntries(keys.filter(key => Object.hasOwn(values, key)).map(key => [key, values[key]])),
+      set: async update => Object.assign(values, update),
+    },
+    sync: {
+      get: async keys => {
+        syncReads++;
+        return Object.fromEntries(keys.filter(key => Object.hasOwn(syncValues, key)).map(key => [key, syncValues[key]]));
+      },
+      set: async () => { throw new Error('sync quota exceeded'); },
+    },
+  } };
+  return { values, syncReads: () => syncReads };
 }
 
-function withChromeStorage(storage, fn) {
-  const hadChrome = Object.prototype.hasOwnProperty.call(globalThis, 'chrome');
-  const originalChrome = globalThis.chrome;
-  globalThis.chrome = {
-    storage,
-  };
+test.afterEach(() => { delete globalThis.chrome; });
 
-  return Promise.resolve()
-    .then(fn)
-    .finally(() => {
-      if (hadChrome) {
-        globalThis.chrome = originalChrome;
-      } else {
-        Reflect.deleteProperty(globalThis, 'chrome');
-      }
-    });
-}
+test('missing Chrome returns defaults and saving is harmless', async () => {
+  assert.deepEqual(await loadPreferences(), DEFAULT_PREFERENCES);
+  await savePreferences({ groupOtherTabsBySite: true });
+});
 
-test('loadPreferences falls back to defaults when chrome is unavailable', async () => {
-  await withMissingChrome(async () => {
-    const options = await loadPreferences();
-    assert.deepEqual(options, DEFAULT_PREFERENCES);
+test('saved local preferences remain authoritative when sync writes fail', async () => {
+  const fixture = storageFixture({}, { groupOtherTabsBySite: false });
+  await savePreferences({ groupOtherTabsBySite: true });
+  assert.equal((await loadPreferences()).groupOtherTabsBySite, true);
+  await savePreferences({ openTikTokPipOnAutoPrepare: true });
+  assert.deepEqual(await loadPreferences(), {
+    groupOtherTabsBySite: true, openTikTokPipOnAutoPrepare: true,
+  });
+  assert.deepEqual(fixture.values, {
+    groupOtherTabsBySite: true, openTikTokPipOnAutoPrepare: true,
   });
 });
 
-test('savePreferences resolves when chrome is unavailable', async () => {
-  await withMissingChrome(async () => {
-    await assert.doesNotReject(() => savePreferences({ groupOtherTabsBySite: true }));
+test('imports sync settings once without overwriting local fallback settings', async () => {
+  const fixture = storageFixture({ groupOtherTabsBySite: false }, {
+    groupOtherTabsBySite: true, openTikTokPipOnAutoPrepare: true,
   });
+  assert.deepEqual(await loadPreferences(), {
+    groupOtherTabsBySite: false, openTikTokPipOnAutoPrepare: true,
+  });
+  await loadPreferences();
+  assert.equal(fixture.syncReads(), 1);
 });
 
-test('loadPreferences falls back to local storage when sync storage fails', async () => {
-  const calls = [];
-  await withChromeStorage(
-    {
-      sync: {
-        async get() {
-          calls.push('sync');
-          throw new Error('sync unavailable');
-        },
-      },
-      local: {
-        async get() {
-          calls.push('local');
-          return { groupOtherTabsBySite: true };
-        },
-      },
-    },
-    async () => {
-      assert.deepEqual(await loadPreferences(), {
-        groupOtherTabsBySite: true,
-        openTikTokPipOnAutoPrepare: false,
-      });
-    },
-  );
-  assert.deepEqual(calls, ['sync', 'local']);
+test('failed sync import retains local settings and retries later', async () => {
+  const fixture = storageFixture({ groupOtherTabsBySite: true }, { openTikTokPipOnAutoPrepare: true });
+  const get = chrome.storage.sync.get;
+  chrome.storage.sync.get = async () => { throw new Error('sync unavailable'); };
+  assert.deepEqual(await loadPreferences(), { ...DEFAULT_PREFERENCES, groupOtherTabsBySite: true });
+  assert.ok(!Object.hasOwn(fixture.values, 'openTikTokPipOnAutoPrepare'));
+  chrome.storage.sync.get = get;
+  assert.equal((await loadPreferences()).openTikTokPipOnAutoPrepare, true);
 });
 
-test('savePreferences falls back to local storage when sync storage fails', async () => {
-  const calls = [];
-  const update = { groupOtherTabsBySite: true };
-  await withChromeStorage(
-    {
-      sync: {
-        async set(items) {
-          calls.push(['sync', items]);
-          throw new Error('sync unavailable');
-        },
-      },
-      local: {
-        async set(items) {
-          calls.push(['local', items]);
-        },
-      },
-    },
-    () => savePreferences(update),
-  );
-  assert.deepEqual(calls, [
-    ['sync', update],
-    ['local', update],
-  ]);
+test('a local write failure is reported rather than claiming the setting was saved', async () => {
+  storageFixture();
+  chrome.storage.local.set = async () => { throw new Error('local storage unavailable'); };
+  await assert.rejects(savePreferences({ groupOtherTabsBySite: true }), /local storage unavailable/);
 });

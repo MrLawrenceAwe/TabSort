@@ -61,8 +61,8 @@ TabSort performs all processing locally and does not send browsing data to a ser
 - `scripting` reinjects the bundled YouTube runtime if Chrome reports that a tab has no content
   script receiver.
 - `webNavigation` detects YouTube single-page navigation reliably.
-- `storage` saves the grouping preference using Chrome sync storage when available, falling back
-  to local storage.
+- `storage` saves preferences locally. Existing sync preferences are imported once; saved
+  local values take precedence.
 - The YouTube host permission limits page inspection and content-script execution to
   `youtube.com`.
 

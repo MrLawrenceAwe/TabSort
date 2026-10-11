@@ -1,5 +1,5 @@
 import { getYouTubeVideoId } from '../../shared/youtube/urls.js';
-import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
+import { TAB_LOAD_STATES } from '../../shared/tabs/constants.js';
 import { isFiniteNumber } from '../../shared/guards.js';
 
 export function clearRemainingTime(record) {

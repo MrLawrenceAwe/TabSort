@@ -2,7 +2,7 @@ import { RECENTLY_LOADED_MS, RECENT_WATCH_TRANSITION_MS, MEDIA_WAIT_GRACE_MS, LO
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
+import { TAB_LOAD_STATES } from '../../shared/tabs/constants.js';
 import {
   createSnapshotPoller,
   shouldPollSnapshot,

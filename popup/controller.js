@@ -74,16 +74,20 @@ async function initializePopupPreferences() {
   const groupOtherTabsToggle = getPopupElement('groupOtherTabsToggle');
   const openTikTokPipToggle = getPopupElement('openTikTokPipToggle');
 
-  if (groupOtherTabsToggle) {
-    groupOtherTabsToggle.checked = Boolean(options.groupOtherTabsBySite);
-    groupOtherTabsToggle.addEventListener('change', () => {
-      savePreferences({ groupOtherTabsBySite: groupOtherTabsToggle.checked });
-    });
-  }
-  if (openTikTokPipToggle) {
-    openTikTokPipToggle.checked = Boolean(options.openTikTokPipOnAutoPrepare);
-    openTikTokPipToggle.addEventListener('change', () => {
-      savePreferences({ openTikTokPipOnAutoPrepare: openTikTokPipToggle.checked });
+  for (const [toggle, key] of [
+    [groupOtherTabsToggle, 'groupOtherTabsBySite'],
+    [openTikTokPipToggle, 'openTikTokPipOnAutoPrepare'],
+  ]) {
+    if (!toggle) continue;
+    toggle.checked = Boolean(options[key]);
+    toggle.addEventListener('change', async () => {
+      toggle.disabled = true;
+      try { await savePreferences({ [key]: toggle.checked }); }
+      catch (error) {
+        toggle.checked = Boolean((await loadPreferences())[key]);
+        setErrorMessage('Could not save the setting. Try again.');
+        runtimeClient.logPopupError('Saving preference failed', error);
+      } finally { toggle.disabled = false; }
     });
   }
 }

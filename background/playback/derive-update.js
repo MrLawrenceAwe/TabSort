@@ -3,7 +3,7 @@ import {
   toFiniteNumber,
   toPositiveFiniteNumber,
 } from '../../shared/guards.js';
-import { MEDIA_DURATION_SYNC_TOLERANCE_SECONDS } from '../../shared/playback/constants.js';
+import { MEDIA_DURATION_SYNC_TOLERANCE_SECONDS } from '../../shared/tabs/constants.js';
 import { getYouTubeVideoId } from '../../shared/youtube/urls.js';
 
 function areEquivalentVideoUrls(leftUrl, rightUrl) {

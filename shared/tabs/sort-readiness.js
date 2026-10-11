@@ -1,5 +1,5 @@
 import { isFiniteNumber } from '../guards.js';
-import { TAB_LOAD_STATES } from './load-states.js';
+import { TAB_LOAD_STATES } from './constants.js';
 
 export function hasRemainingTime(record) {
   return isFiniteNumber(record?.videoDetails?.remainingSeconds);

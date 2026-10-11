@@ -1,4 +1,4 @@
-import { TAB_LOAD_STATES } from '../../shared/tabs/load-states.js';
+import { TAB_LOAD_STATES } from '../../shared/tabs/constants.js';
 import { logDebug } from '../../shared/log.js';
 import { RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import { getTab, MESSAGE_FAILURE_REASONS, sendMessageToTab } from '../tabs/chrome-tabs.js';

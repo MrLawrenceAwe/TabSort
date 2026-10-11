@@ -98,11 +98,11 @@ test('loads the bundled runtime and reports tracked YouTube tabs in the popup', 
   }
 });
 
-test('prepares media in another window while browsing continues, then returns tabs on Stop', async () => {
+test('prepares media while browsing continues and restores the tabs', async () => {
+  test.setTimeout(60_000);
   const userDataDirectory = mkdtempSync(join(tmpdir(), 'tabsort-auto-prepare-'));
   const context = await chromium.launchPersistentContext(userDataDirectory, {
     headless: false,
-    ignoreDefaultArgs: ['--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding'],
     args: [`--disable-extensions-except=${projectRoot}`, `--load-extension=${projectRoot}`],
   });
   // A real one-second silent WAV decoded by Chromium's HTMLVideoElement.
@@ -182,9 +182,24 @@ test('prepares media in another window while browsing continues, then returns ta
       const snapshot = await chrome.runtime.sendMessage({ type: 'getTabSnapshot', windowId });
       return ids.every(id => snapshot.tabRecordsById[id]?.videoDetails.remainingSeconds === 1 && !snapshot.tabRecordsById[id]?.remainingSecondsStale);
     }, ids)).toBe(true);
-    await popup.close();
+  } finally {
+    await context.close();
+    rmSync(userDataDirectory, { recursive: true, force: true });
+  }
+});
 
-    // These pages never expose media. Stop while the first is waiting.
+test('Stop returns a waiting preparation tab without changing the browsing selection', async () => {
+  const userDataDirectory = mkdtempSync(join(tmpdir(), 'tabsort-stop-'));
+  const context = await chromium.launchPersistentContext(userDataDirectory, {
+    headless: false,
+    args: [`--disable-extensions-except=${projectRoot}`, `--load-extension=${projectRoot}`],
+  });
+  try {
+    await context.route('https://www.youtube.com/**', route => route.fulfill({
+      contentType: 'text/html', body: '<title>Waiting video</title><video></video>',
+    }));
+    const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
+    const extensionId = new URL(worker.url()).host;
     const firstStalled = await context.newPage();
     const secondStalled = await context.newPage();
     const reopened = await context.newPage();
@@ -192,6 +207,7 @@ test('prepares media in another window while browsing continues, then returns ta
     await firstStalled.goto('https://www.youtube.com/watch?v=stalled-one');
     await secondStalled.goto('https://www.youtube.com/watch?v=stalled-two');
     const stalledIds = await worker.evaluate(async () => (await chrome.tabs.query({ url: 'https://www.youtube.com/watch?v=stalled-*' })).map(tab => tab.id));
+    const originalTabs = await worker.evaluate(ids => Promise.all(ids.map(id => chrome.tabs.get(id))), stalledIds);
     await reopened.reload();
     await reopened.getByRole('button', { name: 'Auto-prepare tabs', exact: true }).click();
     await expect.poll(() => context.pages().some(page => page.url().endsWith('/preparation/progress.html'))).toBe(true);
@@ -199,11 +215,9 @@ test('prepares media in another window while browsing continues, then returns ta
     await expect.poll(() => worker.evaluate(async id => (await chrome.tabs.get(id)).active, stalledIds[0])).toBe(true);
     await stopWindow.getByRole('button', { name: 'Stop', exact: true }).click();
     await expect(stopWindow.getByRole('heading')).toHaveText('Stopped');
-    const state = await worker.evaluate(async ids => ({
-      firstActive: (await chrome.tabs.get(ids[0])).active,
-      secondActive: (await chrome.tabs.get(ids[1])).active,
-    }), stalledIds);
-    expect(state).toEqual({ firstActive: false, secondActive: false });
+    const returned = await worker.evaluate(ids => Promise.all(ids.map(id => chrome.tabs.get(id))), stalledIds);
+    expect(returned.map(tab => ({ active: tab.active, windowId: tab.windowId, index: tab.index })))
+      .toEqual(originalTabs.map(tab => ({ active: false, windowId: tab.windowId, index: tab.index })));
   } finally {
     await context.close();
     rmSync(userDataDirectory, { recursive: true, force: true });

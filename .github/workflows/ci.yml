@@ -19,6 +19,12 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: xvfb-run --auto-servernum npm run check
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: tabsort-test-results
+          path: test-results/
+          if-no-files-found: ignore
       - run: git diff --exit-code -- dist/content-runtime.js
       - run: npm run package
       - uses: actions/upload-artifact@v4

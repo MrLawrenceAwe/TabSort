@@ -1,4 +1,4 @@
-import { TAB_LOAD_STATES } from './load-states.js';
+import { TAB_LOAD_STATES } from './constants.js';
 import { hasRemainingTime } from './sort-readiness.js';
 import {
   LOADING_GRACE_MS,
