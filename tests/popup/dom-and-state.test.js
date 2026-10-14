@@ -138,7 +138,7 @@ test('organise control hides for an organised layout and returns when the order 
   resetPopupState();
 });
 
-test('TikTok PiP option follows the auto-prepare control visibility', () => {
+test('TikTok PiP option requires more than seven unready tabs and hides during preparation', () => {
   const document = createFakeDocument();
   const option = { hidden: false, classList: { toggle(name, hidden) { if (name === 'hide') this.owner.hidden = hidden; } } };
   option.classList.owner = option;
@@ -147,9 +147,22 @@ test('TikTok PiP option follows the auto-prepare control visibility', () => {
   resetPopupDom();
   resetPopupState();
   initializePopupDom(document);
-  popupState.sortSummary = { readyCount: 1, sortableCount: 2, readyTabsLeadInOrder: false };
+  popupState.sortSummary = { readyCount: 1, sortableCount: 8, readyTabsLeadInOrder: false };
+  renderPopupControls();
+  assert.equal(option.hidden, true);
+
+  popupState.sortSummary.sortableCount = 9;
   renderPopupControls();
   assert.equal(option.hidden, false);
+
+  popupState.autoPreparation.status = 'running';
+  renderPopupControls();
+  assert.equal(option.hidden, true);
+
+  popupState.autoPreparation.status = 'idle';
+  popupState.sortSummary.readyCount = 2;
+  renderPopupControls();
+  assert.equal(option.hidden, true);
 
   popupState.sortSummary = { readyCount: 2, sortableCount: 2, readyTabsLeadInOrder: false };
   renderPopupControls();

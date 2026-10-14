@@ -12,7 +12,8 @@ position and Chrome tab group; the original video returns without changing your
 selected tab. Ready, pinned, live, and currently selected tabs are skipped. TabSort
 does not click Play, so videos that still need interaction may be skipped.
 
-The optional **Open TikTok picture-in-picture during auto-prepare** setting asks
+The optional **Open TikTok picture-in-picture during auto-prepare** setting appears
+only when more than seven eligible tabs still need preparation. When enabled, it asks
 the locally installed TikTok Picture-in-Picture extension to reuse or create a
 TikTok tab and start automatic PiP. Preparation still starts if TikTok or playable
 media is unavailable.

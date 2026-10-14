@@ -44,6 +44,10 @@ export function shouldShowOrganiseButton(sortSummary, isYouTubeLayoutOrganised) 
   return sortSummary.readyCount >= 2 && !isYouTubeLayoutOrganised;
 }
 
+export function shouldShowTikTokPipOption(sortSummary) {
+  return sortSummary.sortableCount - sortSummary.readyCount > 7;
+}
+
 function updateOrganiseButton(organiseButton, shouldShow, disabled) {
   if (!organiseButton) return;
   organiseButton.classList.toggle('hide', !shouldShow);
@@ -108,7 +112,8 @@ export function renderPopupControls() {
     autoPrepareButton.textContent = popupState.isStartingAutoPreparation ? 'Starting auto-prepare…' : 'Auto-prepare tabs';
   }
   const openTikTokPipOption = getPopupElement('openTikTokPipToggle')?.closest?.('.option-toggle');
-  openTikTokPipOption?.classList?.toggle('hide', !shouldShowAutoPrepare);
+  openTikTokPipOption?.classList?.toggle('hide',
+    !shouldShowAutoPrepare || !shouldShowTikTokPipOption(popupState.sortSummary));
   getPopupElement('stopAutoPreparationButton')?.classList.toggle('hide', !running);
   const autoPreparationStatus = getPopupElement('autoPreparationStatus');
   if (autoPreparationStatus) {

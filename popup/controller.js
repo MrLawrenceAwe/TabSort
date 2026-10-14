@@ -7,7 +7,7 @@ import { createRuntimeClient } from './runtime-client.js';
 import { createTabSnapshotClient } from './tab-snapshot-client.js';
 import { createSnapshotPoller } from './snapshot-poller.js';
 import { renderTabList } from './tab-list-view.js';
-import { renderPopupControls, setNextStepHeaderVisible } from './controls-view.js';
+import { renderPopupControls, setNextStepHeaderVisible, shouldShowTikTokPipOption } from './controls-view.js';
 import {
   initializePopupDom,
   getPopupElement,
@@ -174,7 +174,8 @@ async function requestAutoPrepare() {
     'Could not start auto-preparation. Try again.', 'Starting auto-preparation failed', async () => {
       const response = await runtimeClient.requestRuntimeMessage(
         RUNTIME_MESSAGE_TYPES.START_AUTO_PREPARATION,
-        { openTikTokPip: Boolean(getPopupElement('openTikTokPipToggle')?.checked) },
+        { openTikTokPip: shouldShowTikTokPipOption(popupState.sortSummary) &&
+          Boolean(getPopupElement('openTikTokPipToggle')?.checked) },
       );
       if (response?.ok !== true) setErrorMessage('Could not start auto-preparation. Reopen TabSort and try again.');
     });
