@@ -1,17 +1,15 @@
-import { formatPreparationCounts, formatPreparationDetail } from '../shared/preparation-progress.js';
+import { formatPreparationCounts, formatPreparationDetail, formatPreparationHeading } from '../shared/preparation-progress.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 const progress = document.getElementById('progress');
 const current = document.getElementById('current');
 const stop = document.getElementById('stop');
 function render(state) {
   const running = state.status === 'running';
-  const heading = running ? 'Auto-preparing tabs' : state.status === 'complete' ? 'Auto-prepare complete' :
-    state.status === 'stopped' ? state.reason : 'No auto-prepare in progress';
-  document.querySelector('h1').textContent = heading;
+  document.querySelector('h1').textContent = formatPreparationHeading(state);
   progress.textContent = formatPreparationCounts(state);
   current.textContent = running
     ? `${formatPreparationDetail(state)}${state.title ? ` · ${state.title}` : ''}`
-    : '';
+    : formatPreparationDetail(state);
   stop.disabled = !running;
 }
 async function refresh() {

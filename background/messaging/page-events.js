@@ -1,5 +1,5 @@
 import { isFiniteNumber } from '../../shared/guards.js';
-import { getOrCreateTabRecord } from '../tabs/record.js';
+import { getOrCreateMutableTabRecord } from '../tabs/record.js';
 import {
   applyContentScriptReady,
   applyVideoDetailsFromPage,
@@ -52,7 +52,7 @@ export async function handleContentScriptReady(_message, sender) {
   const previousRecord = getTabRecord(tabId);
   const senderUrl = pageSender.url ?? null;
   const videoChanged = hasYouTubeVideoChanged(previousRecord?.url, senderUrl);
-  const record = getOrCreateTabRecord(tabId, windowId, {
+  const record = getOrCreateMutableTabRecord(tabId, windowId, {
     url: senderUrl,
     index: sender?.tab?.index,
     pinned: sender?.tab?.pinned,
@@ -69,7 +69,7 @@ export async function handlePlaybackMetricsReady(_message, sender) {
   if (!pageSender) return;
   const { tabId, windowId } = pageSender;
   setTrackedWindowId(windowId);
-  const record = getOrCreateTabRecord(tabId, windowId);
+  const record = getOrCreateMutableTabRecord(tabId, windowId);
   markPlaybackMetricsReady(record);
   await collectPlaybackMetrics(tabId);
 }
@@ -81,7 +81,7 @@ export async function handlePageVideoDetails(message, sender) {
   const { tabId, windowId, url: detailUrl } = pageSender;
 
   setTrackedWindowId(windowId);
-  const record = getOrCreateTabRecord(tabId, windowId, { url: detailUrl });
+  const record = getOrCreateMutableTabRecord(tabId, windowId, { url: detailUrl });
   const videoChanged = hasYouTubeVideoChanged(record.url, detailUrl);
   applyVideoDetailsFromPage(record, details, { videoChanged });
   updateSortStateAndBroadcast();

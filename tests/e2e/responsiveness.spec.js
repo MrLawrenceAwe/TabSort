@@ -1,35 +1,15 @@
-import { chromium, expect, test } from '@playwright/test';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { expect, test } from './fixtures/extension.js';
 
-let context;
-let directory;
-let extensionId;
-
-test.beforeEach(async () => {
-  directory = mkdtempSync(join(tmpdir(), 'tabsort-responsiveness-'));
-  const projectRoot = resolve('.');
-  context = await chromium.launchPersistentContext(directory, {
-    headless: false,
-    args: [`--disable-extensions-except=${projectRoot}`, `--load-extension=${projectRoot}`],
-  });
+test.beforeEach(async ({ context }) => {
   // These pages contain no players, sources or autoplay: existing browser
   // playback and audio preferences are never involved in the tests.
   await context.route('https://www.youtube.com/**', route => route.fulfill({
     contentType: 'text/html',
     body: '<html><head><title>Live fixture</title><meta itemprop="isLiveBroadcast" content="True"></head><body>No media</body></html>',
   }));
-  const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
-  extensionId = new URL(worker.url()).host;
 });
 
-test.afterEach(async () => {
-  await context?.close();
-  rmSync(directory, { recursive: true, force: true });
-});
-
-test('snapshot loading finishes while a tracked renderer is unresponsive', async () => {
+test('snapshot loading finishes while a tracked renderer is unresponsive', async ({ context, extensionId }) => {
   const video = await context.newPage();
   await video.goto('https://www.youtube.com/watch?v=stalled-renderer');
   const popup = await context.newPage();
@@ -51,7 +31,7 @@ test('snapshot loading finishes while a tracked renderer is unresponsive', async
   }
 });
 
-test('snapshot refresh preserves keyboard focus on the same tab action', async () => {
+test('snapshot refresh preserves keyboard focus on the same tab action', async ({ context, extensionId }) => {
   const popup = await context.newPage();
   await popup.goto(`chrome-extension://${extensionId}/popup/popup.html`);
   await popup.evaluate(async () => {

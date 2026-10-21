@@ -1,3 +1,14 @@
+const PREPARATION_STATUS_LABELS = Object.freeze({
+  idle: 'No auto-prepare in progress',
+  running: 'Auto-preparing tabs',
+  complete: 'Auto-prepare complete',
+  stopped: 'Auto-prepare stopped',
+});
+
+export function formatPreparationHeading(state) {
+  return PREPARATION_STATUS_LABELS[state.status] || PREPARATION_STATUS_LABELS.idle;
+}
+
 export function formatPreparationCounts({ completed = 0, total = 0, ready = 0, skipped = 0 }) {
   return `${completed} of ${total} checked · ${ready} ready · ${skipped} skipped`;
 }
@@ -16,4 +27,10 @@ export function formatPreparationDetail(state) {
   if (state.status === 'stopped') return state.reason || 'Stopped';
   if (state.status !== 'running') return '';
   return PREPARATION_PHASE_LABELS[state.phase] || 'Preparing video';
+}
+
+export function formatPreparationStatus(state) {
+  if (state.status === 'idle') return '';
+  const detail = formatPreparationDetail(state);
+  return `${formatPreparationHeading(state)}: ${formatPreparationCounts(state)}${detail ? ` · ${detail}` : ''}`;
 }

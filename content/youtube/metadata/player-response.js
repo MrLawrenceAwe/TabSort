@@ -18,8 +18,6 @@ function extractInitialPlayerResponse(source) {
     let inString = false;
     let escape = false;
     let quoteChar = '';
-    let parsedSuccessfully = false;
-    let parsedResult = null;
 
     for (let i = start; i < source.length; i += 1) {
       const char = source[i];
@@ -48,18 +46,13 @@ function extractInitialPlayerResponse(source) {
         if (depth === 0) {
           const jsonText = source.slice(start, i + 1);
           try {
-            parsedResult = JSON.parse(jsonText);
-            parsedSuccessfully = true;
+            return JSON.parse(jsonText);
           } catch (_error) {
             // Ignore parse errors from partial or invalid matches and continue.
           }
           break;
         }
       }
-    }
-
-    if (parsedSuccessfully) {
-      return parsedResult;
     }
   }
 }

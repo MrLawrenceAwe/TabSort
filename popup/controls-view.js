@@ -1,4 +1,4 @@
-import { formatPreparationCounts, formatPreparationDetail } from '../shared/preparation-progress.js';
+import { formatPreparationStatus } from '../shared/preparation-progress.js';
 import { getPopupElement } from './elements.js';
 import { popupState } from './store.js';
 
@@ -67,17 +67,6 @@ export function setNextStepHeaderVisible(visible) {
 function setSiteGroupingOptionVisible(visible) {
   const toggle = getPopupElement('groupOtherTabsToggle')?.closest?.('.option-toggle');
   toggle?.classList?.toggle('hide', !visible);
-}
-
-function formatPreparationStatus(state) {
-  if (state.status === 'idle') return '';
-  const labels = {
-    running: 'Auto-preparing tabs',
-    complete: 'Auto-prepare complete',
-    stopped: 'Auto-prepare stopped',
-  };
-  const detail = formatPreparationDetail(state);
-  return `${labels[state.status]}: ${formatPreparationCounts(state)}${detail ? ` · ${detail}` : ''}`;
 }
 
 export function renderPopupControls() {

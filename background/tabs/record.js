@@ -34,7 +34,7 @@ export function createTabRecord(tabId, windowId, defaults = {}) {
   };
 }
 
-export function getOrCreateTabRecord(tabId, windowId, defaults = {}) {
+export function getOrCreateMutableTabRecord(tabId, windowId, defaults = {}) {
   if (!isFiniteNumber(tabId)) {
     return undefined;
   }

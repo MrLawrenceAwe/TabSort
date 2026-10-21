@@ -58,12 +58,6 @@ function createFakeDocument() {
   };
 }
 
-test('popup view model keeps flat sort summary fields available for view decisions', () => {
-  resetPopupState();
-  popupState.sortSummary.readyTabsLeadInOrder = false;
-  assert.equal(popupState.sortSummary.readyTabsLeadInOrder, false);
-});
-
 test('popup accepts snapshot broadcasts only for its active window', () => {
   resetPopupState();
   setActiveWindowId(2);

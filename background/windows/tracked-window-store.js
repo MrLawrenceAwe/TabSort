@@ -99,7 +99,7 @@ export function resetTrackedWindowStore({ windowId = null } = {}) {
   Object.assign(trackedWindowState, nextState);
 }
 
-// Writes take defensive copies. Only getMutableTabRecord exposes owned state.
+// Writes take defensive copies. Mutable record access is explicitly named.
 export function replaceAllTabRecords(tabRecordsById = {}) {
   trackedWindowState.tabRecordsById = cloneTabRecordsById(tabRecordsById);
 }

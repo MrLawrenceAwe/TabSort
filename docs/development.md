@@ -34,6 +34,9 @@ Playwright traces.
   tab readiness and guidance policies, and preparation progress formatting.
 - `tests/background/`, `tests/youtube/`, `tests/popup/`, and `tests/shared/` cover
   their corresponding runtime boundaries.
+- Preparation runner tests cover queue timing and restoration; service tests cover
+  cancellation, playback failures, and cache recovery. The performance suite checks
+  large queues and progress payload sizes.
 - `tests/e2e/` separates extension smoke, auto-preparation, sorting, responsiveness,
   and discarded-workspace scenarios. `fixtures/extension.js` provides the shared
   persistent browser context, service worker, and extension ID for feature suites.
@@ -41,7 +44,8 @@ Playwright traces.
 ## Tab records and playback contracts
 
 Store reads and writes take defensive copies; mutation uses explicit write functions
-and `getMutableTabRecord()`. Tab event bursts reconcile once per window and batch
+and the explicitly named `getMutableTabRecord()` and `getOrCreateMutableTabRecord()`
+accessors. Tab event bursts reconcile once per window and batch
 playback collection by unique tab ID.
 
 Tab records use `loaded`, `loading`, and `discarded` load states. `loadedAt` records
