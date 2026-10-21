@@ -36,7 +36,6 @@ function createMessageHandlers(message, sender) {
     [RUNTIME_MESSAGE_TYPES.GET_AUTO_PREPARATION]: () => ({ ok: true, autoPreparation: getAutoPreparation() }),
     [RUNTIME_MESSAGE_TYPES.GET_TAB_SNAPSHOT]: () => getWindowSnapshot(message),
     [RUNTIME_MESSAGE_TYPES.ORGANISE_TABS]: () => handleOrganiseTabs(message),
-    [RUNTIME_MESSAGE_TYPES.PING]: async () => ({ ok: true }),
     [RUNTIME_MESSAGE_TYPES.ACTIVATE_TAB]: () => activateTab(message),
     [RUNTIME_MESSAGE_TYPES.RELOAD_TAB]: () => reloadTab(message),
     [RUNTIME_MESSAGE_TYPES.LOG_POPUP_MESSAGE]: async () => {

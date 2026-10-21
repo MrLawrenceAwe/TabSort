@@ -4,7 +4,7 @@ import test from 'node:test';
 import { RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import { createTabSnapshotClient } from '../../popup/tab-snapshot-client.js';
 
-test('snapshot client retries after refreshing the active window and worker', async () => {
+test('snapshot client retries after refreshing the active window', async () => {
   const requestedTypes = [];
   let snapshotRequests = 0;
   let windowSyncs = 0;
@@ -26,7 +26,6 @@ test('snapshot client retries after refreshing the active window and worker', as
   assert.equal(windowSyncs, 1);
   assert.deepEqual(requestedTypes, [
     RUNTIME_MESSAGE_TYPES.GET_TAB_SNAPSHOT,
-    RUNTIME_MESSAGE_TYPES.PING,
     RUNTIME_MESSAGE_TYPES.GET_TAB_SNAPSHOT,
   ]);
 });

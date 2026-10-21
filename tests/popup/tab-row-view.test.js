@@ -41,7 +41,7 @@ test('recently loaded rows avoid contradictory stale guidance', () => {
   assert.equal(formatRemainingStatus(record), 'Loading video');
 });
 
-test('recent watch URL transitions avoid reload guidance while runtime can catch up', () => {
+test('recent video URL transitions avoid reload guidance while runtime can catch up', () => {
   const activeRecord = makeRecord({
     isActive: true,
     remainingSecondsStale: true,

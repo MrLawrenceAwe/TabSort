@@ -1,8 +1,9 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const projectRoot = new URL('..', import.meta.url).pathname;
+const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const ignoredDirectories = new Set(['.git', '.tools', 'node_modules']);
 const checkedFiles = [];
 const importPattern =

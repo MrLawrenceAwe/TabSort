@@ -4,21 +4,10 @@ import {
   toPositiveFiniteNumber,
 } from '../../shared/guards.js';
 import { MEDIA_DURATION_SYNC_TOLERANCE_SECONDS } from '../../shared/tabs/constants.js';
-import { getYouTubeVideoId } from '../../shared/youtube/urls.js';
-
-function areEquivalentVideoUrls(leftUrl, rightUrl) {
-  const leftIdentity = getYouTubeVideoId(leftUrl);
-  const rightIdentity = getYouTubeVideoId(rightUrl);
-
-  if (leftIdentity && rightIdentity) {
-    return leftIdentity === rightIdentity;
-  }
-
-  return Boolean(leftUrl) && Boolean(rightUrl) && leftUrl === rightUrl;
-}
+import { hasYouTubeVideoChanged } from '../../shared/youtube/urls.js';
 
 function shouldIgnoreStaleMetricsPayload({ payloadUrl, requestedUrl, currentTabUrl }) {
-  if (payloadUrl && currentTabUrl && !areEquivalentVideoUrls(payloadUrl, currentTabUrl)) {
+  if (payloadUrl && currentTabUrl && hasYouTubeVideoChanged(payloadUrl, currentTabUrl)) {
     return true;
   }
 
@@ -26,7 +15,7 @@ function shouldIgnoreStaleMetricsPayload({ payloadUrl, requestedUrl, currentTabU
     !payloadUrl &&
     requestedUrl &&
     currentTabUrl &&
-    !areEquivalentVideoUrls(requestedUrl, currentTabUrl)
+    hasYouTubeVideoChanged(requestedUrl, currentTabUrl)
   );
 }
 

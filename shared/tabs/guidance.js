@@ -3,7 +3,7 @@ import { hasRemainingTime } from './sort-readiness.js';
 import {
   LOADING_GRACE_MS,
   canMediaStillSettle,
-  canWatchTransitionStillSettle,
+  canVideoTransitionStillSettle,
 } from './grace-periods.js';
 
 export const TAB_GUIDANCE = {
@@ -63,7 +63,7 @@ export function determineTabGuidance(tabRecord, { now = Date.now } = {}) {
   }
 
   const nowMs = now();
-  const transitionCanSettle = canWatchTransitionStillSettle(tabRecord, nowMs);
+  const transitionCanSettle = canVideoTransitionStillSettle(tabRecord, nowMs);
 
   if (!hasRemainingTime(tabRecord)) {
     return resolveGuidanceForMissingRemainingTime(tabRecord, transitionCanSettle, nowMs);

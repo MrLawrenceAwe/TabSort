@@ -5,112 +5,134 @@
 - `npm run build` bundles and minifies the isolated YouTube content runtime into
   `dist/content-runtime.js`.
 - `npm test` runs the unit and integration-style Node tests.
-- `npm run test:e2e` launches Chromium with the unpacked extension and runs the popup/runtime
-  smoke and responsiveness tests. Install its browser once with `npx playwright install chromium`.
-- `npm run check` builds and runs tests, source linting, static syntax/import checks (including the bundle), and release validation.
+- `npm run lint` checks source lint rules; `node scripts/check-static.mjs` checks
+  JavaScript syntax and local imports, including the bundle.
+- `npm run validate:release` checks version consistency and required release resources.
+- `npm run test:e2e` launches Chromium with the unpacked extension. Install its
+  browser once with `npx playwright install chromium`.
+- `npm run check` builds and runs all checks, including browser tests.
 - `npm run package` creates `release/tabsort-v<version>.zip`.
 
-### Code organisation
+CI checks that the committed bundle matches the build, runs the Chromium suite,
+then uploads the packaged extension. Failed checks upload `test-results/` with
+Playwright traces.
 
-- `background/` owns the tracked window, tab reconciliation, playback updates, sorting,
-  and extension message handlers. Store reads and writes take defensive copies; mutation uses
-  explicit write functions and `getMutableTabRecord()`. Tab event bursts reconcile once
-  per window and batch playback collection by unique tab ID.
-- `content/youtube/` collects page metadata and playback evidence. Each observer owns
-  its state. Navigation resets preserve previous media evidence until new media arrives;
-  a full controller reset clears it. Numeric configuration is separate from injected dependencies.
-  The page entry point creates and bootstraps the controller.
-- `popup/` separates the controller, state store, DOM elements, controls, and tab views.
-  The controller applies snapshots and renders controls; tab views render records.
-  CSS follows the system colour scheme and highlights ready, sortable video rows.
-- `preparation/progress.html` and `progress.js` display preparation progress.
-  `placeholder.html` and `placeholder.js` preserve a moved video’s place and offer Stop/recovery.
-- `background/windows/tracked-window-store.js` owns the single tracked-window state.
-- `background/auto-preparation/runner.js` runs the preparation queue; `workspace.js`
-  moves tabs with `moveTabToPreparationWindow()` and restores them with `finishSession()`.
-  Finishing clears the session journal. The service removes the progress tab after
-  successful completion and retains it after stopping. `placeholder.js` projects
-  the moved video into its placeholder position for browsing-window snapshots;
-  `state.js` holds run state and the preparation-window ID.
-- `background/auto-preparation/session-cache.js` persists prepared tab snapshots.
-- `shared/tabs/` contains load states, readiness grace periods, guidance, and refresh policy.
-  `shared/preferences.js` persists grouping and TikTok auto-preparation preferences.
-  `shared/tabs/constants.js` defines load states and playback duration tolerance.
-  `shared/urls.js` provides generic site grouping, and `shared/preparation-progress.js` formats progress counts.
-- `tests/background/`, `tests/youtube/`, `tests/popup/`, and `tests/shared/` mirror
-  the runtime boundaries. Shared tests own tab guidance, refresh policy, preparation
-  eligibility, and progress formatting; popup tests own rendering and snapshot polling.
-  `tests/background/sort-state.test.js` checks derived sorting state.
+## Code organisation
 
-Tab records use `loaded`, `loading`, and `discarded` load states. `loadedAt` records an
-observed completion after loading or discarding, not the start of a reload. Video changes
-refer to YouTube video identity, so extra URL parameters do not invalidate playback data.
-`videoDetails.remainingSeconds` is the estimated wall-clock playback time remaining,
-adjusted for playback speed; `remainingSecondsStale` indicates whether it can be trusted.
-The sorting summary's `readyTabsLeadInOrder` means ready videos occupy the front of
-the unpinned tab strip in remaining-time order. Popup snapshots contain display state;
-the target video order stays in the background store. `isYouTubeLayoutOrganised` additionally
-requires at least two sortable videos, all ready, with YouTube tabs grouped at the front;
-it does not describe grouping of other sites. Sorting and organised-state detection share
-the complete tab-order builder. Sort results report `orderChanged` only after the complete move operation succeeds;
-failures do not imply that earlier moves were rolled back.
-Existing Chrome groups constrain the sort plan to contiguous blocks; the organised state compares against that achievable plan.
-`hasAutoPreparedTime` permits a saved
-remaining-time reading to be used while its tab sleeps. Tab activation uses `activateTab`.
+- `background/windows/` owns the single tracked-window store and window lifecycle.
+- `background/tabs/` owns Chrome tab operations, records, reconciliation, and listeners.
+- `background/playback/` collects metrics and derives and applies playback updates.
+- `background/sorting/` builds tab orders and derives sorting state.
+- `background/messaging/` routes extension messages and handles tab commands and page events.
+- `background/auto-preparation/` owns queue execution, the preparation workspace,
+  placeholder projection, run state, and the session cache.
+- `content/youtube/` collects page metadata and playback evidence. `page/entry.js`
+  bootstraps the controller; `metadata/` and `media/` own their observers.
+- `popup/` contains the controller, state store, runtime clients, DOM elements, and views.
+- `preparation/` contains the progress page and the moved video's placeholder page.
+- `shared/` contains message contracts, preferences, URL helpers, sorting summaries,
+  tab readiness and guidance policies, and preparation progress formatting.
+- `tests/background/`, `tests/youtube/`, `tests/popup/`, and `tests/shared/` cover
+  their corresponding runtime boundaries.
+- `tests/e2e/` separates extension smoke, auto-preparation, sorting, responsiveness,
+  and discarded-workspace scenarios. `fixtures/extension.js` provides the shared
+  persistent browser context, service worker, and extension ID for feature suites.
 
-Playback messages use `metadataDurationSeconds`, `mediaDurationSeconds`, and
-`positionSeconds` to distinguish their sources and units. Tab records store
-`videoDetails.durationSeconds`; the metadata collector translates YouTube’s external
-`lengthSeconds` field at the page boundary. Session-cache entries use `videoId`.
-The cache reader migrates previous stored field names in place before restoring
-readings, preserving prepared times without legacy fallbacks in runtime records.
+## Tab records and playback contracts
+
+Store reads and writes take defensive copies; mutation uses explicit write functions
+and `getMutableTabRecord()`. Tab event bursts reconcile once per window and batch
+playback collection by unique tab ID.
+
+Tab records use `loaded`, `loading`, and `discarded` load states. `loadedAt` records
+an observed completion after loading or discarding. `transitionStartedAt` starts a
+grace period for video transitions on both watch and Shorts pages. Video identity
+ignores extra URL parameters.
+
+`videoDetails.remainingSeconds` estimates wall-clock playback time remaining,
+adjusted for playback speed; `remainingSecondsStale` marks unreliable readings.
+`browserTitle` retains Chrome's title separately from page metadata so sleeping
+tabs remain identifiable after worker suspension or window changes.
+
+Playback messages distinguish `metadataDurationSeconds`, `mediaDurationSeconds`,
+and `positionSeconds`. Records store `videoDetails.durationSeconds`; the metadata
+collector translates YouTube's external `lengthSeconds` field at the page boundary.
+
+Each content observer owns its state. Navigation resets retain previous media
+evidence until new media arrives; a full controller reset clears it. Numeric
+configuration is separate from injected dependencies.
+
+## Sorting
+
+`readyTabsLeadInOrder` means ready videos occupy the front of the unpinned tab
+strip in remaining-time order. Popup snapshots contain display state; the target
+video order stays in the background store.
+
+`isYouTubeLayoutOrganised` requires at least two sortable videos, all ready, and a
+layout matching the complete tab-order plan. Existing Chrome groups constrain the
+plan to contiguous blocks. This state does not describe grouping of other sites.
+Sorting and organised-state detection share the same order builder.
+
+Sort results report `orderChanged` only after the complete move operation succeeds.
+A failed operation may have moved some tabs; those moves are not rolled back.
+
+## Refresh and popup behaviour
 
 Normal playback collection has a two-second deadline per tab, shared by the metric
-request, missing-receiver reinjection and retries. Expiry marks the reading unavailable;
-late responses cannot update records or start more retries. A failed read for a previous
-video does not invalidate a successor video's reading.
-
-Popup table refreshes preserve keyboard focus on the same tab and action, even when
-rows change order. Focus outside the table is left alone; disappearing actions or a
-change from View to Reload do not transfer focus to a different operation. Browser
-responsiveness tests use pages without media. Any test that starts playback mutes its
-specific player before playback and verifies that it remains muted.
+request, missing-receiver reinjection, and retries. Expiry marks the reading
+unavailable. Late responses cannot update records or start more retries, and a
+failed read for a previous video cannot invalidate its successor's reading.
 
 Popup snapshot requests wait at most 250 ms for playback collection. Slower reads
 continue in one shared batch per window and broadcast their results; organising
-still waits for fresh playback data before sorting. Controls and listeners register
-before the initial request, and failed initial loads retry while the popup is open.
-Preparation candidates exclude ready, pinned, live, selected, and currently preparing
-video records. The popup counts and the queue filter use the same shared predicate;
-the TikTok option requires more than seven candidates.
-Records keep Chrome's `browserTitle` separately from page playback metadata so
-sleeping tabs remain identifiable after worker suspension or window changes.
+waits for fresh playback data. Controls and listeners register before the initial
+request, and failed initial loads retry while the popup is open.
 
-The package and manifest versions must match. CI verifies the committed bundle, runs the
-Chromium suite, and uploads the packaged extension. Failed checks upload `test-results/`
-with Playwright traces. Preparation and Stop run as separate scenarios; preparation has
-a 60-second test budget for setup and two sequential reads. Runtime deadlines are unchanged.
+Table refreshes preserve keyboard focus on the same tab and action when rows move.
+Focus outside the table stays in place. Disappearing actions or a change from View
+to Reload do not transfer focus to a different operation.
 
-Preferences use local storage. Missing keys import existing sync settings once, keeping
-local values and retrying imports after read failures. Subsequent saves do not use sync.
+## Preparation and recovery
 
-## Preparation sampling
+Preparation candidates exclude ready, pinned, live, selected, and currently
+preparing videos. The popup counts and queue filter share this predicate. The
+TikTok option requires more than seven candidates.
 
 Each video has a 15-second preparation deadline. Once data appears, the runner
 samples it for a three-second settling period so YouTube can restore saved viewing
 progress. A sudden position jump or a failed read restarts settling. Unavailable
-videos are skipped at the deadline. Successfully prepared sleeping tabs return to
-sleep, and their remaining-time readings stay available for sorting.
+videos are skipped at the deadline.
+
+The workspace moves videos with `moveTabToPreparationWindow()` and returns the
+outstanding video when `finishSession()` clears the recovery journal. Successful
+completion removes the progress tab; stopping retains it. Placeholder projection
+keeps the moved video visible in browsing-window snapshots.
+
+Successfully prepared sleeping tabs return to sleep. `hasAutoPreparedTime` allows
+their saved readings to remain sortable. Session-cache entries use `videoId`; the
+cache reader migrates previous stored field names before restoring readings.
+
+## Preferences
+
+Preferences use local storage. Missing keys import existing sync settings once,
+keeping local values and retrying imports after read failures. Subsequent saves
+do not use sync.
+
+## Browser test policy
+
+Responsiveness fixtures contain no media. Tests that start playback mute their
+specific player before playback and verify that it remains muted. Preparation and
+Stop run as separate scenarios. The preparation scenario allows 60 seconds for
+setup and two sequential reads; runtime deadlines remain unchanged.
 
 ## Preview and artwork
 
 Serve the repository locally and open `docs/preview.html` to preview the popup.
-`docs/preview.js` loads the production `popup/popup.html` markup, installs the fixed
-synthetic browser fixture from `preview-fixture.js`, and starts the production
-controller. The fixture derives sort state using the same helper as the extension.
-Preview buttons do not operate real tabs. `docs/images/popup.png` is the README
-screenshot of this preview; refresh it when the visible popup changes.
+`docs/preview.js` loads the production popup markup, installs the synthetic browser
+fixture from `preview-fixture.js`, and starts the production controller. The fixture
+derives sort state using the extension's helper. Preview buttons do not operate
+real tabs. Refresh `docs/images/popup.png`, the README screenshot, when the visible
+popup changes.
 
-`assets/icon.svg` is the source artwork for the packaged PNG icons in
-`assets/icons/`. Temporary screenshots belong in ignored `output/`, rather than
-committed verification-artifact directories.
+`assets/icon.svg` is the source artwork for the packaged PNG icons in `assets/icons/`.
+Temporary screenshots belong in ignored `output/`.

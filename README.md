@@ -53,8 +53,9 @@ For a synthetic popup preview without installing the extension, serve the reposi
 TabSort performs all processing locally and does not send browsing data to a server.
 
 - `tabs` reads tab URLs and positions, activates or reloads a requested tab, and reorders tabs.
-  URLs outside YouTube are only used locally when the optional “Keep other tabs from the same site together”
-  setting is enabled.
+  Tab URLs are inspected locally to distinguish YouTube pages from other tabs.
+  Enabling “Keep other tabs from the same site together” also uses other tabs’ hostnames
+  to arrange them by site.
 - `tabGroups` moves existing groups intact when sorting, preserving their membership and appearance.
 - `alarms` refreshes eligible playback information periodically while the extension service
   worker is available.

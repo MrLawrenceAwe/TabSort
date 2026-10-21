@@ -1,5 +1,5 @@
 export const RECENTLY_LOADED_MS = 5000;
-export const RECENT_WATCH_TRANSITION_MS = 5000;
+export const VIDEO_TRANSITION_GRACE_MS = 5000;
 export const MEDIA_WAIT_GRACE_MS = 15000;
 export const LOADING_GRACE_MS = 5000;
 
@@ -7,11 +7,11 @@ function isRecentTimestamp(timestamp, nowMs, graceMs) {
   return typeof timestamp === 'number' && nowMs - timestamp < graceMs;
 }
 
-function hasRecentWatchTransition(tabRecord, nowMs) {
+function hasRecentVideoTransition(tabRecord, nowMs) {
   return isRecentTimestamp(
     tabRecord?.transitionStartedAt,
     nowMs,
-    RECENT_WATCH_TRANSITION_MS,
+    VIDEO_TRANSITION_GRACE_MS,
   );
 }
 
@@ -31,6 +31,6 @@ export function canLoadingStillSettle(tabRecord, nowMs) {
   return isRecentTimestamp(tabRecord?.loadingStartedAt, nowMs, LOADING_GRACE_MS);
 }
 
-export function canWatchTransitionStillSettle(tabRecord, nowMs) {
-  return isRecentlyLoaded(tabRecord, nowMs) || hasRecentWatchTransition(tabRecord, nowMs);
+export function canVideoTransitionStillSettle(tabRecord, nowMs) {
+  return isRecentlyLoaded(tabRecord, nowMs) || hasRecentVideoTransition(tabRecord, nowMs);
 }

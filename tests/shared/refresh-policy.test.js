@@ -1,4 +1,4 @@
-import { RECENTLY_LOADED_MS, RECENT_WATCH_TRANSITION_MS, MEDIA_WAIT_GRACE_MS, LOADING_GRACE_MS } from '../../shared/tabs/grace-periods.js';
+import { RECENTLY_LOADED_MS, VIDEO_TRANSITION_GRACE_MS, MEDIA_WAIT_GRACE_MS, LOADING_GRACE_MS } from '../../shared/tabs/grace-periods.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
@@ -90,7 +90,7 @@ test('shouldRefreshRecordMetrics still probes active stale tabs after polling gr
     contentScriptReady: false,
     playbackMetricsReady: false,
     remainingSecondsStale: true,
-    transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS + 1000),
+    transitionStartedAt: NOW_MS - (VIDEO_TRANSITION_GRACE_MS + 1000),
     videoDetails: null,
   });
 
@@ -105,33 +105,33 @@ test('shouldRefreshRecordMetrics does not probe hidden stale tabs after polling 
     contentScriptReady: false,
     playbackMetricsReady: false,
     remainingSecondsStale: true,
-    transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS + 1000),
+    transitionStartedAt: NOW_MS - (VIDEO_TRANSITION_GRACE_MS + 1000),
     videoDetails: null,
   });
 
   assert.equal(shouldRefreshRecordMetrics(record, { now: fakeNow }), false);
 });
 
-test('shouldPollRecord polls recent watch URL transitions before asking for reload', () => {
+test('shouldPollRecord polls recent video URL transitions before asking for reload', () => {
   const record = makeRecord({
     isActive: true,
     contentScriptReady: false,
     playbackMetricsReady: false,
     remainingSecondsStale: true,
-    transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS - 1000),
+    transitionStartedAt: NOW_MS - (VIDEO_TRANSITION_GRACE_MS - 1000),
     videoDetails: null,
   });
 
   assert.equal(shouldPollRecord(record, { now: fakeNow }), true);
 });
 
-test('shouldPollRecord stops polling stalled watch URL transitions', () => {
+test('shouldPollRecord stops polling stalled video URL transitions', () => {
   const record = makeRecord({
     isActive: true,
     contentScriptReady: false,
     playbackMetricsReady: false,
     remainingSecondsStale: true,
-    transitionStartedAt: NOW_MS - (RECENT_WATCH_TRANSITION_MS + 1000),
+    transitionStartedAt: NOW_MS - (VIDEO_TRANSITION_GRACE_MS + 1000),
     videoDetails: null,
   });
 

@@ -3,7 +3,7 @@ import { TAB_LOAD_STATES } from './constants.js';
 import {
   canLoadingStillSettle,
   canMediaStillSettle,
-  canWatchTransitionStillSettle,
+  canVideoTransitionStillSettle,
 } from './grace-periods.js';
 
 export function shouldPollRecord(record, { now = Date.now } = {}) {
@@ -18,7 +18,7 @@ export function shouldPollRecord(record, { now = Date.now } = {}) {
   const nowMs = now();
   if (record.loadState === TAB_LOAD_STATES.LOADED && record.remainingSecondsStale) {
     const waitingForContentScript =
-      !record.contentScriptReady && canWatchTransitionStillSettle(record, nowMs);
+      !record.contentScriptReady && canVideoTransitionStillSettle(record, nowMs);
     const waitingForVideoElement =
       record.isActive &&
       record.contentScriptReady &&

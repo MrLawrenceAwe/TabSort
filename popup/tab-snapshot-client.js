@@ -19,7 +19,6 @@ export function createTabSnapshotClient({
       try {
         if (attempt > 1) {
           await syncActiveWindow().catch(() => {});
-          await requestRuntimeMessage(RUNTIME_MESSAGE_TYPES.PING).catch(() => {});
           await sleep(retryDelayMs);
         }
         const response = await requestRuntimeMessage(RUNTIME_MESSAGE_TYPES.GET_TAB_SNAPSHOT, {});

@@ -6,7 +6,6 @@ export const RUNTIME_MESSAGE_TYPES = Object.freeze({
   PLAYBACK_METRICS_READY: 'playbackMetricsReady',
   CONTENT_SCRIPT_READY: 'contentScriptReady',
   PAGE_VIDEO_DETAILS: 'pageVideoDetails',
-  PING: 'ping',
   RELOAD_TAB: 'reloadTab',
   START_AUTO_PREPARATION: 'startAutoPreparation',
   STOP_AUTO_PREPARATION: 'stopAutoPreparation',

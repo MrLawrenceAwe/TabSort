@@ -1,4 +1,4 @@
-import { RECENTLY_LOADED_MS, RECENT_WATCH_TRANSITION_MS, MEDIA_WAIT_GRACE_MS, LOADING_GRACE_MS } from '../../shared/tabs/grace-periods.js';
+import { RECENTLY_LOADED_MS, VIDEO_TRANSITION_GRACE_MS, MEDIA_WAIT_GRACE_MS, LOADING_GRACE_MS } from '../../shared/tabs/grace-periods.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
@@ -44,7 +44,7 @@ test('recently loaded rows avoid contradictory stale guidance', () => {
   assert.equal(determineTabGuidance(record), TAB_GUIDANCE.NONE);
 });
 
-test('recent watch URL transitions avoid reload guidance while runtime can catch up', () => {
+test('recent video URL transitions avoid reload guidance while runtime can catch up', () => {
   const activeRecord = makeRecord({
     isActive: true,
     remainingSecondsStale: true,
@@ -66,13 +66,13 @@ test('recent watch URL transitions avoid reload guidance while runtime can catch
   assert.equal(determineTabGuidance(inactiveRecord), TAB_GUIDANCE.NONE);
 });
 
-test('stalled watch URL transitions eventually ask for the useful action', () => {
+test('stalled video URL transitions eventually ask for the useful action', () => {
   const activeRecord = makeRecord({
     isActive: true,
     remainingSecondsStale: true,
     contentScriptReady: false,
     playbackMetricsReady: false,
-    transitionStartedAt: Date.now() - (RECENT_WATCH_TRANSITION_MS + 1000),
+    transitionStartedAt: Date.now() - (VIDEO_TRANSITION_GRACE_MS + 1000),
     videoDetails: null,
   });
   const inactiveRecord = makeRecord({
@@ -80,7 +80,7 @@ test('stalled watch URL transitions eventually ask for the useful action', () =>
     remainingSecondsStale: true,
     contentScriptReady: false,
     playbackMetricsReady: false,
-    transitionStartedAt: Date.now() - (RECENT_WATCH_TRANSITION_MS + 1000),
+    transitionStartedAt: Date.now() - (VIDEO_TRANSITION_GRACE_MS + 1000),
     videoDetails: null,
   });
 
