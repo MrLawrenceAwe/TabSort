@@ -6,6 +6,7 @@ function createInitialPopupState() {
     isYouTubeLayoutOrganised: false,
     isOrganising: false,
     isStartingAutoPreparation: false,
+    preparationCandidateCount: 0,
     autoPreparation: { status: 'idle' },
     activeWindowId: null,
   };

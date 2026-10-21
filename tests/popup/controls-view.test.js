@@ -1,19 +1,15 @@
+import { isPreparationCandidate } from '../../shared/tabs/preparation-eligibility.js';
 import { deriveSortState } from '../../background/sorting/derive-state.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
   getOrganisedBadgeText,
-  getOrganiseButtonText,
   areReadyTabsLeadingInOrder,
   shouldShowOrganiseButton,
+  shouldShowTikTokPipOption,
 } from '../../popup/controls-view.js';
 import { createSortSummary } from '../../shared/sorting/summary.js';
-
-test('getOrganiseButtonText distinguishes partial and full organisation', () => {
-  assert.equal(getOrganiseButtonText(2, 4), 'Organise ready tabs');
-  assert.equal(getOrganiseButtonText(3, 3), 'Organise tabs');
-});
 
 test('shows the organise button when ready videos are behind other tabs', () => {
   const sortSummary = createSortSummary({
@@ -62,4 +58,13 @@ test('organise remains available for YouTube pages behind another site and for s
   assert.equal(state.isYouTubeLayoutOrganised, false);
   assert.equal(shouldShowOrganiseButton(state.sortSummary, state.isYouTubeLayoutOrganised), true);
   assert.equal(shouldShowOrganiseButton(createSortSummary({ readyCount: 2, sortableCount: 2, readyTabsLeadInOrder: true }), true), false);
+});
+
+test('selected videos do not raise the TikTok option above its preparation threshold', () => {
+  const records = Array.from({ length: 8 }, (_, index) => ({
+    loadState: 'discarded', remainingSecondsStale: true, isActive: index === 0,
+  }));
+  assert.equal(shouldShowTikTokPipOption(records.filter(isPreparationCandidate).length), false);
+  records[0].isActive = false;
+  assert.equal(shouldShowTikTokPipOption(records.filter(isPreparationCandidate).length), true);
 });

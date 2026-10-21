@@ -47,10 +47,10 @@ export function formatBacklogSummary(summary) {
   const parts = [pluralize(summary.videoCount, 'video')];
   parts.push(
     summary.knownCount > 0
-      ? `${formatBacklogDuration(summary.totalRemainingSeconds)} remaining`
+      ? `${formatBacklogDuration(summary.totalRemainingSeconds)}${summary.unknownCount > 0 ? ' known' : ''} remaining`
       : 'remaining time unavailable',
   );
-  if (summary.unknownCount > 0) parts.push(`${summary.unknownCount} unknown`);
+  if (summary.unknownCount > 0) parts.push(`${pluralize(summary.unknownCount, 'time')} unavailable`);
   if (summary.liveCount > 0) parts.push(pluralize(summary.liveCount, 'live stream'));
   return parts.join(' · ');
 }

@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   executeScriptInTab,
   listWindowTabs,
+  moveTabsInOrder,
   MESSAGE_FAILURE_REASONS,
   sendMessageToTab,
 } from '../../background/tabs/chrome-tabs.js';
@@ -89,4 +90,19 @@ test('executeScriptInTab reports successful Chrome scripting injection', async (
     },
   ]);
   assert.equal(result.ok, true);
+});
+
+test('a failed grouped reorder reports failure after earlier moves without claiming counts', async () => {
+  const moves = [];
+  chrome.tabs.get = async id => ({ id, index: 2 });
+  chrome.tabs.move = async (id, options) => { moves.push({ id, ...options }); };
+  chrome.tabs.query = async () => [{ id: 2, index: 2 }];
+  chrome.tabGroups = { move: async () => { throw new Error('Group move failed'); } };
+
+  const result = await moveTabsInOrder([1, 2], 0, [
+    { id: 2, index: 0, groupId: 5, windowId: 1 },
+    { id: 1, index: 1, groupId: -1, windowId: 1 },
+  ]);
+  assert.deepEqual(moves, [{ id: 1, index: 0 }]);
+  assert.deepEqual(result, { ok: false });
 });

@@ -36,28 +36,23 @@ function updateOrganisedBadge(organisedBadge, readyTabsInOrder) {
   }
 }
 
-export function getOrganiseButtonText(readyCount, sortableCount) {
-  return readyCount === sortableCount ? 'Organise tabs' : 'Organise ready tabs';
-}
-
 export function shouldShowOrganiseButton(sortSummary, isYouTubeLayoutOrganised) {
   return sortSummary.readyCount >= 2 && !isYouTubeLayoutOrganised;
 }
 
-export function shouldShowTikTokPipOption(sortSummary) {
-  return sortSummary.sortableCount - sortSummary.readyCount > 7;
+export function shouldShowTikTokPipOption(preparationCandidateCount) {
+  return preparationCandidateCount > 7;
 }
 
 function updateOrganiseButton(organiseButton, shouldShow, disabled) {
   if (!organiseButton) return;
   organiseButton.classList.toggle('hide', !shouldShow);
   if (shouldShow) {
-    const { readyCount, sortableCount } = popupState.sortSummary;
     organiseButton.disabled = disabled;
     organiseButton.setAttribute?.('aria-busy', String(popupState.isOrganising));
     organiseButton.textContent = popupState.isOrganising
       ? 'Organising…'
-      : getOrganiseButtonText(readyCount, sortableCount);
+      : 'Organise tabs';
     return;
   }
   organiseButton.disabled = false;
@@ -103,8 +98,7 @@ export function renderPopupControls() {
   const preparationBusy = popupState.isStartingAutoPreparation || running;
   const actionsDisabled = popupState.isOrganising || preparationBusy;
   const preparationStatusText = formatPreparationStatus(autoPreparation);
-  const shouldShowAutoPrepare = !running &&
-    popupState.sortSummary.readyCount < popupState.sortSummary.sortableCount;
+  const shouldShowAutoPrepare = !running && popupState.preparationCandidateCount > 0;
   const autoPrepareButton = getPopupElement('autoPrepareButton');
   if (autoPrepareButton) {
     autoPrepareButton.classList.toggle('hide', !shouldShowAutoPrepare);
@@ -113,7 +107,7 @@ export function renderPopupControls() {
   }
   const openTikTokPipOption = getPopupElement('openTikTokPipToggle')?.closest?.('.option-toggle');
   openTikTokPipOption?.classList?.toggle('hide',
-    !shouldShowAutoPrepare || !shouldShowTikTokPipOption(popupState.sortSummary));
+    !shouldShowAutoPrepare || !shouldShowTikTokPipOption(popupState.preparationCandidateCount));
   getPopupElement('stopAutoPreparationButton')?.classList.toggle('hide', !running);
   const autoPreparationStatus = getPopupElement('autoPreparationStatus');
   if (autoPreparationStatus) {

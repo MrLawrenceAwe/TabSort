@@ -15,7 +15,7 @@ import {
 
 ensureChromeApi({ tabs: true });
 
-test('organiseTabs returns move counts after organising tabs', { concurrency: false }, async () => {
+test('organiseTabs reports a completed order change', { concurrency: false }, async () => {
   resetTrackedWindowState(1);
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
@@ -46,13 +46,13 @@ test('organiseTabs returns move counts after organising tabs', { concurrency: fa
 
   const result = await organiseTabs(1);
 
-  assert.deepEqual(result, { ok: true, movedCount: 2, failedCount: 0 });
+  assert.deepEqual(result, { ok: true, orderChanged: true });
   assert.deepEqual(moves, [
     { tabId: [2, 1, 3], index: 0 },
   ]);
 });
 
-test('organiseTabs reports an atomic bulk move failure', { concurrency: false }, async () => {
+test('organiseTabs reports a failed bulk move without inferred counts', { concurrency: false }, async () => {
   resetTrackedWindowState(1);
   setTrackedTabRecords({
     1: createTabRecordFixture(1, {
@@ -74,8 +74,7 @@ test('organiseTabs reports an atomic bulk move failure', { concurrency: false },
   const result = await organiseTabs(1);
 
   assert.equal(result.ok, false);
-  assert.equal(result.movedCount, 0);
-  assert.equal(result.failedCount, 2);
+  assert.deepEqual(result, { ok: false });
 });
 
 test('organiseTabs avoids Chrome move calls when the complete order already matches', { concurrency: false }, async () => {
@@ -102,7 +101,7 @@ test('organiseTabs avoids Chrome move calls when the complete order already matc
 
   const result = await organiseTabs(1);
 
-  assert.deepEqual(result, { ok: true, movedCount: 0, failedCount: 0 });
+  assert.deepEqual(result, { ok: true, orderChanged: false });
 });
 
 test(
@@ -142,7 +141,6 @@ test(
 
     assert.deepEqual(result, {
       ok: false,
-      movedCount: 0,
       skippedReason: 'windowSyncSuperseded',
     });
     assert.deepEqual(movedTabIds, []);

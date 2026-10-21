@@ -95,8 +95,24 @@ test('does not open TikTok PiP when preparation has no eligible videos', async (
 
   const result = await startAutoPreparation({ windowId: 1, openTikTokPip: true });
 
-  assert.deepEqual(result, { ok: false, error: 'noUnreadyTabs' });
+  assert.deepEqual(result, { ok: false, error: 'noEligibleTabs' });
   assert.equal(pipRequests, 0);
+});
+
+test('a selected unready video cannot start a preparation workspace or TikTok request', async () => {
+  resetTrackedWindowStore({ windowId: 1 });
+  chrome.tabs.query = async () => [createChromeTabFixture(1, { active: true })];
+  let pipRequests = 0;
+  let workspaceCreates = 0;
+  chrome.runtime.sendMessage = async (...args) => {
+    if (typeof args[0] === 'string') pipRequests += 1;
+  };
+  chrome.windows.create = async () => { workspaceCreates += 1; return { id: 9 }; };
+
+  assert.deepEqual(await startAutoPreparation({ windowId: 1, openTikTokPip: true }),
+    { ok: false, error: 'noEligibleTabs' });
+  assert.equal(pipRequests, 0);
+  assert.equal(workspaceCreates, 0);
 });
 
 test('completion closes the empty preparation window after preserving source-window candidates', async () => {
@@ -108,7 +124,7 @@ test('completion closes the empty preparation window after preserving source-win
     remove: async key => { delete saved[key]; },
   } };
   chrome.runtime.getURL = path => `chrome-extension://test/${path}`;
-  const tab = createChromeTabFixture(1, { windowId: 1, active: true });
+  const tab = createChromeTabFixture(1, { windowId: 1, active: false });
   const progressTab = createChromeTabFixture(100, {
     windowId: 99,
     url: chrome.runtime.getURL('preparation/progress.html'),
@@ -117,6 +133,8 @@ test('completion closes the empty preparation window after preserving source-win
   chrome.tabs.query = async ({ windowId } = {}) => {
     if (windowId === 99) return [progressTab];
     if (++queryCount === 2) {
+      // A queued candidate selected during setup must still be skipped by the runner.
+      tab.active = true;
       resetTrackedWindowStore({ windowId: 2 });
       replaceAllTabRecords({
         20: createTabRecordFixture(20, { windowId: 2 }),

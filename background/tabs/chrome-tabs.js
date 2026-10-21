@@ -25,13 +25,9 @@ export async function moveTabsInOrder(tabIds, startIndex = 0, currentTabs = []) 
     desiredTabIds.length === currentOrder.length &&
     desiredTabIds.every((tabId, index) => currentOrder[index] === tabId);
   if (!desiredTabIds.length || orderAlreadyMatches) {
-    return { ok: true, movedCount: 0, failedCount: 0 };
+    return { ok: true, orderChanged: false };
   }
 
-  const movedCount =
-    desiredTabIds.length === currentOrder.length
-      ? desiredTabIds.filter((tabId, index) => currentOrder[index] !== tabId).length
-      : desiredTabIds.length;
   try {
     if (!currentTabs.some(tab => tab.groupId >= 0)) {
       await chrome.tabs.move(desiredTabIds, { index: startIndex });
@@ -66,10 +62,10 @@ export async function moveTabsInOrder(tabIds, startIndex = 0, currentTabs = []) 
         }
       }
     }
-    return { ok: true, movedCount, failedCount: 0 };
+    return { ok: true, orderChanged: true };
   } catch (error) {
     logDebug(`tabs.move failed for ${desiredTabIds.join(',')}`, error);
-    return { ok: false, movedCount: 0, failedCount: movedCount };
+    return { ok: false };
   }
 }
 

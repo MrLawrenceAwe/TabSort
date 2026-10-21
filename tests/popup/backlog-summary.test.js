@@ -23,7 +23,7 @@ test('summarises only fresh finite remaining times', () => {
     liveCount: 1,
     totalRemainingSeconds: 3665,
   });
-  assert.equal(formatBacklogSummary(summary), '5 videos · 1h 2m remaining · 2 unknown · 1 live stream');
+  assert.equal(formatBacklogSummary(summary), '5 videos · 1h 2m known remaining · 2 times unavailable · 1 live stream');
 });
 
 test('formats short and exact-hour backlog durations clearly', () => {
@@ -36,6 +36,12 @@ test('formats short and exact-hour backlog durations clearly', () => {
 test('reports unavailable time when no non-live video has reliable timing', () => {
   assert.equal(formatBacklogSummary(createBacklogSummary([
     { remainingSecondsStale: true, videoDetails: { remainingSeconds: 30 } },
-  ])), '1 video · remaining time unavailable · 1 unknown');
+  ])), '1 video · remaining time unavailable · 1 time unavailable');
   assert.equal(formatBacklogSummary(createBacklogSummary([])), '');
+});
+
+test('keeps complete totals concise when every video has a known time', () => {
+  assert.equal(formatBacklogSummary(createBacklogSummary([
+    { remainingSecondsStale: false, videoDetails: { remainingSeconds: 120 } },
+  ])), '1 video · 2m remaining');
 });

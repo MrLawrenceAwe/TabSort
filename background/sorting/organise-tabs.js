@@ -15,7 +15,7 @@ export async function organiseTabs(
   { expectedSyncToken = null } = {},
 ) {
   if (expectedSyncToken != null && !isSyncTokenCurrent(expectedSyncToken)) {
-    return { ok: false, movedCount: 0, skippedReason: 'windowSyncSuperseded' };
+    return { ok: false, skippedReason: 'windowSyncSuperseded' };
   }
 
   const targetVideoTabOrder = getSortState().targetVideoTabOrder;
@@ -27,14 +27,14 @@ export async function organiseTabs(
   });
 
   if (readyTabIds.length < 2) {
-    return { ok: true, movedCount: 0, skippedReason: 'notEnoughReadyTabs' };
+    return { ok: true, orderChanged: false, skippedReason: 'notEnoughReadyTabs' };
   }
 
   const options = await loadPreferences();
   const targetWindowId = isValidWindowId(windowId) ? windowId : null;
   const tabs = await listWindowTabs(targetWindowId);
   if (!Array.isArray(tabs) || tabs.length === 0) {
-    return { ok: false, movedCount: 0, skippedReason: 'tabsUnavailable' };
+    return { ok: false, skippedReason: 'tabsUnavailable' };
   }
 
   const tabsByIndex = tabs.slice().sort((a, b) => a.index - b.index);
@@ -46,16 +46,16 @@ export async function organiseTabs(
   });
 
   if (!finalTabOrder.length) {
-    return { ok: true, movedCount: 0, skippedReason: 'emptySortOrder' };
+    return { ok: true, orderChanged: false, skippedReason: 'emptySortOrder' };
   }
 
   const initialTabIds = new Set(tabs.map((tab) => tab.id));
   if (!finalTabOrder.every((tabId) => initialTabIds.has(tabId))) {
-    return { ok: false, movedCount: 0, skippedReason: 'staleSortOrder' };
+    return { ok: false, skippedReason: 'staleSortOrder' };
   }
 
   if (expectedSyncToken != null && !isSyncTokenCurrent(expectedSyncToken)) {
-    return { ok: false, movedCount: 0, skippedReason: 'windowSyncSuperseded' };
+    return { ok: false, skippedReason: 'windowSyncSuperseded' };
   }
 
   return moveTabsInOrder(

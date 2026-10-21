@@ -101,6 +101,7 @@ test('ordered ready subset keeps the unfinished readiness count visible', () => 
   renderPopupControls();
   assert.equal(document.elements.get('organiseStatus').textContent,
     '2 of 10 sortable tabs ready · Ready tabs in order.');
+  assert.equal(document.elements.get('organiseButton').textContent, 'Organise tabs');
   resetPopupDom();
   resetPopupState();
 });
@@ -138,7 +139,7 @@ test('organise control hides for an organised layout and returns when the order 
   resetPopupState();
 });
 
-test('TikTok PiP option requires more than seven unready tabs and hides during preparation', () => {
+test('TikTok PiP option requires more than seven preparation candidates and hides during preparation', () => {
   const document = createFakeDocument();
   const option = { hidden: false, classList: { toggle(name, hidden) { if (name === 'hide') this.owner.hidden = hidden; } } };
   option.classList.owner = option;
@@ -147,11 +148,11 @@ test('TikTok PiP option requires more than seven unready tabs and hides during p
   resetPopupDom();
   resetPopupState();
   initializePopupDom(document);
-  popupState.sortSummary = { readyCount: 1, sortableCount: 8, readyTabsLeadInOrder: false };
+  popupState.preparationCandidateCount = 7;
   renderPopupControls();
   assert.equal(option.hidden, true);
 
-  popupState.sortSummary.sortableCount = 9;
+  popupState.preparationCandidateCount = 8;
   renderPopupControls();
   assert.equal(option.hidden, false);
 
@@ -160,11 +161,11 @@ test('TikTok PiP option requires more than seven unready tabs and hides during p
   assert.equal(option.hidden, true);
 
   popupState.autoPreparation.status = 'idle';
-  popupState.sortSummary.readyCount = 2;
+  popupState.preparationCandidateCount = 7;
   renderPopupControls();
   assert.equal(option.hidden, true);
 
-  popupState.sortSummary = { readyCount: 2, sortableCount: 2, readyTabsLeadInOrder: false };
+  popupState.preparationCandidateCount = 0;
   renderPopupControls();
   assert.equal(option.hidden, true);
   resetPopupDom();

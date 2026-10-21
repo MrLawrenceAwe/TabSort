@@ -13,6 +13,7 @@ import { tryInjectYouTubeRuntime } from '../youtube/inject.js';
 import { logDebug } from '../../shared/log.js';
 import { updateSortStateAndBroadcast } from '../sorting/update-sort-state.js';
 import { hasReadyRemainingTime } from '../../shared/tabs/sort-readiness.js';
+import { isPreparationCandidate } from '../../shared/tabs/preparation-eligibility.js';
 import { getYouTubeVideoId } from '../../shared/youtube/urls.js';
 import { RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import { openTikTokPipForAutoPreparation } from '../integrations/tiktok-pip.js';
@@ -181,11 +182,11 @@ export async function startAutoPreparation(message) {
     if (signal.aborted) return { ok: false, error: 'startCancelled' };
     if (!windowTabs?.length) return { ok: false, error: 'windowUnavailable' };
     const items = candidates
-      .filter(record => !record.pinned && !record.isLive && !hasReadyRemainingTime(record))
+      .filter(isPreparationCandidate)
       .sort((a, b) => a.index - b.index)
       .map(record => ({ id: record.id, videoId: getYouTubeVideoId(record.url),
         title: record.videoDetails?.title || record.browserTitle || 'YouTube video' }));
-    if (!items.length) return { ok: false, error: 'noUnreadyTabs' };
+    if (!items.length) return { ok: false, error: 'noEligibleTabs' };
     const tiktokPip = message.openTikTokPip === true
       ? await openTikTokPipForAutoPreparation(result.windowId, { signal })
       : null;

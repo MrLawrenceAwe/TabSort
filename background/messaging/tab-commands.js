@@ -130,7 +130,6 @@ export async function handleOrganiseTabs(message) {
   ) {
     return {
       ok: false,
-      movedCount: 0,
       skippedReason: reconciliation?.reason || 'windowSyncUnavailable',
     };
   }

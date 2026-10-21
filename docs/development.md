@@ -38,7 +38,9 @@
   `shared/tabs/constants.js` defines load states and playback duration tolerance.
   `shared/urls.js` provides generic site grouping, and `shared/preparation-progress.js` formats progress counts.
 - `tests/background/`, `tests/youtube/`, `tests/popup/`, and `tests/shared/` mirror
-  the runtime boundaries. `sort-state.test.js` checks derived sorting state.
+  the runtime boundaries. Shared tests own tab guidance, refresh policy, preparation
+  eligibility, and progress formatting; popup tests own rendering and snapshot polling.
+  `tests/background/sort-state.test.js` checks derived sorting state.
 
 Tab records use `loaded`, `loading`, and `discarded` load states. `loadedAt` records an
 observed completion after loading or discarding, not the start of a reload. Video changes
@@ -50,7 +52,9 @@ the unpinned tab strip in remaining-time order. Popup snapshots contain display 
 the target video order stays in the background store. `isYouTubeLayoutOrganised` additionally
 requires at least two sortable videos, all ready, with YouTube tabs grouped at the front;
 it does not describe grouping of other sites. Sorting and organised-state detection share
-the complete tab-order builder. Existing Chrome groups constrain the sort plan to contiguous blocks; the organised state compares against that achievable plan.
+the complete tab-order builder. Sort results report `orderChanged` only after the complete move operation succeeds;
+failures do not imply that earlier moves were rolled back.
+Existing Chrome groups constrain the sort plan to contiguous blocks; the organised state compares against that achievable plan.
 `hasAutoPreparedTime` permits a saved
 remaining-time reading to be used while its tab sleeps. Tab activation uses `activateTab`.
 
@@ -76,6 +80,9 @@ Popup snapshot requests wait at most 250 ms for playback collection. Slower read
 continue in one shared batch per window and broadcast their results; organising
 still waits for fresh playback data before sorting. Controls and listeners register
 before the initial request, and failed initial loads retry while the popup is open.
+Preparation candidates exclude ready, pinned, live, selected, and currently preparing
+video records. The popup counts and the queue filter use the same shared predicate;
+the TikTok option requires more than seven candidates.
 Records keep Chrome's `browserTitle` separately from page playback metadata so
 sleeping tabs remain identifiable after worker suspension or window changes.
 

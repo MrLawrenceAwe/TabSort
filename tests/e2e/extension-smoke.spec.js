@@ -82,7 +82,7 @@ test('loads the bundled runtime and reports tracked YouTube tabs in the popup', 
     await expect(popup.locator('#tabsTable .ready-row')).toHaveCount(1);
     await expect(popup.locator('td.remaining-time').nth(1)).toHaveText('Needs viewing');
     await expect(popup.getByRole('button', { name: 'Auto-prepare tabs', exact: true })).toBeVisible();
-    await expect(popup.locator('#backlogSummary')).toHaveText('2 videos · 1m remaining · 1 unknown');
+    await expect(popup.locator('#backlogSummary')).toHaveText('2 videos · 1m known remaining · 1 time unavailable');
     for (const [colorScheme, background, readyBackground] of [
       ['light', 'rgb(252, 252, 250)', 'rgb(238, 245, 239)'],
       ['dark', 'rgb(25, 25, 25)', 'rgb(32, 43, 35)'],
@@ -314,7 +314,7 @@ test('sorting keeps existing groups and their appearance while reordering their 
     expect(result.pinned).toBe(true);
     expect(result.groups[0]).toMatchObject({ title: 'My videos', color: 'blue', collapsed: true });
     expect(result.groups[1]).toMatchObject({ title: 'Other tabs', color: 'red' });
-    expect(result.repeat).toMatchObject({ ok: true, movedCount: 0 });
+    expect(result.repeat).toMatchObject({ ok: true, orderChanged: false });
   } finally {
     await context.close();
     rmSync(directory, { recursive: true, force: true });

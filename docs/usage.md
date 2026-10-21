@@ -5,7 +5,7 @@
 1. Open several YouTube watch or Shorts pages in one Chrome window.
 2. Open TabSort to see their remaining times. Ready video rows are highlighted.
 3. Choose **Auto-prepare tabs** to read times for eligible videos in a separate window while you keep browsing.
-4. Choose **Organise tabs** or **Organise ready tabs** to arrange the available videos by remaining time.
+4. Choose **Organise tabs** to arrange tabs with ready videos first in remaining-time order.
 
 Auto-prepare handles one video at a time. A temporary placeholder preserves its
 position and Chrome tab group; the original video returns without changing your
@@ -24,6 +24,8 @@ The **Remaining** column shows a time or explains why one is unavailable:
 **Sleeping**, **Loading tab**, **Loading video**, **Needs viewing**, or
 **Couldn’t read time**. Follow the **View tab** or **Reload tab** action when shown.
 Viewing a background tab once can let Chrome expose an accurate remaining time.
+The backlog summary labels partial totals as **known remaining** and lists how many
+video times are unavailable.
 
 A successfully prepared sleeping tab returns to sleep and shows
 **Auto-prepared · sleeping** beside its recorded time. Awake readings and live

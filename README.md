@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/MrLawrenceAwe/TabSort/actions/workflows/ci.yml/badge.svg)](https://github.com/MrLawrenceAwe/TabSort/actions/workflows/ci.yml)
 
-Chrome extension that keeps YouTube video tabs organised by the time you still have left in each video. It tracks watch and shorts tabs in the current window, gathers the remaining playback times and lets you organise the ready tabs with one click.
+Chrome extension that keeps YouTube video tabs organised by the time you still have left in each video. It tracks watch and shorts tabs in the current window, gathers the remaining playback times and lets you organise tabs with ready videos first in remaining-time order.
 
 ![TabSort popup with ready and unready video tabs](docs/images/popup.png)
 
@@ -23,7 +23,7 @@ select the extracted directory when loading the unpacked extension.
 1. Open several YouTube videos in the same Chrome window.
 2. Open TabSort to see remaining playback times and any tabs needing attention.
 3. Choose **Auto-prepare tabs** to prepare eligible tabs while you keep browsing.
-4. Choose **Organise tabs** or **Organise ready tabs** to sort the available videos.
+4. Choose **Organise tabs** to sort the available videos.
 
 See [the usage guide](docs/usage.md) for sleeping tabs, session recovery and Stop behaviour.
 

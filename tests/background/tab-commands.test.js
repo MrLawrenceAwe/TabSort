@@ -133,7 +133,7 @@ test('handleOrganiseTabs refreshes a newly targeted window before deriving its s
 
   assert.deepEqual(result, {
     ok: true,
-    movedCount: 0,
+    orderChanged: false,
     skippedReason: 'notEnoughReadyTabs',
   });
   assert.deepEqual(movedTabIds, []);
@@ -211,7 +211,6 @@ test(
 
     assert.deepEqual(result, {
       ok: false,
-      movedCount: 0,
       skippedReason: 'superseded',
     });
     assert.deepEqual(movedTabIds, []);

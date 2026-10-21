@@ -1,4 +1,5 @@
 import { createSortSummary } from '../shared/sorting/summary.js';
+import { isPreparationCandidate } from '../shared/tabs/preparation-eligibility.js';
 import { createBacklogSummary, formatBacklogSummary } from './backlog-summary.js';
 import { POPUP_LOG_LEVELS, toErrorMessage } from '../shared/log.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
@@ -102,6 +103,7 @@ export function applyTabSnapshot(snapshot) {
   applyPopupState({
     isYouTubeLayoutOrganised,
     sortSummary: createSortSummary(snapshot.sortSummary),
+    preparationCandidateCount: records.filter(isPreparationCandidate).length,
     autoPreparation: snapshot.autoPreparation ?? { status: 'idle' },
   });
   setErrorMessage('');
@@ -174,7 +176,7 @@ async function requestAutoPrepare() {
     'Could not start auto-preparation. Try again.', 'Starting auto-preparation failed', async () => {
       const response = await runtimeClient.requestRuntimeMessage(
         RUNTIME_MESSAGE_TYPES.START_AUTO_PREPARATION,
-        { openTikTokPip: shouldShowTikTokPipOption(popupState.sortSummary) &&
+        { openTikTokPip: shouldShowTikTokPipOption(popupState.preparationCandidateCount) &&
           Boolean(getPopupElement('openTikTokPipToggle')?.checked) },
       );
       if (response?.ok !== true) setErrorMessage('Could not start auto-preparation. Reopen TabSort and try again.');
@@ -194,11 +196,7 @@ async function requestOrganise() {
         setErrorMessage('Could not organise the tabs. Try again.');
         return;
       }
-      if (response.movedCount > 0) {
-        setNoticeMessage(
-          `Organised ${response.movedCount} tab${response.movedCount === 1 ? '' : 's'}.`,
-        );
-      }
+      if (response.orderChanged) setNoticeMessage('Tab order updated.');
     });
 }
 
