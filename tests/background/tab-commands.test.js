@@ -5,6 +5,8 @@ import { TAB_LOAD_STATES } from '../../shared/tabs/constants.js';
 import {
   getTabRecordsById,
   getTrackedWindowId,
+  resetTrackedWindowStore,
+  replaceAllTabRecords,
 } from '../../background/windows/tracked-window-store.js';
 import {
   getWindowSnapshot,
@@ -18,16 +20,14 @@ import {
   ensureChromeApi,
   createChromeTabFixture,
   createTabRecordFixture,
-  resetTrackedWindowState,
   setTrackedSortState,
-  setTrackedTabRecords,
 } from '../helpers/background-test-helpers.js';
 
 ensureChromeApi({ tabs: true });
 
 test('reloadTab does not mutate record state when chrome.tabs.reload fails', { concurrency: false }, async () => {
-  resetTrackedWindowState();
-  setTrackedTabRecords({
+  resetTrackedWindowStore();
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, { videoDetails: { remainingSeconds: 100 }, remainingSecondsStale: false }),
   });
   const before = JSON.parse(JSON.stringify(getTabRecordsById()[1]));
@@ -43,8 +43,8 @@ test('reloadTab does not mutate record state when chrome.tabs.reload fails', { c
 });
 
 test('reloadTab marks record loading only after successful reload call', { concurrency: false }, async () => {
-  resetTrackedWindowState();
-  setTrackedTabRecords({
+  resetTrackedWindowStore();
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, { videoDetails: { remainingSeconds: 100 }, remainingSecondsStale: false }),
   });
 
@@ -63,8 +63,8 @@ test('reloadTab marks record loading only after successful reload call', { concu
 });
 
 test('tab actions reject records outside the popup window', { concurrency: false }, async () => {
-  resetTrackedWindowState(1);
-  setTrackedTabRecords({
+  resetTrackedWindowStore({ windowId: 1 });
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, { windowId: 1 }),
   });
   globalThis.chrome.tabs.update = async () => {
@@ -77,8 +77,8 @@ test('tab actions reject records outside the popup window', { concurrency: false
 });
 
 test('activateTab returns a structured success result', { concurrency: false }, async () => {
-  resetTrackedWindowState(1);
-  setTrackedTabRecords({
+  resetTrackedWindowStore({ windowId: 1 });
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, { windowId: 1 }),
   });
   globalThis.chrome.tabs.update = async () => {};
@@ -89,7 +89,7 @@ test('activateTab returns a structured success result', { concurrency: false }, 
 });
 
 test('getWindowSnapshot does not replace the tracked target with the preparation progress window', { concurrency: false }, async () => {
-  resetTrackedWindowState(1);
+  resetTrackedWindowStore({ windowId: 1 });
   setPreparationWindowId(2);
   globalThis.chrome.tabs.query = async () => {
     throw new Error('the progress window must not be queried');
@@ -103,8 +103,8 @@ test('getWindowSnapshot does not replace the tracked target with the preparation
 });
 
 test('handleOrganiseTabs refreshes a newly targeted window before deriving its sort', { concurrency: false }, async () => {
-  resetTrackedWindowState(1);
-  setTrackedTabRecords({
+  resetTrackedWindowStore({ windowId: 1 });
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, {
       videoDetails: { remainingSeconds: 120 },
       remainingSecondsStale: false,
@@ -146,7 +146,7 @@ test(
   'getWindowSnapshot does not return another window when its reconciliation is superseded',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState(1);
+    resetTrackedWindowStore({ windowId: 1 });
     const queryCallbacks = new Map();
     globalThis.chrome.tabs.query = query =>
       new Promise(resolve => { queryCallbacks.set(query.windowId, resolve); });
@@ -184,7 +184,7 @@ test(
   'handleOrganiseTabs does not sort with another window state when reconciliation is superseded',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState(1);
+    resetTrackedWindowStore({ windowId: 1 });
     const queryCallbacks = new Map();
     globalThis.chrome.tabs.query = query =>
       new Promise(resolve => { queryCallbacks.set(query.windowId, resolve); });

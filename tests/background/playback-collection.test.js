@@ -4,6 +4,9 @@ import test from 'node:test';
 import {
   getMutableTabRecord,
   getTabRecordsById,
+  resetTrackedWindowStore,
+  replaceAllTabRecords,
+  setTabRecord,
 } from '../../background/windows/tracked-window-store.js';
 import {
   collectPlaybackMetrics,
@@ -12,9 +15,6 @@ import {
 import {
   ensureChromeApi,
   createTabRecordFixture,
-  resetTrackedWindowState,
-  setTrackedTabRecords,
-  setTrackedTabRecord,
   createPlaybackMetricsFixture,
   stubChromeTabGetSequence,
   stubChromeTabMetricPayload,
@@ -24,8 +24,8 @@ import {
 ensureChromeApi({ tabs: true });
 
 test('a stalled read expires and its late metrics cannot restore stale time', async () => {
-  resetTrackedWindowState(1);
-  setTrackedTabRecords({ 1: createTabRecordFixture(1, {
+  resetTrackedWindowStore({ windowId: 1 });
+  replaceAllTabRecords({ 1: createTabRecordFixture(1, {
     remainingSecondsStale: false, videoDetails: { remainingSeconds: 100, durationSeconds: 120 },
   }) });
   stubChromeTabGetSequence([{ tabId: 1 }]);
@@ -40,8 +40,8 @@ test('a stalled read expires and its late metrics cannot restore stale time', as
 });
 
 test('an expired read cannot start a late missing-receiver injection', async () => {
-  resetTrackedWindowState(1);
-  setTrackedTabRecords({ 1: createTabRecordFixture(1) });
+  resetTrackedWindowStore({ windowId: 1 });
+  replaceAllTabRecords({ 1: createTabRecordFixture(1) });
   stubChromeTabGetSequence([{ tabId: 1 }]);
   let rejectRead;
   chrome.tabs.sendMessage = () => new Promise((_resolve, reject) => { rejectRead = reject; });
@@ -54,8 +54,8 @@ test('an expired read cannot start a late missing-receiver injection', async () 
 });
 
 test('a stalled reinjection expires without retrying after it finishes late', async () => {
-  resetTrackedWindowState(1);
-  setTrackedTabRecords({ 1: createTabRecordFixture(1) });
+  resetTrackedWindowStore({ windowId: 1 });
+  replaceAllTabRecords({ 1: createTabRecordFixture(1) });
   stubChromeTabGetSequence([{ tabId: 1 }]);
   let messages = 0;
   chrome.tabs.sendMessage = async () => { messages += 1; throw new Error('Receiving end does not exist'); };
@@ -68,13 +68,13 @@ test('a stalled reinjection expires without retrying after it finishes late', as
 });
 
 test('an expired read does not invalidate a successor video', async () => {
-  resetTrackedWindowState(1);
-  setTrackedTabRecords({ 1: createTabRecordFixture(1) });
+  resetTrackedWindowStore({ windowId: 1 });
+  replaceAllTabRecords({ 1: createTabRecordFixture(1) });
   stubChromeTabGetSequence([
     { tabId: 1 }, { tabId: 1, url: 'https://www.youtube.com/watch?v=next' },
   ]);
   chrome.tabs.sendMessage = () => {
-    setTrackedTabRecord(1, createTabRecordFixture(1, {
+    setTabRecord(1, createTabRecordFixture(1, {
       url: 'https://www.youtube.com/watch?v=next', remainingSecondsStale: false,
       videoDetails: { remainingSeconds: 60, durationSeconds: 100 },
     }));
@@ -88,9 +88,9 @@ test(
   'collectPlaybackMetrics applies updates to the latest record object after async boundaries',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
+    resetTrackedWindowStore();
     const initialRecord = createTabRecordFixture(1, { contentScriptReady: false });
-    setTrackedTabRecords({ 1: initialRecord });
+    replaceAllTabRecords({ 1: initialRecord });
 
     stubChromeTabGetSequence([{ tabId: 1 }], { async: true });
     stubChromeTabMetricPayload(createPlaybackMetricsFixture({ tabId: 1 }), { async: true });
@@ -98,7 +98,7 @@ test(
     const collectPromise = collectPlaybackMetrics(1);
 
     const replacementRecord = createTabRecordFixture(1, { contentScriptReady: false });
-    setTrackedTabRecords({ 1: replacementRecord });
+    replaceAllTabRecords({ 1: replacementRecord });
 
     const storedReplacement = getMutableTabRecord(1);
 
@@ -117,8 +117,8 @@ test(
   'collectPlaybackMetrics updates the stored URL when collected metrics come from a new watch page',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
+    resetTrackedWindowStore();
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
         videoDetails: { title: 'Old Video', remainingSeconds: 45, durationSeconds: 120 },
@@ -152,8 +152,8 @@ test(
   'collectPlaybackMetrics ignores async metric payloads that no longer match the tracked URL',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
+    resetTrackedWindowStore();
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
         contentScriptReady: false,
@@ -176,7 +176,7 @@ test(
 
     const collectPromise = collectPlaybackMetrics(1);
 
-    setTrackedTabRecord(1, createTabRecordFixture(1, {
+    setTabRecord(1, createTabRecordFixture(1, {
       url: 'https://www.youtube.com/watch?v=new',
       contentScriptReady: false,
       playbackMetricsReady: false,
@@ -199,8 +199,8 @@ test(
   'collectPlaybackMetrics leaves auto-prepared time intact once Chrome has discarded the tab',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
+    resetTrackedWindowStore();
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         hasAutoPreparedTime: true,
         videoDetails: { title: 'Prepared Video', remainingSeconds: 45, durationSeconds: 120 },
@@ -227,8 +227,8 @@ test(
   'collectPlaybackMetrics keeps remaining time stale until the current page reports media ready',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
+    resetTrackedWindowStore();
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=new',
         contentScriptReady: true,
@@ -265,8 +265,8 @@ test(
   'collectPlaybackMetrics self-resolves when playback metrics expose a ready video',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
+    resetTrackedWindowStore();
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=archive',
         contentScriptReady: true,
@@ -294,8 +294,8 @@ test(
   'collectPlaybackMetrics ignores stale zero recorded length for archived streams',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
+    resetTrackedWindowStore();
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=archive',
         contentScriptReady: true,
@@ -322,8 +322,8 @@ test(
   'collectPlaybackMetrics ignores zero playback duration when no valid length exists',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
+    resetTrackedWindowStore();
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=archive',
         contentScriptReady: true,
@@ -353,8 +353,8 @@ test(
   'collectPlaybackMetrics does not treat missing current time as playback evidence',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
+    resetTrackedWindowStore();
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=archive',
         contentScriptReady: true,
@@ -384,8 +384,8 @@ test(
   'collectPlaybackMetrics keeps remaining time stale when page metadata and video duration disagree',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
+    resetTrackedWindowStore();
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=previous',
         contentScriptReady: true,
@@ -426,8 +426,8 @@ test(
   'collectPlaybackMetricsBatch recomputes and broadcasts once for multiple updates',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
+    resetTrackedWindowStore();
+    replaceAllTabRecords({
       1: createTabRecordFixture(1),
       2: createTabRecordFixture(2),
       3: createTabRecordFixture(3),
@@ -469,8 +469,8 @@ test(
   'collectPlaybackMetrics reinjects the bundled YouTube runtime when no receiver is available',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
+    resetTrackedWindowStore();
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         contentScriptReady: false,
         playbackMetricsReady: false,
@@ -520,8 +520,8 @@ test(
   'collectPlaybackMetrics waits for the injected runtime before giving up on missing receivers',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
+    resetTrackedWindowStore();
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         contentScriptReady: false,
         playbackMetricsReady: false,

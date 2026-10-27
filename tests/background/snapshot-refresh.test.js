@@ -4,13 +4,13 @@ import test from 'node:test';
 import { getWindowSnapshot, handleOrganiseTabs } from '../../background/messaging/tab-commands.js';
 import {
   getTabRecordsById,
+  resetTrackedWindowStore,
+  replaceAllTabRecords,
 } from '../../background/windows/tracked-window-store.js';
 import {
   ensureChromeApi,
   createChromeTabFixture,
   createTabRecordFixture,
-  resetTrackedWindowState,
-  setTrackedTabRecords,
   stubChromeTabQuery,
   stubChromeTabGet,
 } from '../helpers/background-test-helpers.js';
@@ -18,9 +18,9 @@ import {
 ensureChromeApi({ tabs: true });
 
 test('snapshot waits are bounded and share a batch while renderers are stalled', async () => {
-  resetTrackedWindowState(1);
+  resetTrackedWindowStore({ windowId: 1 });
   const tabs = Array.from({ length: 12 }, (_, index) => createChromeTabFixture(index + 1));
-  setTrackedTabRecords(Object.fromEntries(tabs.map(tab => [tab.id,
+  replaceAllTabRecords(Object.fromEntries(tabs.map(tab => [tab.id,
     createTabRecordFixture(tab.id, { isLive: true, remainingSecondsStale: false }),
   ])));
   stubChromeTabQuery(tabs);
@@ -59,9 +59,9 @@ test('snapshot waits are bounded and share a batch while renderers are stalled',
 });
 
 test('an ended live tab becomes sortable on the next snapshot without navigation', async () => {
-  resetTrackedWindowState(1);
+  resetTrackedWindowStore({ windowId: 1 });
   const tab = createChromeTabFixture(1);
-  setTrackedTabRecords({
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, { isLive: true, remainingSecondsStale: false }),
   });
   stubChromeTabQuery([tab]);
@@ -86,9 +86,9 @@ test(
   'getWindowSnapshot refreshes ready awake tabs as well as pending readings',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState(1);
+    resetTrackedWindowStore({ windowId: 1 });
     const now = Date.now();
-    setTrackedTabRecords({
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         isActive: true,
         contentScriptReady: true,
@@ -145,8 +145,8 @@ test(
   'getWindowSnapshot probes active stale tabs even after reload guidance appears',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState(1);
-    setTrackedTabRecords({
+    resetTrackedWindowStore({ windowId: 1 });
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         isActive: true,
         contentScriptReady: false,
@@ -195,9 +195,9 @@ test(
 );
 
 test('organising refreshes playback before deciding the order', { concurrency: false }, async () => {
-  resetTrackedWindowState(1);
+  resetTrackedWindowStore({ windowId: 1 });
   const tabs = [createChromeTabFixture(1), createChromeTabFixture(2)];
-  setTrackedTabRecords({
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, { index: 0, remainingSecondsStale: false,
       videoDetails: { remainingSeconds: 20, durationSeconds: 120 } }),
     2: createTabRecordFixture(2, { index: 1, remainingSecondsStale: false,

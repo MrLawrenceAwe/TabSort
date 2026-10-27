@@ -36,7 +36,7 @@ test('formats short and exact-hour backlog durations clearly', () => {
 test('reports unavailable time when no non-live video has reliable timing', () => {
   assert.equal(formatBacklogSummary(createBacklogSummary([
     { remainingSecondsStale: true, videoDetails: { remainingSeconds: 30 } },
-  ])), '1 video · remaining time unavailable · 1 time unavailable');
+  ])), '1 video · 1 time unavailable');
   assert.equal(formatBacklogSummary(createBacklogSummary([])), '');
 });
 

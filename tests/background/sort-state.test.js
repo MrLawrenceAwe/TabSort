@@ -4,14 +4,14 @@ import { deriveSortState } from '../../background/sorting/derive-state.js';
 
 import {
   getSortState,
+  resetTrackedWindowStore,
+  replaceAllTabRecords,
+  replaceOrderedWindowTabs,
 } from '../../background/windows/tracked-window-store.js';
 import { updateSortStateAndBroadcast } from '../../background/sorting/update-sort-state.js';
 import {
   ensureChromeApi,
   createTabRecordFixture,
-  resetTrackedWindowState,
-  setTrackedTabRecords,
-  setTrackedWindowTabs,
 } from '../helpers/background-test-helpers.js';
 
 ensureChromeApi();
@@ -47,8 +47,8 @@ test('ready prefix compares both placement and time order with or without tab-st
 });
 
 test('orders known remaining-time tabs before unknown tabs', () => {
-  resetTrackedWindowState();
-  setTrackedTabRecords({
+  resetTrackedWindowStore();
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, { index: 0, videoDetails: { remainingSeconds: 50 }, remainingSecondsStale: false }),
     2: createTabRecordFixture(2, { index: 1, videoDetails: { remainingSeconds: null }, remainingSecondsStale: true }),
     3: createTabRecordFixture(3, { index: 2, videoDetails: { remainingSeconds: 10 }, remainingSecondsStale: false }),
@@ -62,8 +62,8 @@ test('orders known remaining-time tabs before unknown tabs', () => {
 });
 
 test('marks window as sorted only when all actionable tabs are known and ordered', () => {
-  resetTrackedWindowState();
-  setTrackedTabRecords({
+  resetTrackedWindowStore();
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, { index: 0, videoDetails: { remainingSeconds: 5 }, remainingSecondsStale: false }),
     2: createTabRecordFixture(2, { index: 1, videoDetails: { remainingSeconds: 20 }, remainingSecondsStale: false }),
   });
@@ -75,8 +75,8 @@ test('marks window as sorted only when all actionable tabs are known and ordered
 });
 
 test('does not call a single sortable tab a completed sort', () => {
-  resetTrackedWindowState();
-  setTrackedTabRecords({
+  resetTrackedWindowStore();
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, {
       index: 0,
       videoDetails: { remainingSeconds: 5 },
@@ -90,8 +90,8 @@ test('does not call a single sortable tab a completed sort', () => {
 });
 
 test('detects a ready prefix that differs from the sort plan', () => {
-  resetTrackedWindowState();
-  setTrackedTabRecords({
+  resetTrackedWindowStore();
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, { index: 0, remainingSecondsStale: true, isActive: false, isHidden: true }),
     2: createTabRecordFixture(2, { index: 1, videoDetails: { remainingSeconds: 20 }, remainingSecondsStale: false }),
     3: createTabRecordFixture(3, { index: 2, remainingSecondsStale: true }),
@@ -106,8 +106,8 @@ test('detects a ready prefix that differs from the sort plan', () => {
 });
 
 test('handles records without a finite index deterministically', () => {
-  resetTrackedWindowState();
-  setTrackedTabRecords({
+  resetTrackedWindowStore();
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, { index: 0, videoDetails: { remainingSeconds: 8 }, remainingSecondsStale: false }),
     2: createTabRecordFixture(2, { index: undefined, videoDetails: { remainingSeconds: 4 }, remainingSecondsStale: false }),
     3: createTabRecordFixture(3, { index: undefined, videoDetails: { remainingSeconds: 2 }, remainingSecondsStale: false }),
@@ -120,8 +120,8 @@ test('handles records without a finite index deterministically', () => {
 });
 
 test('live tabs do not block sorted readiness for VOD tabs with known remaining times', () => {
-  resetTrackedWindowState();
-  setTrackedTabRecords({
+  resetTrackedWindowStore();
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, { index: 0, videoDetails: { remainingSeconds: 5 }, remainingSecondsStale: false }),
     2: createTabRecordFixture(2, { index: 1, videoDetails: { remainingSeconds: 15 }, remainingSecondsStale: false }),
     3: createTabRecordFixture(3, {
@@ -142,8 +142,8 @@ test('live tabs do not block sorted readiness for VOD tabs with known remaining 
 });
 
 test('pinned tracked tabs are excluded from sortable readiness totals', () => {
-  resetTrackedWindowState();
-  setTrackedTabRecords({
+  resetTrackedWindowStore();
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, {
       index: 0,
       pinned: true,
@@ -172,8 +172,8 @@ test('pinned tracked tabs are excluded from sortable readiness totals', () => {
 });
 
 test('does not mark videos sorted while non-YouTube tabs remain in front', () => {
-  resetTrackedWindowState();
-  setTrackedTabRecords({
+  resetTrackedWindowStore();
+  replaceAllTabRecords({
     2: createTabRecordFixture(2, {
       index: 1,
       videoDetails: { remainingSeconds: 5 },
@@ -185,7 +185,7 @@ test('does not mark videos sorted while non-YouTube tabs remain in front', () =>
       remainingSecondsStale: false,
     }),
   });
-  setTrackedWindowTabs([
+  replaceOrderedWindowTabs([
     { id: 1, index: 0, pinned: false, url: 'https://example.com' },
     { id: 2, index: 1, pinned: false, url: 'https://www.youtube.com/watch?v=2' },
     { id: 3, index: 2, pinned: false, url: 'https://www.youtube.com/watch?v=3' },

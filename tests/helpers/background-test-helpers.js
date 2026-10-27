@@ -1,12 +1,7 @@
 import { TAB_LOAD_STATES } from '../../shared/tabs/constants.js';
-import { createSortSummary } from '../../shared/sorting/summary.js';
 import {
   getSortState,
-  replaceAllTabRecords,
-  replaceOrderedWindowTabs,
-  resetTrackedWindowStore,
   setSortState,
-  setTabRecord,
 } from '../../background/windows/tracked-window-store.js';
 import { createTabRecord } from '../../background/tabs/record.js';
 
@@ -143,25 +138,8 @@ export function stubChromeTabMetrics({
     });
 }
 
-export function resetTrackedWindowState(windowId = null) {
-  resetTrackedWindowStore({ windowId });
-  setSortState({ sortSummary: createSortSummary() });
-}
-
-export function setTrackedTabRecords(tabRecordsById = {}) {
-  replaceAllTabRecords(tabRecordsById);
-}
-
-export function setTrackedWindowTabs(tabs = []) {
-  replaceOrderedWindowTabs(tabs);
-}
-
 export function setTrackedSortState(sortState = {}) {
   setSortState({ ...getSortState(), ...sortState });
-}
-
-export function setTrackedTabRecord(tabId, record) {
-  setTabRecord(tabId, record);
 }
 
 export function createTabRecordFixture(id = 1, overrides = {}) {

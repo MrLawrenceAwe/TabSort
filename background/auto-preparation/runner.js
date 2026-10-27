@@ -24,7 +24,7 @@ export function createAutoPreparationRunner({
     state.phase = phase;
     emit();
   }
-  function stop(reason = 'Stopped') {
+  function stop(reason = '') {
     if (!current) return snapshot();
     current.abortController.abort();
     state.reason = reason;

@@ -10,12 +10,12 @@ import {
   getTabRecordsById,
   getTrackedWindowId,
   replaceAllTabRecords,
+  resetTrackedWindowStore,
 } from '../../background/windows/tracked-window-store.js';
 import {
   createChromeTabFixture,
   createTabRecordFixture,
   ensureChromeApi,
-  resetTrackedWindowState,
   stubChromeTabQuery,
   stubChromeTabQueryFailure,
 } from '../helpers/background-test-helpers.js';
@@ -26,7 +26,7 @@ test(
   'syncFocusedWindow claims focused windows even before they have YouTube tabs',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState(1);
+    resetTrackedWindowStore({ windowId: 1 });
     stubChromeTabQuery([]);
 
     await syncFocusedWindow(2);
@@ -41,7 +41,7 @@ test(
   'syncFocusedWindow preserves coherent state when the new window query fails',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState(1);
+    resetTrackedWindowStore({ windowId: 1 });
     replaceAllTabRecords({
       10: createTabRecordFixture(10, { windowId: 1 }),
     });
@@ -59,7 +59,7 @@ test(
   'returning focus to the tracked window supersedes a pending sync to another window',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState(1);
+    resetTrackedWindowStore({ windowId: 1 });
     replaceAllTabRecords({ 10: createTabRecordFixture(10, { windowId: 1 }) });
     let resolveOtherWindow;
     chrome.tabs.query = ({ windowId }) => windowId === 2
@@ -80,7 +80,7 @@ test(
   'initial window sync cannot overwrite a newer focus sync',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
+    resetTrackedWindowStore();
     const queryCallbacks = new Map();
     let lastFocusedCallback;
     globalThis.chrome.windows = {

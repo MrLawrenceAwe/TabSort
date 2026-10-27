@@ -13,7 +13,7 @@ async function waitForCompletion() {
   assert.equal(getAutoPreparation().status, 'complete');
 }
 
-test('100 queued tabs that become ready are skipped without moving; progress payloads contain no tab collection', async () => {
+test('100 queued tabs that become ready bypass preparation moves and count as ready; progress payloads contain no tab collection', async () => {
   const h = createPreparationServiceFixture(100, () => {
     for (let id = 1; id <= 100; id++) {
       const record = getMutableTabRecord(id);

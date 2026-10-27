@@ -6,6 +6,8 @@ import {
   getSortState,
   getTabRecordsById,
   getTrackedWindowId,
+  resetTrackedWindowStore,
+  replaceAllTabRecords,
 } from '../../background/windows/tracked-window-store.js';
 import { reconcileWindowTabRecords } from '../../background/tabs/reconcile-window.js';
 import { setPreparingTabRecord } from '../../background/auto-preparation/placeholder.js';
@@ -14,8 +16,6 @@ import {
   ensureChromeApi,
   createChromeTabFixture,
   createTabRecordFixture,
-  resetTrackedWindowState,
-  setTrackedTabRecords,
   setTrackedSortState,
   stubChromeTabQuery,
   stubChromeTabQueryFailure,
@@ -25,7 +25,7 @@ ensureChromeApi({ tabs: true });
 
 test('sleeping tabs retain browser titles after cold rehydration and window changes', async () => {
   const tab = createChromeTabFixture(1, { discarded: true, title: 'Sleeping video - YouTube' });
-  resetTrackedWindowState(1);
+  resetTrackedWindowStore({ windowId: 1 });
   stubChromeTabQuery([tab]);
   await reconcileWindowTabRecords(1, { force: true });
   assert.equal(getTabRecordsById()[1].browserTitle, tab.title);
@@ -44,8 +44,8 @@ test('auto-prepared sleeping tabs remain sortable after visiting another window'
     set: async values => Object.assign(saved, values),
     get: async () => ({ ...saved }),
   } };
-  resetTrackedWindowState(1);
-  setTrackedTabRecords({
+  resetTrackedWindowStore({ windowId: 1 });
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, {
       loadState: TAB_LOAD_STATES.DISCARDED,
       videoDetails: { title: 'Prepared video', remainingSeconds: 45, durationSeconds: 120 },
@@ -62,7 +62,7 @@ test('auto-prepared sleeping tabs remain sortable after visiting another window'
   await reconcileWindowTabRecords(1, { force: true });
   assert.equal(getSortState().sortSummary.readyCount, 1);
   assert.equal(getTabRecordsById()[1].videoDetails.title, 'Prepared video');
-  resetTrackedWindowState(1);
+  resetTrackedWindowStore({ windowId: 1 });
   await reconcileWindowTabRecords(1, { force: true });
   assert.equal(getSortState().sortSummary.readyCount, 1);
   delete chrome.storage;
@@ -72,7 +72,7 @@ test(
   'reconcileWindowTabRecords does not mark already-open loaded tabs as recently loaded on initial rehydrate',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
+    resetTrackedWindowStore();
 
     stubChromeTabQuery([createChromeTabFixture(1)]);
 
@@ -88,8 +88,8 @@ test(
   'reconcileWindowTabRecords keeps the recent load grace for real discarded-to-loaded transitions',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
+    resetTrackedWindowStore();
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         loadState: TAB_LOAD_STATES.DISCARDED,
         loadedAt: null,
@@ -110,8 +110,8 @@ test(
   'reconcileWindowTabRecords keeps a trusted remaining time when a loaded tab is discarded',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
+    resetTrackedWindowStore();
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         loadState: TAB_LOAD_STATES.LOADED,
         videoDetails: { title: 'Prepared video', remainingSeconds: 45, durationSeconds: 120 },
@@ -137,8 +137,8 @@ test(
   'reconcileWindowTabRecords invalidates an ordinary discarded tab without an auto-preparation marker',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
+    resetTrackedWindowStore();
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         videoDetails: { title: 'Ordinary video', remainingSeconds: 45, durationSeconds: 120 },
         remainingSecondsStale: false,
@@ -159,8 +159,8 @@ test(
   'reconcileWindowTabRecords resets runtime readiness when a tracked tab navigates to a new video URL',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
+    resetTrackedWindowStore();
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=old',
         playbackMetricsReady: true,
@@ -189,8 +189,8 @@ test(
   'reconcileWindowTabRecords preserves readiness when only watch URL parameters change',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
-    setTrackedTabRecords({
+    resetTrackedWindowStore();
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         url: 'https://www.youtube.com/watch?v=same',
         playbackMetricsReady: true,
@@ -225,8 +225,8 @@ test(
   'reconcileWindowTabRecords preserves tracked state when the primary tab query fails',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState(1);
-    setTrackedTabRecords({
+    resetTrackedWindowStore({ windowId: 1 });
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         videoDetails: { title: 'Video 1', remainingSeconds: 90, durationSeconds: 120 },
         remainingSecondsStale: false,
@@ -253,8 +253,8 @@ test(
   'reconcileWindowTabRecords does not switch tracked windows when a forced tab query fails',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState(1);
-    setTrackedTabRecords({
+    resetTrackedWindowStore({ windowId: 1 });
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         videoDetails: { title: 'Window 1 Video', remainingSeconds: 90, durationSeconds: 120 },
         remainingSecondsStale: false,
@@ -278,7 +278,7 @@ test(
   'reconcileWindowTabRecords resolves the concrete window for a last-focused query',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState();
+    resetTrackedWindowStore();
     stubChromeTabQuery([createChromeTabFixture(7, { windowId: 4 })]);
 
     const result = await reconcileWindowTabRecords(null, { force: true });
@@ -291,7 +291,7 @@ test(
 );
 
 test('keeps the video being auto-prepared in its placeholder position, including after switching windows', async () => {
-  resetTrackedWindowState(1);
+  resetTrackedWindowStore({ windowId: 1 });
   const originalGetURL = chrome.runtime.getURL;
   chrome.runtime.getURL = path => `chrome-extension://tabsort/${path}`;
   const record = createTabRecordFixture(5, {

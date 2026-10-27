@@ -102,10 +102,11 @@ Preparation candidates exclude ready, pinned, live, selected, and currently
 preparing videos. The popup counts and queue filter share this predicate. The
 TikTok option requires more than seven candidates.
 
-Each video has a 15-second preparation deadline. Once data appears, the runner
-samples it for a three-second settling period so YouTube can restore saved viewing
-progress. A sudden position jump or a failed read restarts settling. Unavailable
-videos are skipped at the deadline.
+Loading, reading, and settling share a 15-second deadline after the video moves
+to the preparation window. Once data appears, the runner samples it for a
+three-second settling period so YouTube can restore saved viewing progress.
+A sudden position jump or a failed read restarts settling. Videos without a
+settled reading are skipped at the deadline.
 
 The workspace moves videos with `moveTabToPreparationWindow()` and returns the
 outstanding video when `finishSession()` clears the recovery journal. Successful

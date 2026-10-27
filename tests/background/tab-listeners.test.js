@@ -3,17 +3,20 @@ import test from 'node:test';
 import { setImmediate } from 'node:timers/promises';
 import { registerTabAndNavigationListeners } from '../../background/tabs/listeners.js';
 import { saveAutoPreparedTab } from '../../background/auto-preparation/session-cache.js';
-import { getSortState, getTabRecord } from '../../background/windows/tracked-window-store.js';
+import {
+  getSortState,
+  getTabRecord,
+  resetTrackedWindowStore,
+} from '../../background/windows/tracked-window-store.js';
 import {
   createChromeTabFixture,
   createPlaybackMetricsFixture,
   ensureChromeApi,
-  resetTrackedWindowState,
 } from '../helpers/background-test-helpers.js';
 
 test('Chrome tab replacement transfers prepared time to the new sleeping tab ID', async (t) => {
   ensureChromeApi({ tabs: true });
-  resetTrackedWindowState(1);
+  resetTrackedWindowStore({ windowId: 1 });
   const saved = {};
   chrome.storage = { session: {
     get: async () => ({ ...saved }),
@@ -47,7 +50,7 @@ for (const queryFails of [false, true]) {
     ? 'event bursts skip playback collection when reconciliation fails'
     : 'event bursts reconcile once and collect each tracked video only once', async (t) => {
     ensureChromeApi({ tabs: true });
-    resetTrackedWindowState(1);
+    resetTrackedWindowStore({ windowId: 1 });
     t.mock.timers.enable({ apis: ['setTimeout'] });
     const listeners = {};
     for (const event of ['onUpdated', 'onMoved', 'onActivated', 'onDetached', 'onAttached', 'onRemoved']) {
@@ -83,7 +86,7 @@ for (const queryFails of [false, true]) {
 
 test('discard events reconcile auto-prepared tabs without probing their unloaded pages', async (t) => {
   ensureChromeApi({ tabs: true });
-  resetTrackedWindowState(1);
+  resetTrackedWindowStore({ windowId: 1 });
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const listeners = {};
   for (const event of ['onUpdated', 'onMoved', 'onActivated', 'onDetached', 'onAttached', 'onRemoved']) {

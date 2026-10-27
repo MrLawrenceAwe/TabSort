@@ -5,7 +5,7 @@ import test from 'node:test';
 
 import {
   getOrganisedBadgeText,
-  areReadyTabsLeadingInOrder,
+  isOrganisedBadgeEligible,
   shouldShowOrganiseButton,
   shouldShowTikTokPipOption,
 } from '../../popup/controls-view.js';
@@ -40,10 +40,10 @@ test('identifies ready tabs that are already in their intended order', () => {
     readyTabsLeadInOrder: true,
   });
 
-  assert.equal(areReadyTabsLeadingInOrder(partiallyReadyInOrder, false), true);
+  assert.equal(isOrganisedBadgeEligible(partiallyReadyInOrder, false), true);
   assert.equal(getOrganisedBadgeText(false), 'Ready tabs already in order');
   assert.equal(getOrganisedBadgeText(true), 'YouTube tabs organised');
-  assert.equal(areReadyTabsLeadingInOrder(createSortSummary({ readyCount: 1 }), false), false);
+  assert.equal(isOrganisedBadgeEligible(createSortSummary({ readyCount: 1 }), false), false);
 });
 
 

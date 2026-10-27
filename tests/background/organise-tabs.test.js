@@ -2,22 +2,24 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { organiseTabs } from '../../background/sorting/organise-tabs.js';
-import { nextSyncToken } from '../../background/windows/tracked-window-store.js';
+import {
+  nextSyncToken,
+  resetTrackedWindowStore,
+  replaceAllTabRecords,
+} from '../../background/windows/tracked-window-store.js';
 import {
   ensureChromeApi,
   createChromeTabFixture,
   createTabRecordFixture,
-  resetTrackedWindowState,
   setTrackedSortState,
-  setTrackedTabRecords,
   stubChromeTabQuery,
 } from '../helpers/background-test-helpers.js';
 
 ensureChromeApi({ tabs: true });
 
 test('organiseTabs reports a completed order change', { concurrency: false }, async () => {
-  resetTrackedWindowState(1);
-  setTrackedTabRecords({
+  resetTrackedWindowStore({ windowId: 1 });
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, {
       index: 0,
       videoDetails: { title: 'Video 1', remainingSeconds: 120, durationSeconds: 120 },
@@ -53,8 +55,8 @@ test('organiseTabs reports a completed order change', { concurrency: false }, as
 });
 
 test('organiseTabs reports a failed bulk move without inferred counts', { concurrency: false }, async () => {
-  resetTrackedWindowState(1);
-  setTrackedTabRecords({
+  resetTrackedWindowStore({ windowId: 1 });
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, {
       videoDetails: { title: 'Video 1', remainingSeconds: 120, durationSeconds: 120 },
       remainingSecondsStale: false,
@@ -78,8 +80,8 @@ test('organiseTabs reports a failed bulk move without inferred counts', { concur
 });
 
 test('organiseTabs avoids Chrome move calls when the complete order already matches', { concurrency: false }, async () => {
-  resetTrackedWindowState(1);
-  setTrackedTabRecords({
+  resetTrackedWindowStore({ windowId: 1 });
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, {
       videoDetails: { title: 'Video 1', remainingSeconds: 60, durationSeconds: 120 },
       remainingSecondsStale: false,
@@ -108,8 +110,8 @@ test(
   'organiseTabs does not move tabs when its sync token is superseded during auto-preparation',
   { concurrency: false },
   async () => {
-    resetTrackedWindowState(1);
-    setTrackedTabRecords({
+    resetTrackedWindowStore({ windowId: 1 });
+    replaceAllTabRecords({
       1: createTabRecordFixture(1, {
         videoDetails: { title: 'Video 1', remainingSeconds: 120, durationSeconds: 120 },
         remainingSecondsStale: false,

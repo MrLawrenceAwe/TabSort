@@ -2,7 +2,7 @@ import { formatPreparationStatus } from '../shared/preparation-progress.js';
 import { getPopupElement } from './elements.js';
 import { popupState } from './store.js';
 
-export function areReadyTabsLeadingInOrder(sortSummary, isYouTubeLayoutOrganised) {
+export function isOrganisedBadgeEligible(sortSummary, isYouTubeLayoutOrganised) {
   return isYouTubeLayoutOrganised || (
     sortSummary.readyCount >= 2 && sortSummary.readyTabsLeadInOrder
   );
@@ -12,10 +12,11 @@ export function getOrganisedBadgeText(isYouTubeLayoutOrganised) {
   return isYouTubeLayoutOrganised ? 'YouTube tabs organised' : 'Ready tabs already in order';
 }
 
-function updateSortStatus(status, readyTabsInOrder) {
+function updateSortStatus(status) {
   if (!status) return;
   const { readyCount, sortableCount } = popupState.sortSummary;
   if (!popupState.isYouTubeLayoutOrganised) {
+    const readyTabsInOrder = readyCount >= 2 && popupState.sortSummary.readyTabsLeadInOrder;
     status.classList.toggle('hide', sortableCount === 0);
     status.textContent = readyTabsInOrder
       ? `${readyCount} of ${sortableCount} sortable tabs ready · Ready tabs in order.`
@@ -25,12 +26,12 @@ function updateSortStatus(status, readyTabsInOrder) {
   status.classList.add('hide');
 }
 
-function updateOrganisedBadge(organisedBadge, readyTabsInOrder) {
+function updateOrganisedBadge(organisedBadge, visible) {
   if (!organisedBadge) return;
-  organisedBadge.classList.toggle('hide', !readyTabsInOrder);
+  organisedBadge.classList.toggle('hide', !visible);
   const badgeText = getPopupElement('organisedBadgeText');
   if (badgeText) {
-    badgeText.textContent = readyTabsInOrder
+    badgeText.textContent = visible
       ? getOrganisedBadgeText(popupState.isYouTubeLayoutOrganised)
       : '';
   }
@@ -78,7 +79,7 @@ export function renderPopupControls() {
     popupState.isYouTubeLayoutOrganised,
   );
 
-  const readyTabsInOrder = areReadyTabsLeadingInOrder(
+  const badgeEligible = isOrganisedBadgeEligible(
     popupState.sortSummary,
     popupState.isYouTubeLayoutOrganised,
   );
@@ -106,7 +107,7 @@ export function renderPopupControls() {
 
   setSiteGroupingOptionVisible(shouldShowOrganise);
 
-  updateSortStatus(status, readyTabsInOrder);
-  updateOrganisedBadge(organisedBadge, readyTabsInOrder && !preparationBusy);
+  updateSortStatus(status);
+  updateOrganisedBadge(organisedBadge, badgeEligible && !preparationBusy);
   updateOrganiseButton(organiseButton, shouldShowOrganise, actionsDisabled);
 }

@@ -28,7 +28,7 @@ test('missing Chrome returns defaults and saving is harmless', async () => {
   await savePreferences({ groupOtherTabsBySite: true });
 });
 
-test('saved local preferences remain authoritative when sync writes fail', async () => {
+test('saved local preferences take precedence over imported sync settings', async () => {
   const fixture = storageFixture({}, { groupOtherTabsBySite: false });
   await savePreferences({ groupOtherTabsBySite: true });
   assert.equal((await loadPreferences()).groupOtherTabsBySite, true);
@@ -41,7 +41,7 @@ test('saved local preferences remain authoritative when sync writes fail', async
   });
 });
 
-test('imports sync settings once without overwriting local fallback settings', async () => {
+test('imports sync settings once without overwriting saved local settings', async () => {
   const fixture = storageFixture({ groupOtherTabsBySite: false }, {
     groupOtherTabsBySite: true, openTikTokPipOnAutoPrepare: true,
   });

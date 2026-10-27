@@ -96,7 +96,7 @@ test('Stop returns a waiting preparation tab without changing the browsing selec
   const stopWindow = context.pages().find(page => page.url().endsWith('/preparation/progress.html'));
   await expect.poll(() => worker.evaluate(async id => (await chrome.tabs.get(id)).active, stalledIds[0])).toBe(true);
   await stopWindow.getByRole('button', { name: 'Stop', exact: true }).click();
-  await expect(stopWindow.getByRole('heading')).toHaveText('Stopped');
+  await expect(stopWindow.getByRole('heading')).toHaveText('Auto-prepare stopped');
   const returned = await worker.evaluate(ids => Promise.all(ids.map(id => chrome.tabs.get(id))), stalledIds);
   expect(returned.map(tab => ({ active: tab.active, windowId: tab.windowId, index: tab.index })))
     .toEqual(originalTabs.map(tab => ({ active: false, windowId: tab.windowId, index: tab.index })));

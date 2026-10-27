@@ -9,17 +9,16 @@ import {
   setSortState,
   setTabRecord,
   replaceAllTabRecords,
+  resetTrackedWindowStore,
 } from '../../background/windows/tracked-window-store.js';
 import { buildTabSnapshot } from '../../background/tab-snapshot.js';
 import {
   createTabRecordFixture,
-  resetTrackedWindowState,
-  setTrackedTabRecords,
 } from '../helpers/background-test-helpers.js';
 
 test('public tracked window store access returns defensive copies', () => {
-  resetTrackedWindowState();
-  setTrackedTabRecords({
+  resetTrackedWindowStore();
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, {
       videoDetails: { title: 'Video 1', remainingSeconds: 20, durationSeconds: 100 },
       remainingSecondsStale: false,
@@ -33,8 +32,8 @@ test('public tracked window store access returns defensive copies', () => {
 });
 
 test('writable tracked window store access is explicit for write paths', () => {
-  resetTrackedWindowState();
-  setTrackedTabRecords({
+  resetTrackedWindowStore();
+  replaceAllTabRecords({
     1: createTabRecordFixture(1, {
       videoDetails: { title: 'Video 1', remainingSeconds: 20, durationSeconds: 100 },
       remainingSecondsStale: false,
@@ -47,8 +46,8 @@ test('writable tracked window store access is explicit for write paths', () => {
 });
 
 test('sort reads and popup snapshots cannot mutate the background store', () => {
-  resetTrackedWindowState();
-  setTrackedTabRecords({ 1: createTabRecordFixture(1) });
+  resetTrackedWindowStore();
+  replaceAllTabRecords({ 1: createTabRecordFixture(1) });
   setSortState({
     trackedTabOrder: [1], targetVideoTabOrder: [1], sortSummary: { readyCount: 1 },
   });
@@ -71,7 +70,7 @@ test('sort reads and popup snapshots cannot mutate the background store', () => 
 
 
 test('record writes isolate caller inputs', () => {
-  resetTrackedWindowState();
+  resetTrackedWindowStore();
   const record = createTabRecordFixture(1, {
     videoDetails: { title: 'Original', remainingSeconds: 20 },
   });
