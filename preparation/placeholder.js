@@ -1,4 +1,5 @@
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
+import { isYouTubeVideoPage } from '../shared/youtube/urls.js';
 
 const params = new URLSearchParams(location.search);
 const tabId = Number(params.get('tabId'));
@@ -13,9 +14,11 @@ button.addEventListener('click', async () => {
     if (tab) {
       await chrome.tabs.update(tab.id, { active: true });
       await chrome.windows.update(tab.windowId, { focused: true });
-    } else if (originalUrl && /^https:\/\/(www\.)?youtube\.com\//.test(originalUrl)) {
+    } else if (isYouTubeVideoPage(originalUrl)) {
       const current = await chrome.tabs.getCurrent();
       await chrome.tabs.update(current.id, { url: originalUrl });
+    } else {
+      throw new Error('The original video URL is unavailable.');
     }
   } catch {
     document.getElementById('status').textContent = 'Could not return the video. It may still be in the preparation window.';

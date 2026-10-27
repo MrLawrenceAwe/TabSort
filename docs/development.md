@@ -7,7 +7,11 @@
 - `npm test` runs the unit and integration-style Node tests.
 - `npm run lint` checks source lint rules; `node scripts/check-static.mjs` checks
   JavaScript syntax and local imports, including the bundle.
-- `npm run validate:release` checks version consistency and required release resources.
+  Both share directory exclusions in `scripts/check-scope.mjs` for dependencies,
+  tooling, and local artifacts. Only lint excludes `dist/`.
+- `npm run validate:release` checks version consistency, required worker and popup
+  declarations, and release resources, including local scripts and stylesheets
+  referenced by extension HTML.
 - `npm run test:e2e` launches Chromium with the unpacked extension. Install its
   browser once with `npx playwright install chromium`.
 - `npm run check` builds and runs all checks, including browser tests.
@@ -41,6 +45,9 @@ Playwright traces.
 - `tests/e2e/` separates extension smoke, auto-preparation, sorting, responsiveness,
   and discarded-workspace scenarios. `fixtures/extension.js` provides the shared
   persistent browser context, service worker, and extension ID for feature suites.
+  The discard scenario copies `fixtures/discard-runner.js` into its temporary
+  extension, preserving relative imports, and supplies its result endpoint through
+  a separate JSON file. The runner receives the same lint and syntax checks as source.
 
 ## Tab records and playback contracts
 

@@ -1,5 +1,5 @@
 import { chromium, expect, test } from '@playwright/test';
-import { cpSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -27,53 +27,15 @@ test('wakes five discarded pages and restores their groups without taking focus'
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     const endpoint = `http://127.0.0.1:${server.address().port}/result`;
     for (const folder of ['background', 'shared', 'preparation']) cpSync(resolve(folder), join(directory, folder), { recursive: true });
+    const runnerPath = 'tests/e2e/fixtures/discard-runner.js';
     writeFileSync(join(directory, 'manifest.json'), JSON.stringify({
       manifest_version: 3, name: 'TabSort discard regression', version: '1.0',
       permissions: ['tabs', 'storage'], host_permissions: ['http://127.0.0.1/*'],
-      background: { service_worker: 'runner.js', type: 'module' },
+      background: { service_worker: runnerPath, type: 'module' },
     }));
-    writeFileSync(join(directory, 'runner.js'), `
-      import { createPreparationWorkspace } from ${JSON.stringify('./background/auto-preparation/workspace.js')};
-      chrome.runtime.onInstalled.addListener(() => run().then(
-        result => fetch(${JSON.stringify(endpoint)}, {method:'POST', body:JSON.stringify(result)}),
-        error => fetch(${JSON.stringify(endpoint)}, {method:'POST', body:JSON.stringify({error:error.stack})})
-      ));
-      async function run() {
-        const source = await chrome.windows.create({url:'about:blank',focused:true});
-        const activeId = source.tabs[0].id;
-        const tabs = [];
-        const waitLoaded = async id => {
-          const deadline = Date.now() + 20000;
-          while(Date.now() < deadline) {
-            const tab = await chrome.tabs.get(id);
-            if (!tab.discarded && tab.status === 'complete') return tab;
-            await new Promise(resolve => setTimeout(resolve,50));
-          }
-          throw new Error('Tab did not wake: '+id);
-        };
-        for(let i=0;i<5;i++) tabs.push(await chrome.tabs.create({windowId:source.id,active:false,
-          url:'data:text/html,<title>Sleeping '+i+'</title><p>Discard test</p>'}));
-        await Promise.all(tabs.map(tab=>waitLoaded(tab.id)));
-        const groupId = await chrome.tabs.group({tabIds:tabs.map(tab=>tab.id)});
-        const original = [];
-        for(const tab of tabs) original.push(await chrome.tabs.discard(tab.id));
-        const workspace = createPreparationWorkspace();
-        await workspace.create(source.id);
-        const rounds = [];
-        try {
-          for(const tab of original) {
-            await workspace.moveTabToPreparationWindow(tab.id,source.id);
-            const awake = await waitLoaded(tab.id);
-            await workspace.returnTab();
-            const returned = await chrome.tabs.discard(tab.id);
-            rounds.push({awake,returned,preparationFocused:(await chrome.windows.get(workspace.windowId)).focused});
-          }
-        } finally {await workspace.finishSession();}
-        const after = await chrome.tabs.query({windowId:source.id});
-        return {original,rounds,groupId,activeId,finalActiveId:after.find(tab=>tab.active).id,
-          placeholders:after.filter(tab=>tab.url.includes('/placeholder.html')).length};
-      }
-    `);
+    mkdirSync(join(directory, 'tests/e2e/fixtures'), { recursive: true });
+    cpSync(new URL('./fixtures/discard-runner.js', import.meta.url), join(directory, runnerPath));
+    writeFileSync(join(directory, 'result-endpoint.json'), JSON.stringify({ endpoint }));
     child = spawn(chromium.executablePath(), [
       // Match Playwright's test-browser launch on hosted Linux runners.
       '--no-sandbox',

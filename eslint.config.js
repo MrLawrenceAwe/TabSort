@@ -1,8 +1,9 @@
 import globals from 'globals';
+import { IGNORED_CHECK_DIRECTORIES } from './scripts/check-scope.mjs';
 
 export default [
   {
-    ignores: ['node_modules/**', 'dist/**'],
+    ignores: [...IGNORED_CHECK_DIRECTORIES.map(directory => `**/${directory}/**`), 'dist/**'],
   },
   {
     files: ['**/*.js', '**/*.mjs'],

@@ -2,9 +2,10 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { IGNORED_CHECK_DIRECTORIES } from './check-scope.mjs';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const ignoredDirectories = new Set(['.git', '.tools', 'node_modules']);
+const ignoredDirectories = new Set(IGNORED_CHECK_DIRECTORIES);
 const checkedFiles = [];
 const importPattern =
   /(?:import|export)\s+(?:[^'"]+\s+from\s+)?['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
