@@ -42,20 +42,8 @@ export function stubChromeTabQueryFailure(message = 'query failed') {
   globalThis.chrome.tabs.query = async () => { throw new Error(message); };
 }
 
-export function stubChromeTabGet({
-  tabId = 1,
-  windowId = 1,
-  url = `https://www.youtube.com/watch?v=${tabId}`,
-  active = false,
-  hidden = false,
-} = {}) {
-  globalThis.chrome.tabs.get = async () => ({
-      id: tabId,
-      windowId,
-      url,
-      active,
-      hidden,
-  });
+export function stubChromeTabGet(tab = createChromeTabFixture()) {
+  globalThis.chrome.tabs.get = async () => ({ ...tab });
 }
 
 export function createPlaybackMetricsFixture({
@@ -81,22 +69,10 @@ export function createPlaybackMetricsFixture({
   };
 }
 
-export function createChromeTabGetFixture({
-  tabId = 1,
-  windowId = 1,
-  url = `https://www.youtube.com/watch?v=${tabId}`,
-  active = false,
-  hidden = false,
-  discarded = false,
-} = {}) {
-  return { id: tabId, windowId, url, active, hidden, discarded };
-}
-
 export function stubChromeTabGetSequence(tabs, { async = false } = {}) {
-  const responses = tabs.map((tab) => createChromeTabGetFixture(tab));
   let nextIndex = 0;
   globalThis.chrome.tabs.get = async () => {
-    const response = responses[Math.min(nextIndex, responses.length - 1)];
+    const response = tabs[Math.min(nextIndex, tabs.length - 1)];
     nextIndex += 1;
     if (async) {
       await new Promise(resolve => setTimeout(resolve, 0));
@@ -114,7 +90,7 @@ export function stubChromeTabMetricPayload(payload, { async = false } = {}) {
   };
 }
 
-export function stubChromeTabMetrics({
+export function stubArchivedStreamMetrics({
   tabId = 1,
   windowId = 1,
   url = `https://www.youtube.com/watch?v=${tabId}`,
@@ -122,7 +98,7 @@ export function stubChromeTabMetrics({
   hidden = false,
   metrics = {},
 } = {}) {
-  stubChromeTabGet({ tabId, windowId, url, active, hidden });
+  stubChromeTabGet(createChromeTabFixture(tabId, { windowId, url, active, hidden }));
 
   globalThis.chrome.tabs.sendMessage = async () => createPlaybackMetricsFixture({
       tabId,

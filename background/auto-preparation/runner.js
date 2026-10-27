@@ -10,7 +10,7 @@ export function createAutoPreparationRunner({
   publish,
   now = Date.now,
   delay = ms => new Promise(resolve => setTimeout(resolve, ms)),
-  timeoutMs = 15000,
+  playbackWaitTimeoutMs = 15000,
   pollMs = 500,
   settleMs = 3000,
   resumeJumpToleranceSeconds = 5,
@@ -32,7 +32,7 @@ export function createAutoPreparationRunner({
     return current.done;
   }
   async function waitForSettledPlayback(job, item) {
-    const deadline = now() + timeoutMs;
+    const deadline = now() + playbackWaitTimeoutMs;
     let readySince = null;
     let lastRemainingSeconds = null;
     let lastSampleAt = null;

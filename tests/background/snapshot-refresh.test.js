@@ -164,11 +164,10 @@ test(
         active: true,
       }),
     ]);
-    stubChromeTabGet({
-      tabId: 1,
+    stubChromeTabGet(createChromeTabFixture(1, {
       url: 'https://www.youtube.com/watch?v=archive',
       active: true,
-    });
+    }));
 
     const refreshedTabIds = [];
     globalThis.chrome.tabs.sendMessage = async tabId => {

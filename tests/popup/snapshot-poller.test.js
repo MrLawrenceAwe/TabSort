@@ -36,7 +36,7 @@ test('awake live tabs refresh their status; sleeping live tabs remain asleep', (
   assert.equal(shouldPollSnapshot({ tabRecordsById: { 1: sleeping } }), false);
 });
 
-test('shouldPollSnapshot polls only when at least one tracked tab can self-resolve', () => {
+test('shouldPollSnapshot polls stale tabs during the load grace period and stops after it expires', () => {
   const snapshot = {
     tabRecordsById: {
       1: makeRecord({

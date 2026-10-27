@@ -11,7 +11,7 @@ function harness(overrides = {}) {
   let done;
   const finished = new Promise(resolve => { done = resolve; });
   const runner = createAutoPreparationRunner({
-    now: () => time, timeoutMs: 60, pollMs: 10, settleMs: 10,
+    now: () => time, playbackWaitTimeoutMs: 60, pollMs: 10, settleMs: 10,
     delay: async ms => { time += ms; },
     inspect: async id => tabs.get(id),
     moveTabToPreparationWindow: async id => {
@@ -35,7 +35,7 @@ function harness(overrides = {}) {
 test('read latency counts toward polling and successful reads begin settling immediately', async () => {
   const reads = [];
   const h = harness({
-    timeoutMs: 15000, pollMs: 500, settleMs: 3000,
+    playbackWaitTimeoutMs: 15000, pollMs: 500, settleMs: 3000,
     refresh: async id => {
       reads.push(h.now());
       h.advance(200);
@@ -51,7 +51,7 @@ test('read latency counts toward polling and successful reads begin settling imm
 test('polling waits only until the deadline and starts no read after it', async () => {
   const reads = [];
   const h = harness({
-    timeoutMs: 25,
+    playbackWaitTimeoutMs: 25,
     refresh: async () => { reads.push(h.now()); },
   });
   h.runner.start(1, h.items.slice(0, 1));
@@ -124,7 +124,7 @@ test('removed, navigated and excluded tabs are skipped before moving', async () 
 test('a sleeping tab is moved and allowed to load before collecting playback data', async () => {
   let inspections = 0;
   const h = harness({
-    timeoutMs: 100,
+    playbackWaitTimeoutMs: 100,
     inspect: async id => {
       const tab = h.tabs.get(id);
       if (tab.active && ++inspections >= 3) tab.loaded = true;
@@ -151,7 +151,7 @@ test('a sleeping tab is moved and allowed to load before collecting playback dat
 test('auto-preparation waits again when YouTube restores a saved playback position', async () => {
   let refreshCount = 0;
   const h = harness({
-    timeoutMs: 120,
+    playbackWaitTimeoutMs: 120,
     settleMs: 20,
     refresh: async id => {
       refreshCount += 1;

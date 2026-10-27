@@ -5,7 +5,7 @@ import {
   transferAutoPreparedTab,
 } from '../../background/auto-preparation/session-cache.js';
 
-test('saved auto-preparation survives record loss but cannot be reused for awake or different videos', async () => {
+test('sleeping snapshots survive record loss but do not restore into awake tabs or different videos', async () => {
   const storage = {};
   globalThis.chrome = { storage: { session: {
     set: async values => Object.assign(storage, values),

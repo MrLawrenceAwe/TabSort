@@ -27,8 +27,10 @@ Viewing a background tab once can let Chrome expose an accurate remaining time.
 The backlog summary labels partial totals as **known remaining** and lists how many
 video times are unavailable.
 
-A successfully prepared sleeping tab returns to sleep and shows
-**Auto-prepared · sleeping** beside its recorded time. Awake readings and live
+TabSort attempts to return sleeping tabs to sleep after preparation, unless you
+have selected or navigated the tab. If Chrome confirms it is sleeping, a
+successfully prepared tab shows **Auto-prepared · sleeping** beside its recorded
+time. If Chrome cannot put it back to sleep, it stays awake. Awake readings and live
 status refresh while the popup is open, periodically in the background, and before
 organising. Sleeping prepared readings stay cached.
 

@@ -1,4 +1,5 @@
 import { hasReadyRemainingTime } from '../shared/tabs/sort-readiness.js';
+import { TAB_LOAD_STATES } from '../shared/tabs/constants.js';
 import { isFiniteNumber } from '../shared/guards.js';
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
 import {
@@ -96,17 +97,14 @@ export function formatRemainingStatus(record, guidance = determineTabGuidance(re
   if (record.autoPreparationInProgress) return 'Auto-preparing…';
   if (record.isLive) return 'Live Stream';
 
-  const remaining = record?.videoDetails?.remainingSeconds;
-  const hasRemainingTime = isFiniteNumber(remaining);
-
-  if (hasReadyRemainingTime(record) && hasRemainingTime) {
-    const formatted = formatRemaining(remaining);
-    return record.loadState === 'discarded'
+  if (hasReadyRemainingTime(record)) {
+    const formatted = formatRemaining(record.videoDetails.remainingSeconds);
+    return record.loadState === TAB_LOAD_STATES.DISCARDED
       ? `${formatted} · Auto-prepared · sleeping`
       : formatted;
   }
-  if (record.loadState === 'discarded') return 'Sleeping';
-  if (record.loadState === 'loading') return 'Loading tab';
+  if (record.loadState === TAB_LOAD_STATES.DISCARDED) return 'Sleeping';
+  if (record.loadState === TAB_LOAD_STATES.LOADING) return 'Loading tab';
   if (guidance === TAB_GUIDANCE.RELOAD_TAB) return 'Couldn’t read time';
   if (guidance === TAB_GUIDANCE.VIEW_TAB_TO_LOAD_TIME ||
       guidance === TAB_GUIDANCE.VIEW_TAB_TO_REFRESH_TIME) return 'Needs viewing';

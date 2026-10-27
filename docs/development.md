@@ -102,8 +102,9 @@ Preparation candidates exclude ready, pinned, live, selected, and currently
 preparing videos. The popup counts and queue filter share this predicate. The
 TikTok option requires more than seven candidates.
 
-Loading, reading, and settling share a 15-second deadline after the video moves
-to the preparation window. Once data appears, the runner samples it for a
+Loading, reading, and settling share `playbackWaitTimeoutMs` (15 seconds by default)
+after the video moves to the preparation window. Transfer, return, and cleanup are
+outside this deadline. Once data appears, the runner samples it for a
 three-second settling period so YouTube can restore saved viewing progress.
 A sudden position jump or a failed read restarts settling. Videos without a
 settled reading are skipped at the deadline.
@@ -113,9 +114,12 @@ outstanding video when `finishSession()` clears the recovery journal. Successful
 completion removes the progress tab; stopping retains it. Placeholder projection
 keeps the moved video visible in browsing-window snapshots.
 
-Successfully prepared sleeping tabs return to sleep. `hasAutoPreparedTime` allows
-their saved readings to remain sortable. Session-cache entries use `videoId`; the
-cache reader migrates previous stored field names before restoring readings.
+The service attempts to discard previously sleeping tabs after preparation unless
+they have been selected or navigated. A failed discard leaves the tab awake; sleeping
+cache entries are saved only after Chrome confirms discard. `hasAutoPreparedTime`
+allows sleeping tabs' saved readings to remain sortable. Session-cache entries use
+`videoId`; the cache reader migrates previous stored field names before restoring
+readings.
 
 ## Preferences
 

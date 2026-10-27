@@ -14,11 +14,12 @@ import {
 } from '../../background/playback/collect.js';
 import {
   ensureChromeApi,
+  createChromeTabFixture,
   createTabRecordFixture,
   createPlaybackMetricsFixture,
   stubChromeTabGetSequence,
   stubChromeTabMetricPayload,
-  stubChromeTabMetrics,
+  stubArchivedStreamMetrics,
 } from '../helpers/background-test-helpers.js';
 
 ensureChromeApi({ tabs: true });
@@ -28,7 +29,7 @@ test('a stalled read expires and its late metrics cannot restore stale time', as
   replaceAllTabRecords({ 1: createTabRecordFixture(1, {
     remainingSecondsStale: false, videoDetails: { remainingSeconds: 100, durationSeconds: 120 },
   }) });
-  stubChromeTabGetSequence([{ tabId: 1 }]);
+  stubChromeTabGetSequence([createChromeTabFixture(1)]);
   let resolveRead;
   chrome.tabs.sendMessage = () => new Promise(resolve => { resolveRead = resolve; });
   assert.equal(await collectPlaybackMetrics(1, { timeoutMs: 20 }), true);
@@ -42,7 +43,7 @@ test('a stalled read expires and its late metrics cannot restore stale time', as
 test('an expired read cannot start a late missing-receiver injection', async () => {
   resetTrackedWindowStore({ windowId: 1 });
   replaceAllTabRecords({ 1: createTabRecordFixture(1) });
-  stubChromeTabGetSequence([{ tabId: 1 }]);
+  stubChromeTabGetSequence([createChromeTabFixture(1)]);
   let rejectRead;
   chrome.tabs.sendMessage = () => new Promise((_resolve, reject) => { rejectRead = reject; });
   let injections = 0;
@@ -56,7 +57,7 @@ test('an expired read cannot start a late missing-receiver injection', async () 
 test('a stalled reinjection expires without retrying after it finishes late', async () => {
   resetTrackedWindowStore({ windowId: 1 });
   replaceAllTabRecords({ 1: createTabRecordFixture(1) });
-  stubChromeTabGetSequence([{ tabId: 1 }]);
+  stubChromeTabGetSequence([createChromeTabFixture(1)]);
   let messages = 0;
   chrome.tabs.sendMessage = async () => { messages += 1; throw new Error('Receiving end does not exist'); };
   let resolveInjection;
@@ -71,7 +72,7 @@ test('an expired read does not invalidate a successor video', async () => {
   resetTrackedWindowStore({ windowId: 1 });
   replaceAllTabRecords({ 1: createTabRecordFixture(1) });
   stubChromeTabGetSequence([
-    { tabId: 1 }, { tabId: 1, url: 'https://www.youtube.com/watch?v=next' },
+    createChromeTabFixture(1), createChromeTabFixture(1, { url: 'https://www.youtube.com/watch?v=next' }),
   ]);
   chrome.tabs.sendMessage = () => {
     setTabRecord(1, createTabRecordFixture(1, {
@@ -92,7 +93,7 @@ test(
     const initialRecord = createTabRecordFixture(1, { contentScriptReady: false });
     replaceAllTabRecords({ 1: initialRecord });
 
-    stubChromeTabGetSequence([{ tabId: 1 }], { async: true });
+    stubChromeTabGetSequence([createChromeTabFixture(1)], { async: true });
     stubChromeTabMetricPayload(createPlaybackMetricsFixture({ tabId: 1 }), { async: true });
 
     const collectPromise = collectPlaybackMetrics(1);
@@ -127,7 +128,7 @@ test(
       }),
     });
 
-    stubChromeTabGetSequence([{ tabId: 1, url: 'https://www.youtube.com/watch?v=new' }]);
+    stubChromeTabGetSequence([createChromeTabFixture(1, { url: 'https://www.youtube.com/watch?v=new' })]);
     stubChromeTabMetricPayload(
       createPlaybackMetricsFixture({
         title: 'New Video',
@@ -163,8 +164,8 @@ test(
     });
 
     stubChromeTabGetSequence([
-      { tabId: 1, url: 'https://www.youtube.com/watch?v=old' },
-      { tabId: 1, url: 'https://www.youtube.com/watch?v=new' },
+      createChromeTabFixture(1, { url: 'https://www.youtube.com/watch?v=old' }),
+      createChromeTabFixture(1, { url: 'https://www.youtube.com/watch?v=new' }),
     ], { async: true });
     stubChromeTabMetricPayload(
       createPlaybackMetricsFixture({
@@ -208,7 +209,7 @@ test(
       }),
     });
 
-    stubChromeTabGetSequence([{ tabId: 1, discarded: true }]);
+    stubChromeTabGetSequence([createChromeTabFixture(1, { discarded: true })]);
     let messageCount = 0;
     globalThis.chrome.tabs.sendMessage = () => { messageCount += 1; };
 
@@ -238,7 +239,7 @@ test(
       }),
     });
 
-    stubChromeTabGetSequence([{ tabId: 1, url: 'https://www.youtube.com/watch?v=new' }]);
+    stubChromeTabGetSequence([createChromeTabFixture(1, { url: 'https://www.youtube.com/watch?v=new' })]);
     stubChromeTabMetricPayload(
       createPlaybackMetricsFixture({
         title: 'New Video',
@@ -276,7 +277,7 @@ test(
       }),
     });
 
-    stubChromeTabMetrics({ url: 'https://www.youtube.com/watch?v=archive' });
+    stubArchivedStreamMetrics({ url: 'https://www.youtube.com/watch?v=archive' });
 
     await collectPlaybackMetrics(1);
 
@@ -305,7 +306,7 @@ test(
       }),
     });
 
-    stubChromeTabMetrics({ url: 'https://www.youtube.com/watch?v=archive' });
+    stubArchivedStreamMetrics({ url: 'https://www.youtube.com/watch?v=archive' });
 
     await collectPlaybackMetrics(1);
 
@@ -333,7 +334,7 @@ test(
       }),
     });
 
-    stubChromeTabMetrics({
+    stubArchivedStreamMetrics({
       url: 'https://www.youtube.com/watch?v=archive',
       metrics: { playbackMetricsReady: false, mediaDurationSeconds: 0, positionSeconds: 0 },
     });
@@ -364,7 +365,7 @@ test(
       }),
     });
 
-    stubChromeTabMetrics({
+    stubArchivedStreamMetrics({
       url: 'https://www.youtube.com/watch?v=archive',
       metrics: { playbackMetricsReady: false, mediaDurationSeconds: 6211, positionSeconds: null },
     });
@@ -399,7 +400,7 @@ test(
       }),
     });
 
-    stubChromeTabGetSequence([{ tabId: 1, url: 'https://www.youtube.com/watch?v=previous' }]);
+    stubChromeTabGetSequence([createChromeTabFixture(1, { url: 'https://www.youtube.com/watch?v=previous' })]);
     stubChromeTabMetricPayload(
       createPlaybackMetricsFixture({
         title: 'OpenAI vs. Anthropic\'s Direct Faceoff + Future of Agents - With Aaron Levie',
@@ -479,8 +480,8 @@ test(
     });
 
     stubChromeTabGetSequence([
-      { tabId: 1, url: 'https://www.youtube.com/watch?v=1' },
-      { tabId: 1, url: 'https://www.youtube.com/watch?v=1' },
+      createChromeTabFixture(1, { url: 'https://www.youtube.com/watch?v=1' }),
+      createChromeTabFixture(1, { url: 'https://www.youtube.com/watch?v=1' }),
     ]);
 
     const injected = [];
@@ -530,8 +531,8 @@ test(
     });
 
     stubChromeTabGetSequence([
-      { tabId: 1, url: 'https://www.youtube.com/watch?v=1' },
-      { tabId: 1, url: 'https://www.youtube.com/watch?v=1' },
+      createChromeTabFixture(1, { url: 'https://www.youtube.com/watch?v=1' }),
+      createChromeTabFixture(1, { url: 'https://www.youtube.com/watch?v=1' }),
     ]);
 
     globalThis.chrome.scripting = {
