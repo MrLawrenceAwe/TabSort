@@ -19,31 +19,9 @@ function shouldIgnoreStaleMetricsPayload({ payloadUrl, requestedUrl, currentTabU
   );
 }
 
-function resolveVideoDurationSeconds(metricsPayload, record) {
-  const metadataDurationSeconds = toPositiveFiniteNumber(metricsPayload.metadataDurationSeconds);
-  if (metadataDurationSeconds != null) {
-    return metadataDurationSeconds;
-  }
-
-  const recordedDurationSeconds = toPositiveFiniteNumber(record?.videoDetails?.durationSeconds);
-  if (recordedDurationSeconds != null) {
-    return recordedDurationSeconds;
-  }
-
-  return toPositiveFiniteNumber(metricsPayload.mediaDurationSeconds) ?? NaN;
-}
-
-function hasMediaDurationMismatch(metricsPayload, record, resolvedDurationSeconds) {
+function hasMediaDurationMismatch(metricsPayload, authoritativeDurationSeconds) {
   const videoDurationSeconds = toFiniteNumber(metricsPayload.mediaDurationSeconds);
-  if (videoDurationSeconds == null || !isFiniteNumber(resolvedDurationSeconds)) {
-    return false;
-  }
-
-  const authoritativeDurationSeconds =
-    toPositiveFiniteNumber(metricsPayload.metadataDurationSeconds) ??
-    toPositiveFiniteNumber(record?.videoDetails?.durationSeconds);
-
-  if (authoritativeDurationSeconds == null) {
+  if (videoDurationSeconds == null || authoritativeDurationSeconds == null) {
     return false;
   }
 
@@ -78,7 +56,11 @@ export function derivePlaybackUpdate({
     return null;
   }
 
-  const resolvedDurationSeconds = resolveVideoDurationSeconds(metricsPayload, record);
+  const authoritativeDurationSeconds =
+    toPositiveFiniteNumber(metricsPayload.metadataDurationSeconds) ??
+    toPositiveFiniteNumber(record?.videoDetails?.durationSeconds);
+  const resolvedDurationSeconds = authoritativeDurationSeconds ??
+    toPositiveFiniteNumber(metricsPayload.mediaDurationSeconds) ?? NaN;
   const currentTimeSeconds = Number(metricsPayload.positionSeconds ?? NaN);
   const playbackRate = Number(metricsPayload.playbackRate ?? 1);
   const isLive =
@@ -106,7 +88,7 @@ export function derivePlaybackUpdate({
     return update;
   }
 
-  if (hasMediaDurationMismatch(metricsPayload, record, resolvedDurationSeconds)) {
+  if (hasMediaDurationMismatch(metricsPayload, authoritativeDurationSeconds)) {
     update.playbackMetricsReady = false;
     update.remainingSeconds = resolvedDurationSeconds;
     return update;

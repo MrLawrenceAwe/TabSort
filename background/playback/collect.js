@@ -1,8 +1,7 @@
 import { TAB_LOAD_STATES } from '../../shared/tabs/constants.js';
 import { logDebug } from '../../shared/log.js';
-import { RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
-import { getTab, MESSAGE_FAILURE_REASONS, sendMessageToTab } from '../tabs/chrome-tabs.js';
-import { tryInjectYouTubeRuntime } from '../youtube/inject.js';
+import { getTab } from '../tabs/chrome-tabs.js';
+import { readPlaybackMetrics } from './read-metrics.js';
 import { derivePlaybackUpdate } from './derive-update.js';
 import { applyVideoMetricsUnavailable } from '../tabs/video-state.js';
 import { applyPlaybackStateUpdate } from './apply-update.js';
@@ -18,8 +17,6 @@ const DEFAULT_BATCH_CONCURRENCY = 4;
 const NO_RECEIVER_RETRY_ATTEMPTS = 3;
 const NO_RECEIVER_RETRY_DELAY_MS = 50;
 const PLAYBACK_READ_TIMEOUT_MS = 2000;
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function loadTabRecordContext(tabId) {
   const initialRecord = getMutableTabRecord(tabId);
@@ -50,39 +47,6 @@ async function loadTabRecordContext(tabId) {
   return { record, tab };
 }
 
-async function readPlaybackMetrics(tabId, timeoutMs) {
-  let timer;
-  let expired = false;
-  const request = () => sendMessageToTab(tabId, {
-    type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS,
-  });
-  try {
-    return await Promise.race([
-      (async () => {
-        let result = await request();
-        if (expired || result?.reason !== MESSAGE_FAILURE_REASONS.NO_RECEIVER) return result;
-        const injected = await tryInjectYouTubeRuntime(tabId);
-        if (!injected || expired) return result;
-        for (let attempt = 0; attempt < NO_RECEIVER_RETRY_ATTEMPTS; attempt += 1) {
-          await sleep(NO_RECEIVER_RETRY_DELAY_MS);
-          if (expired) return result;
-          result = await request();
-          if (expired || result?.reason !== MESSAGE_FAILURE_REASONS.NO_RECEIVER) break;
-        }
-        return result;
-      })(),
-      new Promise(resolve => {
-        timer = setTimeout(() => resolve({ ok: false, reason: 'timedOut' }), timeoutMs);
-      }),
-    ]);
-  } finally {
-    // The underlying Chrome call cannot be cancelled. Its late result must
-    // neither update records nor start another injection or retry.
-    expired = true;
-    clearTimeout(timer);
-  }
-}
-
 export async function collectPlaybackMetrics(
   tabId,
   { recompute = true, timeoutMs = PLAYBACK_READ_TIMEOUT_MS } = {},
@@ -92,7 +56,11 @@ export async function collectPlaybackMetrics(
     if (!initialContext) return false;
 
     const requestedUrl = initialContext.tab.url || initialContext.record.url || null;
-    const result = await readPlaybackMetrics(tabId, timeoutMs);
+    const result = await readPlaybackMetrics(tabId, {
+      timeoutMs,
+      retryAttempts: NO_RECEIVER_RETRY_ATTEMPTS,
+      retryDelayMs: NO_RECEIVER_RETRY_DELAY_MS,
+    });
     const currentContext = await loadTabRecordContext(tabId);
     if (!currentContext) return false;
     const { record, tab } = currentContext;

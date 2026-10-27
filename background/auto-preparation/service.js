@@ -3,13 +3,13 @@ import { createAutoPreparationRunner } from './runner.js';
 import { createPreparationWorkspace } from './workspace.js';
 import { setPreparingTabRecord } from './placeholder.js';
 import { getAutoPreparation, autoPreparationState, getPreparationWindowId, setPreparationWindowId } from './state.js';
-import { getTab, listWindowTabs, sendMessageToTab, MESSAGE_FAILURE_REASONS, getTabLoadState } from '../tabs/chrome-tabs.js';
+import { getTab, listWindowTabs, getTabLoadState, MESSAGE_FAILURE_REASONS } from '../tabs/chrome-tabs.js';
 import { getTabRecord, getTrackedWindowId, setTabRecord } from '../windows/tracked-window-store.js';
 import { reconcileTabRecord } from '../tabs/reconcile-tab-record.js';
 import { reconcileWindowTabRecords } from '../tabs/reconcile-window.js';
 import { derivePlaybackUpdate } from '../playback/derive-update.js';
 import { applyPlaybackStateUpdate } from '../playback/apply-update.js';
-import { tryInjectYouTubeRuntime } from '../youtube/inject.js';
+import { readPlaybackMetrics } from '../playback/read-metrics.js';
 import { logDebug } from '../../shared/log.js';
 import { updateSortStateAndBroadcast } from '../sorting/update-sort-state.js';
 import { hasReadyRemainingTime } from '../../shared/tabs/sort-readiness.js';
@@ -68,42 +68,25 @@ const runner = createAutoPreparationRunner({
     return workspace.moveTabToPreparationWindow(tabId, windowId);
   },
   async refresh(tabId, _windowId, remainingMs, signal) {
-    let timer;
-    let onAbort;
-    let expired = false;
     let applied = false;
     const record = preparationRecordsById.get(tabId);
     const windowId = workspace.windowId;
     const requestedUrl = record?.url;
     try {
-      await Promise.race([
-        (async () => {
-          const result = await sendMessageToTab(tabId, { type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS });
-          if (expired || signal.aborted) return;
-          if (result.reason === MESSAGE_FAILURE_REASONS.NO_RECEIVER) {
-            await tryInjectYouTubeRuntime(tabId);
-            return; // Poll again after the content runtime has bootstrapped.
-          }
+      // Preparation polls again after reinjection instead of retrying this read.
+      await readPlaybackMetrics(tabId, { timeoutMs: remainingMs, signal },
+        async (result, isCurrent) => {
+          if (result.reason === MESSAGE_FAILURE_REASONS.NO_RECEIVER) return;
           const tab = await getTab(tabId);
-          if (expired || signal.aborted) return;
+          if (!isCurrent()) return;
           if (!result.ok || tab.windowId !== windowId || workspace.transfer?.tabId !== tabId) return;
           const update = derivePlaybackUpdate({ metricsPayload: result.data, record, requestedUrl, currentTabUrl: tab.url });
           if (!update) return;
           record.loadState = getTabLoadState(tab);
           applyPlaybackStateUpdate(record, update, tab.url);
           applied = true;
-        })(),
-        new Promise(resolve => { timer = setTimeout(resolve, remainingMs); }),
-        new Promise(resolve => {
-          onAbort = resolve;
-          if (signal.aborted) resolve();
-          else signal.addEventListener('abort', onAbort, { once: true });
-        }),
-      ]);
+        });
     } finally {
-      expired = true;
-      clearTimeout(timer);
-      signal.removeEventListener('abort', onAbort);
       // A cached sample cannot establish stability while fresh reads fail.
       if (!applied) applyVideoMetricsUnavailable(record);
     }

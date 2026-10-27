@@ -1,14 +1,24 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import test, { afterEach, beforeEach } from 'node:test';
 import { onAutoPreparationWindowRemoved, startAutoPreparation, stopAutoPreparation } from '../../background/auto-preparation/service.js';
-import { getAutoPreparation, getPreparationWindowId } from '../../background/auto-preparation/state.js';
+import { autoPreparationState, createAutoPreparationState, getAutoPreparation, getPreparationWindowId, setPreparationWindowId } from '../../background/auto-preparation/state.js';
 import { getMutableTabRecord, replaceAllTabRecords, resetTrackedWindowStore } from '../../background/windows/tracked-window-store.js';
-import { createChromeTabFixture, createTabRecordFixture, ensureChromeApi } from '../helpers/background-test-helpers.js';
+import { createChromeTabFixture, createTabRecordFixture } from '../helpers/background-test-helpers.js';
 
 import { reconcileWindowTabRecords } from '../../background/tabs/reconcile-window.js';
 import { createPreparationServiceFixture } from '../helpers/preparation-service-fixture.js';
 
-ensureChromeApi({ tabs: true });
+beforeEach(() => {
+  globalThis.chrome = {};
+  createPreparationServiceFixture(0);
+  setPreparationWindowId(null);
+  for (const key of Object.keys(autoPreparationState)) delete autoPreparationState[key];
+  Object.assign(autoPreparationState, createAutoPreparationState());
+});
+
+afterEach(async () => {
+  await stopAutoPreparation();
+});
 
 test('Stop cancels a start that is waiting for the optional TikTok PiP request', async () => {
   resetTrackedWindowStore({ windowId: 1 });

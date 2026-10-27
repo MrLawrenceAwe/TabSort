@@ -21,7 +21,8 @@ Playwright traces.
 
 - `background/windows/` owns the single tracked-window store and window lifecycle.
 - `background/tabs/` owns Chrome tab operations, records, reconciliation, and listeners.
-- `background/playback/` collects metrics and derives and applies playback updates.
+- `background/playback/` owns the shared bounded metric-request transport used by
+  normal collection and preparation, and derives and applies playback updates.
 - `background/sorting/` builds tab orders and derives sorting state.
 - `background/messaging/` routes extension messages and handles tab commands and page events.
 - `background/auto-preparation/` owns queue execution, the preparation workspace,
@@ -86,6 +87,8 @@ Normal playback collection has a two-second deadline per tab, shared by the metr
 request, missing-receiver reinjection, and retries. Expiry marks the reading
 unavailable. Late responses cannot update records or start more retries, and a
 failed read for a previous video cannot invalidate its successor's reading.
+Preparation uses the same transport with its remaining playback deadline and abort
+signal, and waits for the next poll after reinjection rather than retrying immediately.
 
 Popup snapshot requests wait at most 250 ms for playback collection. Slower reads
 continue in one shared batch per window and broadcast their results; organising

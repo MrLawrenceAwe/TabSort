@@ -49,11 +49,6 @@ export async function organiseTabs(
     return { ok: true, orderChanged: false, skippedReason: 'emptySortOrder' };
   }
 
-  const initialTabIds = new Set(tabs.map((tab) => tab.id));
-  if (!finalTabOrder.every((tabId) => initialTabIds.has(tabId))) {
-    return { ok: false, skippedReason: 'staleSortOrder' };
-  }
-
   if (expectedSyncToken != null && !isSyncTokenCurrent(expectedSyncToken)) {
     return { ok: false, skippedReason: 'windowSyncSuperseded' };
   }
