@@ -461,6 +461,37 @@ test('same-duration SPA navigation does not trust the previous video position', 
   } finally { runtime.reset(); resetGlobals(); }
 });
 
+test('navigation completion preserves readiness established by an earlier metric read', () => {
+  const runtime = createYouTubePageController();
+  try {
+    const dom = installRuntimeTestDom();
+    runtime.bootstrap();
+    dom.updatePage({ href: 'https://www.youtube.com/watch?v=two', title: 'Two', duration: 'PT2M0S' });
+    const read = () => {
+      let metrics;
+      installRuntimeTestDom.onMessageListener(
+        { type: RUNTIME_MESSAGE_TYPES.COLLECT_VIDEO_METRICS }, {}, payload => { metrics = payload; },
+      );
+      return metrics;
+    };
+    // The URL changes before navigation finishes, while old media is still mounted.
+    assert.equal(read().playbackMetricsReady, false);
+    dom.video.currentSrc = 'blob:video-two';
+    dom.video.currentTime = 10;
+    assert.equal(read().playbackMetricsReady, true);
+
+    dom.windowTarget.dispatch('yt-navigate-finish');
+    for (let sample = 0; sample < 3; sample++) {
+      const metrics = read();
+      assert.equal(metrics.playbackMetricsReady, true);
+      assert.equal(metrics.positionSeconds, 10);
+    }
+    assert.equal(installRuntimeTestDom.messages.filter(
+      message => message.type === RUNTIME_MESSAGE_TYPES.CONTENT_SCRIPT_READY,
+    ).length, 2);
+  } finally { runtime.reset(); resetGlobals(); }
+});
+
 test('same-video URL parameter changes keep media readiness', () => {
   const runtime = createYouTubePageController();
   try {

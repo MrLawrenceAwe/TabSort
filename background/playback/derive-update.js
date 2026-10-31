@@ -4,7 +4,7 @@ import {
   toPositiveFiniteNumber,
 } from '../../shared/guards.js';
 import { MEDIA_DURATION_SYNC_TOLERANCE_SECONDS } from '../../shared/tabs/constants.js';
-import { hasYouTubeVideoChanged } from '../../shared/youtube/urls.js';
+import { getYouTubeVideoId, hasYouTubeVideoChanged } from '../../shared/youtube/urls.js';
 
 function shouldIgnoreStaleMetricsPayload({ payloadUrl, requestedUrl, currentTabUrl }) {
   if (payloadUrl && currentTabUrl && hasYouTubeVideoChanged(payloadUrl, currentTabUrl)) {
@@ -56,9 +56,13 @@ export function derivePlaybackUpdate({
     return null;
   }
 
+  const currentVideoId = getYouTubeVideoId(payloadUrl || currentTabUrl || requestedUrl);
+  const recordedDurationSeconds = currentVideoId && currentVideoId === getYouTubeVideoId(record?.url)
+    ? toPositiveFiniteNumber(record?.videoDetails?.durationSeconds)
+    : null;
   const authoritativeDurationSeconds =
     toPositiveFiniteNumber(metricsPayload.metadataDurationSeconds) ??
-    toPositiveFiniteNumber(record?.videoDetails?.durationSeconds);
+    recordedDurationSeconds;
   const resolvedDurationSeconds = authoritativeDurationSeconds ??
     toPositiveFiniteNumber(metricsPayload.mediaDurationSeconds) ?? NaN;
   const currentTimeSeconds = Number(metricsPayload.positionSeconds ?? NaN);

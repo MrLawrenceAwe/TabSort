@@ -12,6 +12,8 @@ import {
   collectPlaybackMetrics,
   collectPlaybackMetricsBatch,
 } from '../../background/playback/collect.js';
+import { reconcileTabRecord } from '../../background/tabs/reconcile-tab-record.js';
+import { hasYouTubeVideoChanged } from '../../shared/youtube/urls.js';
 import {
   ensureChromeApi,
   createChromeTabFixture,
@@ -148,6 +150,36 @@ test(
     assert.equal(record.remainingSecondsStale, false);
   },
 );
+
+test('new video metrics without metadata cannot inherit the previous video duration', async () => {
+  resetTrackedWindowStore({ windowId: 1 });
+  replaceAllTabRecords({ 1: createTabRecordFixture(1, {
+    url: 'https://www.youtube.com/shorts/old',
+    videoDetails: { title: 'Old', durationSeconds: 120, remainingSeconds: 90 },
+    remainingSecondsStale: false,
+  }) });
+  const url = 'https://www.youtube.com/shorts/new';
+  const tab = createChromeTabFixture(1, { url });
+  stubChromeTabGetSequence([tab]);
+  stubChromeTabMetricPayload(createPlaybackMetricsFixture({
+    url, title: 'New', metadataDurationSeconds: null, mediaDurationSeconds: 60, positionSeconds: 10,
+  }));
+
+  await collectPlaybackMetrics(1);
+  // Reconciliation runs after the read has updated the record URL.
+  const previous = getTabRecordsById()[1];
+  setTabRecord(1, reconcileTabRecord(tab, previous, 'loaded', {
+    videoChanged: hasYouTubeVideoChanged(previous.url, url),
+  }));
+  await collectPlaybackMetrics(1);
+
+  const record = getTabRecordsById()[1];
+  assert.equal(record.url, url);
+  assert.equal(record.videoDetails.durationSeconds, 60);
+  assert.equal(record.videoDetails.remainingSeconds, 50);
+  assert.equal(record.playbackMetricsReady, true);
+  assert.equal(record.remainingSecondsStale, false);
+});
 
 test(
   'collectPlaybackMetrics ignores async metric payloads that no longer match the tracked URL',

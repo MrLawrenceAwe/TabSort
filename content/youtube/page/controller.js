@@ -143,7 +143,9 @@ export function createYouTubePageController({
     if (currentUrl && currentUrl !== lifecycle.observedPageUrl) {
       titleObserver.dispose();
       if (!isYouTubeVideoPage(currentUrl) ||
-          hasYouTubeVideoChanged(lifecycle.observedPageUrl, currentUrl)) {
+          (hasYouTubeVideoChanged(lifecycle.observedPageUrl, currentUrl) &&
+           !playbackReadiness.isCurrentPlaybackReady())) {
+        // A metric read can establish readiness before yt-navigate-finish.
         playbackReadiness.resetForNavigation();
       }
       lifecycle.observedPageUrl = currentUrl;
