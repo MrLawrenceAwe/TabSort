@@ -1,4 +1,4 @@
-import { startAutoPreparation, stopAutoPreparation } from '../auto-preparation/service.js';
+import { startAutoPreparation, stopAutoPreparation, stopAndReturnPreparationVideo } from '../auto-preparation/service.js';
 import { getAutoPreparation } from '../auto-preparation/state.js';
 import { RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import {
@@ -33,6 +33,7 @@ function createMessageHandlers(message, sender) {
   return {
     [RUNTIME_MESSAGE_TYPES.START_AUTO_PREPARATION]: () => startAutoPreparation(message),
     [RUNTIME_MESSAGE_TYPES.STOP_AUTO_PREPARATION]: () => stopAutoPreparation(),
+    [RUNTIME_MESSAGE_TYPES.STOP_AND_RETURN_PREPARATION_VIDEO]: () => stopAndReturnPreparationVideo(sender.tab),
     [RUNTIME_MESSAGE_TYPES.GET_AUTO_PREPARATION]: () => ({ ok: true, autoPreparation: getAutoPreparation() }),
     [RUNTIME_MESSAGE_TYPES.GET_TAB_SNAPSHOT]: () => getWindowSnapshot(message),
     [RUNTIME_MESSAGE_TYPES.ORGANISE_TABS]: () => handleOrganiseTabs(message),

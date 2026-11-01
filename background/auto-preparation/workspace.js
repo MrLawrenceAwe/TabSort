@@ -61,15 +61,25 @@ export function createPreparationWorkspace() {
         if (tab.groupId >= 0) await step('Ungrouping video before returning', () => chrome.tabs.ungroup(tab.id));
         await step('Returning video to its window', () => chrome.tabs.move(tab.id, { windowId: destination, index: -1 }));
       }
-      if (isPlaceholder(placeholder) && placeholder.groupId >= 0) {
-        await step('Restoring video group', () => chrome.tabs.group({ tabIds: tab.id, groupId: placeholder.groupId }));
+      let returned = await getTab(tab.id);
+      // Chrome can also clear a pin when moving between windows.
+      if (tab.pinned && !returned.pinned) {
+        await step('Restoring video pin', () => chrome.tabs.update(tab.id, { pinned: true }));
+        returned = await getTab(tab.id);
       }
-      const anchor = await readTab(transfer.placeholderId);
-      const returned = await getTab(tab.id);
-      const targetIndex = isPlaceholder(anchor)
-        ? anchor.index - (returned.index < anchor.index ? 1 : 0)
-        : index;
-      await step('Restoring video position', () => chrome.tabs.move(tab.id, { index: targetIndex }));
+      // Grouping a pinned tab silently unpins it. A user's new pin takes
+      // precedence over the original group and position in the unpinned strip.
+      if (!returned.pinned) {
+        if (isPlaceholder(placeholder) && placeholder.groupId >= 0) {
+          await step('Restoring video group', () => chrome.tabs.group({ tabIds: tab.id, groupId: placeholder.groupId }));
+        }
+        const anchor = await readTab(transfer.placeholderId);
+        const grouped = await getTab(tab.id);
+        const targetIndex = isPlaceholder(anchor)
+          ? anchor.index - (grouped.index < anchor.index ? 1 : 0)
+          : index;
+        await step('Restoring video position', () => chrome.tabs.move(tab.id, { index: targetIndex }));
+      }
       // Do not activate the returned tab: the user's selection stays untouched.
     }
     if (isPlaceholder(placeholder)) await chrome.tabs.remove(placeholder.id);

@@ -11,6 +11,7 @@ Auto-prepare handles one video at a time. A temporary placeholder preserves its
 position and Chrome tab group; the original video returns without changing your
 selected tab. Ready, pinned, live, and currently selected tabs are skipped. TabSort
 does not click Play, so videos that still need interaction may be skipped.
+A video you pin during preparation returns pinned, outside its former group.
 
 The optional **Open TikTok picture-in-picture during auto-prepare** setting appears
 only when more than seven eligible tabs still need preparation. When enabled, it asks
@@ -76,4 +77,5 @@ result. Restarting Chrome clears the session cache.
 
 After an interrupted worker restarts, TabSort uses its session journal to return
 an outstanding video. If its original window was closed, the video remains safely
-in the preparation window.
+in the preparation window. The toolbar's preparation badge and title reset when
+the worker restarts.

@@ -207,6 +207,32 @@ export async function stopAutoPreparation() {
   return { ok: true, autoPreparation: getAutoPreparation() };
 }
 
+export async function stopAndReturnPreparationVideo(placeholderTab) {
+  const url = new URL(placeholderTab?.url);
+  const originalUrl = url.searchParams.get('url');
+  const originalTabId = Number(url.searchParams.get('tabId'));
+  url.search = '';
+  url.hash = '';
+  if (url.href !== chrome.runtime.getURL('preparation/placeholder.html') ||
+      !Number.isInteger(placeholderTab?.id) || !Number.isInteger(originalTabId) ||
+      originalTabId <= 0 || !getYouTubeVideoId(originalUrl)) {
+    throw new Error('The original video URL is unavailable.');
+  }
+  // Keep the transfer reference: Chrome can replace its video ID while Stop
+  // returns the tab. The placeholder URL still contains the original ID.
+  const transfer = workspace.transfer?.placeholderId === placeholderTab.id ? workspace.transfer : null;
+  await stopAutoPreparation();
+  // Stop removes the placeholder. Finish selecting the video in the worker,
+  // whose lifetime does not depend on that page remaining open.
+  let tab;
+  try { tab = await getTab(transfer?.tabId ?? originalTabId); } catch { /* Video was closed. */ }
+  const selected = tab
+    ? await chrome.tabs.update(tab.id, { active: true })
+    : await chrome.tabs.update(placeholderTab.id, { url: originalUrl, active: true });
+  await chrome.windows.update(selected.windowId, { focused: true });
+  return { ok: true };
+}
+
 export function onAutoPreparationWindowRemoved(windowId) {
   if (windowId === getPreparationWindowId()) {
     setPreparationWindowId(null);

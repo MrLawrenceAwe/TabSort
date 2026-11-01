@@ -9,6 +9,7 @@ export const RUNTIME_MESSAGE_TYPES = Object.freeze({
   RELOAD_TAB: 'reloadTab',
   START_AUTO_PREPARATION: 'startAutoPreparation',
   STOP_AUTO_PREPARATION: 'stopAutoPreparation',
+  STOP_AND_RETURN_PREPARATION_VIDEO: 'stopAndReturnPreparationVideo',
   GET_AUTO_PREPARATION: 'getAutoPreparation',
   AUTO_PREPARATION_UPDATED: 'autoPreparationUpdated',
   ORGANISE_TABS: 'organiseTabs',

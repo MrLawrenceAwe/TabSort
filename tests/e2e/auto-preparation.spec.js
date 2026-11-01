@@ -102,6 +102,44 @@ test('Stop returns a waiting preparation tab without changing the browsing selec
     .toEqual(originalTabs.map(tab => ({ active: false, windowId: tab.windowId, index: tab.index })));
 });
 
+for (const closeVideo of [false, true]) {
+  test(`placeholder Stop and return video ${closeVideo ? 'reopens a closed video' : 'selects the restored video'}`, async ({ context, worker, extensionId }) => {
+    await context.route('https://www.youtube.com/**', route => route.fulfill({
+      contentType: 'text/html', body: '<title>Waiting video</title><video></video>',
+    }));
+    const video = await context.newPage();
+    await video.goto('https://www.youtube.com/watch?v=placeholder-return');
+    const popup = await context.newPage();
+    await popup.goto(`chrome-extension://${extensionId}/popup/popup.html`);
+    const original = await worker.evaluate(async () => {
+      const [tab] = await chrome.tabs.query({ url: 'https://www.youtube.com/watch?v=placeholder-return' });
+      return tab;
+    });
+    await popup.reload();
+    await popup.getByRole('button', { name: 'Auto-prepare tabs', exact: true }).click();
+    await expect.poll(() => worker.evaluate(async id => (await chrome.tabs.get(id)).windowId, original.id))
+      .not.toBe(original.windowId);
+    await expect.poll(() => context.pages().some(page => page.url().includes('/preparation/placeholder.html?'))).toBe(true);
+    const placeholder = context.pages().find(page => page.url().includes('/preparation/placeholder.html?'));
+    await placeholder.bringToFront();
+    if (closeVideo) await video.close();
+    await placeholder.getByRole('button', { name: 'Stop and return video', exact: true }).click();
+    await expect.poll(() => worker.evaluate(async windowId => {
+      const [tab] = await chrome.tabs.query({ windowId, active: true });
+      return tab.url;
+    }, original.windowId)).toBe(original.url);
+    expect(await worker.evaluate(async windowId => (await chrome.windows.get(windowId)).focused, original.windowId)).toBe(true);
+    if (!closeVideo) {
+      const returned = await worker.evaluate(id => chrome.tabs.get(id), original.id);
+      expect(returned).toMatchObject({ active: true, windowId: original.windowId, index: original.index, groupId: original.groupId });
+      await expect.poll(() => placeholder.isClosed()).toBe(true);
+      await expect.poll(() => popup.evaluate(async () =>
+        (await chrome.runtime.sendMessage({ type: 'getAutoPreparation' })).autoPreparation.status,
+      )).toBe('stopped');
+    }
+  });
+}
+
 test('preparation preserves first, middle and last positions in a multi-tab group', async ({ context, extensionId }) => {
   const testPage = await context.newPage();
   await testPage.goto(`chrome-extension://${extensionId}/popup/popup.html`);

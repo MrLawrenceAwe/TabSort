@@ -1,4 +1,4 @@
-import { getPreparationWindowId } from '../auto-preparation/state.js';
+import { getAutoPreparation, getPreparationWindowId } from '../auto-preparation/state.js';
 import { onAutoPreparationWindowRemoved, recoverAutoPreparation } from '../auto-preparation/service.js';
 import { isValidWindowId } from '../../shared/guards.js';
 import { logDebug, logListenerError, withErrorLogging } from '../../shared/log.js';
@@ -13,6 +13,7 @@ import { reconcileWindowTabRecords } from '../tabs/reconcile-window.js';
 import { listWindowTabs } from '../tabs/chrome-tabs.js';
 import { isYouTubeVideoPage } from '../../shared/youtube/urls.js';
 import { shouldRefreshRecordMetrics } from '../../shared/tabs/refresh-policy.js';
+import { queueAutoPreparationToolbarIndicator } from '../toolbar-indicator.js';
 
 const PLAYBACK_REFRESH_ALARM = 'refreshRemaining';
 const REFRESH_INTERVAL_MINUTES = 1;
@@ -75,6 +76,9 @@ async function ensureRefreshAlarm() {
 }
 
 export function initializeWindowLifecycle() {
+  // Chrome retains action badges across worker restarts; the in-memory run
+  // does not survive. Queue the reset before any new run can publish progress.
+  void queueAutoPreparationToolbarIndicator(getAutoPreparation());
   ensureRefreshAlarm();
   recoverAutoPreparation().then(() => syncInitialWindowState()).catch((error) => logListenerError('initial window sync', error));
 

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test, { afterEach, beforeEach } from 'node:test';
-import { onAutoPreparationWindowRemoved, startAutoPreparation, stopAutoPreparation } from '../../background/auto-preparation/service.js';
+import { onAutoPreparationTabReplaced, onAutoPreparationWindowRemoved, startAutoPreparation, stopAutoPreparation, stopAndReturnPreparationVideo } from '../../background/auto-preparation/service.js';
 import { autoPreparationState, createAutoPreparationState, getAutoPreparation, getPreparationWindowId, setPreparationWindowId } from '../../background/auto-preparation/state.js';
 import { getMutableTabRecord, replaceAllTabRecords, resetTrackedWindowStore } from '../../background/windows/tracked-window-store.js';
 import { createChromeTabFixture, createTabRecordFixture } from '../helpers/background-test-helpers.js';
@@ -18,6 +18,44 @@ beforeEach(() => {
 
 afterEach(async () => {
   await stopAutoPreparation();
+});
+
+test('placeholder return selects the replacement video after stopping a pending read', async () => {
+  const h = createPreparationServiceFixture(1);
+  let enteredRead;
+  let releaseRead;
+  const entered = new Promise(resolve => { enteredRead = resolve; });
+  chrome.tabs.sendMessage = () => new Promise(resolve => {
+    releaseRead = resolve;
+    enteredRead();
+  });
+  let focusedWindowId;
+  chrome.windows.update = async (id, options) => {
+    assert.equal(options.focused, true);
+    focusedWindowId = id;
+  };
+  await startAutoPreparation({ windowId: 1 });
+  await entered;
+  try {
+    const placeholder = [...h.tabs.values()].find(tab => tab.url.includes('/placeholder.html?'));
+    h.tabs.set(100, { ...h.tabs.get(1), id: 100 });
+    h.tabs.delete(1);
+    await onAutoPreparationTabReplaced(100, 1);
+    assert.deepEqual(await stopAndReturnPreparationVideo(placeholder), { ok: true });
+    assert.equal(getAutoPreparation().status, 'stopped');
+    assert.equal(h.tabs.get(100).windowId, 1);
+    assert.equal(h.tabs.get(100).active, true);
+    assert.equal(focusedWindowId, 1);
+    assert.equal(h.tabs.has(placeholder.id), false);
+  } finally {
+    releaseRead(null);
+  }
+});
+
+test('placeholder return rejects requests from another page', async () => {
+  await assert.rejects(stopAndReturnPreparationVideo({
+    id: 2, url: 'https://example.com/?tabId=1&url=https://www.youtube.com/watch?v=test',
+  }), /original video URL is unavailable/);
 });
 
 test('Stop cancels a start that is waiting for the optional TikTok PiP request', async () => {

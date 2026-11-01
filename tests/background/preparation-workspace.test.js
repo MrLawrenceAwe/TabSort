@@ -78,6 +78,40 @@ test('never moves the current browsing tab', async () => {
   assert.equal(h.workspace.transfer, null);
 });
 
+for (const pinDuringReturn of [false, true]) {
+  test(`preserves a video pinned ${pinDuringReturn ? 'while returning' : 'in the preparation window'} instead of regrouping it`, async () => {
+    const h = harness();
+    await h.workspace.create(1);
+    await h.workspace.moveTabToPreparationWindow(2, 1);
+    const placeholderId = h.workspace.transfer.placeholderId;
+    const move = chrome.tabs.move;
+    chrome.tabs.move = async (id, options) => {
+      await move(id, options);
+      if (id === 2 && options.windowId === 1) {
+        Object.assign(h.tabs.get(2), { pinned: pinDuringReturn, index: pinDuringReturn ? 0 : 4 });
+      }
+    };
+    const update = chrome.tabs.update;
+    chrome.tabs.update = async (id, options) => {
+      await update(id, options);
+      if (options.pinned) Object.assign(h.tabs.get(id), { index: 0, groupId: -1 });
+    };
+    // Chrome silently unpins a tab when adding it to a group.
+    chrome.tabs.group = async ({ tabIds, groupId }) => {
+      Object.assign(h.tabs.get(tabIds), { pinned: false, groupId });
+    };
+    if (!pinDuringReturn) h.tabs.get(2).pinned = true;
+    await h.workspace.finishSession();
+    assert.equal(h.tabs.get(2).windowId, 1);
+    assert.equal(h.tabs.get(2).pinned, true);
+    assert.equal(h.tabs.get(2).groupId, -1);
+    assert.equal(h.tabs.get(2).index, 0);
+    assert.equal(h.tabs.get(1).active, true);
+    assert.equal(h.tabs.has(placeholderId), false);
+    assert.equal(h.saved.autoPreparationWorkspace, undefined);
+  });
+}
+
 test('a worker restart returns a journaled tab and removes its stale progress page and placeholder', async () => {
   const h = harness();
   await h.workspace.create(1);

@@ -1,25 +1,10 @@
 import { RUNTIME_MESSAGE_TYPES } from '../shared/messages.js';
-import { isYouTubeVideoPage } from '../shared/youtube/urls.js';
-
-const params = new URLSearchParams(location.search);
-const tabId = Number(params.get('tabId'));
-const originalUrl = params.get('url');
 const button = document.getElementById('return');
 button.addEventListener('click', async () => {
   button.disabled = true;
   try {
-    await chrome.runtime.sendMessage({ type: RUNTIME_MESSAGE_TYPES.STOP_AUTO_PREPARATION });
-    let tab;
-    try { tab = await chrome.tabs.get(tabId); } catch { /* Closed in the preparation window. */ }
-    if (tab) {
-      await chrome.tabs.update(tab.id, { active: true });
-      await chrome.windows.update(tab.windowId, { focused: true });
-    } else if (isYouTubeVideoPage(originalUrl)) {
-      const current = await chrome.tabs.getCurrent();
-      await chrome.tabs.update(current.id, { url: originalUrl });
-    } else {
-      throw new Error('The original video URL is unavailable.');
-    }
+    const response = await chrome.runtime.sendMessage({ type: RUNTIME_MESSAGE_TYPES.STOP_AND_RETURN_PREPARATION_VIDEO });
+    if (!response?.ok) throw new Error(response?.error || 'Could not return the video.');
   } catch {
     document.getElementById('status').textContent = 'Could not return the video. It may still be in the preparation window.';
     button.disabled = false;
