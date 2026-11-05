@@ -19,6 +19,7 @@ const PREPARATION_PHASE_LABELS = Object.freeze({
   loading: 'Waiting for the tab to load',
   reading: 'Waiting for video data',
   settling: 'Checking saved playback progress',
+  retrying: 'Reloading video to retry preparation',
   returning: 'Returning video to its original window',
   stopping: 'Stopping — waiting for the current step to finish',
 });
@@ -26,7 +27,10 @@ const PREPARATION_PHASE_LABELS = Object.freeze({
 export function formatPreparationDetail(state) {
   if (state.status === 'stopped') return state.reason || '';
   if (state.status !== 'running') return '';
-  return PREPARATION_PHASE_LABELS[state.phase] || 'Preparing video';
+  const detail = PREPARATION_PHASE_LABELS[state.phase] || 'Preparing video';
+  return state.attempt > 1 && state.phase !== 'stopping'
+    ? `Attempt ${state.attempt} of ${state.maxAttempts} · ${detail}`
+    : detail;
 }
 
 export function formatPreparationStatus(state) {

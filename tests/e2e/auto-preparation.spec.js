@@ -74,8 +74,15 @@ test('prepares media while browsing continues and restores the tabs', async ({ c
   await expect.poll(() => popup.evaluate(async ids => {
     const { windowId } = await chrome.tabs.get(ids[0]);
     const snapshot = await chrome.runtime.sendMessage({ type: 'getTabSnapshot', windowId });
-    return ids.every(id => snapshot.tabRecordsById[id]?.videoDetails.remainingSeconds === 1 && !snapshot.tabRecordsById[id]?.remainingSecondsStale);
+    return ids.every(id => {
+      const record = snapshot.tabRecordsById[id];
+      const remaining = record?.videoDetails.remainingSeconds;
+      return remaining > 0.8 && remaining <= 1 && !record.remainingSecondsStale;
+    });
   }, ids)).toBe(true);
+  for (const page of [firstVideo, secondVideo]) {
+    expect(await page.locator('video').evaluate(video => video.paused && !video.muted)).toBe(true);
+  }
 });
 
 test('Stop returns a waiting preparation tab without changing the browsing selection', async ({ context, worker, extensionId }) => {

@@ -12,6 +12,8 @@ function harness(overrides = {}) {
   const finished = new Promise(resolve => { done = resolve; });
   const runner = createAutoPreparationRunner({
     now: () => time, playbackWaitTimeoutMs: 60, pollMs: 10, settleMs: 10,
+    maxAttempts: 1,
+    retryTabPreparation: async () => true,
     delay: async ms => { time += ms; },
     inspect: async id => tabs.get(id),
     moveTabToPreparationWindow: async id => {
@@ -87,6 +89,79 @@ test('stalled tabs time out and do not prevent subsequent tabs from being visite
   const result = await h.finished;
   assert.deepEqual(h.moved, [1, 2, 3]);
   assert.equal(result.skipped, 3);
+});
+
+test('production defaults allow a slow tab a minute per attempt and retry twice before skipping', async () => {
+  const retries = [];
+  const h = harness({
+    playbackWaitTimeoutMs: undefined, maxAttempts: undefined,
+    refresh: async () => {},
+    retryTabPreparation: async id => { retries.push({ id, time: h.now() }); return true; },
+  });
+  h.runner.start(1, h.items.slice(0, 1));
+  const result = await h.finished;
+  assert.deepEqual(retries, [{ id: 1, time: 60000 }, { id: 1, time: 120000 }]);
+  assert.equal(h.now(), 180000);
+  assert.equal(result.skipped, 1);
+  assert.equal(result.completed, 1);
+  assert.deepEqual(h.moved, [1]);
+  assert.equal(h.finishedTabs.length, 1);
+});
+
+test('a sleeping tab that succeeds on retry is returned prepared and counted once', async () => {
+  let retries = 0;
+  const h = harness({
+    maxAttempts: 3,
+    retryTabPreparation: async () => { retries++; return true; },
+    refresh: async id => { if (retries) h.tabs.get(id).ready = true; },
+  });
+  h.tabs.get(1).discarded = true;
+  h.runner.start(1, h.items.slice(0, 1));
+  const result = await h.finished;
+  assert.equal(retries, 1);
+  assert.equal(result.ready, 1);
+  assert.equal(result.skipped, 0);
+  assert.equal(result.completed, 1);
+  assert.deepEqual(h.finishedTabs, [{ id: 1, autoPrepared: true, wasDiscarded: true }]);
+});
+
+test('a slow initial load can succeed after the former fifteen-second limit', async () => {
+  const h = harness({
+    playbackWaitTimeoutMs: undefined,
+    inspect: async id => {
+      const tab = h.tabs.get(id);
+      tab.loaded = h.now() >= 20000;
+      return tab;
+    },
+  });
+  h.runner.start(1, h.items.slice(0, 1));
+  assert.equal((await h.finished).ready, 1);
+  assert.ok(h.now() >= 20000);
+});
+
+test('Stop during retry prevents another read and returns the tab', async () => {
+  const h = harness({
+    maxAttempts: 3, refresh: async () => {},
+    retryTabPreparation: async () => { void h.runner.stop(); return true; },
+  });
+  h.runner.start(1, h.items);
+  assert.equal((await h.finished).status, 'stopped');
+  assert.deepEqual(h.moved, [1]);
+  assert.equal(h.finishedTabs.length, 1);
+});
+
+test('navigation while waiting and a failed retry guard prevent further retries', async () => {
+  for (const navigated of [true, false]) {
+    let retries = 0;
+    const h = harness({
+      maxAttempts: 3,
+      refresh: async id => { if (navigated) h.tabs.get(id).videoId = 'another-video'; },
+      retryTabPreparation: async () => { retries++; return false; },
+    });
+    h.runner.start(1, h.items.slice(0, 1));
+    assert.equal((await h.finished).skipped, 1);
+    assert.equal(retries, navigated ? 0 : 1);
+  }
 });
 
 test('Stop prevents further moves even while a read is in flight', async () => {

@@ -12,6 +12,16 @@ test('preparation reports the failed step reason instead of just a frozen count'
   assert.equal(formatPreparationDetail({ status: 'complete', phase: 'returning' }), '');
 });
 
+test('retry progress shows the attempt while waiting and keeps Stop clear', () => {
+  const state = { status: 'running', attempt: 2, maxAttempts: 3 };
+  assert.equal(formatPreparationDetail({ ...state, phase: 'retrying' }),
+    'Attempt 2 of 3 · Reloading video to retry preparation');
+  assert.equal(formatPreparationDetail({ ...state, phase: 'loading' }),
+    'Attempt 2 of 3 · Waiting for the tab to load');
+  assert.equal(formatPreparationDetail({ ...state, phase: 'stopping' }),
+    'Stopping — waiting for the current step to finish');
+});
+
 test('stopped preparation keeps its status heading and explains the reason separately', () => {
   const state = { status: 'stopped', reason: 'Could not return video',
     completed: 1, total: 2, ready: 1, skipped: 0 };

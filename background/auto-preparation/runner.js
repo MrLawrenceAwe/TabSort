@@ -4,13 +4,15 @@ import { createAutoPreparationState } from './state.js';
 export function createAutoPreparationRunner({
   inspect,
   moveTabToPreparationWindow,
+  retryTabPreparation,
   refresh,
   finishTabPreparation,
   cleanup = async () => {},
   publish,
   now = Date.now,
   delay = ms => new Promise(resolve => setTimeout(resolve, ms)),
-  playbackWaitTimeoutMs = 15000,
+  playbackWaitTimeoutMs = 60000,
+  maxAttempts = 3,
   pollMs = 500,
   settleMs = 3000,
   resumeJumpToleranceSeconds = 5,
@@ -40,7 +42,7 @@ export function createAutoPreparationRunner({
     while (!job.signal.aborted && now() < deadline) {
       const tab = await inspect(item.id, job.windowId);
       if (job.signal.aborted) return false;
-      if (!tab || tab.videoId !== item.videoId || tab.excluded) break;
+      if (!tab || tab.videoId !== item.videoId || tab.excluded) return null;
       if (!tab.active) {
         stop('Stopped because the selected tab changed inside the preparation window');
         return false;
@@ -90,13 +92,30 @@ export function createAutoPreparationRunner({
   async function prepareTab(job, item, initial) {
     state.currentTabId = item.id;
     state.title = item.title;
+    state.attempt = 1;
+    state.maxAttempts = maxAttempts;
     state.phase = 'moving';
     emit();
     let ready = false;
     try {
       const moved = await moveTabToPreparationWindow(item.id, job.windowId);
       if (job.signal.aborted || !moved) return false;
-      ready = await waitForSettledPlayback(job, item);
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        if (job.signal.aborted) return false;
+        if (attempt > 1) {
+          state.attempt = attempt;
+          setPhase('retrying');
+          const retried = await retryTabPreparation(item.id, job.windowId, job.signal);
+          if (job.signal.aborted || !retried) return false;
+        }
+        const result = await waitForSettledPlayback(job, item);
+        if (result === true) {
+          ready = true;
+          break;
+        }
+        // Only timeouts are retryable; never reload a navigated or excluded tab.
+        if (result === null || job.signal.aborted) break;
+      }
       return ready;
     } finally {
       setPhase('returning');
@@ -136,6 +155,7 @@ export function createAutoPreparationRunner({
       state.status = job.signal.aborted ? 'stopped' : 'complete';
       state.currentTabId = null;
       state.title = '';
+      state.attempt = null;
       emit();
     }
   }
@@ -154,6 +174,7 @@ export function createAutoPreparationRunner({
       const job = { windowId, items, abortController, signal: abortController.signal };
       current = job;
       delete state.reason;
+      state.attempt = null;
       Object.assign(state, { status: 'running', windowId, total: items.length, completed: 0,
         ready: 0, skipped: 0, currentTabId: null, title: '', phase: 'starting' });
       emit();

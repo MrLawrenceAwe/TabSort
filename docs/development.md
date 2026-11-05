@@ -96,6 +96,11 @@ unavailable. Late responses cannot update records or start more retries, and a
 failed read for a previous video cannot invalidate its successor's reading.
 Preparation uses the same transport with its remaining playback deadline and abort
 signal, and waits for the next poll after reinjection rather than retrying immediately.
+Preparation first initializes the player through an isolated script: mute, play,
+pause on `playing`, then restore the original mute state. Metric collection starts
+only after that step completes. Stop, navigation, page exit, rejection, and a
+ten-second watchdog pause the player and restore muting. Script calls are bounded
+and late starts receive cleanup. Each reload creates a new playback session.
 
 Popup snapshot requests wait at most 250 ms for playback collection. Slower reads
 continue in one shared batch per window and broadcast their results; organising
@@ -112,12 +117,16 @@ Preparation candidates exclude ready, pinned, live, selected, and currently
 preparing videos. The popup counts and queue filter share this predicate. The
 TikTok option requires more than seven candidates.
 
-Loading, reading, and settling share `playbackWaitTimeoutMs` (15 seconds by default)
+Loading, reading, and settling share `playbackWaitTimeoutMs` (60 seconds by default)
 after the video moves to the preparation window. Transfer, return, and cleanup are
 outside this deadline. Once data appears, the runner samples it for a
 three-second settling period so YouTube can restore saved viewing progress.
 A sudden position jump or a failed read restarts settling. Videos without a
-settled reading are skipped at the deadline.
+settled reading are reloaded in the preparation window and retried, for up to
+three attempts. Only timeouts retry; closed, navigated, pinned, and live videos
+are not reloaded. Each retry checks the tab identity, selection, and workspace
+ownership again. Individual metric reads are capped at two seconds so a stalled
+message cannot consume the whole attempt. Stop cancels reads and prevents retries.
 
 The workspace moves videos with `moveTabToPreparationWindow()` and returns the
 outstanding video when `finishSession()` clears the recovery journal. Successful

@@ -10,7 +10,13 @@
 Auto-prepare handles one video at a time. A temporary placeholder preserves its
 position and Chrome tab group; the original video returns without changing your
 selected tab. Ready, pinned, live, and currently selected tabs are skipped. TabSort
-does not click Play, so videos that still need interaction may be skipped.
+allows up to one minute per attempt and automatically reloads timed-out videos
+for two more attempts before skipping them. Retry progress shows the current
+attempt. Successfully prepared videos keep their remaining times while sleeping.
+TabSort briefly starts each video's player muted, pauses it as soon as playback
+starts, and restores its original mute setting. It then checks the saved viewing
+position before keeping the remaining time. Videos blocked by sign-in, errors,
+or other required interaction may still be skipped after all attempts.
 A video you pin during preparation returns pinned, outside its former group.
 
 The optional **Open TikTok picture-in-picture during auto-prepare** setting appears

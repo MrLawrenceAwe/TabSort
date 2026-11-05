@@ -326,7 +326,11 @@ for (const lateResult of ['metrics', 'noReceiver']) {
     let enteredRead;
     let injections = 0;
     const entered = new Promise(resolve => { enteredRead = resolve; });
-    chrome.scripting = { executeScript: async () => { injections++; } };
+    chrome.scripting = { executeScript: async options => {
+      if (options.func) return [{ result: true }];
+      injections++;
+      return [];
+    } };
     chrome.tabs.sendMessage = () => new Promise((resolve, reject) => {
       releaseRead = () => lateResult === 'metrics'
         ? resolve({ url: h.tabs.get(1).url, metadataDurationSeconds: 60, mediaDurationSeconds: 60,
@@ -358,7 +362,7 @@ for (const failure of ['readError', 'invalidPayload', 'noReceiver']) {
     const h = createPreparationServiceFixture(1);
     let reads = 0;
     let failReads = true;
-    chrome.scripting = { executeScript: async () => [] };
+    chrome.scripting = { executeScript: async options => options.func ? [{ result: true }] : [] };
     chrome.tabs.sendMessage = async id => {
       reads++;
       if (reads > 1 && failReads) {

@@ -19,8 +19,10 @@ import { RUNTIME_MESSAGE_TYPES } from '../../shared/messages.js';
 import { openTikTokPipForAutoPreparation } from '../integrations/tiktok-pip.js';
 import { saveAutoPreparedTab } from './session-cache.js';
 import { queueAutoPreparationToolbarIndicator } from '../toolbar-indicator.js';
+import { createSilentPlaybackPreparation } from './silent-playback.js';
 
 const workspace = createPreparationWorkspace();
+const silentPlayback = createSilentPlaybackPreparation();
 // Preparation owns its records; browsing a different window can freely replace
 // the popup's tracked-window store without interrupting this run.
 const preparationRecordsById = new Map();
@@ -28,6 +30,7 @@ let startAbortController = null;
 let recoveryPromise = null;
 
 async function clearPreparationSession() {
+  await silentPlayback.stop();
   await workspace.finishSession();
   setPreparingTabRecord(null);
   preparationRecordsById.clear();
@@ -67,14 +70,32 @@ const runner = createAutoPreparationRunner({
     setPreparingTabRecord(preparationRecordsById.get(tabId));
     return workspace.moveTabToPreparationWindow(tabId, windowId);
   },
+  async retryTabPreparation(tabId, _windowId, signal) {
+    const tab = await getTab(tabId).catch(() => null);
+    const record = preparationRecordsById.get(tabId);
+    if (signal.aborted || !tab || !record || tab.pinned || record.isLive ||
+        !tab.active || tab.windowId !== workspace.windowId ||
+        workspace.transfer?.tabId !== tabId ||
+        getYouTubeVideoId(tab.url) !== getYouTubeVideoId(record.url)) return false;
+    applyVideoMetricsUnavailable(record);
+    await silentPlayback.stop();
+    if (signal.aborted) return false;
+    await chrome.tabs.reload(tabId);
+    return true;
+  },
   async refresh(tabId, _windowId, remainingMs, signal) {
     let applied = false;
     const record = preparationRecordsById.get(tabId);
     const windowId = workspace.windowId;
     const requestedUrl = record?.url;
     try {
+      const tab = await getTab(tabId);
+      if (signal.aborted || tab.pinned || record?.isLive || !tab.active ||
+          tab.windowId !== windowId || workspace.transfer?.tabId !== tabId ||
+          getYouTubeVideoId(tab.url) !== getYouTubeVideoId(requestedUrl)) return;
+      if (!await silentPlayback.read(tabId, getYouTubeVideoId(requestedUrl), signal)) return;
       // Preparation polls again after reinjection instead of retrying this read.
-      await readPlaybackMetrics(tabId, { timeoutMs: remainingMs, signal },
+      await readPlaybackMetrics(tabId, { timeoutMs: Math.min(2000, remainingMs), signal },
         async (result, isCurrent) => {
           if (result.reason === MESSAGE_FAILURE_REASONS.NO_RECEIVER) return;
           const tab = await getTab(tabId);
@@ -92,6 +113,7 @@ const runner = createAutoPreparationRunner({
     }
   },
   async finishTabPreparation(tabId, _windowId, { autoPrepared, wasDiscarded }) {
+    await silentPlayback.stop();
     const record = preparationRecordsById.get(tabId);
     const returned = await workspace.returnTab();
     setPreparingTabRecord(null);
@@ -242,6 +264,7 @@ export function onAutoPreparationWindowRemoved(windowId) {
 
 
 export async function onAutoPreparationTabReplaced(addedTabId, removedTabId) {
+  silentPlayback.replaceTabId(addedTabId, removedTabId);
   const record = preparationRecordsById.get(removedTabId);
   if (record) {
     record.id = addedTabId;

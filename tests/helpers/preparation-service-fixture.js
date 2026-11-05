@@ -3,6 +3,7 @@ import { createChromeTabFixture, ensureChromeApi } from './background-test-helpe
 
 export function createPreparationServiceFixture(count, onCreate = () => {}) {
   ensureChromeApi({ tabs: true });
+  chrome.scripting = { executeScript: async () => [{ result: true }] };
   resetTrackedWindowStore({ windowId: 1 });
   const tabs = new Map(Array.from({ length: count }, (_, index) => {
     const id = index + 1;
