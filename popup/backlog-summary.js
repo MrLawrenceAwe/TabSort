@@ -1,4 +1,5 @@
 import { isFiniteNumber } from '../shared/guards.js';
+import { hasReadyRemainingTime } from '../shared/tabs/sort-readiness.js';
 
 function pluralize(count, singular, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
@@ -30,7 +31,7 @@ export function createBacklogSummary(records = []) {
     }
 
     const remainingSeconds = record?.videoDetails?.remainingSeconds;
-    if (!record?.remainingSecondsStale && isFiniteNumber(remainingSeconds) && remainingSeconds >= 0) {
+    if (hasReadyRemainingTime(record) && remainingSeconds >= 0) {
       knownCount += 1;
       totalRemainingSeconds += remainingSeconds;
     } else {

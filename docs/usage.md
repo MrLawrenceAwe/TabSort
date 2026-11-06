@@ -35,7 +35,8 @@ The **Remaining** column shows a time or explains why one is unavailable:
 **Couldn’t read time**. Follow the **View tab** or **Reload tab** action when shown.
 Viewing a background tab once can let Chrome expose an accurate remaining time.
 The backlog summary labels partial totals as **known remaining** and lists how many
-video times are unavailable.
+video times are unavailable. Totals include usable cached sleeping times and exclude
+readings still undergoing auto-preparation.
 
 TabSort attempts to return sleeping tabs to sleep after preparation, unless you
 have selected or navigated the tab. If Chrome confirms it is sleeping, a
