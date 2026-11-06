@@ -1,5 +1,29 @@
 import { expect, test } from './fixtures/extension.js';
 
+test('foreground recovery focuses the preparation window and returns to the previous window', async ({ context, extensionId }) => {
+  const page = await context.newPage();
+  await page.goto(`chrome-extension://${extensionId}/popup/popup.html`);
+  const result = await page.evaluate(async () => {
+    const { createPreparationFocusRecovery } = await import(chrome.runtime.getURL('background/auto-preparation/focus-recovery.js'));
+    const previous = await chrome.windows.getLastFocused();
+    const preparation = await chrome.windows.create({ focused: false });
+    const recovery = createPreparationFocusRecovery({ waitMs: 0 });
+    try {
+      await chrome.windows.update(previous.id, { focused: true });
+      await recovery.recover(preparation.id, new AbortController().signal);
+      const during = await chrome.windows.getLastFocused();
+      await recovery.release();
+      const after = await chrome.windows.getLastFocused();
+      return { during: during.id, after: after.id, preparation: preparation.id, previous: previous.id };
+    } finally {
+      await recovery.reset();
+      await chrome.windows.remove(preparation.id);
+    }
+  });
+  expect(result.during).toBe(result.preparation);
+  expect(result.after).toBe(result.previous);
+});
+
 test('prepares media while browsing continues and restores the tabs', async ({ context, worker, extensionId }) => {
   test.setTimeout(60_000);
   // A real one-second silent WAV decoded by Chromium's HTMLVideoElement.
@@ -13,16 +37,32 @@ test('prepares media while browsing continues and restores the tabs', async ({ c
     const stalled = route.request().url().includes('stalled');
     return route.fulfill({ contentType: 'text/html', body: `<!doctype html>
       <html><head><title>Deferred video</title><meta itemprop="duration" content="PT1S"></head>
-      <body><video preload="auto"></video><script>
+      <body><div id="movie_player"><video preload="auto"></video></div><script>
         let mounted = false;
+        const player = document.querySelector('#movie_player');
+        const video = document.querySelector('video');
+        player.isMuted = () => video.muted;
+        player.mute = () => { video.muted = true; };
+        player.unMute = () => { video.muted = false; };
+        player.pauseVideo = () => video.pause();
+        // These page-owned methods are invisible to an isolated script.
+        // Media deliberately remains unavailable until Play initializes it.
+        player.playVideo = () => {
+          document.body.dataset.silentStart = video.muted ? 'yes' : 'no';
+          reveal();
+        };
+        // Reproduce Disable Autoplay for YouTube replacing the video method.
+        HTMLVideoElement.prototype.play = function () {
+          return Promise.reject(new DOMException('NotAllowedError'));
+        };
         function reveal() {
           if (document.hidden || mounted || ${stalled}) return;
           mounted = true;
-          setTimeout(() => { document.querySelector('video').src =
-            'data:audio/wav;base64,${wav.toString('base64')}'; }, 300);
+          setTimeout(() => {
+            video.addEventListener('loadedmetadata', () => { video.currentTime = 0.1; }, { once: true });
+            video.src = 'data:audio/wav;base64,${wav.toString('base64')}';
+          }, 300);
         }
-        document.addEventListener('visibilitychange', reveal);
-        reveal();
       </script></body></html>` });
   });
 
@@ -77,11 +117,12 @@ test('prepares media while browsing continues and restores the tabs', async ({ c
     return ids.every(id => {
       const record = snapshot.tabRecordsById[id];
       const remaining = record?.videoDetails.remainingSeconds;
-      return remaining > 0.8 && remaining <= 1 && !record.remainingSecondsStale;
+      return remaining > 0.5 && remaining <= 1 && !record.remainingSecondsStale;
     });
   }, ids)).toBe(true);
   for (const page of [firstVideo, secondVideo]) {
     expect(await page.locator('video').evaluate(video => video.paused && !video.muted)).toBe(true);
+    await expect(page.locator('body')).toHaveAttribute('data-silent-start', 'yes');
   }
 });
 

@@ -94,13 +94,26 @@ Normal playback collection has a two-second deadline per tab, shared by the metr
 request, missing-receiver reinjection, and retries. Expiry marks the reading
 unavailable. Late responses cannot update records or start more retries, and a
 failed read for a previous video cannot invalidate its successor's reading.
-Preparation uses the same transport with its remaining playback deadline and abort
-signal, and waits for the next poll after reinjection rather than retrying immediately.
-Preparation first initializes the player through an isolated script: mute, play,
-pause on `playing`, then restore the original mute state. Metric collection starts
-only after that step completes. Stop, navigation, page exit, rejection, and a
+Preparation first initializes the player through a main-world script using
+YouTube's player API: mute, play, pause 250 ms after `playing`, then restore the
+original mute state. Failed starts retry after one second within the same attempt;
+media arriving after a failed start can still proceed to collection.
+The muted media element is also started when the player leaves it paused.
+Initialization calls `HTMLMediaElement.prototype.play` directly so an autoplay
+extension's video-method override cannot reject this explicitly requested action.
+Source replacement AbortErrors retry on metadata/canplay events. Timed-out script calls
+receive fresh session tokens so late cleanup cannot block subsequent attempts.
+Preparation reads metrics directly from the paused media in the same main-world
+script, independent of content-script messaging. It verifies page and player video
+identity, rejects adverts, seeking and missing metadata, then samples for stability.
+Actual media metadata (HAVE_METADATA) is sufficient: a video with duration and a
+restored position can be paused and read even when buffering prevents `playing`.
+Stop, navigation, page exit, rejection, and a
 ten-second watchdog pause the player and restore muting. Script calls are bounded
 and late starts receive cleanup. Each reload creates a new playback session.
+After five seconds without a usable reading, preparation may focus its window
+once per attempt for up to three seconds. Success, Stop, and retry release focus
+early; restoration checks that the user has not switched to another window.
 
 Popup snapshot requests wait at most 250 ms for playback collection. Slower reads
 continue in one shared batch per window and broadcast their results; organising
@@ -132,6 +145,11 @@ The workspace moves videos with `moveTabToPreparationWindow()` and returns the
 outstanding video when `finishSession()` clears the recovery journal. Successful
 completion removes the progress tab; stopping retains it. Placeholder projection
 keeps the moved video visible in browsing-window snapshots.
+
+The return journal uses local storage: Chrome clears session storage when an
+extension reloads or updates. It records the source window, position, and group
+so recovery also works if the placeholder was removed during reload. A removed
+single-tab group is recreated with its original name, colour, and collapsed state.
 
 The service attempts to discard previously sleeping tabs after preparation unless
 they have been selected or navigated. A failed discard leaves the tab awake; sleeping

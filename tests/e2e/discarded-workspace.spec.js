@@ -30,7 +30,7 @@ test('wakes five discarded pages and restores their groups without taking focus'
     const runnerPath = 'tests/e2e/fixtures/discard-runner.js';
     writeFileSync(join(directory, 'manifest.json'), JSON.stringify({
       manifest_version: 3, name: 'TabSort discard regression', version: '1.0',
-      permissions: ['tabs', 'storage'], host_permissions: ['http://127.0.0.1/*'],
+      permissions: ['tabs', 'tabGroups', 'storage'], host_permissions: ['http://127.0.0.1/*'],
       background: { service_worker: runnerPath, type: 'module' },
     }));
     mkdirSync(join(directory, 'tests/e2e/fixtures'), { recursive: true });

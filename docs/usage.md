@@ -17,6 +17,9 @@ TabSort briefly starts each video's player muted, pauses it as soon as playback
 starts, and restores its original mute setting. It then checks the saved viewing
 position before keeping the remaining time. Videos blocked by sign-in, errors,
 or other required interaction may still be skipped after all attempts.
+If initialization stalls for five seconds, TabSort briefly brings its preparation
+window forward (up to three seconds), then returns focus to your previous window.
+It leaves focus alone if you switch windows yourself during that interval.
 A video you pin during preparation returns pinned, outside its former group.
 
 The optional **Open TikTok picture-in-picture during auto-prepare** setting appears
@@ -81,7 +84,7 @@ browser session. Awake saved times are used only when newer playback data is
 unavailable. Waking, reloading, navigating, or closing a tab invalidates its saved
 result. Restarting Chrome clears the session cache.
 
-After an interrupted worker restarts, TabSort uses its session journal to return
+After a worker restart or extension reload, TabSort uses its saved local journal to return
 an outstanding video. If its original window was closed, the video remains safely
 in the preparation window. The toolbar's preparation badge and title reset when
 the worker restarts.

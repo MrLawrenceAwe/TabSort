@@ -11,7 +11,8 @@ async function startWaitingVideo({ context, worker, extensionId }) {
   await popup.goto(`chrome-extension://${extensionId}/popup/popup.html`);
   const original = await worker.evaluate(async () => {
     const [tab] = await chrome.tabs.query({ url: 'https://www.youtube.com/watch?v=recovery-regression' });
-    await chrome.tabs.group({ tabIds: tab.id });
+    const groupId = await chrome.tabs.group({ tabIds: tab.id });
+    await chrome.tabGroups.update(groupId, { title: 'Recovery videos', color: 'blue' });
     return chrome.tabs.get(tab.id);
   });
   await popup.reload();
@@ -32,14 +33,20 @@ test('pinning a grouped preparation video preserves the pin when the video retur
   const returned = await worker.evaluate(id => chrome.tabs.get(id), original.id);
   expect(returned).toMatchObject({ windowId: original.windowId, pinned: true, groupId: -1, index: 0, active: false });
   expect(await popup.evaluate(async () => ({
-    journal: (await chrome.storage.session.get('autoPreparationWorkspace')).autoPreparationWorkspace ?? null,
+    journal: (await chrome.storage.local.get('autoPreparationWorkspace')).autoPreparationWorkspace ?? null,
     placeholders: (await chrome.tabs.query({})).filter(tab => tab.url.includes('/preparation/placeholder.html')).length,
   }))).toEqual({ journal: null, placeholders: 0 });
 });
 
-test('worker restart returns the video and clears the stale toolbar badge and title', async ({ context, worker, extensionId }) => {
+test('worker restart recovers after session storage and the placeholder are lost', async ({ context, worker, extensionId }) => {
   const { popup, original } = await startWaitingVideo({ context, worker, extensionId });
   await expect.poll(() => popup.evaluate(() => chrome.action.getBadgeText({}))).toBe('1/1');
+  await popup.evaluate(async () => {
+    await chrome.storage.session.clear();
+    const placeholders = (await chrome.tabs.query({})).filter(tab =>
+      tab.url.includes('/preparation/placeholder.html'));
+    await chrome.tabs.remove(placeholders.map(tab => tab.id));
+  });
   const cdp = await context.newCDPSession(popup);
   const versions = [];
   cdp.on('ServiceWorker.workerVersionUpdated', event => versions.push(...event.versions));
@@ -59,9 +66,12 @@ test('worker restart returns the video and clears the stale toolbar badge and ti
     badge: await chrome.action.getBadgeText({}),
     title: await chrome.action.getTitle({}),
     tab: await chrome.tabs.get(tabId),
-    journal: (await chrome.storage.session.get('autoPreparationWorkspace')).autoPreparationWorkspace ?? null,
+    group: (await chrome.tabs.get(tabId)).groupId >= 0
+      ? await chrome.tabGroups.get((await chrome.tabs.get(tabId)).groupId) : null,
+    journal: (await chrome.storage.local.get('autoPreparationWorkspace')).autoPreparationWorkspace ?? null,
   }), original.id)).toMatchObject({
     state: 'idle', badge: '', title: 'TabSort', journal: null,
-    tab: { id: original.id, windowId: original.windowId, index: original.index, groupId: original.groupId, active: false },
+    tab: { id: original.id, windowId: original.windowId, index: original.index, active: false },
+    group: { title: 'Recovery videos', color: 'blue' },
   });
 });

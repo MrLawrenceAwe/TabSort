@@ -6,7 +6,9 @@ const JOURNAL_KEY = 'autoPreparationWorkspace';
 // journal is written before moving a real tab so a worker restart can return it.
 export function createPreparationWorkspace() {
   let workspace = null;
-  const persist = () => chrome.storage.session.set({ [JOURNAL_KEY]: workspace });
+  // Extension reloads clear storage.session. The return journal must survive
+  // reload/update as well as service-worker suspension.
+  const persist = () => chrome.storage.local.set({ [JOURNAL_KEY]: workspace });
   async function step(label, action) {
     try { return await action(); } catch (error) {
       throw new Error(`${label}: ${error?.message || error}`, { cause: error });
@@ -72,6 +74,16 @@ export function createPreparationWorkspace() {
       if (!returned.pinned) {
         if (isPlaceholder(placeholder) && placeholder.groupId >= 0) {
           await step('Restoring video group', () => chrome.tabs.group({ tabIds: tab.id, groupId: placeholder.groupId }));
+        } else if (!isPlaceholder(placeholder) && transfer.group) {
+          const group = await chrome.tabGroups.get(transfer.group.id).catch(() => null);
+          if (group?.windowId === destination) {
+            await step('Restoring saved video group', () => chrome.tabs.group({ tabIds: tab.id, groupId: group.id }));
+          } else if (!group) {
+            const groupId = await step('Recreating video group', () => chrome.tabs.group({ tabIds: tab.id }));
+            await chrome.tabGroups.update(groupId, {
+              title: transfer.group.title, color: transfer.group.color, collapsed: transfer.group.collapsed,
+            });
+          }
         }
         const anchor = await readTab(transfer.placeholderId);
         const grouped = await getTab(tab.id);
@@ -92,7 +104,7 @@ export function createPreparationWorkspace() {
     await returnTab();
     if (!workspace) return;
     workspace = null;
-    await chrome.storage.session.remove(JOURNAL_KEY);
+    await chrome.storage.local.remove(JOURNAL_KEY);
   }
 
   async function discardUnstartedWorkspace() {
@@ -120,6 +132,7 @@ export function createPreparationWorkspace() {
     async moveTabToPreparationWindow(tabId, sourceWindowId) {
       const tab = await getTab(tabId);
       if (tab.windowId !== sourceWindowId || tab.active || tab.pinned) return false;
+      const group = tab.groupId >= 0 ? await chrome.tabGroups.get(tab.groupId) : null;
       const url = new URL(chrome.runtime.getURL('preparation/placeholder.html'));
       url.searchParams.set('tabId', String(tab.id));
       url.searchParams.set('url', tab.url);
@@ -127,7 +140,7 @@ export function createPreparationWorkspace() {
         windowId: sourceWindowId, active: false, url: url.href,
       }));
       workspace.transfer = {
-        tabId, placeholderId: placeholder.id, sourceWindowId, index: tab.index,
+        tabId, placeholderId: placeholder.id, sourceWindowId, index: tab.index, group,
       };
       await persist();
       if (tab.groupId >= 0) await step('Adding placeholder to group', () => chrome.tabs.group({ tabIds: placeholder.id, groupId: tab.groupId }));
@@ -168,7 +181,7 @@ export function createPreparationWorkspace() {
     discardUnstartedWorkspace,
     removeProgressTabs,
     async recover() {
-      const saved = await chrome.storage.session.get(JOURNAL_KEY);
+      const saved = await chrome.storage.local.get(JOURNAL_KEY);
       workspace = saved[JOURNAL_KEY] ?? null;
       if (!workspace) return;
       const recoveredWindowId = workspace.windowId;

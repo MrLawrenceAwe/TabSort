@@ -3,13 +3,12 @@ import { createAutoPreparationRunner } from './runner.js';
 import { createPreparationWorkspace } from './workspace.js';
 import { setPreparingTabRecord } from './placeholder.js';
 import { getAutoPreparation, autoPreparationState, getPreparationWindowId, setPreparationWindowId } from './state.js';
-import { getTab, listWindowTabs, getTabLoadState, MESSAGE_FAILURE_REASONS } from '../tabs/chrome-tabs.js';
+import { getTab, listWindowTabs, getTabLoadState } from '../tabs/chrome-tabs.js';
 import { getTabRecord, getTrackedWindowId, setTabRecord } from '../windows/tracked-window-store.js';
 import { reconcileTabRecord } from '../tabs/reconcile-tab-record.js';
 import { reconcileWindowTabRecords } from '../tabs/reconcile-window.js';
 import { derivePlaybackUpdate } from '../playback/derive-update.js';
 import { applyPlaybackStateUpdate } from '../playback/apply-update.js';
-import { readPlaybackMetrics } from '../playback/read-metrics.js';
 import { logDebug } from '../../shared/log.js';
 import { updateSortStateAndBroadcast } from '../sorting/update-sort-state.js';
 import { hasReadyRemainingTime } from '../../shared/tabs/sort-readiness.js';
@@ -20,9 +19,11 @@ import { openTikTokPipForAutoPreparation } from '../integrations/tiktok-pip.js';
 import { saveAutoPreparedTab } from './session-cache.js';
 import { queueAutoPreparationToolbarIndicator } from '../toolbar-indicator.js';
 import { createSilentPlaybackPreparation } from './silent-playback.js';
+import { createPreparationFocusRecovery } from './focus-recovery.js';
 
 const workspace = createPreparationWorkspace();
 const silentPlayback = createSilentPlaybackPreparation();
+const focusRecovery = createPreparationFocusRecovery();
 // Preparation owns its records; browsing a different window can freely replace
 // the popup's tracked-window store without interrupting this run.
 const preparationRecordsById = new Map();
@@ -31,6 +32,7 @@ let recoveryPromise = null;
 
 async function clearPreparationSession() {
   await silentPlayback.stop();
+  await focusRecovery.reset();
   await workspace.finishSession();
   setPreparingTabRecord(null);
   preparationRecordsById.clear();
@@ -79,12 +81,14 @@ const runner = createAutoPreparationRunner({
         getYouTubeVideoId(tab.url) !== getYouTubeVideoId(record.url)) return false;
     applyVideoMetricsUnavailable(record);
     await silentPlayback.stop();
+    await focusRecovery.reset();
     if (signal.aborted) return false;
     await chrome.tabs.reload(tabId);
     return true;
   },
-  async refresh(tabId, _windowId, remainingMs, signal) {
+  async refresh(tabId, _windowId, _remainingMs, signal) {
     let applied = false;
+    let ownsTab = false;
     const record = preparationRecordsById.get(tabId);
     const windowId = workspace.windowId;
     const requestedUrl = record?.url;
@@ -93,27 +97,29 @@ const runner = createAutoPreparationRunner({
       if (signal.aborted || tab.pinned || record?.isLive || !tab.active ||
           tab.windowId !== windowId || workspace.transfer?.tabId !== tabId ||
           getYouTubeVideoId(tab.url) !== getYouTubeVideoId(requestedUrl)) return;
+      ownsTab = true;
       if (!await silentPlayback.read(tabId, getYouTubeVideoId(requestedUrl), signal)) return;
-      // Preparation polls again after reinjection instead of retrying this read.
-      await readPlaybackMetrics(tabId, { timeoutMs: Math.min(2000, remainingMs), signal },
-        async (result, isCurrent) => {
-          if (result.reason === MESSAGE_FAILURE_REASONS.NO_RECEIVER) return;
-          const tab = await getTab(tabId);
-          if (!isCurrent()) return;
-          if (!result.ok || tab.windowId !== windowId || workspace.transfer?.tabId !== tabId) return;
-          const update = derivePlaybackUpdate({ metricsPayload: result.data, record, requestedUrl, currentTabUrl: tab.url });
-          if (!update) return;
-          record.loadState = getTabLoadState(tab);
-          applyPlaybackStateUpdate(record, update, tab.url);
-          applied = true;
-        });
+      const metrics = await silentPlayback.read(tabId, getYouTubeVideoId(requestedUrl), signal, 'metrics');
+      const currentTab = await getTab(tabId);
+      if (signal.aborted || !metrics || currentTab.windowId !== windowId ||
+          workspace.transfer?.tabId !== tabId) return;
+      const update = derivePlaybackUpdate({ metricsPayload: metrics, record, requestedUrl, currentTabUrl: currentTab.url });
+      if (!update) return;
+      record.loadState = getTabLoadState(currentTab);
+      applyPlaybackStateUpdate(record, update, currentTab.url);
+      applied = true;
     } finally {
       // A cached sample cannot establish stability while fresh reads fail.
       if (!applied) applyVideoMetricsUnavailable(record);
+      if (ownsTab && !signal.aborted) {
+        if (hasReadyRemainingTime(record)) await focusRecovery.release();
+        else await focusRecovery.recover(windowId, signal);
+      }
     }
   },
   async finishTabPreparation(tabId, _windowId, { autoPrepared, wasDiscarded }) {
     await silentPlayback.stop();
+    await focusRecovery.reset();
     const record = preparationRecordsById.get(tabId);
     const returned = await workspace.returnTab();
     setPreparingTabRecord(null);

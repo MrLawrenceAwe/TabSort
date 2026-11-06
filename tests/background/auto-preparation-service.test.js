@@ -6,7 +6,7 @@ import { getMutableTabRecord, replaceAllTabRecords, resetTrackedWindowStore } fr
 import { createChromeTabFixture, createTabRecordFixture } from '../helpers/background-test-helpers.js';
 
 import { reconcileWindowTabRecords } from '../../background/tabs/reconcile-window.js';
-import { createPreparationServiceFixture } from '../helpers/preparation-service-fixture.js';
+import { createPreparationServiceFixture, createPreparationStorage } from '../helpers/preparation-service-fixture.js';
 
 beforeEach(() => {
   globalThis.chrome = {};
@@ -60,7 +60,7 @@ test('placeholder return rejects requests from another page', async () => {
 
 test('Stop cancels a start that is waiting for the optional TikTok PiP request', async () => {
   resetTrackedWindowStore({ windowId: 1 });
-  chrome.storage = { session: { get: async () => ({}), set: async () => {}, remove: async () => {} } };
+  chrome.storage = createPreparationStorage();
   chrome.runtime.getURL = path => `chrome-extension://test/${path}`;
   const tab = createChromeTabFixture(1, { windowId: 1, active: false });
   chrome.tabs.query = async () => [tab];
@@ -93,11 +93,7 @@ test('Stop cancels a start that is waiting for the optional TikTok PiP request',
 test('Stop removes the unstarted preparation progress tab when window creation finishes late', async () => {
   resetTrackedWindowStore({ windowId: 1 });
   const saved = {};
-  chrome.storage = { session: {
-    get: async () => saved,
-    set: async data => Object.assign(saved, data),
-    remove: async key => { delete saved[key]; },
-  } };
+  chrome.storage = createPreparationStorage({}, saved);
   chrome.runtime.getURL = path => `chrome-extension://test/${path}`;
   const sourceTab = createChromeTabFixture(1, { windowId: 1, active: false });
   const progressTab = createChromeTabFixture(99, {
@@ -134,7 +130,7 @@ test('Stop removes the unstarted preparation progress tab when window creation f
 
 test('does not open TikTok PiP when preparation has no eligible videos', async () => {
   resetTrackedWindowStore({ windowId: 1 });
-  chrome.storage = { session: { get: async () => ({}), set: async () => {}, remove: async () => {} } };
+  chrome.storage = createPreparationStorage();
   chrome.tabs.query = async () => [
     createChromeTabFixture(1, { windowId: 1, url: 'https://example.com', active: true }),
   ];
@@ -169,11 +165,7 @@ test('a selected unready video cannot start a preparation workspace or TikTok re
 test('completion closes the empty preparation window after preserving source-window candidates', async () => {
   resetTrackedWindowStore({ windowId: 1 });
   const saved = {};
-  chrome.storage = { session: {
-    get: async () => saved,
-    set: async data => Object.assign(saved, data),
-    remove: async key => { delete saved[key]; },
-  } };
+  chrome.storage = createPreparationStorage({}, saved);
   chrome.runtime.getURL = path => `chrome-extension://test/${path}`;
   const tab = createChromeTabFixture(1, { windowId: 1, active: false });
   const progressTab = createChromeTabFixture(100, {
@@ -326,11 +318,6 @@ for (const lateResult of ['metrics', 'noReceiver']) {
     let enteredRead;
     let injections = 0;
     const entered = new Promise(resolve => { enteredRead = resolve; });
-    chrome.scripting = { executeScript: async options => {
-      if (options.func) return [{ result: true }];
-      injections++;
-      return [];
-    } };
     chrome.tabs.sendMessage = () => new Promise((resolve, reject) => {
       releaseRead = () => lateResult === 'metrics'
         ? resolve({ url: h.tabs.get(1).url, metadataDurationSeconds: 60, mediaDurationSeconds: 60,
@@ -362,7 +349,6 @@ for (const failure of ['readError', 'invalidPayload', 'noReceiver']) {
     const h = createPreparationServiceFixture(1);
     let reads = 0;
     let failReads = true;
-    chrome.scripting = { executeScript: async options => options.func ? [{ result: true }] : [] };
     chrome.tabs.sendMessage = async id => {
       reads++;
       if (reads > 1 && failReads) {

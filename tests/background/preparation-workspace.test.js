@@ -12,7 +12,7 @@ function harness() {
   const calls = [];
   globalThis.chrome = {
     runtime: { getURL: path => `chrome-extension://test/${path}` },
-    storage: { session: {
+    storage: { local: {
       get: async key => ({ [key]: structuredClone(saved[key]) }),
       set: async values => Object.assign(saved, structuredClone(values)),
       remove: async key => { delete saved[key]; },
@@ -24,6 +24,9 @@ function harness() {
         tabs.set(9, { id: 9, windowId: 3, index: 0, url: options.url, active: true });
         return { id: 3, tabs: [tabs.get(9)] };
       },
+    },
+    tabGroups: {
+      get: async id => ({ id, windowId: 1, title: 'Videos', color: 'grey', collapsed: false }),
     },
     tabs: {
       get: async id => { if (!tabs.has(id)) throw new Error('No tab'); return { ...tabs.get(id) }; },
@@ -124,6 +127,35 @@ test('a worker restart returns a journaled tab and removes its stale progress pa
   assert.equal(h.tabs.has(9), false);
   assert.equal(h.tabs.has(30), true);
   assert.equal(h.saved.autoPreparationWorkspace, undefined);
+});
+
+test('extension reload clears session storage without losing the return journal or group', async () => {
+  const h = harness();
+  await h.workspace.create(1);
+  await h.workspace.moveTabToPreparationWindow(2, 1);
+  h.tabs.delete(h.workspace.transfer.placeholderId);
+  // Chrome clears the entire session area on extension reload, not local.
+  chrome.storage.session = { get: async () => ({}) };
+  await createPreparationWorkspace().recover();
+  assert.equal(h.tabs.get(2).windowId, 1);
+  assert.equal(h.tabs.get(2).index, 1);
+  assert.equal(h.tabs.get(2).groupId, 7);
+  assert.equal(h.saved.autoPreparationWorkspace, undefined);
+});
+
+test('recovery recreates the original group when a reload removes its sole placeholder', async () => {
+  const h = harness();
+  await h.workspace.create(1);
+  await h.workspace.moveTabToPreparationWindow(2, 1);
+  h.tabs.delete(h.workspace.transfer.placeholderId);
+  chrome.tabGroups.get = async () => { throw new Error('Group removed'); };
+  let restoredGroup;
+  chrome.tabs.group = async ({ tabIds }) => { h.tabs.get(tabIds).groupId = 8; return 8; };
+  chrome.tabGroups.update = async (id, details) => { restoredGroup = { id, ...details }; };
+  await createPreparationWorkspace().recover();
+  assert.equal(h.tabs.get(2).windowId, 1);
+  assert.equal(h.tabs.get(2).groupId, 8);
+  assert.deepEqual(restoredGroup, { id: 8, title: 'Videos', color: 'grey', collapsed: false });
 });
 
 test('closing the original window leaves the real video in preparation and clears the journal', async () => {
