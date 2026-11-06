@@ -13,9 +13,9 @@ selected tab. Ready, pinned, live, and currently selected tabs are skipped. TabS
 allows up to one minute per attempt and automatically reloads timed-out videos
 for two more attempts before skipping them. Retry progress shows the current
 attempt. Successfully prepared videos keep their remaining times while sleeping.
-TabSort briefly starts each video's player muted, pauses it as soon as playback
-starts, and restores its original mute setting. It then checks the saved viewing
-position before keeping the remaining time. Videos blocked by sign-in, errors,
+TabSort briefly starts each video's player muted, pauses it shortly after playback
+or usable metadata becomes available, and restores its original mute setting. It
+then checks the saved viewing position before keeping the remaining time. Videos blocked by sign-in, errors,
 or other required interaction may still be skipped after all attempts.
 If initialization stalls for five seconds, TabSort briefly brings its preparation
 window forward (up to three seconds), then returns focus to your previous window.

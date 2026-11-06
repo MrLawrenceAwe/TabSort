@@ -87,7 +87,11 @@ const runner = createAutoPreparationRunner({
     await chrome.tabs.reload(tabId);
     return true;
   },
-  async refresh(tabId, _windowId, _remainingMs, signal) {
+  async refresh(tabId, _windowId, remainingMs, runSignal) {
+    if (runSignal.aborted || remainingMs <= 0) return;
+    const deadlineController = new AbortController();
+    const signal = AbortSignal.any([runSignal, deadlineController.signal]);
+    const deadlineTimer = setTimeout(() => deadlineController.abort(), remainingMs);
     let applied = false;
     let ownsTab = false;
     const record = preparationRecordsById.get(tabId);
@@ -111,6 +115,7 @@ const runner = createAutoPreparationRunner({
       applyPlaybackStateUpdate(record, update, currentTab.url);
       applied = true;
     } finally {
+      clearTimeout(deadlineTimer);
       // A cached sample cannot establish stability while fresh reads fail.
       if (!applied) applyVideoMetricsUnavailable(record);
       if (ownsTab && !signal.aborted) {

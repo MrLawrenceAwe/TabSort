@@ -84,6 +84,7 @@ export async function collectPlaybackMetrics(
       return false;
     }
 
+    record.contentScriptReady = true;
     applyPlaybackStateUpdate(record, playbackUpdate, currentTabUrl);
     if (recompute) updateSortStateAndBroadcast();
     return true;

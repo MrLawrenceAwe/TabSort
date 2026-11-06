@@ -73,7 +73,6 @@ export function derivePlaybackUpdate({
   const update = {
     nextUrl: payloadUrl || currentTabUrl || null,
     nextTitle: typeof metricsPayload.title === 'string' ? metricsPayload.title : null,
-    contentScriptReady: true,
     playbackMetricsReady:
       metricsPayload.playbackMetricsReady === true,
     isLive,

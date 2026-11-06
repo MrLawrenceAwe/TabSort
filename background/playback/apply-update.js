@@ -7,7 +7,6 @@ export function applyPlaybackStateUpdate(record, playbackUpdate, currentTabUrl) 
   if (!record || !playbackUpdate) return;
 
   record.hasAutoPreparedTime = false;
-  record.contentScriptReady = playbackUpdate.contentScriptReady;
   if (playbackUpdate.playbackMetricsReady) {
     markPlaybackMetricsReady(record);
   } else {

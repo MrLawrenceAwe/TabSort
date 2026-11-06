@@ -55,7 +55,7 @@ export function controlSilentPlayback(videoId, token, operation) {
     session.retryAt = Date.now() + 1000;
     clearTimeout(timer);
     clearTimeout(pauseTimer);
-    video.removeEventListener('playing', onPlaying);
+    video.removeEventListener('playing', schedulePreparationPause);
     video.removeEventListener('loadedmetadata', onMediaReady);
     video.removeEventListener('canplay', onMediaReady);
     video.removeEventListener('seeked', onMediaReady);
@@ -69,9 +69,9 @@ export function controlSilentPlayback(videoId, token, operation) {
     video.muted = originalMuted;
     session.ready = ready;
   }
-  function onPlaying() {
-    // Let YouTube complete its player transition before pausing. Pausing in
-    // the playing event itself can interrupt its pending initialization.
+  function schedulePreparationPause() {
+    // Playback or usable metadata can finish initialization. Give YouTube's
+    // player transition a moment to settle before pausing and restoring sound.
     pauseTimer ??= setTimeout(() => finish(true), 250);
   }
   function onCancelled() { finish(false); }
@@ -81,7 +81,7 @@ export function controlSilentPlayback(videoId, token, operation) {
       // reject even an explicitly requested muted preparation. Use the browser
       // media method for this short, user-requested initialization only.
       Promise.resolve(HTMLMediaElement.prototype.play.call(video)).then(() => {
-        if (!finished) onPlaying();
+        if (!finished) schedulePreparationPause();
         else if (store.current === session) video.pause();
       }, error => {
         // YouTube can replace the media source while its Play action starts.
@@ -95,10 +95,10 @@ export function controlSilentPlayback(videoId, token, operation) {
     // HAVE_METADATA provides the actual media duration and restored position.
     // Waiting for buffered frames can stall forever even though time is readable.
     if (video.readyState >= 1 && Number.isFinite(video.duration) &&
-        video.duration > 0 && !video.seeking) onPlaying();
+        video.duration > 0 && !video.seeking) schedulePreparationPause();
     else if (video.paused) playMedia();
   }
-  video.addEventListener('playing', onPlaying);
+  video.addEventListener('playing', schedulePreparationPause);
   video.addEventListener('loadedmetadata', onMediaReady);
   video.addEventListener('canplay', onMediaReady);
   video.addEventListener('seeked', onMediaReady);
@@ -112,7 +112,7 @@ export function controlSilentPlayback(videoId, token, operation) {
     player?.mute?.();
     if (typeof player?.playVideo === 'function') {
       player.playVideo();
-      if (!video.paused && video.readyState >= 2) onPlaying();
+      if (!video.paused && video.readyState >= 2) schedulePreparationPause();
     } else if (video.paused) document.querySelector('#movie_player .ytp-play-button')?.click();
     if (finished || pauseTimer != null) return session.ready;
     // The player API may initialize metadata while leaving the media paused.

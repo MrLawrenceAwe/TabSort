@@ -73,6 +73,9 @@ tabs remain identifiable after worker suspension or window changes.
 Playback messages distinguish `metadataDurationSeconds`, `mediaDurationSeconds`,
 and `positionSeconds`. Records store `videoDetails.durationSeconds`; the metadata
 collector translates YouTube's external `lengthSeconds` field at the page boundary.
+Content-script messages and collection own `contentScriptReady`; shared playback
+updates leave it unchanged because main-world preparation reads do not establish
+script readiness.
 
 Each content observer owns its state. Navigation resets retain previous media
 evidence until new media arrives; a full controller reset clears it. Numeric
@@ -99,9 +102,10 @@ request, missing-receiver reinjection, and retries. Expiry marks the reading
 unavailable. Late responses cannot update records or start more retries, and a
 failed read for a previous video cannot invalidate its successor's reading.
 Preparation first initializes the player through a main-world script using
-YouTube's player API: mute, play, pause 250 ms after `playing`, then restore the
-original mute state. Failed starts retry after one second within the same attempt;
-media arriving after a failed start can still proceed to collection.
+YouTube's player API: mute, play, pause 250 ms after playback or usable metadata
+arrives, then restore the original mute state. Failed starts retry after one second
+within the same attempt; media arriving after a failed start can still proceed to
+collection.
 Preparation polls awake tabs even while Chrome reports page loading. A verified
 media reading can finish before unrelated requests do; its prepared snapshot
 remains usable during that loading state. A new loading event invalidates it.
@@ -146,7 +150,9 @@ settled reading are reloaded in the preparation window and retried, for up to
 three attempts. Only timeouts retry; closed, navigated, pinned, and live videos
 are not reloaded. Each retry checks the tab identity, selection, and workspace
 ownership again. Individual metric reads are capped at two seconds so a stalled
-message cannot consume the whole attempt. Stop cancels reads and prevents retries.
+script call cannot consume the whole attempt. Initialization and collection share
+the attempt's remaining budget; its expiry cancels the current read and prevents
+starting another operation in that refresh. Stop cancels reads and prevents retries.
 
 The workspace moves videos with `moveTabToPreparationWindow()` and returns the
 outstanding video when `finishSession()` clears the recovery journal. Successful
