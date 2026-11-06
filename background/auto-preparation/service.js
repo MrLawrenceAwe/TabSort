@@ -20,6 +20,7 @@ import { saveAutoPreparedTab } from './session-cache.js';
 import { queueAutoPreparationToolbarIndicator } from '../toolbar-indicator.js';
 import { createSilentPlaybackPreparation } from './silent-playback.js';
 import { createPreparationFocusRecovery } from './focus-recovery.js';
+import { TAB_LOAD_STATES } from '../../shared/tabs/constants.js';
 
 const workspace = createPreparationWorkspace();
 const silentPlayback = createSilentPlaybackPreparation();
@@ -63,7 +64,7 @@ const runner = createAutoPreparationRunner({
       active: tab.active, discarded: tab.discarded, videoId,
       excluded: tab.pinned || record?.isLive || !videoId || (!isInPreparationWindow && tab.active),
       loaded: !tab.discarded && tab.status === 'complete',
-      ready: !tab.discarded && tab.status === 'complete' &&
+      ready: !tab.discarded &&
         videoId === getYouTubeVideoId(record?.url) && hasReadyRemainingTime(record),
       remainingSeconds: record?.videoDetails?.remainingSeconds,
     };
@@ -105,7 +106,8 @@ const runner = createAutoPreparationRunner({
           workspace.transfer?.tabId !== tabId) return;
       const update = derivePlaybackUpdate({ metricsPayload: metrics, record, requestedUrl, currentTabUrl: currentTab.url });
       if (!update) return;
-      record.loadState = getTabLoadState(currentTab);
+      // A valid media reading is usable before unrelated page requests finish.
+      record.loadState = TAB_LOAD_STATES.LOADED;
       applyPlaybackStateUpdate(record, update, currentTab.url);
       applied = true;
     } finally {
@@ -126,7 +128,7 @@ const runner = createAutoPreparationRunner({
     if (!returned) return;
     const sameVideo = getYouTubeVideoId(returned.url) === getYouTubeVideoId(record?.url);
     if (autoPrepared && sameVideo && !(wasDiscarded && !returned.active)) {
-      await saveAutoPreparedTab(record, { discarded: Boolean(returned.discarded) });
+      await saveAutoPreparedTab(record, { discarded: Boolean(returned.discarded), loading: returned.status === 'loading' });
     }
     // Never discard a tab the user has selected or navigated in the meantime.
     if (wasDiscarded && !returned.active && sameVideo) {

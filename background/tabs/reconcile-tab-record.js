@@ -12,7 +12,9 @@ export function reconcileTabRecord(
   const isDiscarded = nextLoadState === TAB_LOAD_STATES.DISCARDED;
   const loadStateChanged = previousRecord.loadState && previousRecord.loadState !== nextLoadState;
   const keepsAutoPreparedTime =
-    isDiscarded && !videoChanged && Boolean(previousRecord.hasAutoPreparedTime);
+    !videoChanged && Boolean(previousRecord.hasAutoPreparedTime) &&
+    (isDiscarded || (previousRecord.loadState === TAB_LOAD_STATES.LOADING &&
+      !previousRecord.remainingSecondsStale));
   const timestamp = Date.now();
 
   const record = createTabRecord(tab.id, tab.windowId, {

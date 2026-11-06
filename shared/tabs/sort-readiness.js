@@ -9,7 +9,8 @@ export function hasReadyRemainingTime(record) {
   if (!record || record.autoPreparationInProgress) return false;
   const canUseRecordedTime =
     record.loadState === TAB_LOAD_STATES.LOADED ||
-    (record.loadState === TAB_LOAD_STATES.DISCARDED && record.hasAutoPreparedTime);
+    ((record.loadState === TAB_LOAD_STATES.DISCARDED ||
+      record.loadState === TAB_LOAD_STATES.LOADING) && record.hasAutoPreparedTime);
   if (!canUseRecordedTime) return false;
   if (record.remainingSecondsStale) return false;
   return hasRemainingTime(record);

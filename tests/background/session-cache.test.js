@@ -4,6 +4,28 @@ import {
   saveAutoPreparedTab, removeAutoPreparedTab, readAutoPreparedTabs, restoreAutoPreparedTab,
   transferAutoPreparedTab,
 } from '../../background/auto-preparation/session-cache.js';
+import { reconcileTabRecord } from '../../background/tabs/reconcile-tab-record.js';
+import { hasReadyRemainingTime } from '../../shared/tabs/sort-readiness.js';
+import { applyTabReloadStarted } from '../../background/tabs/video-state.js';
+
+test('a reading collected during pending page requests remains ready until a new navigation starts', async () => {
+  const storage = {};
+  globalThis.chrome = { storage: { session: {
+    set: async values => Object.assign(storage, values),
+    get: async () => structuredClone(storage),
+  } } };
+  const tab = { id: 42, windowId: 1, url: 'https://www.youtube.com/watch?v=pending', status: 'loading', discarded: false };
+  await saveAutoPreparedTab({ ...tab, remainingSecondsStale: false,
+    videoDetails: { remainingSeconds: 25 } }, { discarded: false, loading: true });
+  const saved = await readAutoPreparedTabs();
+  const restored = restoreAutoPreparedTab(tab, reconcileTabRecord(tab, {}, 'loading'), saved);
+  assert.equal(hasReadyRemainingTime(restored), true);
+  const pending = reconcileTabRecord(tab, restored, 'loading');
+  assert.equal(hasReadyRemainingTime(pending), true);
+  assert.equal(hasReadyRemainingTime(reconcileTabRecord({ ...tab, status: 'complete' }, pending, 'loaded')), true);
+  applyTabReloadStarted(pending);
+  assert.equal(hasReadyRemainingTime(reconcileTabRecord(tab, pending, 'loading')), false);
+});
 
 test('sleeping snapshots survive record loss but do not restore into awake tabs or different videos', async () => {
   const storage = {};

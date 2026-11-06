@@ -15,10 +15,11 @@ function harness(overrides = {}) {
     maxAttempts: 1,
     retryTabPreparation: async () => true,
     delay: async ms => { time += ms; },
-    inspect: async id => tabs.get(id),
+    inspect: async id => tabs.has(id) ? { ...tabs.get(id) } : null,
     moveTabToPreparationWindow: async id => {
       for (const tab of tabs.values()) tab.active = false;
       tabs.get(id).active = true;
+      tabs.get(id).discarded = false;
       moved.push(id);
       return true;
     },
@@ -131,8 +132,9 @@ test('a slow initial load can succeed after the former fifteen-second limit', as
     inspect: async id => {
       const tab = h.tabs.get(id);
       tab.loaded = h.now() >= 20000;
-      return tab;
+      return { ...tab };
     },
+    refresh: async id => { h.tabs.get(id).ready = h.now() >= 20000; },
   });
   h.runner.start(1, h.items.slice(0, 1));
   assert.equal((await h.finished).ready, 1);
@@ -196,17 +198,17 @@ test('removed, navigated and excluded tabs are skipped before moving', async () 
   assert.deepEqual(h.moved, []);
 });
 
-test('a sleeping tab is moved and allowed to load before collecting playback data', async () => {
+test('a sleeping tab is woken before collecting playback data', async () => {
   let inspections = 0;
   const h = harness({
     playbackWaitTimeoutMs: 100,
     inspect: async id => {
       const tab = h.tabs.get(id);
       if (tab.active && ++inspections >= 3) tab.loaded = true;
-      return tab;
+      return { ...tab };
     },
     refresh: async id => {
-      assert.equal(h.tabs.get(id).loaded, true);
+      assert.equal(h.tabs.get(id).discarded, false);
       h.refreshed.push(id);
       h.tabs.get(id).ready = true;
     },
@@ -221,6 +223,17 @@ test('a sleeping tab is moved and allowed to load before collecting playback dat
   assert.deepEqual(h.finishedTabs, [{
     id: 1, autoPrepared: true, wasDiscarded: true,
   }]);
+});
+
+test('preparation reads valid playback while the full page remains loading', async () => {
+  const h = harness();
+  h.tabs.get(1).loaded = false;
+  h.runner.start(1, h.items.slice(0, 1));
+  const result = await h.finished;
+  assert.equal(result.ready, 1);
+  assert.equal(result.skipped, 0);
+  assert.equal(h.tabs.get(1).loaded, false);
+  assert.ok(h.refreshed.length > 0);
 });
 
 test('auto-preparation waits again when YouTube restores a saved playback position', async () => {

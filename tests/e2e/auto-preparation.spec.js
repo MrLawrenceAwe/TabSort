@@ -33,6 +33,8 @@ test('prepares media while browsing continues and restores the tabs', async ({ c
   wav.writeUInt32LE(8000, 24); wav.writeUInt32LE(16000, 28);
   wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34);
   wav.write('data', 36); wav.writeUInt32LE(16000, 40);
+  // A pending image keeps Chrome's tab.status at loading after the player mounts.
+  await context.route('https://pending.tabsort.test/**', () => {});
   await context.route('https://www.youtube.com/**', route => {
     const stalled = route.request().url().includes('stalled');
     return route.fulfill({ contentType: 'text/html', body: `<!doctype html>
@@ -63,7 +65,7 @@ test('prepares media while browsing continues and restores the tabs', async ({ c
             video.src = 'data:audio/wav;base64,${wav.toString('base64')}';
           }, 300);
         }
-      </script></body></html>` });
+      </script><img src="https://pending.tabsort.test/image.png"></body></html>` });
   });
 
   const popup = await context.newPage();
@@ -71,8 +73,8 @@ test('prepares media while browsing continues and restores the tabs', async ({ c
   const firstVideo = await context.newPage();
   const secondVideo = await context.newPage();
   await popup.bringToFront();
-  await firstVideo.goto('https://www.youtube.com/watch?v=deferred-one');
-  await secondVideo.goto('https://www.youtube.com/watch?v=deferred-two');
+  await firstVideo.goto('https://www.youtube.com/watch?v=deferred-one', { waitUntil: 'domcontentloaded' });
+  await secondVideo.goto('https://www.youtube.com/watch?v=deferred-two', { waitUntil: 'domcontentloaded' });
   let ids = await worker.evaluate(async () => (await chrome.tabs.query({ url: 'https://www.youtube.com/*' })).map(tab => tab.id));
   const originalTabs = await worker.evaluate(async ids => {
     await chrome.tabs.group({ tabIds: ids[0] });
@@ -108,6 +110,7 @@ test('prepares media while browsing continues and restores the tabs', async ({ c
   ids = await worker.evaluate(async () => (await chrome.tabs.query({ url: 'https://www.youtube.com/*' })).sort((a, b) => a.index - b.index).map(tab => tab.id));
   expect(await worker.evaluate(async ids => (await Promise.all(ids.map(id => chrome.tabs.get(id)))).map(tab => tab.windowId), ids)).toEqual([sourceWindowId, sourceWindowId]);
   const returnedTabs = await worker.evaluate(async ids => Promise.all(ids.map(id => chrome.tabs.get(id))), ids);
+  expect(returnedTabs.every(tab => tab.status === 'loading')).toBe(true);
   expect(returnedTabs.map(tab => tab.index)).toEqual(originalTabs.map(tab => tab.index));
   expect(returnedTabs[0].groupId).toBe(originalTabs[0].groupId);
   expect(await worker.evaluate(async windowId => (await chrome.tabs.query({ windowId, active: true }))[0].url, sourceWindowId)).toContain('data:text/html');

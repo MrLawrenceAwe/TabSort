@@ -81,7 +81,7 @@ export function createAutoPreparationRunner({
       if (waitMs > 0) await delay(waitMs);
       if (job.signal.aborted) return false;
       if (now() >= deadline) break;
-      if (tab.loaded) {
+      if (!tab.discarded) {
         lastRefreshAt = now();
         await refresh(item.id, job.windowId, Math.max(1, deadline - now()), job.signal);
       }

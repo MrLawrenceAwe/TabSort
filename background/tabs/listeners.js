@@ -9,10 +9,12 @@ import {
   deleteTabFromOrderedWindow,
   deleteTabRecord,
   getTrackedWindowId,
+  getMutableTabRecord,
 } from '../windows/tracked-window-store.js';
 import { reconcileWindowTabRecords } from './reconcile-window.js';
 import { isYouTubeVideoPage } from '../../shared/youtube/urls.js';
 import { removeAutoPreparedTab, transferAutoPreparedTab } from '../auto-preparation/session-cache.js';
+import { applyTabReloadStarted } from './video-state.js';
 
 const RECONCILE_DEBOUNCE_MS = 200;
 const pendingReconcilesByWindow = new Map();
@@ -71,6 +73,9 @@ export function registerTabAndNavigationListeners({ onTrackedWindowClosed } = {}
         void removeAutoPreparedTab(tabId).catch(error => logDebug('autoPrepared tab cleanup failed', error));
       }
       if (!canManageWindow(tab.windowId)) return;
+      if (changeInfo.status === 'loading' && !tab.discarded) {
+        applyTabReloadStarted(getMutableTabRecord(tabId));
+      }
       if (
         Object.prototype.hasOwnProperty.call(changeInfo, 'discarded') ||
         changeInfo.status === 'complete' ||

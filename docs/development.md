@@ -98,6 +98,9 @@ Preparation first initializes the player through a main-world script using
 YouTube's player API: mute, play, pause 250 ms after `playing`, then restore the
 original mute state. Failed starts retry after one second within the same attempt;
 media arriving after a failed start can still proceed to collection.
+Preparation polls awake tabs even while Chrome reports page loading. A verified
+media reading can finish before unrelated requests do; its prepared snapshot
+remains usable during that loading state. A new loading event invalidates it.
 The muted media element is also started when the player leaves it paused.
 Initialization calls `HTMLMediaElement.prototype.play` directly so an autoplay
 extension's video-method override cannot reject this explicitly requested action.
