@@ -99,8 +99,8 @@ const runner = createAutoPreparationRunner({
           tab.windowId !== windowId || workspace.transfer?.tabId !== tabId ||
           getYouTubeVideoId(tab.url) !== getYouTubeVideoId(requestedUrl)) return;
       ownsTab = true;
-      if (!await silentPlayback.read(tabId, getYouTubeVideoId(requestedUrl), signal)) return;
-      const metrics = await silentPlayback.read(tabId, getYouTubeVideoId(requestedUrl), signal, 'metrics');
+      if (!await silentPlayback.preparePlayback(tabId, getYouTubeVideoId(requestedUrl), signal)) return;
+      const metrics = await silentPlayback.readMetrics(tabId, getYouTubeVideoId(requestedUrl), signal);
       const currentTab = await getTab(tabId);
       if (signal.aborted || !metrics || currentTab.windowId !== windowId ||
           workspace.transfer?.tabId !== tabId) return;

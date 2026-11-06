@@ -4,12 +4,10 @@ import { tryInjectYouTubeRuntime } from '../youtube/inject.js';
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-// Keep the request, reinjection, retries, and result handling within one deadline.
-// Consumers that await more work must recheck isCurrent before applying a result.
+// Keep the request, reinjection, and retries within one deadline.
 export async function readPlaybackMetrics(
   tabId,
   { timeoutMs, signal, retryAttempts = 0, retryDelayMs = 0 },
-  onResult = result => result,
 ) {
   let timer;
   let onAbort;
@@ -38,7 +36,7 @@ export async function readPlaybackMetrics(
           }
         }
       }
-      return onResult(result, isCurrent);
+      return result;
     })();
     const requests = [pending, new Promise(resolve => {
       timer = setTimeout(() => resolve({ ok: false, reason: 'timedOut' }), timeoutMs);

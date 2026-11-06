@@ -244,7 +244,7 @@ test('same-video navigation events do not permanently cancel a preparation token
   assert.equal(h.events.filter(([event]) => event === 'play').length, 2);
 });
 
-test('a timed-out injection gets a fresh session on the next read', async t => {
+test('a timed-out injection gets a fresh session on the next playback preparation', async t => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const calls = [];
   let release;
@@ -257,10 +257,10 @@ test('a timed-out injection gets a fresh session on the next read', async t => {
   } } };
   const preparation = createSilentPlaybackPreparation();
   const signal = new AbortController().signal;
-  const first = preparation.read(1, 'one', signal);
+  const first = preparation.preparePlayback(1, 'one', signal);
   t.mock.timers.tick(2000);
   assert.equal(await first, false);
-  assert.equal(await preparation.read(1, 'one', signal), true);
+  assert.equal(await preparation.preparePlayback(1, 'one', signal), true);
   const [oldStart, , newStart] = calls;
   assert.notEqual(oldStart.args[1], newStart.args[1]);
   release([{ result: true }]);
@@ -333,7 +333,7 @@ test('abort releases a stalled script call and cleans up a late start', async ()
   } } };
   const controller = new AbortController();
   const preparation = createSilentPlaybackPreparation();
-  const pending = preparation.read(1, 'one', controller.signal);
+  const pending = preparation.preparePlayback(1, 'one', controller.signal);
   controller.abort();
   assert.equal(await pending, false);
   await preparation.stop();

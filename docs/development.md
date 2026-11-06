@@ -25,12 +25,16 @@ Playwright traces.
 
 - `background/windows/` owns the single tracked-window store and window lifecycle.
 - `background/tabs/` owns Chrome tab operations, records, reconciliation, and listeners.
-- `background/playback/` owns the shared bounded metric-request transport used by
-  normal collection and preparation, and derives and applies playback updates.
+- `background/playback/` owns the bounded content-script metric-request transport
+  used by normal collection, plus playback update derivation and application shared
+  with preparation.
 - `background/sorting/` builds tab orders and derives sorting state.
 - `background/messaging/` routes extension messages and handles tab commands and page events.
 - `background/auto-preparation/` owns queue execution, the preparation workspace,
-  placeholder projection, run state, and the session cache.
+  placeholder projection, run state, and the session cache. `silent-playback.js`
+  uses separately bounded main-world script calls: `preparePlayback()` initializes
+  muted playback and returns readiness; `readMetrics()` reads paused media and
+  returns metrics or null.
 - `content/youtube/` collects page metadata and playback evidence. `page/entry.js`
   bootstraps the controller; `metadata/` and `media/` own their observers.
 - `popup/` contains the controller, state store, runtime clients, DOM elements, and views.

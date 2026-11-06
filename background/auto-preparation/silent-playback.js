@@ -133,43 +133,50 @@ export function createSilentPlaybackPreparation() {
     func: controlSilentPlayback,
     args: [session.videoId, session.token, operation],
   });
-  return {
-    async read(tabId, videoId, signal, operation = 'start') {
-      if (signal.aborted) return false;
-      current ??= { tabId, videoId, token: crypto.randomUUID() };
-      const session = current;
-      if (session.tabId !== tabId || session.videoId !== videoId) return false;
-      let timer;
-      let onAbort;
-      let expired = false;
-      let settled = false;
-      try {
-        const pending = execute(session, operation).then(result => {
-          settled = true;
-          if (expired || signal.aborted || current !== session) {
-            void execute(session, 'stop').catch(() => {});
-            return false;
-          }
-          return operation === 'metrics' ? result?.[0]?.result || null : result?.[0]?.result === true;
-        }).catch(() => { settled = true; return false; });
-        return await Promise.race([
-          pending,
-          new Promise(resolve => { timer = setTimeout(() => resolve(false), 2000); }),
-          new Promise(resolve => {
-            onAbort = () => resolve(false);
-            signal.addEventListener('abort', onAbort, { once: true });
-            if (signal.aborted) onAbort();
-          }),
-        ]);
-      } finally {
-        expired = true;
-        clearTimeout(timer);
-        signal.removeEventListener('abort', onAbort);
-        if (!settled && current === session) {
-          current = null;
+  async function runOperation(tabId, videoId, signal, operation) {
+    if (signal.aborted) return false;
+    current ??= { tabId, videoId, token: crypto.randomUUID() };
+    const session = current;
+    if (session.tabId !== tabId || session.videoId !== videoId) return false;
+    let timer;
+    let onAbort;
+    let expired = false;
+    let settled = false;
+    try {
+      const pending = execute(session, operation).then(result => {
+        settled = true;
+        if (expired || signal.aborted || current !== session) {
           void execute(session, 'stop').catch(() => {});
+          return false;
         }
+        return operation === 'metrics' ? result?.[0]?.result || null : result?.[0]?.result === true;
+      }).catch(() => { settled = true; return false; });
+      return await Promise.race([
+        pending,
+        new Promise(resolve => { timer = setTimeout(() => resolve(false), 2000); }),
+        new Promise(resolve => {
+          onAbort = () => resolve(false);
+          signal.addEventListener('abort', onAbort, { once: true });
+          if (signal.aborted) onAbort();
+        }),
+      ]);
+    } finally {
+      expired = true;
+      clearTimeout(timer);
+      signal.removeEventListener('abort', onAbort);
+      if (!settled && current === session) {
+        current = null;
+        void execute(session, 'stop').catch(() => {});
       }
+    }
+  }
+
+  return {
+    preparePlayback(tabId, videoId, signal) {
+      return runOperation(tabId, videoId, signal, 'start');
+    },
+    async readMetrics(tabId, videoId, signal) {
+      return await runOperation(tabId, videoId, signal, 'metrics') || null;
     },
     async stop() {
       const session = current;

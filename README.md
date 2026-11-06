@@ -63,10 +63,11 @@ TabSort performs all processing locally and does not send browsing data to a ser
   script receiver.
 - `webNavigation` detects YouTube single-page navigation reliably.
 - `storage` saves preferences locally. Existing sync preferences are imported once; saved
-  local values take precedence. Session storage also caches prepared video IDs, titles,
-  durations, remaining times, and sleeping status, and keeps a recovery journal with tab
-  and window IDs and the original tab position. These session records survive worker
-  suspension and clear when Chrome restarts; the journal is removed when the preparation
+  local values take precedence. Session storage caches prepared video IDs, titles,
+  durations, remaining times, and sleeping status. These cached readings survive worker
+  suspension and clear when Chrome restarts. Local storage keeps a recovery journal
+  with tab and window IDs, the original tab position, and group details. The journal
+  survives browser restarts and extension reloads and is removed when the preparation
   session finishes. See [session recovery](docs/usage.md#session-recovery).
 - The YouTube host permission limits page inspection and content-script execution to
   `youtube.com`.
