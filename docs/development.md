@@ -168,8 +168,8 @@ The service attempts to discard previously sleeping tabs after preparation unles
 they have been selected or navigated. A failed discard leaves the tab awake; sleeping
 cache entries are saved only after Chrome confirms discard. `hasAutoPreparedTime`
 allows sleeping tabs' saved readings to remain sortable. Session-cache entries use
-`videoId`; the cache reader migrates previous stored field names before restoring
-readings.
+`videoId` and `videoDetails.durationSeconds`. Reloads and updates clear this cache,
+so its reader only needs the current schema.
 
 ## Preferences
 

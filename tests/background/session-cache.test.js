@@ -49,18 +49,19 @@ test('sleeping snapshots survive record loss but do not restore into awake tabs 
   assert.deepEqual(restoreAutoPreparedTab(tab, {}, await readAutoPreparedTabs()), {});
 });
 
-test('migrates session readings to the current schema without changing the workspace journal', async () => {
+test('reads current session readings without writes and transfers replaced tab IDs', async () => {
   const tab = { id: 42, discarded: true, url: 'https://www.youtube.com/watch?v=saved' };
   const journal = { windowId: 9, transfer: { tabId: 42, placeholderId: 43 } };
   const storage = {
     autoPreparationWorkspace: journal,
+    'autoPreparedTab:3': null,
     'autoPreparedTab:42': {
-      identity: 'saved', discarded: true,
-      videoDetails: { title: 'Saved video', remainingSeconds: 25, lengthSeconds: 100 },
+      videoId: 'saved', discarded: true,
+      videoDetails: { title: 'Saved video', remainingSeconds: 25, durationSeconds: 100 },
     },
     'autoPreparedTab:7': {
-      videoId: 'current', identity: 'obsolete', discarded: false,
-      videoDetails: { remainingSeconds: 10, durationSeconds: 80, lengthSeconds: 100 },
+      videoId: 'current', discarded: false,
+      videoDetails: { remainingSeconds: 10, durationSeconds: 80 },
     },
   };
   let writes = 0;
@@ -82,24 +83,13 @@ test('migrates session readings to the current schema without changing the works
   assert.equal(restoreAutoPreparedTab(tab, {}, saved).videoDetails.remainingSeconds, 25);
   assert.deepEqual(storage.autoPreparationWorkspace, journal);
   assert.equal(saved.autoPreparationWorkspace, undefined);
+  assert.equal(saved['autoPreparedTab:3'], undefined);
   assert.deepEqual(await readAutoPreparedTabs(), saved);
-  assert.equal(writes, 1);
+  assert.equal(writes, 0);
 
   await transferAutoPreparedTab(99, 42);
   assert.equal(storage['autoPreparedTab:42'], undefined);
   assert.deepEqual(storage['autoPreparedTab:99'], saved['autoPreparedTab:42']);
-});
-
-test('retains a legacy reading if its migration cannot be saved', async () => {
-  const storage = { 'autoPreparedTab:42': { identity: 'saved', discarded: true,
-    videoDetails: { remainingSeconds: 25, lengthSeconds: 100 } } };
-  const original = structuredClone(storage);
-  globalThis.chrome = { storage: { session: {
-    get: async () => structuredClone(storage),
-    set: async () => { throw new Error('Storage unavailable'); },
-  } } };
-  await assert.rejects(readAutoPreparedTabs(), /Storage unavailable/);
-  assert.deepEqual(storage, original);
 });
 
 test('awake snapshots restore only missing data in the same loaded video', async () => {

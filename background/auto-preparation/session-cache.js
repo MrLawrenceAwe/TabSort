@@ -36,31 +36,11 @@ export async function transferAutoPreparedTab(addedTabId, removedTabId) {
 export async function readAutoPreparedTabs() {
   const stored = await chrome.storage?.session?.get(null) ?? {};
   const preparedTabs = {};
-  const migratedTabs = {};
+  // Reloads and updates clear session storage, so entries use the current schema.
   for (const [key, cached] of Object.entries(stored)) {
     if (!key.startsWith(AUTO_PREPARED_KEY_PREFIX) || !cached) continue;
-    // Rewrite the previous cache schema before restoring it. Keeping this
-    // migration at the storage boundary preserves session readings without
-    // carrying legacy field names into tab records or playback messages.
-    const needsMigration = Object.hasOwn(cached, 'identity') ||
-      (cached.videoDetails && Object.hasOwn(cached.videoDetails, 'lengthSeconds'));
-    if (!needsMigration) {
-      preparedTabs[key] = cached;
-      continue;
-    }
-    const { identity, ...snapshot } = cached;
-    snapshot.videoId ??= identity;
-    if (snapshot.videoDetails) {
-      const { lengthSeconds, ...details } = snapshot.videoDetails;
-      if (!Object.hasOwn(details, 'durationSeconds') && lengthSeconds !== undefined) {
-        details.durationSeconds = lengthSeconds;
-      }
-      snapshot.videoDetails = details;
-    }
-    preparedTabs[key] = snapshot;
-    migratedTabs[key] = snapshot;
+    preparedTabs[key] = cached;
   }
-  if (Object.keys(migratedTabs).length) await chrome.storage.session.set(migratedTabs);
   return preparedTabs;
 }
 
