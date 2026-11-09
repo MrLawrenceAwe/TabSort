@@ -283,7 +283,7 @@ test('reads the verified paused media directly without a content-script message'
   const metrics = controlSilentPlayback('one', 'session', 'metrics');
   assert.deepEqual(metrics, {
     url: location.href, title: 'Test video', playbackMetricsReady: true,
-    metadataDurationSeconds: 100, mediaDurationSeconds: 100, positionSeconds: 25,
+    mediaDurationSeconds: 100, positionSeconds: 25,
     playbackRate: 2, isLive: false,
   });
   assert.deepEqual(h.events, []);

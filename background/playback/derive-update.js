@@ -45,6 +45,7 @@ export function derivePlaybackUpdate({
   record,
   requestedUrl,
   currentTabUrl,
+  durationAuthority = 'metadata',
 }) {
   const payloadUrl =
     typeof metricsPayload?.url === 'string' && metricsPayload.url ? metricsPayload.url : null;
@@ -60,9 +61,9 @@ export function derivePlaybackUpdate({
   const recordedDurationSeconds = currentVideoId && currentVideoId === getYouTubeVideoId(record?.url)
     ? toPositiveFiniteNumber(record?.videoDetails?.durationSeconds)
     : null;
-  const authoritativeDurationSeconds =
-    toPositiveFiniteNumber(metricsPayload.metadataDurationSeconds) ??
-    recordedDurationSeconds;
+  const authoritativeDurationSeconds = durationAuthority === 'media'
+    ? toPositiveFiniteNumber(metricsPayload.mediaDurationSeconds)
+    : toPositiveFiniteNumber(metricsPayload.metadataDurationSeconds) ?? recordedDurationSeconds;
   const resolvedDurationSeconds = authoritativeDurationSeconds ??
     toPositiveFiniteNumber(metricsPayload.mediaDurationSeconds) ?? NaN;
   const currentTimeSeconds = Number(metricsPayload.positionSeconds ?? NaN);
@@ -91,7 +92,7 @@ export function derivePlaybackUpdate({
     return update;
   }
 
-  if (hasMediaDurationMismatch(metricsPayload, authoritativeDurationSeconds)) {
+  if (durationAuthority === 'metadata' && hasMediaDurationMismatch(metricsPayload, authoritativeDurationSeconds)) {
     update.playbackMetricsReady = false;
     update.remainingSeconds = resolvedDurationSeconds;
     return update;

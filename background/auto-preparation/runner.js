@@ -41,11 +41,11 @@ export function createAutoPreparationRunner({
     let lastRefreshAt = null;
     while (!job.signal.aborted && now() < deadline) {
       const tab = await inspect(item.id, job.windowId);
-      if (job.signal.aborted) return false;
-      if (!tab || tab.videoId !== item.videoId || tab.excluded) return null;
+      if (job.signal.aborted) return 'cancelled';
+      if (!tab || tab.videoId !== item.videoId || tab.excluded) return 'ineligible';
       if (!tab.active) {
         stop('Stopped because the selected tab changed inside the preparation window');
-        return false;
+        return 'cancelled';
       }
       setPhase(tab.ready ? 'settling' : tab.loaded ? 'reading' : 'loading');
       const sampledAt = now();
@@ -64,7 +64,7 @@ export function createAutoPreparationRunner({
         }
         lastRemainingSeconds = tab.remainingSeconds;
         lastSampleAt = sampledAt;
-        if (sampledAt - readySince >= settleMs) return true;
+        if (sampledAt - readySince >= settleMs) return 'ready';
       } else {
         readySince = null;
         lastRemainingSeconds = null;
@@ -79,14 +79,14 @@ export function createAutoPreparationRunner({
         deadline - now(),
       ));
       if (waitMs > 0) await delay(waitMs);
-      if (job.signal.aborted) return false;
+      if (job.signal.aborted) return 'cancelled';
       if (now() >= deadline) break;
       if (!tab.discarded) {
         lastRefreshAt = now();
         await refresh(item.id, job.windowId, Math.max(1, deadline - now()), job.signal);
       }
     }
-    return false;
+    return job.signal.aborted ? 'cancelled' : 'timedOut';
   }
 
   async function prepareTab(job, item, initial) {
@@ -108,13 +108,13 @@ export function createAutoPreparationRunner({
           const retried = await retryTabPreparation(item.id, job.windowId, job.signal);
           if (job.signal.aborted || !retried) return false;
         }
-        const result = await waitForSettledPlayback(job, item);
-        if (result === true) {
+        const outcome = await waitForSettledPlayback(job, item);
+        if (outcome === 'ready') {
           ready = true;
           break;
         }
         // Only timeouts are retryable; never reload a navigated or excluded tab.
-        if (result === null || job.signal.aborted) break;
+        if (outcome !== 'timedOut' || job.signal.aborted) break;
       }
       return ready;
     } finally {

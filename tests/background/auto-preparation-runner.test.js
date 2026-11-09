@@ -257,7 +257,6 @@ test('auto-preparation waits again when YouTube restores a saved playback positi
   assert.equal(h.finishedTabs[0].autoPrepared, true);
 });
 
-
 test('Stop waits for a pending move and returns the tab before allowing a new run', async () => {
   let release;
   let entered;
@@ -306,4 +305,17 @@ test('a pending return is visible in status and Stop reports that it is waiting'
   await stopped;
   assert.equal(h.runner.snapshot().status, 'stopped');
   assert.equal(h.runner.snapshot().phase, null);
+});
+
+test('a tab becoming ineligible while waiting is returned without retrying', async () => {
+  let retries = 0;
+  const h = harness({
+    maxAttempts: 3,
+    refresh: async id => { h.tabs.get(id).excluded = true; },
+    retryTabPreparation: async () => { retries++; return true; },
+  });
+  h.runner.start(1, h.items.slice(0, 1));
+  assert.equal((await h.finished).skipped, 1);
+  assert.equal(retries, 0);
+  assert.deepEqual(h.finishedTabs, [{ id: 1, autoPrepared: false, wasDiscarded: undefined }]);
 });

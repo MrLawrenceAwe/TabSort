@@ -108,7 +108,10 @@ const runner = createAutoPreparationRunner({
       const currentTab = await getTab(tabId);
       if (signal.aborted || !metrics || currentTab.windowId !== windowId ||
           workspace.transfer?.tabId !== tabId) return;
-      const update = derivePlaybackUpdate({ metricsPayload: metrics, record, requestedUrl, currentTabUrl: currentTab.url });
+      const update = derivePlaybackUpdate({
+        metricsPayload: metrics, record, requestedUrl, currentTabUrl: currentTab.url,
+        durationAuthority: 'media',
+      });
       if (!update) return;
       // A valid media reading is usable before unrelated page requests finish.
       record.loadState = TAB_LOAD_STATES.LOADED;

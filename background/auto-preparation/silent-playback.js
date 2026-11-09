@@ -26,7 +26,6 @@ export function controlSilentPlayback(videoId, token, operation) {
       url: location.href,
       title: data?.title || document.title.replace(/ - YouTube$/, ''),
       playbackMetricsReady: true,
-      metadataDurationSeconds: video.duration,
       mediaDurationSeconds: video.duration,
       positionSeconds: video.currentTime,
       playbackRate: video.playbackRate || 1,

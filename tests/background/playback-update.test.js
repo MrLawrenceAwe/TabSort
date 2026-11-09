@@ -18,3 +18,32 @@ test('playback readings preserve independently observed content-script readiness
     assert.equal(record.remainingSecondsStale, false);
   }
 });
+
+test('normal collection rejects a media duration that disagrees with page metadata', () => {
+  const record = createTabRecordFixture(1);
+  const update = derivePlaybackUpdate({
+    record, requestedUrl: record.url, currentTabUrl: record.url,
+    metricsPayload: createPlaybackMetricsFixture({
+      metadataDurationSeconds: 200, mediaDurationSeconds: 100,
+    }),
+  });
+  assert.equal(update.resolvedDurationSeconds, 200);
+  assert.equal(update.playbackMetricsReady, false);
+  assert.equal(update.remainingSecondsStale, true);
+});
+
+test('preparation explicitly trusts verified media rather than recorded duration', () => {
+  const record = createTabRecordFixture(1, { videoDetails: { durationSeconds: 200 } });
+  const update = derivePlaybackUpdate({
+    record, requestedUrl: record.url, currentTabUrl: record.url,
+    durationAuthority: 'media',
+    metricsPayload: {
+      url: record.url, mediaDurationSeconds: 100, positionSeconds: 25,
+      playbackRate: 2, playbackMetricsReady: true,
+    },
+  });
+  assert.equal(update.resolvedDurationSeconds, 100);
+  assert.equal(update.playbackMetricsReady, true);
+  assert.equal(update.remainingSeconds, 37.5);
+  assert.equal(update.remainingSecondsStale, false);
+});

@@ -71,8 +71,10 @@ adjusted for playback speed; `remainingSecondsStale` marks unreliable readings.
 tabs remain identifiable after worker suspension or window changes.
 
 Playback messages distinguish `metadataDurationSeconds`, `mediaDurationSeconds`,
-and `positionSeconds`. Records store `videoDetails.durationSeconds`; the metadata
-collector translates YouTube's external `lengthSeconds` field at the page boundary.
+and `positionSeconds`. Preparation supplies only media duration and explicitly selects
+`durationAuthority: 'media'` when deriving playback updates. Normal collection uses
+page or recorded metadata duration and checks it against media duration. Records
+store `videoDetails.durationSeconds`; the metadata collector translates YouTube's external `lengthSeconds` field at the page boundary.
 Content-script messages and collection own `contentScriptReady`; shared playback
 updates leave it unchanged because main-world preparation reads do not establish
 script readiness.
@@ -147,7 +149,8 @@ outside this deadline. Once data appears, the runner samples it for a
 three-second settling period so YouTube can restore saved viewing progress.
 A sudden position jump or a failed read restarts settling. Videos without a
 settled reading are reloaded in the preparation window and retried, for up to
-three attempts. Only timeouts retry; closed, navigated, pinned, and live videos
+three attempts. The settling loop reports named `ready`, `timedOut`, `cancelled`,
+or `ineligible` outcomes; only `timedOut` retries. Closed, navigated, pinned, and live videos
 are not reloaded. Each retry checks the tab identity, selection, and workspace
 ownership again. Individual metric reads are capped at two seconds so a stalled
 script call cannot consume the whole attempt. Initialization and collection share
