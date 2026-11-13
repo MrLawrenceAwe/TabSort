@@ -12,10 +12,14 @@ export function controlSilentPlayback(videoId, token, operation) {
   const currentId = url.pathname.startsWith('/shorts/')
     ? url.pathname.split('/')[2] : url.searchParams.get('v');
   if (currentId !== videoId) return false;
-  const player = document.querySelector('#movie_player');
-  const video = document.querySelector('ytd-reel-video-renderer[is-active] video') ||
-    document.querySelector('#movie_player video') || document.querySelector('video');
+  const isShort = url.pathname.startsWith('/shorts/');
+  const video = isShort
+    ? document.querySelector('ytd-reel-video-renderer[is-active] video') ||
+      document.querySelector('#shorts-player video')
+    : document.querySelector('#movie_player video') || document.querySelector('video');
   if (!video) return false;
+  const player = video.closest?.('.html5-video-player') ||
+    document.querySelector(isShort ? '#shorts-player' : '#movie_player');
   const isAdvert = () => player?.classList?.contains('ad-showing') === true;
   if (operation === 'metrics') {
     const data = player?.getVideoData?.();
@@ -37,7 +41,7 @@ export function controlSilentPlayback(videoId, token, operation) {
     if (store.current.ready && video.paused && !isAdvert()) return true;
     if (!store.current.finished) {
       store.current.checkMedia();
-      return false;
+      return store.current.ready;
     }
     // A failed play is not a permanent failure of this document. YouTube can
     // deliver its media after an interrupted play request or the watchdog.
@@ -49,8 +53,10 @@ export function controlSilentPlayback(videoId, token, operation) {
   const originalMuted = typeof player?.isMuted === 'function' ? player.isMuted() : video.muted;
   let timer;
   let pauseTimer;
+  let pauseAt = null;
+  const expiresAt = Date.now() + 10000;
   let finished = false;
-  const session = { token, video, ready: false, finished: false, retryAt: 0, finish, checkMedia: onMediaReady };
+  const session = { token, video, ready: false, finished: false, retryAt: 0, finish, checkMedia };
   store.current = session;
   function finish(ready) {
     if (finished) return;
@@ -77,10 +83,24 @@ export function controlSilentPlayback(videoId, token, operation) {
     if (isAdvert()) return;
     // Playback or usable metadata can finish initialization. Give YouTube's
     // player transition a moment to settle before pausing and restoring sound.
+    pauseAt ??= Date.now() + 250;
     pauseTimer ??= setTimeout(() => {
       pauseTimer = null;
+      pauseAt = null;
       if (!isAdvert()) finish(true);
     }, 250);
+  }
+  function checkMedia() {
+    // Hidden pages can defer their timers. The worker's existing polling must
+    // also service these deadlines so readable media never waits for visibility.
+    if (pauseAt != null && Date.now() >= pauseAt) {
+      clearTimeout(pauseTimer);
+      pauseTimer = null;
+      pauseAt = null;
+      if (!isAdvert()) finish(true);
+    }
+    if (!finished && Date.now() >= expiresAt) finish(false);
+    if (!finished) onMediaReady();
   }
   function onCancelled() { finish(false); }
   function playMedia() {

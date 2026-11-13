@@ -401,3 +401,50 @@ test('an advert appearing during the pause delay stays muted and Stop still paus
   assert.equal(h.video.paused, true);
   assert.equal(h.video.muted, false);
 });
+
+test('background polling completes preparation when hidden-page timers are throttled', t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let now = 1000;
+  t.mock.method(Date, 'now', () => now);
+  const h = harness();
+  Object.assign(h.video, { readyState: 1, duration: 2355.841, currentTime: 624 });
+  h.start();
+  now += 500; // No page timer callbacks run while the window is hidden.
+  assert.equal(h.start(), true);
+  assert.equal(h.video.paused, true);
+  assert.equal(h.video.muted, false);
+});
+
+test('background polling enforces the watchdog even when page timers never fire', t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let now = 1000;
+  t.mock.method(Date, 'now', () => now);
+  const h = harness();
+  h.start();
+  now += 10000;
+  assert.equal(h.start(), false);
+  assert.equal(h.video.paused, true);
+  assert.equal(h.video.muted, false);
+});
+
+test('Shorts preparation uses the Shorts player rather than the empty watch-page player', t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const h = harness();
+  location.href = 'https://www.youtube.com/shorts/one';
+  Object.assign(h.video, { readyState: 1, duration: 45, currentTime: 12 });
+  const emptyVideo = { paused: true, readyState: 0 };
+  const watchPlayer = { getVideoData: () => ({ video_id: 'old-watch-video' }) };
+  const shortsPlayer = { playVideo() {}, getVideoData: () => ({ video_id: 'one', title: 'Short' }) };
+  h.video.closest = selector => selector === '.html5-video-player' ? shortsPlayer : null;
+  document.querySelector = selector => ({
+    '#movie_player': watchPlayer,
+    '#movie_player video': emptyVideo,
+    '#shorts-player video': h.video,
+    'video': emptyVideo,
+  })[selector] ?? null;
+  assert.equal(h.start(), false);
+  t.mock.timers.tick(250);
+  assert.equal(h.start(), true);
+  assert.equal(controlSilentPlayback('one', 'session', 'metrics').positionSeconds, 12);
+  assert.equal(h.video.paused, true);
+});
