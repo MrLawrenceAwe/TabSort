@@ -342,3 +342,62 @@ test('abort releases a stalled script call and cleans up a late start', async ()
   assert.deepEqual(calls.map(call => call.args[2]), ['start', 'stop', 'stop']);
   assert.ok(calls.every(call => call.world === 'MAIN'));
 });
+
+test('a player that resumes after preparation is paused again instead of remaining unreadable', t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const h = harness();
+  document.title = 'Video - YouTube';
+  Object.assign(h.video, { readyState: 4, duration: 100, currentTime: 25 });
+  h.start();
+  t.mock.timers.tick(250);
+  assert.equal(h.start(), true);
+  h.video.paused = false;
+  assert.equal(h.start(), false);
+  assert.equal(h.video.muted, true);
+  t.mock.timers.tick(250);
+  assert.equal(h.start(), true);
+  assert.equal(controlSilentPlayback('one', 'session', 'metrics').positionSeconds, 25);
+});
+
+test('an advert keeps playing muted until content replaces it instead of being paused forever', t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const h = harness();
+  document.title = 'Video - YouTube';
+  let advert = true;
+  const player = { playVideo() {}, classList: { contains: () => advert } };
+  document.querySelector = selector => selector === '#movie_player' ? player : h.video;
+  Object.assign(h.video, { readyState: 4, duration: 30, currentTime: 0 });
+  h.start();
+  h.listeners.get('playing')();
+  t.mock.timers.tick(250);
+  assert.equal(h.video.paused, false);
+  assert.equal(h.video.muted, true);
+  assert.equal(h.start(), false);
+  advert = false;
+  Object.assign(h.video, { duration: 100, currentTime: 25 });
+  // The same media element can switch to content without another playing event.
+  assert.equal(h.start(), false);
+  t.mock.timers.tick(250);
+  assert.equal(h.start(), true);
+  assert.equal(h.video.paused, true);
+  assert.equal(h.video.muted, false);
+  assert.equal(controlSilentPlayback('one', 'session', 'metrics').positionSeconds, 25);
+});
+
+test('an advert appearing during the pause delay stays muted and Stop still pauses it', t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const h = harness();
+  let advert = false;
+  const player = { playVideo() {}, classList: { contains: () => advert } };
+  document.querySelector = selector => selector === '#movie_player' ? player : h.video;
+  Object.assign(h.video, { readyState: 4, duration: 100, currentTime: 25 });
+  h.start();
+  advert = true;
+  t.mock.timers.tick(250);
+  assert.equal(h.video.paused, false);
+  assert.equal(h.video.muted, true);
+  assert.equal(h.start(), false);
+  h.stop();
+  assert.equal(h.video.paused, true);
+  assert.equal(h.video.muted, false);
+});
