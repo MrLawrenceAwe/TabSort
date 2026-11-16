@@ -53,7 +53,6 @@ export function createPlaybackMetricsFixture({
   playbackMetricsReady = true,
   metadataDurationSeconds = 120,
   positionSeconds = 20,
-  playbackRate = 1,
   isLive = false,
   ...overrides
 } = {}) {
@@ -63,7 +62,6 @@ export function createPlaybackMetricsFixture({
     playbackMetricsReady,
     metadataDurationSeconds,
     positionSeconds,
-    playbackRate,
     isLive,
     ...overrides,
   };
@@ -108,7 +106,6 @@ export function stubArchivedStreamMetrics({
       metadataDurationSeconds: null,
       mediaDurationSeconds: 6211,
       positionSeconds: 0,
-      playbackRate: 1,
       isLive: false,
       ...metrics,
     });

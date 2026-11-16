@@ -33,7 +33,6 @@ export function controlSilentPlayback(videoId, token, operation) {
       playbackMetricsReady: true,
       mediaDurationSeconds: video.duration,
       positionSeconds: video.currentTime,
-      playbackRate: video.playbackRate || 1,
       isLive: data?.isLive === true,
     };
   }
@@ -140,6 +139,13 @@ export function controlSilentPlayback(videoId, token, operation) {
     player?.mute?.();
     if (typeof player?.playVideo === 'function') {
       player.playVideo();
+      // A page extension can leave playVideo() ineffective on a cold player.
+      // YouTube's control also initializes its source and saved position; a
+      // native media play alone can leave the player unstarted for a long time.
+      const playerState = player.getPlayerState?.();
+      if (video.paused && video.readyState === 0 && (playerState === -1 || playerState === 5)) {
+        player.querySelector?.('.ytp-play-button')?.click();
+      }
       if (!video.paused && video.readyState >= 2) schedulePreparationPause();
     } else if (video.paused) document.querySelector('#movie_player .ytp-play-button')?.click();
     if (finished || pauseTimer != null) return session.ready;
@@ -157,6 +163,10 @@ export function createSilentPlaybackPreparation() {
   let current = null;
   const execute = (session, operation) => chrome.scripting.executeScript({
     target: { tabId: session.tabId },
+    // The player can be readable while unrelated page requests are pending.
+    // Waiting for document_idle can outlast our script deadline and cancel
+    // every start before it executes. Stop must bypass that gate as well.
+    injectImmediately: true,
     world: 'MAIN',
     func: controlSilentPlayback,
     args: [session.videoId, session.token, operation],

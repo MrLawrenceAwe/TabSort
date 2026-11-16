@@ -31,13 +31,12 @@ function hasMediaDurationMismatch(metricsPayload, authoritativeDurationSeconds) 
   );
 }
 
-function deriveRemainingTimeSeconds(resolvedDurationSeconds, currentTimeSeconds, playbackRate) {
+function deriveRemainingTimeSeconds(resolvedDurationSeconds, currentTimeSeconds) {
   if (!isFiniteNumber(currentTimeSeconds)) {
     return resolvedDurationSeconds;
   }
 
-  const safePlaybackRate = isFiniteNumber(playbackRate) && playbackRate > 0 ? playbackRate : 1;
-  return Math.max(0, (resolvedDurationSeconds - currentTimeSeconds) / safePlaybackRate);
+  return Math.max(0, resolvedDurationSeconds - currentTimeSeconds);
 }
 
 export function derivePlaybackUpdate({
@@ -67,7 +66,6 @@ export function derivePlaybackUpdate({
   const resolvedDurationSeconds = authoritativeDurationSeconds ??
     toPositiveFiniteNumber(metricsPayload.mediaDurationSeconds) ?? NaN;
   const currentTimeSeconds = Number(metricsPayload.positionSeconds ?? NaN);
-  const playbackRate = Number(metricsPayload.playbackRate ?? 1);
   const isLive =
     metricsPayload.isLive === true ? true : metricsPayload.isLive === false ? false : record.isLive;
 
@@ -106,7 +104,6 @@ export function derivePlaybackUpdate({
   update.remainingSeconds = deriveRemainingTimeSeconds(
     resolvedDurationSeconds,
     currentTimeSeconds,
-    playbackRate,
   );
   update.remainingSecondsStale = !isFiniteNumber(currentTimeSeconds);
   return update;

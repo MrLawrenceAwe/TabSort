@@ -46,6 +46,8 @@ export function createPreparationServiceFixture(count, onCreate = () => {}) {
   };
   chrome.tabs.update = async (id, options) => Object.assign(tabs.get(id), options);
   chrome.tabs.remove = async id => { tabs.delete(id); };
-  chrome.windows = { get: async id => ({ id }), create: async () => { onCreate(); return { id: 99 }; } };
+  chrome.windows = { get: async id => ({ id }),
+    getLastFocused: async () => ({ id: 1, focused: false }),
+    create: async () => { onCreate(); return { id: 99 }; } };
   return { tabs, messages, moves, saved, journal };
 }

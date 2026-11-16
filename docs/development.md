@@ -65,8 +65,8 @@ an observed completion after loading or discarding. `transitionStartedAt` starts
 grace period for video transitions on both watch and Shorts pages. Video identity
 ignores extra URL parameters.
 
-`videoDetails.remainingSeconds` estimates wall-clock playback time remaining,
-adjusted for playback speed; `remainingSecondsStale` marks unreliable readings.
+`videoDetails.remainingSeconds` is video duration minus playback position,
+independent of playback speed; `remainingSecondsStale` marks unreliable readings.
 `browserTitle` retains Chrome's title separately from page metadata so sleeping
 tabs remain identifiable after worker suspension or window changes.
 
@@ -111,7 +111,14 @@ collection.
 Preparation polls awake tabs even while Chrome reports page loading. A verified
 media reading can finish before unrelated requests do; its prepared snapshot
 remains usable during that loading state. A new loading event invalidates it.
+Preparation start, metric, and stop scripts use `injectImmediately` so Chrome's
+default `document_idle` scheduling cannot hold them behind the page load until
+their two-second deadline cancels them. Missing player elements remain retryable.
 The muted media element is also started when the player leaves it paused.
+If the player API leaves a cold media element paused and YouTube still reports
+an unstarted or cued player, preparation clicks that player's Play control before
+falling back to the native media method. This allows YouTube's own control path
+to initialize the source and saved position. It never toggles an already playing video.
 Initialization calls `HTMLMediaElement.prototype.play` directly so an autoplay
 extension's video-method override cannot reject this explicitly requested action.
 Source replacement AbortErrors retry on metadata/canplay events. Timed-out script calls
@@ -124,9 +131,12 @@ restored position can be paused and read even when buffering prevents `playing`.
 Stop, navigation, page exit, rejection, and a
 ten-second watchdog pause the player and restore muting. Script calls are bounded
 and late starts receive cleanup. Each reload creates a new playback session.
-After five seconds without a usable reading, preparation may focus its window
+After one second without a usable reading, preparation may focus its window
 once per attempt for up to three seconds. Success, Stop, and retry release focus
 early; restoration checks that the user has not switched to another window.
+A check made while Chrome is inactive does not consume that opportunity: the
+next poll can recover as soon as Chrome becomes active again, without waiting
+for the sixty-second attempt deadline and a reload.
 
 Popup snapshot requests wait at most 250 ms for playback collection. Slower reads
 continue in one shared batch per window and broadcast their results; organising

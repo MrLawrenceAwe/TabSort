@@ -4,6 +4,23 @@ import { derivePlaybackUpdate } from '../../background/playback/derive-update.js
 import { applyPlaybackStateUpdate } from '../../background/playback/apply-update.js';
 import { createPlaybackMetricsFixture, createTabRecordFixture } from '../helpers/background-test-helpers.js';
 
+test('remaining video time is independent of speed for normal and preparation readings', () => {
+  const record = createTabRecordFixture(1);
+  for (const durationAuthority of ['metadata', 'media']) {
+    for (const playbackRate of [0.5, 1, 2]) {
+      const update = derivePlaybackUpdate({
+        record, requestedUrl: record.url, currentTabUrl: record.url,
+        durationAuthority,
+        metricsPayload: createPlaybackMetricsFixture({
+          metadataDurationSeconds: 1005, mediaDurationSeconds: 1005,
+          positionSeconds: 215, playbackRate,
+        }),
+      });
+      assert.equal(update.remainingSeconds, 790);
+    }
+  }
+});
+
 test('playback readings preserve independently observed content-script readiness', () => {
   for (const contentScriptReady of [false, true]) {
     const record = createTabRecordFixture(1, { contentScriptReady });
@@ -44,6 +61,6 @@ test('preparation explicitly trusts verified media rather than recorded duration
   });
   assert.equal(update.resolvedDurationSeconds, 100);
   assert.equal(update.playbackMetricsReady, true);
-  assert.equal(update.remainingSeconds, 37.5);
+  assert.equal(update.remainingSeconds, 75);
   assert.equal(update.remainingSecondsStale, false);
 });

@@ -33,7 +33,7 @@ test('snapshot waits are bounded and share a batch while renderers are stalled',
     await gate;
     return { url: tabs[id - 1].url, isLive: false, playbackMetricsReady: true,
       metadataDurationSeconds: 120, mediaDurationSeconds: 120,
-      positionSeconds: 20, playbackRate: 1 };
+      positionSeconds: 20 };
   };
   let deadline;
   try {
@@ -72,7 +72,7 @@ test('an ended live tab becomes sortable on the next snapshot without navigation
     return {
       url: tab.url, isLive: false, playbackMetricsReady: true,
       metadataDurationSeconds: 120, mediaDurationSeconds: 120,
-      positionSeconds: 20, playbackRate: 1,
+      positionSeconds: 20,
     };
   };
   const snapshot = await getWindowSnapshot({ windowId: 1 });
@@ -120,7 +120,6 @@ test(
         playbackMetricsReady: true,
         metadataDurationSeconds: 120,
         positionSeconds: 20,
-        playbackRate: 1,
         isLive: false,
       };
     };
@@ -137,7 +136,7 @@ test(
       mediaDurationSeconds: 120, positionSeconds: 100, playbackRate: 2, isLive: false,
     });
     const afterSeekAndSpeedChange = await getWindowSnapshot({ windowId: 1 });
-    assert.equal(afterSeekAndSpeedChange.tabRecordsById[2].videoDetails.remainingSeconds, 10);
+    assert.equal(afterSeekAndSpeedChange.tabRecordsById[2].videoDetails.remainingSeconds, 20);
   },
 );
 
@@ -179,7 +178,6 @@ test(
         metadataDurationSeconds: null,
         mediaDurationSeconds: 6211,
         positionSeconds: 0,
-        playbackRate: 1,
         isLive: false,
       };
     };
@@ -207,7 +205,7 @@ test('organising refreshes playback before deciding the order', { concurrency: f
   globalThis.chrome.tabs.sendMessage = async id => ({
     url: tabs[id - 1].url, playbackMetricsReady: true, isLive: false,
     metadataDurationSeconds: 120, mediaDurationSeconds: 120,
-    positionSeconds: id === 1 ? 0 : 110, playbackRate: 1,
+    positionSeconds: id === 1 ? 0 : 110,
   });
   const moves = [];
   globalThis.chrome.tabs.move = async ids => { moves.push(ids); };

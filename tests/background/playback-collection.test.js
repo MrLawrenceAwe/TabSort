@@ -479,7 +479,6 @@ test(
         playbackMetricsReady: true,
         metadataDurationSeconds: 120,
         positionSeconds: tabId * 10,
-        playbackRate: 1,
         isLive: false,
       });
 

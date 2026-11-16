@@ -194,6 +194,42 @@ test('starts the media when the player API supplies metadata but leaves it pause
   assert.equal(h.video.paused, true);
 });
 
+test('uses the Play control when the player API leaves a cold player unstarted', t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const h = harness();
+  document.title = 'Video - YouTube';
+  Object.assign(h.video, { readyState: 0 });
+  let clicks = 0;
+  const button = { click() {
+    clicks++;
+    assert.equal(h.video.muted, true);
+    Object.assign(h.video, { readyState: 1, duration: 1005, currentTime: 215 });
+    h.listeners.get('loadedmetadata')();
+  } };
+  const player = { playVideo() {}, getPlayerState: () => -1, querySelector: () => button };
+  document.querySelector = selector => selector === '#movie_player' ? player
+    : selector.includes('.ytp-play-button') ? button : h.video;
+  h.start();
+  assert.equal(clicks, 1);
+  t.mock.timers.tick(250);
+  assert.equal(h.start(), true);
+  assert.equal(controlSilentPlayback('one', 'session', 'metrics').positionSeconds, 215);
+  assert.equal(h.events.some(([event]) => event === 'play'), false,
+    'The successful player-control path must not also start the media element');
+});
+
+test('does not toggle the Play control after the player API has started playback', t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const h = harness();
+  Object.assign(h.video, { readyState: 0 });
+  const player = { playVideo() { h.video.paused = false; }, getPlayerState: () => -1,
+    querySelector() { assert.fail('Would pause the starting video'); } };
+  document.querySelector = selector => selector === '#movie_player' ? player
+    : selector.includes('.ytp-play-button') ? { click() { assert.fail('Would pause the starting video'); } } : h.video;
+  h.start();
+  h.stop();
+});
+
 test('a source replacement AbortError waits for new metadata and starts again', async t => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const h = harness();
@@ -269,6 +305,29 @@ test('a timed-out injection gets a fresh session on the next playback preparatio
   await preparation.stop();
 });
 
+test('preparation can start, read and stop before a loading document becomes idle', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  // Chrome normally queues executeScript until document_idle. A page whose
+  // requests remain pending must not keep every preparation call behind that
+  // gate until the worker cancels its token.
+  const operations = [];
+  const metrics = { positionSeconds: 25, mediaDurationSeconds: 100 };
+  globalThis.chrome = { scripting: { executeScript: options => {
+    if (!options.injectImmediately) return new Promise(() => {});
+    operations.push(options.args[2]);
+    return Promise.resolve([{ result: options.args[2] === 'metrics' ? metrics : true }]);
+  } } };
+  const preparation = createSilentPlaybackPreparation();
+  const signal = new AbortController().signal;
+  const started = preparation.preparePlayback(1, 'one', signal);
+  await new Promise(resolve => setImmediate(resolve));
+  t.mock.timers.tick(2000);
+  assert.equal(await started, true, 'Start must run while document_idle is still pending');
+  assert.deepEqual(await preparation.readMetrics(1, 'one', signal), metrics);
+  await preparation.stop();
+  assert.deepEqual(operations, ['start', 'metrics', 'stop']);
+});
+
 test('a different video cannot be initialized by a stale request', () => {
   const h = harness();
   location.href = 'https://www.youtube.com/watch?v=another';
@@ -284,7 +343,7 @@ test('reads the verified paused media directly without a content-script message'
   assert.deepEqual(metrics, {
     url: location.href, title: 'Test video', playbackMetricsReady: true,
     mediaDurationSeconds: 100, positionSeconds: 25,
-    playbackRate: 2, isLive: false,
+    isLive: false,
   });
   assert.deepEqual(h.events, []);
 });

@@ -3,7 +3,7 @@
 ## Prepare and organise tabs
 
 1. Open several YouTube watch or Shorts pages in one Chrome window.
-2. Open TabSort to see their remaining times. Ready video rows are highlighted.
+2. Open TabSort to see their remaining times. Remaining time is the video duration minus your current position, regardless of playback speed. Ready video rows are highlighted.
 3. Choose **Auto-prepare tabs** to read times for eligible videos in a separate window while you keep browsing.
 4. Choose **Organise tabs** to arrange tabs with ready videos first in remaining-time order.
 
@@ -17,7 +17,7 @@ TabSort briefly starts each video's player muted, pauses it shortly after playba
 or usable metadata becomes available, and restores its original mute setting. It
 then checks the saved viewing position before keeping the remaining time. Videos blocked by sign-in, errors,
 or other required interaction may still be skipped after all attempts.
-If initialization stalls for five seconds, TabSort briefly brings its preparation
+If initialization stalls for one second, TabSort briefly brings its preparation
 window forward (up to three seconds), then returns focus to your previous window.
 It leaves focus alone if you switch windows yourself during that interval.
 A video you pin during preparation returns pinned, outside its former group.

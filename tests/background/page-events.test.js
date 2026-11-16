@@ -437,7 +437,6 @@ test(
         metadataDurationSeconds: 300,
         mediaDurationSeconds: 300,
         positionSeconds: 180,
-        playbackRate: 1,
         isLive: false,
       });
 

@@ -11,7 +11,7 @@ export function shouldPollRecord(record, { now = Date.now } = {}) {
   // Live status can change without a navigation or title change.
   if (record.isLive) return record.loadState === TAB_LOAD_STATES.LOADED;
 
-  // Awake readings change as playback advances, seeks, or changes speed,
+  // Awake readings change as playback advances or seeks,
   // even in a background tab. Sleeping preparation snapshots remain cached.
   if (record.loadState === TAB_LOAD_STATES.LOADED && hasReadyRemainingTime(record)) return true;
 

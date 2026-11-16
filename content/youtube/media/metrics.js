@@ -36,10 +36,6 @@ function collectVideoMetrics({
     isLive: Boolean(details.isLive),
     mediaDurationSeconds: getVideoDurationSeconds(video, player),
     positionSeconds: getVideoCurrentTimeSeconds(video, player),
-    playbackRate:
-      video && isFiniteNumber(video.playbackRate) && video.playbackRate > 0
-        ? video.playbackRate
-        : 1,
   };
 }
 
